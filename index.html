@@ -620,11 +620,11 @@
   <h2>Be the first to <em>try StudyFlow.</em></h2>
   <p>Join the waitlist and get early access when we launch — completely free.</p>
 
-  <div class="waitlist-form reveal">
+  <div class="waitlist-form" style="opacity:1; transform:none;">
     <div class="waitlist-box">
-      <div class="waitlist-input-row">
+      <div class="waitlist-input-row" id="input-row">
         <input type="email" id="waitlist-email" placeholder="Enter your student email..." />
-        <button onclick="joinWaitlist()">Join waitlist →</button>
+        <button type="button" id="waitlist-btn" onclick="window.joinWaitlist()">Join waitlist →</button>
       </div>
       <div id="waitlist-success" class="waitlist-success" style="display:none;">
         🎉 You're on the list! We'll reach out when StudyFlow launches.
@@ -674,18 +674,32 @@
     }, 8000);
   }
 
-  // Waitlist form
-  function joinWaitlist() {
-    const email = document.getElementById('waitlist-email').value;
-    if (!email || !email.includes('@')) {
-      alert('Please enter a valid email!');
+  // Waitlist form - bulletproof version
+  window.joinWaitlist = function() {
+    var emailInput = document.getElementById('waitlist-email');
+    var successBox = document.getElementById('waitlist-success');
+    var inputRow = document.getElementById('input-row');
+    var email = emailInput ? emailInput.value : '';
+
+    if (!email || email.indexOf('@') === -1) {
+      alert('Please enter a valid email address!');
       return;
     }
-    document.getElementById('waitlist-success').style.display = 'block';
-    document.querySelector('.waitlist-input-row').style.display = 'none';
+    if (inputRow) inputRow.style.display = 'none';
+    if (successBox) {
+      successBox.style.display = 'block';
+      successBox.style.opacity = '1';
+    }
     count++;
     if (counterEl) counterEl.textContent = count;
   }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var btn = document.getElementById('waitlist-btn');
+    if (btn) {
+      btn.onclick = function() { window.joinWaitlist(); };
+    }
+  });
 </script>
 </body>
 </html>
