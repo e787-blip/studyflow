@@ -620,32 +620,45 @@
   <h2>Be the first to <em>try StudyFlow.</em></h2>
   <p>Join the waitlist and get early access when we launch — completely free.</p>
 
-  <div class="waitlist-form" style="opacity:1; transform:none;">
-    <div class="waitlist-box">
-      <div class="waitlist-input-row" id="input-row">
-        <input type="email" id="waitlist-email" placeholder="Enter your student email..." />
-        <button type="button" id="waitlist-btn" onclick="window.joinWaitlist()">Join waitlist →</button>
-      </div>
-      <div id="waitlist-success" class="waitlist-success" style="display:none;">
-        🎉 You're on the list! We'll reach out when StudyFlow launches.
-      </div>
-      <p class="waitlist-note">No spam. No credit card. Just early access.</p>
+  <div id="wl-input" style="display:flex; gap:.75rem; max-width:500px; margin:0 auto;">
+    <input id="wl-email" type="email" placeholder="Enter your student email..." style="flex:1; padding:.9rem 1.2rem; border-radius:12px; border:1.5px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.15); color:#fff; font-size:0.95rem; outline:none;" />
+    <button id="wl-btn" style="background:#fff; color:#4a7cf6; padding:.9rem 1.5rem; border-radius:12px; font-weight:700; font-size:0.95rem; border:none; cursor:pointer; white-space:nowrap;">Join waitlist →</button>
+  </div>
+  <div id="wl-success" style="display:none; max-width:500px; margin:0 auto; background:rgba(255,255,255,0.2); border:1.5px solid rgba(255,255,255,0.4); border-radius:12px; padding:1rem 1.4rem; color:#fff; font-size:0.95rem; font-weight:500; text-align:center;">
+    🎉 You're on the list! We'll reach out when StudyFlow launches.
+  </div>
+  <p style="color:rgba(255,255,255,.5); font-size:0.78rem; margin-top:.75rem;">No spam. No credit card. Just early access.</p>
+  <div style="display:flex; gap:2.5rem; justify-content:center; margin-top:2rem;">
+    <div style="text-align:center;">
+      <strong id="counter" style="display:block; font-size:1.6rem; font-weight:700; color:#fff;">47</strong>
+      <span style="font-size:0.8rem; color:rgba(255,255,255,.55);">students waiting</span>
     </div>
-    <div class="waitlist-stats">
-      <div class="stat">
-        <strong id="counter">0</strong>
-        <span>students waiting</span>
-      </div>
-      <div class="stat">
-        <strong>Free</strong>
-        <span>for early access</span>
-      </div>
-      <div class="stat">
-        <strong>🔒</strong>
-        <span>no spam ever</span>
-      </div>
+    <div style="text-align:center;">
+      <strong style="display:block; font-size:1.6rem; font-weight:700; color:#fff;">Free</strong>
+      <span style="font-size:0.8rem; color:rgba(255,255,255,.55);">early access</span>
+    </div>
+    <div style="text-align:center;">
+      <strong style="display:block; font-size:1.6rem; font-weight:700; color:#fff;">🔒</strong>
+      <span style="font-size:0.8rem; color:rgba(255,255,255,.55);">no spam ever</span>
     </div>
   </div>
+
+  <script>
+    var wlCount = 47;
+    document.getElementById('counter').textContent = wlCount;
+
+    document.getElementById('wl-btn').addEventListener('click', function() {
+      var email = document.getElementById('wl-email').value;
+      if (!email || email.indexOf('@') === -1) {
+        alert('Please enter a valid email!');
+        return;
+      }
+      document.getElementById('wl-input').style.display = 'none';
+      document.getElementById('wl-success').style.display = 'block';
+      wlCount++;
+      document.getElementById('counter').textContent = wlCount;
+    });
+  </script>
 </section>
 
 <!-- FOOTER -->
@@ -660,46 +673,6 @@
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
   }, { threshold: 0.12 });
   reveals.forEach(el => observer.observe(el));
-
-  // Animated counter
-  let count = 47;
-  const counterEl = document.getElementById('counter');
-  if (counterEl) {
-    counterEl.textContent = count;
-    setInterval(() => {
-      if (Math.random() > 0.7) {
-        count++;
-        counterEl.textContent = count;
-      }
-    }, 8000);
-  }
-
-  // Waitlist form - bulletproof version
-  window.joinWaitlist = function() {
-    var emailInput = document.getElementById('waitlist-email');
-    var successBox = document.getElementById('waitlist-success');
-    var inputRow = document.getElementById('input-row');
-    var email = emailInput ? emailInput.value : '';
-
-    if (!email || email.indexOf('@') === -1) {
-      alert('Please enter a valid email address!');
-      return;
-    }
-    if (inputRow) inputRow.style.display = 'none';
-    if (successBox) {
-      successBox.style.display = 'block';
-      successBox.style.opacity = '1';
-    }
-    count++;
-    if (counterEl) counterEl.textContent = count;
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    var btn = document.getElementById('waitlist-btn');
-    if (btn) {
-      btn.onclick = function() { window.joinWaitlist(); };
-    }
-  });
 </script>
 </body>
 </html>
