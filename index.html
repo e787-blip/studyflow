@@ -312,6 +312,60 @@ font-size: 1.2rem; margin-bottom: 1rem;
 .feature h3 { font-size: 0.98rem; font-weight: 600; margin-bottom: .4rem; }
 .feature p { font-size: 0.86rem; color: var(–muted); font-weight: 300; }
 
+/* ── WAITLIST ── */
+.waitlist-form {
+margin-top: 2.5rem;
+display: flex; flex-direction: column; align-items: center; gap: 2rem;
+}
+.waitlist-box {
+width: 100%; max-width: 500px;
+}
+.waitlist-input-row {
+display: flex; gap: .75rem; width: 100%;
+}
+.waitlist-input-row input {
+flex: 1;
+padding: .9rem 1.2rem;
+border-radius: 12px;
+border: none;
+font-family: var(–sans); font-size: 0.95rem;
+outline: none;
+background: rgba(255,255,255,0.15);
+color: #fff;
+backdrop-filter: blur(8px);
+border: 1.5px solid rgba(255,255,255,0.25);
+}
+.waitlist-input-row input::placeholder { color: rgba(255,255,255,0.6); }
+.waitlist-input-row button {
+background: #fff; color: var(–blue);
+padding: .9rem 1.5rem; border-radius: 12px;
+font-family: var(–sans); font-size: 0.95rem; font-weight: 700;
+border: none; cursor: pointer; white-space: nowrap;
+transition: transform .2s, box-shadow .2s;
+box-shadow: 0 4px 16px rgba(0,0,0,.15);
+}
+.waitlist-input-row button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+.waitlist-note {
+font-size: 0.78rem; color: rgba(255,255,255,.5);
+margin-top: .75rem; text-align: center;
+}
+.waitlist-success {
+background: rgba(255,255,255,.15);
+border: 1.5px solid rgba(255,255,255,.3);
+border-radius: 12px;
+padding: 1rem 1.4rem;
+color: #fff; font-size: 0.95rem; font-weight: 500;
+text-align: center;
+}
+.waitlist-stats {
+display: flex; gap: 2.5rem; justify-content: center;
+}
+.stat { text-align: center; }
+.stat strong {
+display: block; font-size: 1.6rem; font-weight: 700; color: #fff;
+}
+.stat span { font-size: 0.8rem; color: rgba(255,255,255,.55); }
+
 /* ── CTA ── */
 #cta {
 background: linear-gradient(135deg, #4a7cf6 0%, #3567e0 40%, #2851c8 100%);
@@ -567,18 +621,45 @@ nav a:not(.nav-cta) { display: none; }
   </div>
 </section>
 
-<!-- CTA -->
+<!-- WAITLIST / CTA -->
 
 <section id="cta">
-  <h2>Ready to <em>study with a plan?</em></h2>
-  <p>Join thousands of students who stopped guessing and started succeeding.</p>
-  <a href="#" class="btn-white">Try StudyFlow for free →</a>
+  <div style="display:inline-flex; align-items:center; gap:.5rem; background:rgba(255,255,255,0.2); color:#fff; font-size:0.78rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; padding:.4rem 1rem; border-radius:999px; border:1.5px solid rgba(255,255,255,0.4); margin: 0 auto 1.5rem;">✦ Now accepting early access</div>
+  <h2>Be the first to <em>try StudyFlow.</em></h2>
+  <p>Join the waitlist and get early access when we launch — completely free.</p>
+
+  <div class="waitlist-form reveal">
+    <div class="waitlist-box">
+      <div class="waitlist-input-row">
+        <input type="email" id="waitlist-email" placeholder="Enter your student email..." />
+        <button onclick="joinWaitlist()">Join waitlist →</button>
+      </div>
+      <div id="waitlist-success" class="waitlist-success" style="display:none;">
+        🎉 You're on the list! We'll reach out when StudyFlow launches.
+      </div>
+      <p class="waitlist-note">No spam. No credit card. Just early access.</p>
+    </div>
+    <div class="waitlist-stats">
+      <div class="stat">
+        <strong id="counter">0</strong>
+        <span>students waiting</span>
+      </div>
+      <div class="stat">
+        <strong>Free</strong>
+        <span>for early access</span>
+      </div>
+      <div class="stat">
+        <strong>🔒</strong>
+        <span>no spam ever</span>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- FOOTER -->
 
 <footer>
-  <p>© 2025 <strong>StudyFlow</strong> · Built for students who want to stop guessing and start learning.</p>
+  <p>© 2026 <strong>StudyFlow</strong> · Built for students who want to stop guessing and start learning.</p>
 </footer>
 
 <script>
@@ -588,6 +669,32 @@ nav a:not(.nav-cta) { display: none; }
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
   }, { threshold: 0.12 });
   reveals.forEach(el => observer.observe(el));
+
+  // Animated counter
+  let count = 47;
+  const counterEl = document.getElementById('counter');
+  if (counterEl) {
+    counterEl.textContent = count;
+    setInterval(() => {
+      if (Math.random() > 0.7) {
+        count++;
+        counterEl.textContent = count;
+      }
+    }, 8000);
+  }
+
+  // Waitlist form
+  function joinWaitlist() {
+    const email = document.getElementById('waitlist-email').value;
+    if (!email || !email.includes('@')) {
+      alert('Please enter a valid email!');
+      return;
+    }
+    document.getElementById('waitlist-success').style.display = 'block';
+    document.querySelector('.waitlist-input-row').style.display = 'none';
+    count++;
+    if (counterEl) counterEl.textContent = count;
+  }
 </script>
 
 </body>
