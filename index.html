@@ -60,6 +60,7 @@ background: var(–blue); color: #fff !important;
 padding: .45rem 1.1rem; border-radius: 8px;
 font-size: 0.88rem !important;
 transition: background .2s, transform .15s !important;
+-webkit-text-fill-color: #fff !important;
 }
 .nav-cta:hover { background: #3567e0 !important; transform: translateY(-1px); }
 
@@ -91,7 +92,7 @@ border: 1px solid rgba(74,124,246,.2);
 margin-bottom: 2rem;
 animation: fadeUp .6s ease both;
 }
-.badge::before { content: ‘●’; font-size: 0.5rem; }
+.badge::before { content: ‘✦’; font-size: 1rem; font-weight: 900; }
 h1 {
 font-family: var(–serif);
 font-size: clamp(3rem, 7vw, 5.5rem);
@@ -115,20 +116,23 @@ display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
 animation: fadeUp .7s .3s ease both;
 }
 .btn-primary {
-background: var(–blue); color: #fff;
+background: var(–blue); color: #fff !important;
 padding: .85rem 2rem; border-radius: 12px;
 font-family: var(–sans); font-size: 1rem; font-weight: 600;
 border: none; cursor: pointer; text-decoration: none;
 transition: background .2s, transform .15s, box-shadow .2s;
 box-shadow: 0 4px 20px rgba(74,124,246,.3);
+display: inline-block;
+-webkit-text-fill-color: #fff;
 }
 .btn-primary:hover { background: #3567e0; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(74,124,246,.38); }
 .btn-ghost {
-background: transparent; color: var(–ink);
+background: transparent; color: var(–ink) !important;
 padding: .85rem 2rem; border-radius: 12px;
 font-family: var(–sans); font-size: 1rem; font-weight: 500;
 border: 1.5px solid var(–border); cursor: pointer; text-decoration: none;
 transition: border-color .2s, background .2s;
+display: inline-block;
 }
 .btn-ghost:hover { border-color: var(–blue); background: var(–blue-light); }
 
@@ -355,6 +359,18 @@ footer strong { color: rgba(255,255,255,.7); }
 from { opacity: 0; transform: translateY(24px); }
 to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Ensure animated elements are always visible after animation */
+.badge, h1, .hero-sub, .hero-btns, .hero-preview {
+animation-fill-mode: both;
+animation-duration: .7s;
+animation-timing-function: ease;
+}
+.badge { animation-name: fadeUp; animation-delay: 0s; }
+h1 { animation-name: fadeUp; animation-delay: .1s; }
+.hero-sub { animation-name: fadeUp; animation-delay: .2s; }
+.hero-btns { animation-name: fadeUp; animation-delay: .3s; }
+.hero-preview { animation-name: fadeUp; animation-delay: .45s; }
 
 .reveal {
 opacity: 0; transform: translateY(22px);
