@@ -411,28 +411,224 @@
 
   /* ── ANIMATIONS ── */
   @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(24px); }
+    from { opacity: 0; transform: translateY(32px); }
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  /* Ensure animated elements are always visible after animation */
-  .badge, h1, .hero-sub, .hero-btns, .hero-preview {
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-40px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(40px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+
+  @keyframes pulse-ring {
+    0% { transform: scale(1); opacity: .6; }
+    100% { transform: scale(1.5); opacity: 0; }
+  }
+
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  @keyframes navSlideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes badgePop {
+    0% { opacity: 0; transform: scale(0.8) translateY(10px); }
+    70% { transform: scale(1.05) translateY(-2px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  /* Nav animation */
+  nav {
+    animation: navSlideDown .6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Hero animations */
+  .badge {
+    animation: badgePop .7s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: .1s;
+  }
+  h1 {
+    animation: fadeUp .9s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: .2s;
+  }
+  .hero-sub {
+    animation: fadeUp .9s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: .35s;
+  }
+  .hero-btns {
+    animation: fadeUp .9s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: .5s;
+  }
+  .hero-preview {
+    animation: scaleIn 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: .65s;
     animation-fill-mode: both;
-    animation-duration: .7s;
-    animation-timing-function: ease;
   }
-  .badge { animation-name: fadeUp; animation-delay: 0s; }
-  h1 { animation-name: fadeUp; animation-delay: .1s; }
-  .hero-sub { animation-name: fadeUp; animation-delay: .2s; }
-  .hero-btns { animation-name: fadeUp; animation-delay: .3s; }
-  .hero-preview { animation-name: fadeUp; animation-delay: .45s; }
 
+  /* Floating animation on hero preview */
+  .hero-preview {
+    animation: scaleIn 1s cubic-bezier(0.16, 1, 0.3, 1) .65s both,
+               float 6s ease-in-out 1.65s infinite;
+  }
+
+  /* Shimmer on badge */
+  .badge {
+    background: linear-gradient(90deg, var(--blue) 0%, #7eb4ff 50%, var(--blue) 100%);
+    background-size: 200% auto;
+    animation: badgePop .7s cubic-bezier(0.16, 1, 0.3, 1) .1s both,
+               shimmer 3s linear 1s infinite;
+    color: #fff;
+    border: none;
+  }
+
+  /* Scroll reveal - enhanced */
   .reveal {
-    opacity: 0; transform: translateY(22px);
-    transition: opacity .65s ease, transform .65s ease;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity .8s cubic-bezier(0.16, 1, 0.3, 1),
+                transform .8s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .reveal.visible { opacity: 1; transform: none; }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
 
+  /* Staggered children reveal */
+  .reveal-stagger > * {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity .7s cubic-bezier(0.16, 1, 0.3, 1),
+                transform .7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-stagger.visible > *:nth-child(1) { opacity: 1; transform: none; transition-delay: 0s; }
+  .reveal-stagger.visible > *:nth-child(2) { opacity: 1; transform: none; transition-delay: .12s; }
+  .reveal-stagger.visible > *:nth-child(3) { opacity: 1; transform: none; transition-delay: .24s; }
+  .reveal-stagger.visible > *:nth-child(4) { opacity: 1; transform: none; transition-delay: .36s; }
+
+  /* Button hover effects */
+  .btn-primary {
+    transition: background .2s, transform .3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .3s ease !important;
+  }
+  .btn-primary:hover {
+    transform: translateY(-3px) scale(1.02) !important;
+    box-shadow: 0 12px 36px rgba(74,124,246,.5) !important;
+  }
+  .btn-primary:active { transform: translateY(0) scale(0.98) !important; }
+
+  .btn-ghost {
+    transition: all .3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+  .btn-ghost:hover { transform: translateY(-3px) !important; }
+  .btn-ghost:active { transform: translateY(0) scale(0.98) !important; }
+
+  /* Card hover effects */
+  .step, .benefit, .feature {
+    transition: transform .4s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow .4s ease !important;
+  }
+  .step:hover { transform: translateY(-8px) !important; }
+  .benefit:hover { transform: translateY(-6px) !important; }
+  .feature:hover {
+    transform: translateY(-6px) !important;
+    box-shadow: 0 16px 40px rgba(74,124,246,.15) !important;
+  }
+
+  /* Nav links hover */
+  nav a:not(.nav-cta) {
+    position: relative;
+  }
+  nav a:not(.nav-cta)::after {
+    content: '';
+    position: absolute; bottom: -3px; left: 0; right: 0;
+    height: 2px; background: var(--blue); border-radius: 2px;
+    transform: scaleX(0);
+    transition: transform .3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  nav a:not(.nav-cta):hover::after { transform: scaleX(1); }
+
+  /* Animated gradient hero background */
+  .hero {
+    background: linear-gradient(135deg, #e8f0ff, #f0f4ff, #e4edff, #f4f7ff);
+    background-size: 400% 400%;
+    animation: gradientShift 8s ease infinite;
+  }
+
+  /* ── RAINBOW HOVER EFFECT ── */
+  @keyframes rainbowSpin {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .step, .feature, .benefit, .plan-card, .hero-preview {
+    position: relative;
+    z-index: 0;
+  }
+
+  .step::before, .feature::before, .plan-card::before, .hero-preview::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    background: linear-gradient(270deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #c77dff, #ff6b6b);
+    background-size: 400% 400%;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity .4s ease;
+    animation: rainbowSpin 3s ease infinite;
+  }
+
+  .step:hover::before, .feature:hover::before, .plan-card:hover::before, .hero-preview:hover::before {
+    opacity: 1;
+  }
+
+  /* Benefits are on dark background so slightly different */
+  .benefit {
+    position: relative;
+    z-index: 0;
+  }
+  .benefit::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    background: linear-gradient(270deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #c77dff, #ff6b6b);
+    background-size: 400% 400%;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity .4s ease;
+    animation: rainbowSpin 3s ease infinite;
+  }
   /* ── RESPONSIVE ── */
   @media (max-width: 760px) {
     .plan-wrapper { grid-template-columns: 1fr; }
@@ -505,7 +701,7 @@
   <div class="section-label">Simple process</div>
   <h2 class="section-title">Three steps to a <em>clear plan</em></h2>
   <p class="section-sub">No complicated setup. No guessing what to study. Just upload and go.</p>
-  <div class="steps reveal">
+  <div class="steps reveal-stagger reveal">
     <div class="step">
       <div class="step-icon">📤</div>
       <div class="step-num">1</div>
@@ -588,7 +784,7 @@
   <div class="section-label">Why students love it</div>
   <h2 class="section-title">Study smarter, <em>not harder</em></h2>
   <p class="section-sub">StudyFlow removes the guesswork so you can focus on what actually matters.</p>
-  <div class="benefits-grid reveal">
+  <div class="benefits-grid reveal-stagger reveal">
     <div class="benefit">
       <div class="benefit-icon">🎯</div>
       <h3>No more confusion</h3>
@@ -617,7 +813,7 @@
   <div class="section-label">What's included</div>
   <h2 class="section-title">Everything you need to <em>ace it</em></h2>
   <p class="section-sub">StudyFlow gives you a full toolkit — not just a schedule.</p>
-  <div class="features-grid reveal">
+  <div class="features-grid reveal-stagger reveal">
     <div class="feature">
       <div class="feature-icon">🤖</div>
       <h3>AI Study Plans</h3>
@@ -777,12 +973,55 @@
 </footer>
 
 <script>
-  // Scroll reveal
+  // Scroll reveal with stagger support
   const reveals = document.querySelectorAll('.reveal');
   const observer = new IntersectionObserver(entries => {
-    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
-  }, { threshold: 0.12 });
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
   reveals.forEach(el => observer.observe(el));
+
+  // Smooth number counter animation
+  function animateCounter(el, target, duration) {
+    let start = 0;
+    const step = target / (duration / 16);
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= target) { start = target; clearInterval(timer); }
+      el.textContent = Math.floor(start);
+    }, 16);
+  }
+
+  const counterEl = document.getElementById('counter');
+  if (counterEl) {
+    const counterObserver = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          animateCounter(counterEl, 47, 1500);
+          counterObserver.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.5 });
+    counterObserver.observe(counterEl);
+  }
+
+  // Waitlist form
+  function submitWaitlist() {
+    var email = document.getElementById('wl-email').value;
+    if (!email || email.indexOf('@') === -1) {
+      alert('Please enter a valid email!');
+      return;
+    }
+    window.open('https://tally.so/r/Gx0Veo?email=' + encodeURIComponent(email), '_blank');
+    document.getElementById('wl-input').style.display = 'none';
+    document.getElementById('wl-success').style.display = 'block';
+    var counter = document.getElementById('counter');
+    if (counter) counter.textContent = parseInt(counter.textContent) + 1;
+  }
 </script>
 </body>
 </html>
