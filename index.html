@@ -268,7 +268,7 @@
   .tag.orange { background: #fff0e0; color: #c06b1a; }
 
   /* ── BENEFITS ── */
-  #benefits { background: var(--ink); color: #fff; }
+  #benefits { background: #1a1d2e; color: #fff; }
   #benefits .section-title { color: #fff; max-width: 600px; }
   #benefits .section-title em { color: #7eb4ff; }
   #benefits .section-sub { color: rgba(255,255,255,.5); }
@@ -278,16 +278,19 @@
     gap: 1.2rem; margin-top: 3.5rem;
   }
   .benefit {
-    background: rgba(255,255,255,.05);
-    border: 1px solid rgba(255,255,255,.09);
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
     border-radius: 18px;
     padding: 1.8rem;
     transition: background .25s, transform .25s;
   }
-  .benefit:hover { background: rgba(255,255,255,.09); transform: translateY(-3px); }
+  .benefit:hover { background: rgba(255,255,255,.1); transform: translateY(-3px); }
   .benefit-icon { font-size: 1.6rem; margin-bottom: 1rem; }
-  .benefit h3 { font-size: 1rem; font-weight: 600; margin-bottom: .5rem; }
+  .benefit h3 { font-size: 1rem; font-weight: 600; margin-bottom: .5rem; color: #fff; }
   .benefit p { font-size: 0.88rem; color: rgba(255,255,255,.5); font-weight: 300; }
+
+  /* Override dark mode for benefits - it should always be dark */
+  body.dark #benefits { background: #0d1017; }
 
   /* ── FEATURES ── */
   #features { background: var(--soft); }
@@ -678,29 +681,106 @@
   .dark-toggle:hover { border-color: var(--blue); background: var(--blue-light); }
 
   body.dark {
-    --ink: #f0f4ff;
-    --muted: #8899bb;
-    --soft: #1a1f2e;
-    --white: #13161f;
-    --border: #252a3a;
+    --ink: #e8eeff;
+    --muted: #7a8aaa;
+    --soft: #161b28;
+    --white: #0f1219;
+    --border: #222840;
     --blue-light: #1a2540;
-    background: #13161f;
+    background: #0f1219;
+    color: #e8eeff;
+    transition: background .4s ease, color .4s ease;
   }
   body.dark nav {
-    background: rgba(19,22,31,0.9);
-    border-bottom-color: #252a3a;
+    background: rgba(15,18,25,0.92);
+    border-bottom-color: #222840;
   }
-  body.dark .step,
-  body.dark .feature { background: #1a1f2e; }
-  body.dark .plan-card { background: #1a1f2e; }
-  body.dark .faq-item { background: #1a1f2e; }
+  body.dark nav a { color: #7a8aaa; }
+  body.dark nav a:hover { color: #e8eeff; }
+  body.dark .logo text tspan:first-child { fill: #e8eeff; }
+
+  /* Hero */
   body.dark .hero {
-    background: linear-gradient(135deg, #131828, #161c2e, #131828);
-    background-size: 400% 400%;
+    background: linear-gradient(175deg, #131828 0%, #0f1219 50%, #0f1219 100%);
+    animation: none;
   }
-  body.dark .section-title { color: var(--ink); }
-  body.dark h1 { color: var(--ink); }
-  body.dark .faq-q { color: var(--ink); }
+  body.dark h1 { color: #e8eeff; }
+  body.dark h1 em { color: #7eb4ff; }
+  body.dark .hero-sub { color: #7a8aaa; }
+  body.dark .btn-ghost {
+    background: #161b28;
+    border-color: #222840;
+    color: #7eb4ff !important;
+    -webkit-text-fill-color: #7eb4ff !important;
+  }
+  body.dark .hero-preview {
+    background: #161b28;
+    border-color: #222840;
+  }
+  body.dark .preview-upload {
+    background: #1a2540;
+    border-color: rgba(74,124,246,.3);
+  }
+  body.dark .preview-upload strong { color: #7eb4ff; }
+
+  /* Sections */
+  body.dark #how { background: #161b28; }
+  body.dark #example { background: #0f1219; }
+  body.dark #features { background: #161b28; }
+  body.dark #faq { background: #161b28; }
+  body.dark #pricing { background: #0f1219 !important; }
+  body.dark .section-title { color: #e8eeff; }
+  body.dark .section-title em { color: #7eb4ff; }
+  body.dark .section-sub { color: #7a8aaa; }
+  body.dark .section-label { color: #7eb4ff; }
+
+  /* Cards */
+  body.dark .step {
+    background: #161b28;
+    border-color: #222840;
+  }
+  body.dark .step h3 { color: #e8eeff; }
+  body.dark .step p { color: #7a8aaa; }
+  body.dark .feature {
+    background: #161b28;
+    border-color: #222840;
+  }
+  body.dark .feature h3 { color: #e8eeff; }
+  body.dark .feature p { color: #7a8aaa; }
+  body.dark .faq-item {
+    background: #161b28;
+    border-color: #222840;
+  }
+  body.dark .faq-q { color: #e8eeff; }
+  body.dark .faq-a { color: #7a8aaa; }
+
+  /* Plan card */
+  body.dark .plan-card {
+    background: #161b28;
+    border-color: #222840;
+  }
+  body.dark .plan-aside h3 { color: #e8eeff; }
+  body.dark .plan-aside p { color: #7a8aaa; }
+  body.dark .session { border-bottom-color: #222840; }
+  body.dark .session-info h5 { color: #e8eeff; }
+  body.dark .session-info p { color: #7a8aaa; }
+  body.dark .session-time { color: #7a8aaa; }
+
+  /* Pricing free card */
+  body.dark .pricing-free {
+    background: #161b28 !important;
+    border-color: #222840 !important;
+  }
+
+  /* Benefits stay dark already */
+  /* Footer */
+  body.dark footer { background: #080b11; }
+
+  /* Dark mode toggle */
+  body.dark .dark-toggle {
+    border-color: #222840;
+    background: #161b28;
+  }
 
   /* ── RESPONSIVE ── */
   @media (max-width: 760px) {
@@ -920,7 +1000,7 @@
   <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.5rem; margin-top:3.5rem; max-width:700px;">
 
     <!-- Free Plan -->
-    <div style="background:var(--soft); border:1.5px solid var(--border); border-radius:24px; padding:2.2rem 2rem;">
+    <div class="pricing-free" style="background:var(--soft); border:1.5px solid var(--border); border-radius:24px; padding:2.2rem 2rem;">
       <div style="font-size:0.78rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:1rem;">Free</div>
       <div style="font-size:3rem; font-weight:700; color:var(--ink); line-height:1; margin-bottom:.3rem;">$0</div>
       <div style="font-size:0.88rem; color:var(--muted); margin-bottom:1.8rem;">Forever free</div>
