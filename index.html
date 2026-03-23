@@ -583,51 +583,55 @@
     animation: gradientShift 8s ease infinite;
   }
 
-  /* ── RAINBOW HOVER EFFECT ── */
-  @keyframes rainbowSpin {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+  /* ── ORBITING COMET BORDER EFFECT ── */
+  @keyframes orbitComet {
+    0%   { background-position: 0% 0%; }
+    100% { background-position: 400% 0%; }
   }
 
   .step, .feature, .benefit, .plan-card, .hero-preview {
     position: relative;
     z-index: 0;
+    isolation: isolate;
   }
 
-  .step::before, .feature::before, .plan-card::before, .hero-preview::before {
+  .step::before, .feature::before, .benefit::before, .plan-card::before, .hero-preview::before {
     content: '';
     position: absolute;
-    inset: -2px;
+    inset: -1px;
     border-radius: inherit;
-    background: linear-gradient(270deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #c77dff, #ff6b6b);
-    background-size: 400% 400%;
-    z-index: -1;
+    padding: 1px;
+    background: conic-gradient(
+      from var(--angle, 0deg),
+      transparent 0deg,
+      transparent 280deg,
+      rgba(120, 180, 255, 0.5) 300deg,
+      rgba(180, 130, 255, 0.6) 320deg,
+      rgba(120, 180, 255, 0.3) 340deg,
+      transparent 360deg
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
     opacity: 0;
     transition: opacity .4s ease;
-    animation: rainbowSpin 3s ease infinite;
+    animation: spinComet 2.5s linear infinite;
   }
 
-  .step:hover::before, .feature:hover::before, .plan-card:hover::before, .hero-preview:hover::before {
+  @property --angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  @keyframes spinComet {
+    from { --angle: 0deg; }
+    to   { --angle: 360deg; }
+  }
+
+  .step:hover::before, .feature:hover::before, .benefit:hover::before,
+  .plan-card:hover::before, .hero-preview:hover::before {
     opacity: 1;
-  }
-
-  /* Benefits are on dark background so slightly different */
-  .benefit {
-    position: relative;
-    z-index: 0;
-  }
-  .benefit::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    border-radius: inherit;
-    background: linear-gradient(270deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #c77dff, #ff6b6b);
-    background-size: 400% 400%;
-    z-index: -1;
-    opacity: 0;
-    transition: opacity .4s ease;
-    animation: rainbowSpin 3s ease infinite;
   }
   /* ── RESPONSIVE ── */
   @media (max-width: 760px) {
