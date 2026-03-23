@@ -604,10 +604,12 @@
     background: conic-gradient(
       from var(--angle, 0deg),
       transparent 0deg,
-      transparent 280deg,
-      rgba(120, 180, 255, 0.5) 300deg,
-      rgba(180, 130, 255, 0.6) 320deg,
-      rgba(120, 180, 255, 0.3) 340deg,
+      transparent 260deg,
+      rgba(120, 180, 255, 0.6) 290deg,
+      rgba(180, 130, 255, 0.9) 310deg,
+      rgba(255, 255, 255, 1) 320deg,
+      rgba(180, 130, 255, 0.9) 330deg,
+      rgba(120, 180, 255, 0.4) 350deg,
       transparent 360deg
     );
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -633,6 +635,73 @@
   .plan-card:hover::before, .hero-preview:hover::before {
     opacity: 1;
   }
+  /* ── FAQ ── */
+  .faq-list { display: flex; flex-direction: column; gap: .75rem; }
+  .faq-item {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color .3s;
+  }
+  .faq-item:hover { border-color: var(--blue); }
+  .faq-q {
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+    padding: 1.2rem 1.5rem;
+    background: none; border: none; cursor: pointer;
+    font-family: var(--sans); font-size: 1rem; font-weight: 600;
+    color: var(--ink); text-align: left;
+    transition: color .2s;
+  }
+  .faq-q:hover { color: var(--blue); }
+  .faq-icon {
+    font-size: 1.4rem; font-weight: 300; color: var(--blue);
+    transition: transform .3s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-shrink: 0;
+  }
+  .faq-item.open .faq-icon { transform: rotate(45deg); }
+  .faq-a {
+    max-height: 0; overflow: hidden;
+    padding: 0 1.5rem;
+    font-size: 0.95rem; color: var(--muted); font-weight: 300; line-height: 1.7;
+    transition: max-height .4s cubic-bezier(0.16, 1, 0.3, 1), padding .3s ease;
+  }
+  .faq-item.open .faq-a { max-height: 200px; padding: 0 1.5rem 1.2rem; }
+
+  /* ── DARK MODE ── */
+  .dark-toggle {
+    background: none; border: 1.5px solid var(--border);
+    border-radius: 999px; padding: .3rem .7rem;
+    cursor: pointer; font-size: 1rem;
+    transition: all .3s ease; margin-left: 1rem;
+  }
+  .dark-toggle:hover { border-color: var(--blue); background: var(--blue-light); }
+
+  body.dark {
+    --ink: #f0f4ff;
+    --muted: #8899bb;
+    --soft: #1a1f2e;
+    --white: #13161f;
+    --border: #252a3a;
+    --blue-light: #1a2540;
+    background: #13161f;
+  }
+  body.dark nav {
+    background: rgba(19,22,31,0.9);
+    border-bottom-color: #252a3a;
+  }
+  body.dark .step,
+  body.dark .feature { background: #1a1f2e; }
+  body.dark .plan-card { background: #1a1f2e; }
+  body.dark .faq-item { background: #1a1f2e; }
+  body.dark .hero {
+    background: linear-gradient(135deg, #131828, #161c2e, #131828);
+    background-size: 400% 400%;
+  }
+  body.dark .section-title { color: var(--ink); }
+  body.dark h1 { color: var(--ink); }
+  body.dark .faq-q { color: var(--ink); }
+
   /* ── RESPONSIVE ── */
   @media (max-width: 760px) {
     .plan-wrapper { grid-template-columns: 1fr; }
@@ -676,6 +745,7 @@
     <a href="#features">Features</a>
     <a href="#pricing">Pricing</a>
     <a href="#cta" class="nav-cta">Try for free</a>
+    <button class="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">🌙</button>
   </div>
 </nav>
 
@@ -909,6 +979,52 @@
   </div>
 </section>
 
+<!-- FAQ -->
+<section id="faq" style="background:var(--soft); padding:6rem 5%;">
+  <div class="section-label">Got questions?</div>
+  <h2 class="section-title">Frequently asked <em>questions</em></h2>
+  <p class="section-sub">Everything you need to know about StudyFlow.</p>
+
+  <div class="faq-list reveal" style="margin-top:3rem; max-width:680px;">
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        What file types can I upload? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">You can upload PDFs, PowerPoint slides, Word docs, and plain text notes. Basically anything you'd study from.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        How does the AI create my study plan? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">StudyFlow reads your lesson, understands the key topics, and breaks them into focused study sessions based on your deadline and difficulty level. No two plans are the same.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        Is StudyFlow really free? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">Yes! The free plan gives you 1 study plan per month with no credit card needed. Upgrade to Pro for $7.99/month to unlock unlimited plans, flashcards, and practice questions.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        What subjects does it work for? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">Any subject! Biology, history, math, languages — if you can upload notes for it, StudyFlow can build a plan for it.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">
+        When will StudyFlow fully launch? <span class="faq-icon">+</span>
+      </button>
+      <div class="faq-a">We're working hard on it! Join the waitlist above to be first in line for early access when we launch.</div>
+    </div>
+
+  </div>
+</section>
+
 <!-- WAITLIST / CTA -->
 <section id="cta">
   <div style="display:inline-flex; align-items:center; gap:.5rem; background:rgba(255,255,255,0.2); color:#fff; font-size:0.78rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; padding:.4rem 1rem; border-radius:999px; border:1.5px solid rgba(255,255,255,0.4); margin: 0 auto 1.5rem;">✦ Now accepting early access</div>
@@ -1013,7 +1129,25 @@
     counterObserver.observe(counterEl);
   }
 
-  // Waitlist form
+  // FAQ accordion
+  function toggleFaq(btn) {
+    var item = btn.parentElement;
+    var isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(function(el) { el.classList.remove('open'); });
+    if (!isOpen) item.classList.add('open');
+  }
+
+  // Dark mode
+  function toggleDark() {
+    document.body.classList.toggle('dark');
+    var btn = document.querySelector('.dark-toggle');
+    btn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+    localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+  }
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.body.classList.add('dark');
+    document.querySelector('.dark-toggle').textContent = '☀️';
+  }
   function submitWaitlist() {
     var email = document.getElementById('wl-email').value;
     if (!email || email.indexOf('@') === -1) {
