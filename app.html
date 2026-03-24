@@ -569,24 +569,29 @@
     var prompt = 'You are StudyFlow, an expert AI study coach. Create a detailed, personalized study plan based on the following:\n\nSUBJECT: ' + subject + '\nSTUDENT GOAL: ' + selectedGoal + '\nDIFFICULTY LEVEL: ' + selectedDifficulty + '\n' + deadlineText + '\n\nLESSON CONTENT:\n' + notes.substring(0, 8000) + '\n\nCreate a clear study plan with:\n1. A brief analysis of the key topics in this lesson\n2. Day-by-day study sessions with specific topics and time estimates\n3. What to focus on most based on difficulty\n4. 3-5 specific study tips for this material\n5. A quick summary of what to review right before the exam\n\nFormat it clearly with sections and make it feel personalized and encouraging. Keep it practical and actionable.';
 
     // Call Gemini API
-    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyBrpHGcca_zkcWExT-hQqVgqC55H638yNo', {
+    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=AIzaSyBrpHGcca_zkcWExT-hQqVgqC55H638yNo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
       })
     })
-    .then(function(res) { return res.json(); })
+    .then(function(res) {
+      if (!res.ok) throw new Error('API error: ' + res.status);
+      return res.json();
+    })
     .then(function(data) {
+      if (!data.candidates || !data.candidates[0]) throw new Error('No response');
       var plan = data.candidates[0].content.parts[0].text;
       generatedPlan = plan;
       showResult(plan, subject, deadline);
     })
     .catch(function(err) {
-      alert('Something went wrong. Please try again!');
+      console.error('Error:', err);
+      document.getElementById('loading').classList.remove('active');
+      alert('Something went wrong: ' + err.message + '. Please try pasting your notes instead of uploading a file.');
       goToStep(2);
-      console.error(err);
     });
   }
 
