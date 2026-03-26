@@ -698,7 +698,7 @@
   }
   body.dark nav a { color: #7a8aaa; }
   body.dark nav a:hover { color: #e8eeff; }
-  body.dark .logo text tspan:first-child { fill: #e8eeff; }
+  body.dark .logo text tspan:first-child { fill: #fff !important; }
 
   /* Hero */
   body.dark .hero {
@@ -1318,10 +1318,20 @@
     var btn = document.querySelector('.dark-toggle');
     btn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
     localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+    updateLogoColor();
   }
+
+  function updateLogoColor() {
+    var tspan = document.querySelector('nav svg text tspan');
+    if (tspan) {
+      tspan.setAttribute('fill', document.body.classList.contains('dark') ? '#ffffff' : '#1a1d2e');
+    }
+  }
+
   if (localStorage.getItem('darkMode') === 'true') {
     document.body.classList.add('dark');
     document.querySelector('.dark-toggle').textContent = '☀️';
+    updateLogoColor();
   }
   function submitWaitlist() {
     var email = document.getElementById('wl-email').value;
