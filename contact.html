@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Contact & Support — StudyFlow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #1a1d2e; --muted: #6b7280; --soft: #f4f6fb;
+    --blue: #4a7cf6; --blue-light: #dce8ff; --white: #fff; --border: #e8ecf4;
+    --serif: 'Instrument Serif', Georgia, serif; --sans: 'DM Sans', sans-serif;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: var(--sans); color: var(--ink); background: var(--soft); }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+
+  nav {
+    background: rgba(255,255,255,.92); backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border); padding: 1rem 5%;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 1px 12px rgba(74,124,246,.07);
+  }
+  .logo { text-decoration: none; display: flex; align-items: center; }
+  nav a.back { font-size: 0.88rem; color: var(--muted); text-decoration: none; font-weight: 500; transition: color .2s; }
+  nav a.back:hover { color: var(--blue); }
+
+  /* HERO */
+  .hero {
+    text-align: center; padding: 5rem 5% 4rem;
+    background: linear-gradient(175deg, #e8f0ff 0%, #f4f7ff 45%, #fff 100%);
+    animation: fadeUp .7s cubic-bezier(0.16,1,.3,1) both;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: .5rem;
+    background: var(--blue); color: #fff;
+    font-size: 0.75rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+    padding: .4rem 1rem; border-radius: 999px; margin-bottom: 1.5rem;
+    box-shadow: 0 4px 14px rgba(74,124,246,.3);
+  }
+  .hero h1 {
+    font-family: var(--serif); font-size: clamp(2.2rem, 5vw, 3.5rem);
+    letter-spacing: -0.03em; color: var(--ink); margin-bottom: .6rem;
+  }
+  .hero h1 em { font-style: italic; color: var(--blue); }
+  .hero p { color: var(--muted); font-size: 1rem; font-weight: 300; max-width: 440px; margin: 0 auto; }
+
+  /* CONTAINER */
+  .container { max-width: 900px; margin: 0 auto; padding: 4rem 5% 6rem; }
+
+  /* CONTACT GRID */
+  .contact-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 2.5rem; align-items: start; }
+
+  /* INFO SIDE */
+  .info-section h2 {
+    font-family: var(--serif); font-size: 1.8rem; letter-spacing: -0.02em;
+    color: var(--ink); margin-bottom: .4rem;
+  }
+  .info-section h2 em { font-style: italic; color: var(--blue); }
+  .info-section p { color: var(--muted); font-size: 0.95rem; font-weight: 300; line-height: 1.7; margin-bottom: 2rem; }
+
+  .contact-method {
+    display: flex; align-items: flex-start; gap: 1rem;
+    padding: 1.2rem; background: var(--white);
+    border: 1.5px solid var(--border); border-radius: 16px;
+    margin-bottom: .8rem; transition: border-color .2s;
+  }
+  .contact-method:hover { border-color: var(--blue); }
+  .contact-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: var(--blue-light); display: flex; align-items: center;
+    justify-content: center; font-size: 1rem; flex-shrink: 0; color: var(--blue); font-weight: 700;
+  }
+  .contact-method h4 { font-size: 0.92rem; font-weight: 600; color: var(--ink); margin-bottom: .2rem; }
+  .contact-method p { font-size: 0.82rem; color: var(--muted); margin: 0; font-weight: 300; }
+  .contact-method a { font-size: 0.82rem; color: var(--blue); text-decoration: none; font-weight: 500; }
+  .contact-method a:hover { text-decoration: underline; }
+
+  /* FORM SIDE */
+  .form-card {
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: 24px; padding: 2.2rem;
+    box-shadow: 0 8px 32px rgba(74,124,246,.08);
+  }
+  .form-card h3 { font-family: var(--serif); font-size: 1.4rem; color: var(--ink); margin-bottom: .3rem; }
+  .form-card h3 em { font-style: italic; color: var(--blue); }
+  .form-card p { color: var(--muted); font-size: 0.88rem; font-weight: 300; margin-bottom: 1.6rem; }
+
+  .form-field { margin-bottom: 1.2rem; }
+  .form-label { display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--ink); margin-bottom: .5rem; }
+  .form-input {
+    width: 100%; padding: .85rem 1.1rem;
+    border: 1.5px solid var(--border); border-radius: 12px;
+    font-family: var(--sans); font-size: 0.92rem; color: var(--ink);
+    background: var(--soft); outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .form-input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(74,124,246,.1); }
+  .form-input::placeholder { color: #9ca3af; }
+  textarea.form-input { min-height: 130px; resize: vertical; line-height: 1.6; }
+
+  .topic-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: 1.2rem; }
+  .topic-btn {
+    padding: .6rem .8rem; border-radius: 10px;
+    border: 1.5px solid var(--border); background: var(--soft);
+    font-family: var(--sans); font-size: 0.82rem; font-weight: 500;
+    color: var(--ink); cursor: pointer; transition: all .2s; text-align: center;
+  }
+  .topic-btn:hover { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
+  .topic-btn.selected { border-color: var(--blue); background: var(--blue); color: #fff; }
+
+  .btn-submit {
+    width: 100%; padding: 1rem; background: var(--blue); color: #fff;
+    border: none; border-radius: 14px; font-family: var(--sans);
+    font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    transition: background .2s, transform .2s, box-shadow .2s;
+    box-shadow: 0 4px 16px rgba(74,124,246,.3);
+  }
+  .btn-submit:hover { background: #3567e0; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(74,124,246,.4); }
+  .btn-submit:active { transform: none; }
+
+  .success-msg {
+    display: none; text-align: center; padding: 2rem;
+    background: #d1faf0; border: 1.5px solid #38bfa1;
+    border-radius: 18px; color: #1a9e80;
+  }
+  .success-msg h4 { font-size: 1.1rem; font-weight: 600; margin-bottom: .4rem; }
+  .success-msg p { font-size: 0.88rem; opacity: .8; }
+
+  /* FAQ QUICK */
+  .faq-section { margin-top: 4rem; }
+  .faq-section h2 { font-family: var(--serif); font-size: 1.8rem; letter-spacing: -0.02em; color: var(--ink); margin-bottom: .4rem; }
+  .faq-section h2 em { font-style: italic; color: var(--blue); }
+  .faq-section p { color: var(--muted); font-size: 0.92rem; font-weight: 300; margin-bottom: 1.8rem; }
+  .faq-item { background: var(--white); border: 1.5px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: .7rem; transition: border-color .2s; }
+  .faq-item:hover { border-color: var(--blue); }
+  .faq-q { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 1.1rem 1.4rem; background: none; border: none; cursor: pointer; font-family: var(--sans); font-size: 0.95rem; font-weight: 600; color: var(--ink); text-align: left; transition: color .2s; }
+  .faq-q:hover { color: var(--blue); }
+  .faq-icon { font-size: 1.2rem; color: var(--blue); transition: transform .3s cubic-bezier(0.16,1,.3,1); flex-shrink: 0; }
+  .faq-item.open .faq-icon { transform: rotate(45deg); }
+  .faq-a { max-height: 0; overflow: hidden; padding: 0 1.4rem; font-size: 0.92rem; color: var(--muted); font-weight: 300; line-height: 1.7; transition: max-height .4s cubic-bezier(0.16,1,.3,1), padding .3s; }
+  .faq-item.open .faq-a { max-height: 200px; padding: 0 1.4rem 1.1rem; }
+
+  /* FOOTER */
+  footer { background: var(--ink); color: rgba(255,255,255,.4); text-align: center; padding: 2.5rem 5%; font-size: 0.83rem; }
+  footer strong { color: rgba(255,255,255,.7); }
+
+  @media (max-width: 700px) { .contact-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="150" height="37">
+      <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
+      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
+      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
+      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
+      <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
+      <rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/>
+      <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
+      <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
+      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
+      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
+        <tspan fill="#1a1d2e">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
+      </text>
+    </svg>
+  </a>
+  <a href="index.html" class="back">← Back to home</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="badge">✦ We're here to help</div>
+  <h1>Contact & <em>Support</em></h1>
+  <p>Got a question, issue, or idea? We'd love to hear from you — usually respond within 24 hours.</p>
+</section>
+
+<div class="container">
+  <div class="contact-grid">
+
+    <!-- INFO -->
+    <div class="info-section">
+      <h2>Get in <em>touch</em></h2>
+      <p>Whether you're having a technical issue, want to share feedback, or just want to say hi — we're here for you.</p>
+
+      <div class="contact-method">
+        <div class="contact-icon">@</div>
+        <div>
+          <h4>Email us</h4>
+          <p>For general questions and support</p>
+          <a href="mailto:support@studyflow.app">support@studyflow.app</a>
+        </div>
+      </div>
+
+      <div class="contact-method">
+        <div class="contact-icon">✦</div>
+        <div>
+          <h4>Feature requests</h4>
+          <p>Have an idea to make StudyFlow better?</p>
+          <a href="mailto:ideas@studyflow.app">ideas@studyflow.app</a>
+        </div>
+      </div>
+
+      <div class="contact-method">
+        <div class="contact-icon">⏱</div>
+        <div>
+          <h4>Response time</h4>
+          <p>We typically respond within 24 hours on weekdays.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <div class="form-card">
+      <h3>Send us a <em>message</em></h3>
+      <p>Fill out the form and we'll get back to you as soon as possible.</p>
+
+      <div id="form-content">
+        <div class="form-field">
+          <label class="form-label">Your name</label>
+          <input type="text" class="form-input" id="contact-name" placeholder="e.g. Ethan" />
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="contact-email" placeholder="your@email.com" />
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">What's this about?</label>
+          <div class="topic-grid">
+            <button class="topic-btn" onclick="selectTopic(this)">Bug report</button>
+            <button class="topic-btn" onclick="selectTopic(this)">Feature request</button>
+            <button class="topic-btn" onclick="selectTopic(this)">Billing</button>
+            <button class="topic-btn" onclick="selectTopic(this)">General question</button>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label class="form-label">Message</label>
+          <textarea class="form-input" id="contact-message" placeholder="Tell us what's on your mind..."></textarea>
+        </div>
+
+        <button class="btn-submit" onclick="submitForm()">Send message →</button>
+      </div>
+
+      <div class="success-msg" id="success-msg">
+        <h4>Message sent!</h4>
+        <p>Thanks for reaching out. We'll get back to you within 24 hours.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq-section">
+    <h2>Quick <em>answers</em></h2>
+    <p>Common questions — answered fast.</p>
+
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">Is StudyFlow really free? <span class="faq-icon">+</span></button>
+      <div class="faq-a">Yes! The free plan gives you 1 study plan per month with no credit card needed. Upgrade to Pro for $7.99/month for unlimited plans and more features.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">What file types can I upload? <span class="faq-icon">+</span></button>
+      <div class="faq-a">You can upload PDFs, Word documents, PowerPoint slides, and plain text files. Any format your teacher might give you — we've got it covered.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">How do I cancel my subscription? <span class="faq-icon">+</span></button>
+      <div class="faq-a">You can cancel anytime from your account settings — no questions asked. If you need help, just email us at support@studyflow.app.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">Is my data private? <span class="faq-icon">+</span></button>
+      <div class="faq-a">Absolutely. We never share your notes or study plans with anyone. Your data is only used to generate your personal study plan and nothing else.</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>© 2026 <strong>StudyFlow</strong> · Built for students who want to stop guessing and start learning.</p>
+</footer>
+
+<script>
+  var selectedTopic = '';
+
+  function selectTopic(btn) {
+    document.querySelectorAll('.topic-btn').forEach(function(b) { b.classList.remove('selected'); });
+    btn.classList.add('selected');
+    selectedTopic = btn.textContent;
+  }
+
+  function submitForm() {
+    var name = document.getElementById('contact-name').value;
+    var email = document.getElementById('contact-email').value;
+    var message = document.getElementById('contact-message').value;
+    if (!name || !email || !message) { alert('Please fill out all fields!'); return; }
+    if (!email.includes('@')) { alert('Please enter a valid email!'); return; }
+    document.getElementById('form-content').style.display = 'none';
+    document.getElementById('success-msg').style.display = 'block';
+  }
+
+  function toggleFaq(btn) {
+    var item = btn.parentElement;
+    var isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(function(el) { el.classList.remove('open'); });
+    if (!isOpen) item.classList.add('open');
+  }
+</script>
+</body>
+</html>
