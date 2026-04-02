@@ -555,17 +555,13 @@
   .btn-ghost:hover { transform: translateY(-3px) !important; }
   .btn-ghost:active { transform: translateY(0) scale(0.98) !important; }
 
-  /* Card hover effects */
+  /* Card hover effects - border highlight only, no pop up */
   .step, .benefit, .feature {
-    transition: transform .4s cubic-bezier(0.16, 1, 0.3, 1),
-                box-shadow .4s ease !important;
+    transition: border-color .3s ease, box-shadow .3s ease !important;
   }
-  .step:hover { transform: translateY(-8px) !important; }
-  .benefit:hover { transform: translateY(-6px) !important; }
-  .feature:hover {
-    transform: translateY(-6px) !important;
-    box-shadow: 0 16px 40px rgba(74,124,246,.15) !important;
-  }
+  .step:hover { border-color: var(--blue) !important; box-shadow: 0 4px 20px rgba(74,124,246,.1) !important; }
+  .benefit:hover { border-color: rgba(255,255,255,.25) !important; }
+  .feature:hover { border-color: var(--blue) !important; box-shadow: 0 4px 20px rgba(74,124,246,.1) !important; }
 
   /* Nav links hover */
   nav a:not(.nav-cta) {
@@ -829,6 +825,7 @@
     <a href="#features">Features</a>
     <a href="#pricing">Pricing</a>
     <a href="about.html">About</a>
+    <a href="contact.html">Support</a>
     <a href="app.html" class="nav-cta">Try for free</a>
     <button class="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">🌙</button>
   </div>
