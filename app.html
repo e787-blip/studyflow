@@ -409,7 +409,7 @@
 
     var prompt = 'You are StudyFlow, an expert AI study coach. Create a detailed personalized study plan.\n\nSUBJECT: ' + subject + '\nGOAL: ' + selectedGoal + '\nDIFFICULTY: ' + selectedDifficulty + '\nDEADLINE: ' + (deadline || 'Not specified') + '\n\nLESSON CONTENT:\n' + notes.substring(0, 6000) + '\n\nCreate a clear study plan with:\n1. Key Topics Overview\n2. Day-by-Day Study Schedule with time estimates\n3. Focus Areas\n4. 3-5 Study Tips\n5. Pre-Exam Quick Recap\n\nBe encouraging and practical!';
 
-    fetch('/api/generate', {
+    fetch('https://studyflow-j17wr1g23-e787-blips-projects.vercel.app/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: prompt })
