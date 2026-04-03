@@ -15,11 +15,13 @@
     --sans: 'DM Sans', sans-serif; --serif: 'Instrument Serif', Georgia, serif;
   }
   body { font-family: var(--sans); color: var(--ink); background: var(--soft); min-height: 100vh; }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
-  @keyframes spin { to{transform:rotate(360deg)} }
-  @keyframes shake { 0%,100%{transform:none} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
-  @keyframes pop { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
 
+  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  @keyframes shake { 0%,100%{transform:none} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+
+  /* NAV */
   nav {
     background:#fff; border-bottom:1px solid var(--border); padding:.85rem 2rem;
     display:flex; align-items:center; justify-content:space-between;
@@ -28,152 +30,132 @@
   .logo { text-decoration:none; display:flex; align-items:center; }
   .nav-back { font-size:0.85rem; color:var(--muted); text-decoration:none; font-weight:500; padding:.4rem .9rem; border-radius:8px; border:1px solid var(--border); transition:all .2s; }
   .nav-back:hover { color:var(--blue); border-color:var(--blue); background:var(--blue-light); }
-  .nav-progress { display:flex; align-items:center; gap:.75rem; }
-  .nav-progress-bar { width:120px; height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
-  .nav-progress-fill { height:100%; background:var(--blue); border-radius:3px; transition:width .5s; }
-  .nav-progress-text { font-size:0.8rem; color:var(--muted); font-weight:500; }
+  .nav-center { display:flex; flex-direction:column; align-items:center; gap:.3rem; }
+  .nav-step-label { font-size:0.72rem; color:var(--muted); font-weight:500; }
+  .progress-bar { width:160px; height:5px; background:var(--border); border-radius:3px; overflow:hidden; }
+  .progress-fill { height:100%; background:var(--blue); border-radius:3px; transition:width .5s cubic-bezier(0.16,1,.3,1); }
 
-  .container { max-width:720px; margin:0 auto; padding:2rem 1.5rem 6rem; }
+  /* CONTAINER */
+  .container { max-width:680px; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
 
-  /* PHASE HEADER */
-  .phase-header {
-    background:linear-gradient(135deg,#4a7cf6,#2851c8);
-    border-radius:24px; padding:2rem; margin-bottom:2rem;
-    position:relative; overflow:hidden;
-    box-shadow:0 12px 40px rgba(74,124,246,.25);
+  /* CARD */
+  .step-card {
+    background:#fff; border:1.5px solid var(--border); border-radius:28px;
+    overflow:hidden; box-shadow:0 8px 32px rgba(74,124,246,.08);
     animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both;
   }
-  .phase-header::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle,rgba(255,255,255,.1) 1px,transparent 1px); background-size:24px 24px; pointer-events:none; }
-  .phase-badge { display:inline-flex; align-items:center; gap:.4rem; background:rgba(255,255,255,.2); color:#fff; font-size:0.7rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:.3rem .8rem; border-radius:999px; border:1px solid rgba(255,255,255,.3); margin-bottom:.8rem; position:relative; z-index:1; }
-  .phase-header h1 { font-family:var(--serif); font-size:clamp(1.5rem,3vw,2rem); color:#fff; letter-spacing:-0.02em; margin-bottom:.4rem; position:relative; z-index:1; }
-  .phase-header p { color:rgba(255,255,255,.75); font-size:0.9rem; font-weight:300; line-height:1.6; position:relative; z-index:1; }
 
-  /* CONTENT CARD */
-  .content-card {
-    background:#fff; border:1.5px solid var(--border); border-radius:24px; padding:2rem;
-    margin-bottom:1.5rem; animation:fadeUp .5s .1s cubic-bezier(0.16,1,.3,1) both;
-    line-height:1.8; font-size:0.95rem; color:var(--ink);
+  /* CARD HEADER */
+  .card-header {
+    background:linear-gradient(135deg,#4a7cf6,#2851c8);
+    padding:1.8rem 2rem; position:relative; overflow:hidden;
   }
-  .content-card h3 { font-family:var(--serif); font-size:1.3rem; color:var(--ink); margin-bottom:.75rem; letter-spacing:-0.01em; }
-  .content-card p { margin-bottom:1rem; font-weight:300; }
-  .content-card p:last-child { margin-bottom:0; }
-  .content-card ul { padding-left:1.2rem; margin-bottom:1rem; }
-  .content-card li { margin-bottom:.4rem; font-weight:300; }
-  .key-term { background:var(--blue-light); color:var(--blue); padding:.1rem .4rem; border-radius:4px; font-weight:600; font-size:0.88rem; }
+  .card-header::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle,rgba(255,255,255,.1) 1px,transparent 1px); background-size:24px 24px; pointer-events:none; }
+  .card-header-badge { display:inline-flex; align-items:center; gap:.4rem; background:rgba(255,255,255,.2); color:#fff; font-size:0.7rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:.28rem .75rem; border-radius:999px; border:1px solid rgba(255,255,255,.3); margin-bottom:.7rem; position:relative; z-index:1; }
+  .card-header h1 { font-family:var(--serif); font-size:clamp(1.4rem,3vw,1.9rem); color:#fff; letter-spacing:-0.02em; position:relative; z-index:1; line-height:1.2; }
 
-  /* QUESTIONS */
-  .questions-section { animation:fadeUp .5s .2s cubic-bezier(0.16,1,.3,1) both; }
-  .questions-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
-  .questions-header h2 { font-family:var(--serif); font-size:1.3rem; color:var(--ink); }
-  .question-count { font-size:0.8rem; color:var(--muted); background:var(--soft); padding:.3rem .8rem; border-radius:999px; border:1px solid var(--border); }
+  /* CARD BODY */
+  .card-body { padding:2rem; }
 
-  .question-card {
-    background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.8rem;
-    margin-bottom:1rem; transition:border-color .2s;
-  }
-  .question-card.correct { border-color:var(--green); background:#f0fdf9; }
-  .question-card.wrong { border-color:var(--red); background:#fef2f2; animation:shake .3s ease; }
-  .q-num { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:.6rem; }
-  .q-text { font-size:0.97rem; font-weight:600; color:var(--ink); margin-bottom:1.2rem; line-height:1.5; }
-  .q-options { display:flex; flex-direction:column; gap:.5rem; }
+  /* WELCOME */
+  .welcome-text { font-size:1rem; color:var(--muted); font-weight:300; line-height:1.8; margin-bottom:1.5rem; }
+
+  /* LESSON CONTENT */
+  .lesson-content { font-size:0.97rem; color:var(--ink); line-height:1.85; font-weight:300; }
+  .lesson-content p { margin-bottom:1rem; }
+  .lesson-content p:last-child { margin-bottom:0; }
+  .lesson-content strong { font-weight:600; color:var(--ink); }
+
+  /* KEY TERMS */
+  .terms-list { display:flex; flex-direction:column; gap:.75rem; }
+  .term-item { background:var(--soft); border:1.5px solid var(--border); border-radius:14px; padding:1rem 1.2rem; }
+  .term-word { font-size:0.92rem; font-weight:700; color:var(--blue); margin-bottom:.3rem; }
+  .term-def { font-size:0.88rem; color:var(--muted); font-weight:300; line-height:1.6; }
+
+  /* QUESTION */
+  .q-header { margin-bottom:1.2rem; }
+  .q-difficulty { display:inline-block; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.25rem .7rem; border-radius:999px; margin-bottom:.6rem; }
+  .q-difficulty.easy { background:#d1faf0; color:#1a9e80; }
+  .q-difficulty.medium { background:#fff0e0; color:#c06b1a; }
+  .q-difficulty.hard { background:#fee2e2; color:#dc2626; }
+  .q-text { font-size:1rem; font-weight:600; color:var(--ink); line-height:1.5; }
+  .q-options { display:flex; flex-direction:column; gap:.5rem; margin-top:1.2rem; }
   .q-option {
-    padding:.8rem 1rem; border-radius:12px; border:1.5px solid var(--border);
-    background:var(--soft); font-family:var(--sans); font-size:0.9rem; font-weight:500;
+    padding:.85rem 1.1rem; border-radius:14px; border:1.5px solid var(--border);
+    background:var(--soft); font-family:var(--sans); font-size:0.92rem; font-weight:500;
     color:var(--ink); cursor:pointer; text-align:left; transition:all .2s;
     display:flex; align-items:center; gap:.75rem;
   }
-  .q-option:hover { border-color:var(--blue); background:var(--blue-light); color:var(--blue); }
+  .q-option:hover:not(:disabled) { border-color:var(--blue); background:var(--blue-light); color:var(--blue); }
   .q-option.selected { border-color:var(--blue); background:var(--blue); color:#fff; }
-  .q-option.correct-ans { border-color:var(--green); background:#d1faf0; color:#1a9e80; }
-  .q-option.wrong-ans { border-color:var(--red); background:#fee2e2; color:#dc2626; }
+  .q-option.correct { border-color:var(--green); background:#d1faf0; color:#1a9e80; }
+  .q-option.wrong { border-color:var(--red); background:#fee2e2; color:#dc2626; animation:shake .3s ease; }
   .q-option:disabled { cursor:not-allowed; }
-  .option-letter { width:24px; height:24px; border-radius:6px; background:rgba(0,0,0,.06); display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700; flex-shrink:0; }
-  .q-option.selected .option-letter { background:rgba(255,255,255,.3); }
+  .option-letter { width:26px; height:26px; border-radius:7px; background:rgba(0,0,0,.06); display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700; flex-shrink:0; }
+  .q-option.selected .option-letter { background:rgba(255,255,255,.25); color:#fff; }
 
-  /* TRUE/FALSE */
-  .tf-options { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
+  /* TRUE FALSE */
+  .tf-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-top:1.2rem; }
   .tf-btn {
-    padding:1rem; border-radius:12px; border:1.5px solid var(--border);
-    background:var(--soft); font-family:var(--sans); font-size:0.95rem; font-weight:600;
+    padding:1rem; border-radius:14px; border:1.5px solid var(--border);
+    background:var(--soft); font-family:var(--sans); font-size:1rem; font-weight:600;
     color:var(--ink); cursor:pointer; transition:all .2s; text-align:center;
   }
-  .tf-btn:hover { border-color:var(--blue); background:var(--blue-light); color:var(--blue); }
+  .tf-btn:hover:not(:disabled) { border-color:var(--blue); background:var(--blue-light); color:var(--blue); }
   .tf-btn.selected { border-color:var(--blue); background:var(--blue); color:#fff; }
-  .tf-btn.correct-ans { border-color:var(--green); background:#d1faf0; color:#1a9e80; }
-  .tf-btn.wrong-ans { border-color:var(--red); background:#fee2e2; color:#dc2626; }
+  .tf-btn.correct { border-color:var(--green); background:#d1faf0; color:#1a9e80; }
+  .tf-btn.wrong { border-color:var(--red); background:#fee2e2; color:#dc2626; }
+  .tf-btn:disabled { cursor:not-allowed; }
 
   /* HINT */
-  .hint-section { margin-top:1rem; }
-  .hint-btn {
-    background:none; border:1.5px solid var(--border); color:var(--muted);
-    padding:.5rem 1rem; border-radius:8px; font-family:var(--sans);
-    font-size:0.82rem; font-weight:500; cursor:pointer; transition:all .2s;
-  }
+  .hint-row { margin-top:1.2rem; }
+  .hint-btn { background:none; border:1.5px solid var(--border); color:var(--muted); padding:.45rem .9rem; border-radius:8px; font-family:var(--sans); font-size:0.82rem; font-weight:500; cursor:pointer; transition:all .2s; }
   .hint-btn:hover { border-color:var(--orange); color:var(--orange); background:#fff8e0; }
-  .hint-text { display:none; margin-top:.75rem; padding:.75rem 1rem; background:#fff8e0; border:1px solid #f59e0b; border-radius:10px; font-size:0.85rem; color:#92400e; line-height:1.6; }
-  .hint-text.visible { display:block; animation:fadeUp .3s ease; }
+  .hint-box { display:none; margin-top:.75rem; padding:.8rem 1rem; background:#fff8e0; border:1px solid #f59e0b; border-radius:10px; font-size:0.85rem; color:#92400e; line-height:1.6; }
+  .hint-box.show { display:block; animation:fadeIn .3s ease; }
 
-  /* REVIEW */
-  .review-card {
-    border-radius:14px; padding:1.2rem 1.5rem; margin-top:1rem;
-    display:none; animation:fadeUp .3s ease;
-  }
-  .review-card.visible { display:block; }
-  .review-card.correct-review { background:#d1faf0; border:1px solid var(--green); }
-  .review-card.wrong-review { background:#fee2e2; border:1px solid var(--red); }
-  .review-label { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.4rem; }
-  .review-card.correct-review .review-label { color:#1a9e80; }
-  .review-card.wrong-review .review-label { color:#dc2626; }
-  .review-explanation { font-size:0.88rem; line-height:1.6; }
-  .review-card.correct-review .review-explanation { color:#065f46; }
-  .review-card.wrong-review .review-explanation { color:#7f1d1d; }
+  /* FEEDBACK */
+  .feedback-box { margin-top:1.2rem; border-radius:14px; padding:1rem 1.2rem; display:none; animation:fadeIn .3s ease; }
+  .feedback-box.show { display:block; }
+  .feedback-box.correct-fb { background:#d1faf0; border:1.5px solid var(--green); }
+  .feedback-box.wrong-fb { background:#fee2e2; border:1.5px solid var(--red); }
+  .feedback-label { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; }
+  .correct-fb .feedback-label { color:#1a9e80; }
+  .wrong-fb .feedback-label { color:#dc2626; }
+  .feedback-text { font-size:0.88rem; line-height:1.6; }
+  .correct-fb .feedback-text { color:#065f46; }
+  .wrong-fb .feedback-text { color:#7f1d1d; }
 
-  /* SUBMIT */
-  .submit-section { margin-top:2rem; text-align:center; }
-  .btn-submit {
-    background:var(--blue); color:#fff; padding:1rem 2.5rem; border-radius:14px;
-    font-family:var(--sans); font-size:1rem; font-weight:600; border:none; cursor:pointer;
-    transition:all .3s; box-shadow:0 4px 16px rgba(74,124,246,.3);
+  /* CARD FOOTER */
+  .card-footer { padding:1.5rem 2rem; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .step-counter { font-size:0.8rem; color:var(--muted); font-weight:500; }
+  .btn-next {
+    background:var(--blue); color:#fff; padding:.85rem 2rem; border-radius:12px;
+    font-family:var(--sans); font-size:0.95rem; font-weight:600; border:none; cursor:pointer;
+    transition:all .3s cubic-bezier(0.16,1,.3,1); box-shadow:0 4px 14px rgba(74,124,246,.3);
   }
-  .btn-submit:hover { background:#3567e0; transform:translateY(-2px); box-shadow:0 8px 24px rgba(74,124,246,.4); }
-  .btn-submit:disabled { background:var(--border); color:var(--muted); cursor:not-allowed; transform:none; box-shadow:none; }
+  .btn-next:hover { background:#3567e0; transform:translateY(-2px); box-shadow:0 8px 22px rgba(74,124,246,.4); }
+  .btn-next:disabled { background:var(--border); color:var(--muted); cursor:not-allowed; transform:none; box-shadow:none; }
 
   /* RESULTS */
-  .results-screen { display:none; animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both; }
-  .results-screen.visible { display:block; }
-  .results-header {
-    border-radius:24px; padding:2.5rem; text-align:center; margin-bottom:2rem;
-    position:relative; overflow:hidden;
-  }
-  .results-header.great { background:linear-gradient(135deg,#38bfa1,#059669); box-shadow:0 12px 40px rgba(56,191,161,.25); }
-  .results-header.good { background:linear-gradient(135deg,#4a7cf6,#2851c8); box-shadow:0 12px 40px rgba(74,124,246,.25); }
-  .results-header.needs-work { background:linear-gradient(135deg,#f59e0b,#d97706); box-shadow:0 12px 40px rgba(245,158,11,.25); }
-  .results-header::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle,rgba(255,255,255,.1) 1px,transparent 1px); background-size:24px 24px; }
-  .results-score { font-size:4rem; font-weight:700; color:#fff; line-height:1; position:relative; z-index:1; }
-  .results-label { font-size:1.1rem; color:rgba(255,255,255,.85); margin-top:.4rem; position:relative; z-index:1; }
-  .results-msg { font-size:0.9rem; color:rgba(255,255,255,.7); margin-top:.3rem; position:relative; z-index:1; }
-
-  .wrong-reviews h2 { font-family:var(--serif); font-size:1.4rem; color:var(--ink); margin-bottom:1rem; }
-  .wrong-review-item {
-    background:#fff; border:1.5px solid var(--border); border-radius:18px; padding:1.5rem; margin-bottom:1rem;
-    border-left:4px solid var(--red);
-  }
-  .wr-question { font-size:0.95rem; font-weight:600; color:var(--ink); margin-bottom:.6rem; }
-  .wr-your { font-size:0.85rem; color:#dc2626; margin-bottom:.3rem; }
-  .wr-correct { font-size:0.85rem; color:#1a9e80; margin-bottom:.6rem; }
-  .wr-why { font-size:0.85rem; color:var(--muted); line-height:1.6; padding:.75rem 1rem; background:var(--soft); border-radius:10px; }
-
-  .btn-next-day {
-    width:100%; padding:1.1rem; background:var(--blue); color:#fff; border:none; border-radius:14px;
-    font-family:var(--sans); font-size:1rem; font-weight:600; cursor:pointer; margin-top:2rem;
-    transition:all .3s; box-shadow:0 4px 16px rgba(74,124,246,.3);
-  }
-  .btn-next-day:hover { background:#3567e0; transform:translateY(-2px); }
-
-  /* LOADING */
-  .content-loading { text-align:center; padding:3rem; background:#fff; border:1.5px solid var(--border); border-radius:24px; margin-bottom:1.5rem; }
-  .content-loading .spinner { width:40px; height:40px; border-radius:50%; border:3px solid var(--blue-light); border-top-color:var(--blue); animation:spin 1s linear infinite; margin:0 auto 1rem; }
-  .content-loading p { color:var(--muted); font-size:0.9rem; }
+  .results-card { background:#fff; border:1.5px solid var(--border); border-radius:28px; overflow:hidden; box-shadow:0 8px 32px rgba(74,124,246,.08); display:none; animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both; }
+  .results-card.show { display:block; }
+  .results-top { padding:2.5rem 2rem; text-align:center; }
+  .results-top.great { background:linear-gradient(135deg,#38bfa1,#059669); }
+  .results-top.good { background:linear-gradient(135deg,#4a7cf6,#2851c8); }
+  .results-top.retry { background:linear-gradient(135deg,#f59e0b,#d97706); }
+  .results-score { font-size:4.5rem; font-weight:700; color:#fff; line-height:1; }
+  .results-msg { font-size:1rem; color:rgba(255,255,255,.85); margin-top:.5rem; }
+  .results-body { padding:2rem; }
+  .results-body h3 { font-family:var(--serif); font-size:1.3rem; color:var(--ink); margin-bottom:1rem; }
+  .wrong-item { background:var(--soft); border:1.5px solid var(--border); border-left:4px solid var(--red); border-radius:14px; padding:1.2rem 1.5rem; margin-bottom:.8rem; }
+  .wi-q { font-size:0.92rem; font-weight:600; color:var(--ink); margin-bottom:.4rem; }
+  .wi-yours { font-size:0.82rem; color:#dc2626; margin-bottom:.2rem; }
+  .wi-correct { font-size:0.82rem; color:#1a9e80; margin-bottom:.5rem; }
+  .wi-why { font-size:0.82rem; color:var(--muted); line-height:1.6; padding:.65rem .9rem; background:#fff; border-radius:8px; }
+  .all-correct-msg { background:#d1faf0; border:1.5px solid var(--green); border-radius:14px; padding:1.2rem; text-align:center; color:#1a9e80; font-weight:600; font-size:0.95rem; margin-bottom:1rem; }
+  .btn-dashboard { width:100%; padding:1rem; background:var(--blue); color:#fff; border:none; border-radius:14px; font-family:var(--sans); font-size:1rem; font-weight:600; cursor:pointer; transition:all .3s; box-shadow:0 4px 14px rgba(74,124,246,.3); margin-top:1.5rem; }
+  .btn-dashboard:hover { background:#3567e0; transform:translateY(-2px); }
 </style>
 </head>
 <body>
@@ -195,39 +177,24 @@
       </text>
     </svg>
   </a>
-  <div class="nav-progress">
-    <div class="nav-progress-bar"><div class="nav-progress-fill" id="nav-progress" style="width:0%"></div></div>
-    <span class="nav-progress-text" id="nav-progress-text">0%</span>
+  <div class="nav-center">
+    <div class="nav-step-label" id="nav-step-label">Loading...</div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
   </div>
   <a href="dashboard.html" class="nav-back">← Dashboard</a>
 </nav>
 
 <div class="container">
-  <div id="lesson-view">
-    <div class="content-loading" id="content-loading">
-      <div class="spinner"></div>
-      <p>Loading today's lesson...</p>
-    </div>
-  </div>
-
-  <div class="results-screen" id="results-screen">
-    <div class="results-header" id="results-header">
-      <div class="results-score" id="results-score">0/0</div>
-      <div class="results-label" id="results-label">Quiz Complete!</div>
-      <div class="results-msg" id="results-msg"></div>
-    </div>
-    <div class="wrong-reviews" id="wrong-reviews"></div>
-    <button class="btn-next-day" id="btn-next-day" onclick="nextDay()">Continue to next day →</button>
-  </div>
+  <div class="step-card" id="step-card"></div>
+  <div class="results-card" id="results-card"></div>
 </div>
 
 <script>
-  var plan = null;
-  var dayIndex = 0;
-  var day = null;
+  var plan, day, dayIndex;
+  var steps = [];
+  var currentStep = 0;
   var answers = {};
-  var hints = {};
-  var submitted = false;
+  var wrongItems = [];
 
   function init() {
     var saved = localStorage.getItem('studyflow_plan');
@@ -236,247 +203,259 @@
     plan = JSON.parse(saved);
     day = plan.days[dayIndex];
     if (!day) { window.location.href = 'dashboard.html'; return; }
-    renderLesson();
+    buildSteps();
+    renderStep();
   }
 
-  function renderLesson() {
-    document.getElementById('content-loading').style.display = 'none';
-
-    var isFinal = day.isFinal;
-    var dayType = dayIndex === 0 ? 'Introduction' : (isFinal ? 'Final Exam Day' : 'Day ' + (dayIndex + 1));
-
-    var html = '';
-
-    // Phase header
-    html += '<div class="phase-header">' +
-      '<div class="phase-badge">✦ ' + dayType + '</div>' +
-      '<h1>' + (day.title || 'Day ' + (dayIndex + 1)) + '</h1>' +
-      '<p>' + (day.briefing || '') + '</p>' +
-      '</div>';
-
-    // Lesson content
-    if (day.content) {
-      html += '<div class="content-card"><h3>Today\'s Lesson</h3>' + formatContent(day.content) + '</div>';
+  function buildSteps() {
+    steps = [];
+    // Step 1: Welcome
+    steps.push({ type: 'welcome' });
+    // Step 2: Lesson content
+    if (day.content) steps.push({ type: 'lesson' });
+    // Step 3: Key terms (day 1 only)
+    if (dayIndex === 0 && day.keyTerms && day.keyTerms.length) steps.push({ type: 'terms' });
+    // Questions — one per step
+    if (day.questions) {
+      day.questions.forEach(function(q, i) { steps.push({ type: 'question', index: i }); });
     }
-
-    // Key terms if day 1
-    if (dayIndex === 0 && day.keyTerms && day.keyTerms.length) {
-      html += '<div class="content-card"><h3>Key Terms to Know</h3><ul>';
-      day.keyTerms.forEach(function(t) {
-        html += '<li><span class="key-term">' + t.term + '</span> — ' + t.definition + '</li>';
-      });
-      html += '</ul></div>';
-    }
-
-    // Questions
-    if (day.questions && day.questions.length) {
-      html += '<div class="questions-section">' +
-        '<div class="questions-header">' +
-          '<h2>' + (isFinal ? 'Final Practice Test' : 'Practice Questions') + '</h2>' +
-          '<span class="question-count">Q 1/' + day.questions.length + '</span>' +
-        '</div>';
-
-      day.questions.forEach(function(q, qi) {
-        html += '<div class="question-card" id="q-' + qi + '">' +
-          '<div class="q-num">Question ' + (qi + 1) + ' of ' + day.questions.length + (q.difficulty ? ' · ' + q.difficulty : '') + '</div>' +
-          '<div class="q-text">' + q.question + '</div>';
-
-        if (q.type === 'truefalse') {
-          html += '<div class="tf-options">' +
-            '<button class="tf-btn" onclick="selectTF(' + qi + ', \'True\')" id="tf-' + qi + '-true">True</button>' +
-            '<button class="tf-btn" onclick="selectTF(' + qi + ', \'False\')" id="tf-' + qi + '-false">False</button>' +
-            '</div>';
-        } else {
-          html += '<div class="q-options">';
-          var letters = ['A','B','C','D'];
-          q.options.forEach(function(opt, oi) {
-            html += '<button class="q-option" onclick="selectOption(' + qi + ', ' + oi + ')" id="opt-' + qi + '-' + oi + '">' +
-              '<span class="option-letter">' + letters[oi] + '</span>' + opt + '</button>';
-          });
-          html += '</div>';
-        }
-
-        html += '<div class="hint-section">' +
-          '<button class="hint-btn" onclick="toggleHint(' + qi + ')">Show hint</button>' +
-          '<div class="hint-text" id="hint-' + qi + '">' + (q.hint || 'Think carefully about the key concepts from today\'s lesson.') + '</div>' +
-          '</div>';
-
-        html += '<div class="review-card" id="review-' + qi + '"></div>';
-        html += '</div>';
-      });
-
-      html += '</div>';
-      html += '<div class="submit-section"><button class="btn-submit" id="btn-submit" onclick="submitQuiz()" disabled>Submit answers</button></div>';
-    } else {
-      html += '<div class="submit-section"><button class="btn-submit" onclick="completeDay()">Complete day →</button></div>';
-    }
-
-    document.getElementById('lesson-view').innerHTML = html;
-    updateProgress();
-  }
-
-  function formatContent(content) {
-    if (typeof content === 'string') {
-      return content.split('\n').filter(function(l){ return l.trim(); }).map(function(l){
-        return '<p>' + l + '</p>';
-      }).join('');
-    }
-    return '<p>' + content + '</p>';
   }
 
   function updateProgress() {
-    var total = day.questions ? day.questions.length : 0;
-    var answered = Object.keys(answers).length;
-    var pct = total > 0 ? Math.round((answered / total) * 100) : 0;
-    document.getElementById('nav-progress').style.width = pct + '%';
-    document.getElementById('nav-progress-text').textContent = pct + '%';
-    if (document.getElementById('btn-submit')) {
-      document.getElementById('btn-submit').disabled = answered < total;
-    }
+    var pct = Math.round((currentStep / (steps.length - 1)) * 100);
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('nav-step-label').textContent = 'Step ' + (currentStep + 1) + ' of ' + steps.length;
   }
 
-  function selectOption(qi, oi) {
-    if (submitted) return;
-    var opts = document.querySelectorAll('[id^="opt-' + qi + '-"]');
-    opts.forEach(function(o){ o.classList.remove('selected'); });
-    document.getElementById('opt-' + qi + '-' + oi).classList.add('selected');
-    answers[qi] = oi;
+  function renderStep() {
     updateProgress();
+    var step = steps[currentStep];
+    var html = '';
+    var isLast = currentStep === steps.length - 1;
+    var stepNum = currentStep + 1;
+    var totalSteps = steps.length;
+
+    if (step.type === 'welcome') {
+      var dayLabel = dayIndex === 0 ? 'Introduction' : (day.isFinal ? 'Final Exam Day' : 'Day ' + (dayIndex + 1));
+      html = '<div class="card-header">' +
+        '<div class="card-header-badge">✦ ' + dayLabel + '</div>' +
+        '<h1>' + (day.title || 'Day ' + (dayIndex + 1)) + '</h1>' +
+        '</div>' +
+        '<div class="card-body">' +
+        '<p class="welcome-text">' + (day.briefing || '') + '</p>' +
+        '</div>' +
+        '<div class="card-footer">' +
+        '<span class="step-counter">' + stepNum + ' / ' + totalSteps + '</span>' +
+        '<button class="btn-next" onclick="nextStep()">Let\'s go →</button>' +
+        '</div>';
+    }
+
+    else if (step.type === 'lesson') {
+      html = '<div class="card-header">' +
+        '<div class="card-header-badge">Today\'s Lesson</div>' +
+        '<h1>' + (day.title || '') + '</h1>' +
+        '</div>' +
+        '<div class="card-body">' +
+        '<div class="lesson-content">' + formatContent(day.content) + '</div>' +
+        '</div>' +
+        '<div class="card-footer">' +
+        '<span class="step-counter">' + stepNum + ' / ' + totalSteps + '</span>' +
+        '<button class="btn-next" onclick="nextStep()">Next →</button>' +
+        '</div>';
+    }
+
+    else if (step.type === 'terms') {
+      var termsHtml = '<div class="terms-list">';
+      day.keyTerms.forEach(function(t) {
+        termsHtml += '<div class="term-item"><div class="term-word">' + t.term + '</div><div class="term-def">' + t.definition + '</div></div>';
+      });
+      termsHtml += '</div>';
+      html = '<div class="card-header">' +
+        '<div class="card-header-badge">Key Terms</div>' +
+        '<h1>Words to Know</h1>' +
+        '</div>' +
+        '<div class="card-body">' + termsHtml + '</div>' +
+        '<div class="card-footer">' +
+        '<span class="step-counter">' + stepNum + ' / ' + totalSteps + '</span>' +
+        '<button class="btn-next" onclick="nextStep()">Next →</button>' +
+        '</div>';
+    }
+
+    else if (step.type === 'question') {
+      var qi = step.index;
+      var q = day.questions[qi];
+      var qNum = day.questions.indexOf(q) + 1;
+      var totalQ = day.questions.length;
+      var diffClass = (q.difficulty || 'easy').toLowerCase();
+      var answered = answers[qi] !== undefined;
+
+      var optionsHtml = '';
+      if (q.type === 'truefalse') {
+        var tSel = answers[qi] === 'True' ? ' selected' : '';
+        var fSel = answers[qi] === 'False' ? ' selected' : '';
+        optionsHtml = '<div class="tf-grid">' +
+          '<button class="tf-btn' + tSel + '" onclick="selectTF(' + qi + ', \'True\')" id="tf-' + qi + '-True">True</button>' +
+          '<button class="tf-btn' + fSel + '" onclick="selectTF(' + qi + ', \'False\')" id="tf-' + qi + '-False">False</button>' +
+          '</div>';
+      } else {
+        optionsHtml = '<div class="q-options">';
+        var letters = ['A','B','C','D'];
+        q.options.forEach(function(opt, oi) {
+          var sel = answers[qi] === oi ? ' selected' : '';
+          optionsHtml += '<button class="q-option' + sel + '" onclick="selectMCQ(' + qi + ',' + oi + ')" id="opt-' + qi + '-' + oi + '">' +
+            '<span class="option-letter">' + letters[oi] + '</span>' + opt + '</button>';
+        });
+        optionsHtml += '</div>';
+      }
+
+      html = '<div class="card-header">' +
+        '<div class="card-header-badge">Question ' + qNum + ' of ' + totalQ + '</div>' +
+        '<h1>' + (day.isFinal ? 'Final Test' : 'Practice Questions') + '</h1>' +
+        '</div>' +
+        '<div class="card-body">' +
+        '<div class="q-header">' +
+        '<span class="q-difficulty ' + diffClass + '">' + (q.difficulty || 'Medium') + '</span>' +
+        '<div class="q-text">' + q.question + '</div>' +
+        '</div>' +
+        optionsHtml +
+        '<div class="hint-row">' +
+        '<button class="hint-btn" onclick="toggleHint(' + qi + ')">Show hint</button>' +
+        '<div class="hint-box" id="hint-' + qi + '">' + (q.hint || 'Think carefully about today\'s lesson.') + '</div>' +
+        '</div>' +
+        '<div class="feedback-box" id="fb-' + qi + '"></div>' +
+        '</div>' +
+        '<div class="card-footer">' +
+        '<span class="step-counter">Q' + qNum + ' / ' + totalQ + '</span>' +
+        '<button class="btn-next" id="btn-next-q" onclick="nextStep()" ' + (answered ? '' : 'disabled') + '>' + (isLast ? 'See results →' : 'Next →') + '</button>' +
+        '</div>';
+    }
+
+    document.getElementById('step-card').innerHTML = html;
+    document.getElementById('step-card').style.animation = 'none';
+    void document.getElementById('step-card').offsetWidth;
+    document.getElementById('step-card').style.animation = 'fadeUp .4s cubic-bezier(0.16,1,.3,1) both';
+  }
+
+  function formatContent(content) {
+    if (!content) return '';
+    return content.split('\n').filter(function(l){ return l.trim(); }).map(function(l){
+      return '<p>' + l + '</p>';
+    }).join('');
+  }
+
+  function selectMCQ(qi, oi) {
+    if (answers[qi] !== undefined) return;
+    var q = day.questions[qi];
+    answers[qi] = oi;
+    var opts = document.querySelectorAll('[id^="opt-' + qi + '-"]');
+    opts.forEach(function(o) { o.disabled = true; o.classList.remove('selected'); });
+    document.getElementById('opt-' + qi + '-' + oi).classList.add('selected');
+    var isCorrect = oi === q.correctIndex;
+    showFeedback(qi, isCorrect, q);
+    if (!isCorrect) {
+      document.getElementById('opt-' + qi + '-' + oi).classList.add('wrong');
+      document.getElementById('opt-' + qi + '-' + q.correctIndex).classList.add('correct');
+      wrongItems.push({ q: q, userAns: q.options[oi] });
+    } else {
+      document.getElementById('opt-' + qi + '-' + oi).classList.add('correct');
+    }
+    document.getElementById('btn-next-q').disabled = false;
   }
 
   function selectTF(qi, val) {
-    if (submitted) return;
-    document.getElementById('tf-' + qi + '-True').classList.remove('selected');
-    document.getElementById('tf-' + qi + '-False').classList.remove('selected');
-    document.getElementById('tf-' + qi + '-' + val).classList.add('selected');
+    if (answers[qi] !== undefined) return;
+    var q = day.questions[qi];
     answers[qi] = val;
-    updateProgress();
+    document.getElementById('tf-' + qi + '-True').disabled = true;
+    document.getElementById('tf-' + qi + '-False').disabled = true;
+    document.getElementById('tf-' + qi + '-' + val).classList.add('selected');
+    var isCorrect = val === q.correct;
+    showFeedback(qi, isCorrect, q);
+    if (!isCorrect) {
+      document.getElementById('tf-' + qi + '-' + val).classList.add('wrong');
+      document.getElementById('tf-' + qi + '-' + q.correct).classList.add('correct');
+      wrongItems.push({ q: q, userAns: val });
+    } else {
+      document.getElementById('tf-' + qi + '-' + val).classList.add('correct');
+    }
+    document.getElementById('btn-next-q').disabled = false;
+  }
+
+  function showFeedback(qi, isCorrect, q) {
+    var fb = document.getElementById('fb-' + qi);
+    if (!fb) return;
+    fb.className = 'feedback-box show ' + (isCorrect ? 'correct-fb' : 'wrong-fb');
+    fb.innerHTML = '<div class="feedback-label">' + (isCorrect ? 'Correct!' : 'Not quite') + '</div>' +
+      '<div class="feedback-text">' + (q.explanation || (isCorrect ? 'Great job!' : 'Review the explanation and keep going.')) + '</div>';
   }
 
   function toggleHint(qi) {
-    var hint = document.getElementById('hint-' + qi);
-    hint.classList.toggle('visible');
-    var btn = hint.previousElementSibling;
-    btn.textContent = hint.classList.contains('visible') ? 'Hide hint' : 'Show hint';
+    var box = document.getElementById('hint-' + qi);
+    box.classList.toggle('show');
+    var btn = box.previousElementSibling;
+    btn.textContent = box.classList.contains('show') ? 'Hide hint' : 'Show hint';
   }
 
-  function submitQuiz() {
-    submitted = true;
-    var correct = 0;
-    var wrongItems = [];
-
-    day.questions.forEach(function(q, qi) {
-      var userAns = answers[qi];
-      var isCorrect = false;
-
-      if (q.type === 'truefalse') {
-        isCorrect = userAns === q.correct;
-        var trueBtn = document.getElementById('tf-' + qi + '-True');
-        var falseBtn = document.getElementById('tf-' + qi + '-False');
-        if (q.correct === 'True') trueBtn.classList.add('correct-ans'); else falseBtn.classList.add('correct-ans');
-        if (userAns !== q.correct) {
-          document.getElementById('tf-' + qi + '-' + userAns).classList.add('wrong-ans');
-        }
-      } else {
-        isCorrect = userAns === q.correctIndex;
-        var opts = document.querySelectorAll('[id^="opt-' + qi + '-"]');
-        opts.forEach(function(o, oi) {
-          if (oi === q.correctIndex) o.classList.add('correct-ans');
-          else if (oi === userAns && userAns !== q.correctIndex) o.classList.add('wrong-ans');
-          o.disabled = true;
-        });
-      }
-
-      if (isCorrect) {
-        correct++;
-        document.getElementById('q-' + qi).classList.add('correct');
-        var rev = document.getElementById('review-' + qi);
-        rev.className = 'review-card correct-review visible';
-        rev.innerHTML = '<div class="review-label">Correct!</div><div class="review-explanation">' + (q.explanation || 'Great job! You got this one right.') + '</div>';
-      } else {
-        document.getElementById('q-' + qi).classList.add('wrong');
-        var rev = document.getElementById('review-' + qi);
-        rev.className = 'review-card wrong-review visible';
-        var correctAns = q.type === 'truefalse' ? q.correct : q.options[q.correctIndex];
-        rev.innerHTML = '<div class="review-label">Incorrect</div><div class="review-explanation"><strong>Correct answer:</strong> ' + correctAns + '<br><br>' + (q.explanation || 'Review this concept and try to understand why this is the correct answer.') + '</div>';
-        wrongItems.push({ q: q, qi: qi, userAns: userAns });
-      }
-    });
-
-    document.getElementById('btn-submit').style.display = 'none';
-    setTimeout(function(){ showResults(correct, wrongItems); }, 800);
+  function nextStep() {
+    if (currentStep < steps.length - 1) {
+      currentStep++;
+      renderStep();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      showResults();
+    }
   }
 
-  function showResults(correct, wrongItems) {
-    var total = day.questions.length;
-    var pct = Math.round((correct / total) * 100);
-    document.getElementById('lesson-view').style.display = 'none';
-    var screen = document.getElementById('results-screen');
-    screen.classList.add('visible');
+  function showResults() {
+    document.getElementById('step-card').style.display = 'none';
+    var totalQ = day.questions ? day.questions.length : 0;
+    var correct = totalQ - wrongItems.length;
+    var pct = totalQ > 0 ? Math.round((correct / totalQ) * 100) : 100;
+    document.getElementById('progress-fill').style.width = '100%';
+    document.getElementById('nav-step-label').textContent = 'Complete!';
 
-    var header = document.getElementById('results-header');
-    var scoreEl = document.getElementById('results-score');
-    var labelEl = document.getElementById('results-label');
-    var msgEl = document.getElementById('results-msg');
+    var topClass = pct >= 80 ? 'great' : (pct >= 60 ? 'good' : 'retry');
+    var msg = pct >= 80 ? 'Excellent work — you nailed it!' : (pct >= 60 ? 'Good job — review the ones you missed.' : 'Keep studying — you\'ll get it!');
 
-    scoreEl.textContent = correct + '/' + total;
-
-    if (pct >= 80) {
-      header.className = 'results-header great';
-      labelEl.textContent = 'Excellent work!';
-      msgEl.textContent = 'You nailed it — keep that momentum going!';
-    } else if (pct >= 60) {
-      header.className = 'results-header good';
-      labelEl.textContent = 'Good job!';
-      msgEl.textContent = 'You\'re getting there — review the explanations below.';
+    var wrongHtml = '';
+    if (wrongItems.length === 0) {
+      wrongHtml = '<div class="all-correct-msg">Perfect score! Every answer was correct!</div>';
     } else {
-      header.className = 'results-header needs-work';
-      labelEl.textContent = 'Needs more practice';
-      msgEl.textContent = 'Don\'t worry — review the explanations carefully below.';
-    }
-
-    var nextBtn = document.getElementById('btn-next-day');
-    if (day.isFinal) {
-      nextBtn.textContent = 'Back to dashboard →';
-    } else {
-      nextBtn.textContent = 'Continue to Day ' + (dayIndex + 2) + ' →';
-    }
-
-    if (wrongItems.length > 0) {
-      var html = '<h2 style="font-family:var(--serif);font-size:1.4rem;margin-bottom:1rem;">Review — What to Study More</h2>';
+      wrongHtml = '<h3>Review — What to Study More</h3>';
       wrongItems.forEach(function(item) {
         var correctAns = item.q.type === 'truefalse' ? item.q.correct : item.q.options[item.q.correctIndex];
-        var userAns = item.q.type === 'truefalse' ? item.userAns : item.q.options[item.userAns];
-        html += '<div class="wrong-review-item">' +
-          '<div class="wr-question">' + item.q.question + '</div>' +
-          '<div class="wr-your">Your answer: ' + userAns + '</div>' +
-          '<div class="wr-correct">Correct answer: ' + correctAns + '</div>' +
-          '<div class="wr-why">' + (item.q.explanation || 'Review this concept in your notes and make sure you understand why the correct answer is right.') + '</div>' +
+        wrongHtml += '<div class="wrong-item">' +
+          '<div class="wi-q">' + item.q.question + '</div>' +
+          '<div class="wi-yours">Your answer: ' + item.userAns + '</div>' +
+          '<div class="wi-correct">Correct answer: ' + correctAns + '</div>' +
+          '<div class="wi-why">' + (item.q.explanation || 'Review this in your notes.') + '</div>' +
           '</div>';
       });
-      document.getElementById('wrong-reviews').innerHTML = html;
-    } else {
-      document.getElementById('wrong-reviews').innerHTML = '<div style="text-align:center;padding:1.5rem;background:#d1faf0;border-radius:16px;color:#1a9e80;font-weight:600;margin-bottom:1rem;">Perfect score! You got every question right!</div>';
     }
+
+    var nextLabel = day.isFinal || dayIndex >= plan.days.length - 1 ? 'Back to dashboard →' : 'Continue to Day ' + (dayIndex + 2) + ' →';
+
+    document.getElementById('results-card').innerHTML =
+      '<div class="results-top ' + topClass + '">' +
+        '<div class="results-score">' + correct + '/' + totalQ + '</div>' +
+        '<div class="results-msg">' + msg + '</div>' +
+      '</div>' +
+      '<div class="results-body">' + wrongHtml +
+        '<button class="btn-dashboard" onclick="finishDay()">' + nextLabel + '</button>' +
+      '</div>';
+
+    document.getElementById('results-card').classList.add('show');
 
     plan.days[dayIndex].completed = true;
     plan.days[dayIndex].score = pct;
     localStorage.setItem('studyflow_plan', JSON.stringify(plan));
   }
 
-  function completeDay() {
-    plan.days[dayIndex].completed = true;
-    localStorage.setItem('studyflow_plan', JSON.stringify(plan));
-    window.location.href = 'dashboard.html';
-  }
-
-  function nextDay() {
-    if (day.isFinal || dayIndex >= plan.days.length - 1) {
-      window.location.href = 'dashboard.html';
-    } else {
+  function finishDay() {
+    if (!day.isFinal && dayIndex < plan.days.length - 1) {
       localStorage.setItem('studyflow_current_day', dayIndex + 1);
-      window.location.href = 'dashboard.html';
     }
+    window.location.href = 'dashboard.html';
   }
 
   init();
