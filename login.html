@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StudyFlow — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #1a1d2e; --muted: #6b7280; --soft: #f0f4ff;
+    --blue: #4a7cf6; --blue-light: #dce8ff; --white: #fff; --border: #e8ecf4;
+    --sans: 'DM Sans', sans-serif; --serif: 'Instrument Serif', Georgia, serif;
+  }
+  body { font-family: var(--sans); color: var(--ink); min-height: 100vh; display: flex; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+  @keyframes gradientShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+
+  /* LEFT PANEL */
+  .left-panel {
+    width: 45%; background: linear-gradient(135deg, #4a7cf6 0%, #3567e0 50%, #2851c8 100%);
+    background-size: 200% 200%;
+    animation: gradientShift 6s ease infinite;
+    display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+    padding: 4rem; position: relative; overflow: hidden;
+  }
+  .left-panel::before {
+    content: ''; position: absolute; inset: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,.1) 1px, transparent 1px);
+    background-size: 28px 28px; pointer-events: none;
+  }
+  .left-logo { text-decoration: none; display: flex; align-items: center; margin-bottom: 3rem; position: relative; z-index: 1; }
+  .left-panel h1 { font-family: var(--serif); font-size: clamp(2rem, 3vw, 2.8rem); color: #fff; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 1rem; position: relative; z-index: 1; }
+  .left-panel h1 em { font-style: italic; color: #c5d9ff; }
+  .left-panel p { color: rgba(255,255,255,.75); font-size: 0.95rem; font-weight: 300; line-height: 1.7; max-width: 320px; position: relative; z-index: 1; margin-bottom: 2.5rem; }
+  .left-features { display: flex; flex-direction: column; gap: .75rem; position: relative; z-index: 1; }
+  .left-feature { display: flex; align-items: center; gap: .75rem; color: rgba(255,255,255,.85); font-size: 0.88rem; font-weight: 400; }
+  .left-feature-dot { width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,.25); display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: #fff; flex-shrink: 0; }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    flex: 1; background: var(--white); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 3rem 2rem;
+    overflow-y: auto;
+  }
+  .auth-box { width: 100%; max-width: 400px; animation: fadeUp .6s cubic-bezier(0.16,1,.3,1) both; }
+
+  /* TABS */
+  .tabs { display: flex; background: var(--soft); border-radius: 14px; padding: .3rem; margin-bottom: 2rem; }
+  .tab {
+    flex: 1; padding: .7rem; border-radius: 10px; border: none; background: none;
+    font-family: var(--sans); font-size: 0.92rem; font-weight: 600; color: var(--muted);
+    cursor: pointer; transition: all .25s;
+  }
+  .tab.active { background: #fff; color: var(--ink); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+
+  .auth-box h2 { font-family: var(--serif); font-size: 1.8rem; color: var(--ink); margin-bottom: .3rem; letter-spacing: -0.02em; }
+  .auth-box h2 em { font-style: italic; color: var(--blue); }
+  .auth-box p { color: var(--muted); font-size: 0.88rem; font-weight: 300; margin-bottom: 1.8rem; }
+
+  /* GOOGLE BTN */
+  .btn-google {
+    width: 100%; padding: .9rem; border-radius: 12px;
+    border: 1.5px solid var(--border); background: #fff;
+    font-family: var(--sans); font-size: 0.92rem; font-weight: 600; color: var(--ink);
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .75rem;
+    transition: all .2s; margin-bottom: 1.2rem;
+  }
+  .btn-google:hover { border-color: var(--blue); background: var(--soft); }
+  .google-icon { width: 20px; height: 20px; }
+
+  /* DIVIDER */
+  .divider { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; color: var(--muted); font-size: 0.78rem; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* FORM */
+  .form-field { margin-bottom: 1rem; }
+  .form-label { display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--ink); margin-bottom: .45rem; }
+  .form-input {
+    width: 100%; padding: .85rem 1.1rem; border: 1.5px solid var(--border); border-radius: 12px;
+    font-family: var(--sans); font-size: 0.92rem; color: var(--ink); background: var(--soft);
+    outline: none; transition: border-color .2s, box-shadow .2s;
+  }
+  .form-input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(74,124,246,.1); }
+  .form-input::placeholder { color: #9ca3af; }
+
+  .forgot { font-size: 0.78rem; color: var(--blue); text-decoration: none; float: right; margin-top: -2rem; margin-bottom: 1.2rem; display: block; font-weight: 500; }
+  .forgot:hover { text-decoration: underline; }
+
+  .btn-submit {
+    width: 100%; padding: .95rem; background: var(--blue); color: #fff; border: none; border-radius: 12px;
+    font-family: var(--sans); font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    transition: all .3s; box-shadow: 0 4px 14px rgba(74,124,246,.3); margin-top: .5rem;
+  }
+  .btn-submit:hover { background: #3567e0; transform: translateY(-1px); box-shadow: 0 8px 22px rgba(74,124,246,.4); }
+
+  .terms { font-size: 0.75rem; color: var(--muted); text-align: center; margin-top: 1rem; line-height: 1.6; }
+  .terms a { color: var(--blue); text-decoration: none; }
+  .terms a:hover { text-decoration: underline; }
+
+  /* ERROR / SUCCESS */
+  .msg-box { padding: .75rem 1rem; border-radius: 10px; font-size: 0.85rem; margin-bottom: 1rem; display: none; }
+  .msg-box.error { background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; }
+  .msg-box.success { background: #d1faf0; border: 1px solid #38bfa1; color: #1a9e80; }
+  .msg-box.show { display: block; }
+
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    .left-panel { width: 100%; padding: 2.5rem 2rem; min-height: auto; }
+    .left-panel h1 { font-size: 1.8rem; }
+    .left-features { display: none; }
+    .right-panel { padding: 2rem 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LEFT PANEL -->
+<div class="left-panel">
+  <a href="index.html" class="left-logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="150" height="37">
+      <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:rgba(255,255,255,.9)"/><stop offset="100%" style="stop-color:rgba(255,255,255,.6)"/></linearGradient></defs>
+      <rect x="0" y="2" width="40" height="40" rx="10" fill="rgba(255,255,255,.2)"/>
+      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.3"/>
+      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.5"/>
+      <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
+      <rect x="17" y="16" width="11" height="2" rx="1" fill="rgba(74,124,246,.6)"/>
+      <rect x="17" y="21" width="8" height="2" rx="1" fill="rgba(74,124,246,.4)"/>
+      <rect x="17" y="26" width="10" height="2" rx="1" fill="rgba(74,124,246,.3)"/>
+      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
+      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
+        <tspan fill="white">Study</tspan><tspan fill="rgba(255,255,255,.7)">Flow</tspan>
+      </text>
+    </svg>
+  </a>
+  <h1>Turn lessons into <em>study plans.</em></h1>
+  <p>Upload your notes, get a personalized AI-powered plan, and actually understand your material before exam day.</p>
+  <div class="left-features">
+    <div class="left-feature"><div class="left-feature-dot">✦</div>AI-generated study plans from your notes</div>
+    <div class="left-feature"><div class="left-feature-dot">✦</div>Day-by-day lessons that get harder</div>
+    <div class="left-feature"><div class="left-feature-dot">✦</div>Practice questions with instant feedback</div>
+    <div class="left-feature"><div class="left-feature-dot">✦</div>Wrong answer review so you actually learn</div>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="right-panel">
+  <div class="auth-box">
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" id="tab-login" onclick="switchTab('login')">Sign in</button>
+      <button class="tab" id="tab-signup" onclick="switchTab('signup')">Create account</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-view">
+      <h2>Welcome <em>back</em></h2>
+      <p>Sign in to continue your study plans.</p>
+
+      <div class="msg-box" id="login-msg"></div>
+
+      <button class="btn-google" onclick="googleAuth()">
+        <svg class="google-icon" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div class="divider">or sign in with email</div>
+
+      <div class="form-field">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="login-email" placeholder="your@email.com" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="login-password" placeholder="••••••••" />
+      </div>
+      <a href="#" class="forgot">Forgot password?</a>
+      <button class="btn-submit" onclick="handleLogin()">Sign in →</button>
+      <p class="terms">By signing in you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</p>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="signup-view" style="display:none;">
+      <h2>Get <em>started</em></h2>
+      <p>Create your free account — no credit card needed.</p>
+
+      <div class="msg-box" id="signup-msg"></div>
+
+      <button class="btn-google" onclick="googleAuth()">
+        <svg class="google-icon" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div class="divider">or sign up with email</div>
+
+      <div class="form-field">
+        <label class="form-label">Full name</label>
+        <input type="text" class="form-input" id="signup-name" placeholder="Ethan Hwang" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="signup-email" placeholder="your@email.com" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-input" id="signup-password" placeholder="Min. 8 characters" />
+      </div>
+      <button class="btn-submit" onclick="handleSignup()">Create account →</button>
+      <p class="terms">By creating an account you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function switchTab(tab) {
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+    document.getElementById('login-view').style.display = tab === 'login' ? 'block' : 'none';
+    document.getElementById('signup-view').style.display = tab === 'signup' ? 'block' : 'none';
+  }
+
+  function showMsg(id, type, text) {
+    var el = document.getElementById(id);
+    el.className = 'msg-box show ' + type;
+    el.textContent = text;
+  }
+
+  function handleLogin() {
+    var email = document.getElementById('login-email').value;
+    var password = document.getElementById('login-password').value;
+    if (!email || !email.includes('@')) { showMsg('login-msg', 'error', 'Please enter a valid email.'); return; }
+    if (!password || password.length < 6) { showMsg('login-msg', 'error', 'Please enter your password.'); return; }
+    // Save user session
+    localStorage.setItem('studyflow_user', JSON.stringify({ email: email, name: email.split('@')[0] }));
+    showMsg('login-msg', 'success', 'Signing you in...');
+    setTimeout(function() { window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html'; }, 800);
+  }
+
+  function handleSignup() {
+    var name = document.getElementById('signup-name').value;
+    var email = document.getElementById('signup-email').value;
+    var password = document.getElementById('signup-password').value;
+    if (!name) { showMsg('signup-msg', 'error', 'Please enter your name.'); return; }
+    if (!email || !email.includes('@')) { showMsg('signup-msg', 'error', 'Please enter a valid email.'); return; }
+    if (!password || password.length < 8) { showMsg('signup-msg', 'error', 'Password must be at least 8 characters.'); return; }
+    localStorage.setItem('studyflow_user', JSON.stringify({ email: email, name: name }));
+    showMsg('signup-msg', 'success', 'Account created! Taking you to StudyFlow...');
+    setTimeout(function() { window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html'; }, 800);
+  }
+
+  function googleAuth() {
+    // Simulated Google auth - redirects to app
+    var mockName = 'Student';
+    localStorage.setItem('studyflow_user', JSON.stringify({ email: 'student@gmail.com', name: mockName, google: true }));
+    window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
+  }
+
+  // Check if already logged in
+  if (localStorage.getItem('studyflow_user')) {
+    window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
+  }
+</script>
+</body>
+</html>
