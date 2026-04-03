@@ -9,334 +9,188 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --ink: #1a1d2e;
-    --muted: #6b7280;
-    --soft: #f4f6fb;
-    --blue: #4a7cf6;
-    --blue-light: #dce8ff;
-    --white: #ffffff;
-    --border: #e8ecf4;
-    --serif: 'Instrument Serif', Georgia, serif;
-    --sans: 'DM Sans', sans-serif;
+    --ink: #1a1d2e; --muted: #6b7280; --soft: #f0f4ff;
+    --blue: #4a7cf6; --blue-light: #dce8ff; --white: #ffffff; --border: #e8ecf4;
+    --serif: 'Instrument Serif', Georgia, serif; --sans: 'DM Sans', sans-serif;
   }
   html { scroll-behavior: smooth; }
-  body {
-    font-family: var(--sans);
-    color: var(--ink);
-    background: var(--soft);
-    min-height: 100vh;
-  }
+  body { font-family: var(--sans); color: var(--ink); background: var(--soft); min-height: 100vh; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(74,124,246,.4); } 50% { box-shadow: 0 0 0 10px rgba(74,124,246,0); } }
+  @keyframes gradientShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  @keyframes slideIn { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:none} }
 
   nav {
-    background: #fff;
-    border-bottom: 1px solid var(--border);
-    padding: 1rem 5%;
+    background: rgba(255,255,255,.95); backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border); padding: 1rem 5%;
     display: flex; align-items: center; justify-content: space-between;
     position: sticky; top: 0; z-index: 100;
-    box-shadow: 0 1px 12px rgba(74,124,246,.07);
+    box-shadow: 0 2px 20px rgba(74,124,246,.08);
+    animation: fadeUp .5s cubic-bezier(0.16,1,.3,1) both;
   }
   .logo { text-decoration: none; display: flex; align-items: center; }
   nav a.back {
-    font-size: 0.88rem; color: var(--muted);
-    text-decoration: none; font-weight: 500;
-    transition: color .2s; display: flex; align-items: center; gap: .3rem;
+    font-size: 0.85rem; color: var(--muted); text-decoration: none; font-weight: 500;
+    transition: all .2s; display: flex; align-items: center; gap: .4rem;
+    padding: .4rem .9rem; border-radius: 8px; border: 1px solid var(--border);
   }
-  nav a.back:hover { color: var(--blue); }
+  nav a.back:hover { color: var(--blue); border-color: var(--blue); background: var(--blue-light); }
 
-  .app-container {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 3rem 1.5rem 6rem;
-  }
+  .app-container { max-width: 680px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; }
 
   .app-header {
-    text-align: center;
-    margin-bottom: 2.5rem;
-    background: linear-gradient(135deg, #4a7cf6, #2851c8);
-    border-radius: 24px;
-    padding: 2.5rem 2rem;
+    text-align: center; margin-bottom: 2rem;
+    background: linear-gradient(135deg, #4a7cf6 0%, #3567e0 50%, #2851c8 100%);
+    background-size: 200% 200%;
+    animation: fadeUp .6s .1s cubic-bezier(0.16,1,.3,1) both, gradientShift 6s ease infinite;
+    border-radius: 28px; padding: 2.5rem 2rem;
+    position: relative; overflow: hidden;
+    box-shadow: 0 20px 50px rgba(74,124,246,.3);
+  }
+  .app-header::before {
+    content: ''; position: absolute; inset: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,.1) 1px, transparent 1px);
+    background-size: 28px 28px; pointer-events: none;
+  }
+  .app-header-badge {
+    display: inline-flex; align-items: center; gap: .4rem;
+    background: rgba(255,255,255,.2); color: #fff;
+    font-size: 0.72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    padding: .3rem .85rem; border-radius: 999px; border: 1px solid rgba(255,255,255,.3);
+    margin-bottom: 1rem; position: relative; z-index: 1;
   }
   .app-header h1 {
-    font-family: var(--serif);
-    font-size: clamp(2rem, 4vw, 3rem);
-    letter-spacing: -0.03em;
-    color: var(--ink);
-    margin-bottom: .5rem;
+    font-family: var(--serif); font-size: clamp(1.9rem, 5vw, 2.8rem);
+    letter-spacing: -0.03em; line-height: 1.1; margin-bottom: .6rem; position: relative; z-index: 1;
   }
   .app-header h1 .white { color: #fff; }
   .app-header h1 em { font-style: italic; color: #c5d9ff; }
-  .app-header p { color: var(--muted); font-weight: 400; font-size: 1rem; }
+  .app-header p { color: rgba(255,255,255,.75); font-weight: 300; font-size: 0.95rem; position: relative; z-index: 1; }
 
-  .card h2 {
-    font-family: var(--serif);
-    font-size: 1.6rem; letter-spacing: -0.02em;
-    color: var(--ink);
-    margin-bottom: .4rem;
-  }
-  .card h2 em { font-style: italic; color: var(--blue); }
-  .card-sub { color: var(--muted); font-size: 0.95rem; font-weight: 400; margin-bottom: 2rem; }
-
-  .upload-zone strong { display: block; font-size: 1.05rem; color: var(--ink); font-weight: 600; margin-bottom: .3rem; }
-  .upload-zone span { font-size: 0.85rem; color: #4b5563; }
-
-  .paste-label {
-    display: block; font-size: 0.85rem; font-weight: 600;
-    color: var(--ink); margin: 1.5rem 0 .5rem;
-    text-transform: uppercase; letter-spacing: .05em;
-  }
-
-  .field label {
-    display: block; font-size: 0.92rem; font-weight: 600;
-    color: var(--ink); margin-bottom: .5rem;
-  }
-  .field label span { color: var(--muted); font-weight: 400; font-size: 0.82rem; }
-
-  .option-btn {
-    padding: .7rem 1rem; border-radius: 12px;
-    border: 1.5px solid var(--border); background: var(--white);
-    font-family: var(--sans); font-size: 0.88rem; font-weight: 500;
-    color: var(--ink); cursor: pointer;
-    transition: all .2s ease; text-align: center;
-  }
-  .option-btn:hover { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
-  .option-btn.selected { border-color: var(--blue); background: var(--blue); color: #fff; }
-
-  .loading-screen h3 {
-    font-family: var(--serif); font-size: 1.6rem;
-    color: var(--ink); margin-bottom: .5rem;
-  }
-  .loading-screen p { color: var(--muted); font-weight: 400; }
-  .loading-step {
-    font-size: 0.88rem; color: var(--ink);
-    padding: .5rem 1rem; border-radius: 8px;
-    background: var(--white); border: 1px solid var(--border);
-    opacity: 0; transition: opacity .4s, color .4s; font-weight: 500;
-  }
-  .loading-step.visible { opacity: 1; }
-  .loading-step.done { color: #38bfa1; }
-
-  .result-body {
-    background: var(--white);
-    border: 1.5px solid var(--border);
-    border-top: none;
-    border-radius: 0 0 18px 18px;
-    padding: 2rem;
-    font-size: 0.95rem; line-height: 1.8;
-    color: var(--ink);
-    white-space: pre-wrap;
-    max-height: 500px; overflow-y: auto;
-    font-weight: 400;
-  }
-
-  /* STEPS INDICATOR */
   .steps-indicator {
     display: flex; align-items: center; justify-content: center;
-    gap: .5rem; margin-bottom: 2.5rem;
+    gap: .5rem; margin-bottom: 2rem;
+    animation: fadeUp .6s .2s cubic-bezier(0.16,1,.3,1) both;
   }
   .step-dot {
-    width: 32px; height: 32px; border-radius: 50%;
+    width: 34px; height: 34px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 0.78rem; font-weight: 700;
     background: var(--border); color: var(--muted);
-    transition: all .3s ease;
+    transition: all .4s cubic-bezier(0.16,1,.3,1);
   }
-  .step-dot.active { background: var(--blue); color: #fff; }
+  .step-dot.active { background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(74,124,246,.4); animation: pulse 2s ease infinite; }
   .step-dot.done { background: #38bfa1; color: #fff; }
-  .step-line {
-    flex: 1; max-width: 60px; height: 2px;
-    background: var(--border); border-radius: 2px;
-    transition: background .3s;
-  }
+  .step-line { flex: 1; max-width: 60px; height: 2px; background: var(--border); border-radius: 2px; transition: background .4s; }
   .step-line.done { background: #38bfa1; }
 
-  /* CARDS */
   .card {
-    background: var(--white);
-    border: 1.5px solid var(--border);
-    border-radius: 24px;
-    padding: 2.5rem;
-    box-shadow: 0 4px 24px rgba(74,124,246,.06);
-    display: none;
+    background: var(--white); border: 1.5px solid var(--border); border-radius: 28px;
+    padding: 2.5rem; box-shadow: 0 8px 40px rgba(74,124,246,.08);
+    display: none; animation: fadeUp .5s cubic-bezier(0.16,1,.3,1) both;
   }
-  .card.active { display: block; animation: fadeUp .5s cubic-bezier(0.16,1,.3,1) both; }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+  .card.active { display: block; }
+  .card-icon {
+    width: 52px; height: 52px; border-radius: 16px;
+    background: var(--blue-light); display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; margin-bottom: 1.2rem; animation: float 4s ease-in-out infinite;
   }
-
-  .card h2 {
-    font-family: var(--serif);
-    font-size: 1.6rem; letter-spacing: -0.02em;
-    margin-bottom: .4rem;
-  }
+  .card h2 { font-family: var(--serif); font-size: 1.7rem; letter-spacing: -0.02em; color: var(--ink); margin-bottom: .3rem; }
   .card h2 em { font-style: italic; color: var(--blue); }
-  .card-sub { color: var(--muted); font-size: 0.95rem; font-weight: 300; margin-bottom: 2rem; }
+  .card-sub { color: var(--muted); font-size: 0.92rem; font-weight: 300; margin-bottom: 1.8rem; line-height: 1.5; }
 
-  /* UPLOAD ZONE */
-  .upload-zone {
-    border: 2px dashed rgba(74,124,246,.3);
-    border-radius: 18px;
-    padding: 3rem 1.5rem;
-    text-align: center;
-    background: var(--blue-light);
-    cursor: pointer;
-    transition: all .3s ease;
-    position: relative;
-  }
-  .upload-zone:hover, .upload-zone.dragover {
-    border-color: var(--blue);
-    background: #d0e4ff;
-    transform: scale(1.01);
-  }
-  .upload-zone input[type="file"] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
-  }
-  .upload-icon-big { font-size: 2.5rem; margin-bottom: .75rem; }
-  .upload-zone strong { display: block; font-size: 1.05rem; color: var(--ink); margin-bottom: .3rem; }
-  .upload-zone span { font-size: 0.85rem; color: var(--muted); }
-  .file-selected {
-    margin-top: 1rem; padding: .75rem 1rem;
-    background: #d1faf0; border-radius: 12px;
-    font-size: 0.88rem; color: #1a9e80; font-weight: 500;
-    display: none;
-  }
+  .field-label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--ink); margin-bottom: .6rem; text-transform: uppercase; letter-spacing: .07em; }
+  .field-label span { color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
+  .field { margin-bottom: 1.6rem; }
 
-  /* TEXTAREA */
-  .paste-label {
-    display: block; font-size: 0.85rem; font-weight: 600;
-    color: var(--muted); margin: 1.5rem 0 .5rem;
-    text-transform: uppercase; letter-spacing: .05em;
-  }
   textarea {
-    width: 100%; padding: 1rem 1.2rem;
-    border: 1.5px solid var(--border); border-radius: 14px;
+    width: 100%; padding: 1.1rem 1.3rem; border: 1.5px solid var(--border); border-radius: 16px;
     font-family: var(--sans); font-size: 0.95rem; color: var(--ink);
-    background: var(--soft); resize: vertical; min-height: 140px;
-    outline: none; transition: border-color .2s;
-    line-height: 1.6;
+    background: var(--soft); resize: vertical; min-height: 160px; outline: none;
+    transition: border-color .25s, box-shadow .25s; line-height: 1.7;
   }
-  textarea:focus { border-color: var(--blue); }
+  textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(74,124,246,.1); }
+  textarea::placeholder { color: #9ca3af; }
 
-  /* FORM FIELDS */
-  .field { margin-bottom: 1.5rem; }
-  .field label {
-    display: block; font-size: 0.88rem; font-weight: 600;
-    color: var(--ink); margin-bottom: .5rem;
+  .text-input {
+    width: 100%; padding: .9rem 1.2rem; border: 1.5px solid var(--border); border-radius: 14px;
+    font-family: var(--sans); font-size: 0.95rem; color: var(--ink);
+    background: var(--soft); outline: none; transition: border-color .25s, box-shadow .25s;
   }
-  .field label span { color: var(--muted); font-weight: 300; font-size: 0.82rem; }
-  .options-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    gap: .6rem;
-  }
+  .text-input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(74,124,246,.1); }
+
+  .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .6rem; }
   .option-btn {
-    padding: .7rem 1rem; border-radius: 12px;
-    border: 1.5px solid var(--border); background: var(--soft);
-    font-family: var(--sans); font-size: 0.88rem; font-weight: 500;
-    color: var(--ink); cursor: pointer;
-    transition: all .2s ease; text-align: center;
+    padding: .75rem 1rem; border-radius: 14px; border: 1.5px solid var(--border);
+    background: var(--soft); font-family: var(--sans); font-size: 0.88rem; font-weight: 500;
+    color: var(--ink); cursor: pointer; transition: all .25s cubic-bezier(0.16,1,.3,1); text-align: center;
   }
-  .option-btn:hover { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
-  .option-btn.selected { border-color: var(--blue); background: var(--blue); color: #fff; }
-  input[type="date"], input[type="text"] {
-    width: 100%; padding: .85rem 1.2rem;
-    border: 1.5px solid var(--border); border-radius: 12px;
-    font-family: var(--sans); font-size: 0.95rem; color: var(--ink);
-    background: var(--soft); outline: none; transition: border-color .2s;
-  }
-  input[type="date"]:focus, input[type="text"]:focus { border-color: var(--blue); }
+  .option-btn:hover { border-color: var(--blue); background: var(--blue-light); color: var(--blue); transform: translateY(-2px); }
+  .option-btn.selected { border-color: var(--blue); background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(74,124,246,.35); transform: translateY(-2px); }
 
-  /* BUTTONS */
   .btn-next {
-    width: 100%; padding: 1rem;
-    background: var(--blue); color: #fff;
-    border: none; border-radius: 14px;
-    font-family: var(--sans); font-size: 1rem; font-weight: 600;
-    cursor: pointer; margin-top: 1.5rem;
-    transition: background .2s, transform .2s, box-shadow .2s;
-    box-shadow: 0 4px 16px rgba(74,124,246,.3);
+    width: 100%; padding: 1.1rem; background: var(--blue); color: #fff;
+    border: none; border-radius: 16px; font-family: var(--sans); font-size: 1rem; font-weight: 600;
+    cursor: pointer; margin-top: 1.5rem; transition: all .3s cubic-bezier(0.16,1,.3,1);
+    box-shadow: 0 6px 20px rgba(74,124,246,.35); letter-spacing: .01em;
   }
-  .btn-next:hover { background: #3567e0; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(74,124,246,.4); }
-  .btn-next:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-next:hover { background: #3567e0; transform: translateY(-2px); box-shadow: 0 10px 28px rgba(74,124,246,.45); }
+  .btn-next:active { transform: translateY(0) scale(.98); }
   .btn-back {
-    background: none; border: none; color: var(--muted);
-    font-family: var(--sans); font-size: 0.9rem; cursor: pointer;
-    margin-top: .75rem; display: block; width: 100%; text-align: center;
-    transition: color .2s;
+    background: none; border: none; color: var(--muted); font-family: var(--sans);
+    font-size: 0.88rem; cursor: pointer; margin-top: .75rem; display: block;
+    width: 100%; text-align: center; transition: color .2s; padding: .5rem;
   }
   .btn-back:hover { color: var(--ink); }
 
-  /* LOADING */
+  .divider { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; color: var(--muted); font-size: 0.8rem; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
   .loading-screen {
-    display: none; text-align: center; padding: 3rem 1rem;
+    display: none; text-align: center; padding: 3rem 1.5rem;
+    background: var(--white); border: 1.5px solid var(--border); border-radius: 28px;
+    box-shadow: 0 8px 40px rgba(74,124,246,.08);
+    animation: fadeUp .5s cubic-bezier(0.16,1,.3,1) both;
   }
   .loading-screen.active { display: block; }
-  .spinner {
-    width: 52px; height: 52px; border-radius: 50%;
-    border: 3px solid var(--blue-light);
-    border-top-color: var(--blue);
-    animation: spin 1s linear infinite;
-    margin: 0 auto 1.5rem;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-screen h3 {
-    font-family: var(--serif); font-size: 1.6rem;
-    color: var(--ink); margin-bottom: .5rem;
-  }
-  .loading-screen p { color: var(--muted); font-weight: 300; }
-  .loading-steps { margin-top: 1.5rem; display: flex; flex-direction: column; gap: .5rem; }
+  .spinner-wrap { position: relative; width: 64px; height: 64px; margin: 0 auto 1.5rem; }
+  .spinner { width: 64px; height: 64px; border-radius: 50%; border: 3px solid var(--blue-light); border-top-color: var(--blue); animation: spin 1s linear infinite; position: absolute; inset: 0; }
+  .spinner-inner { width: 44px; height: 44px; border-radius: 50%; border: 3px solid transparent; border-bottom-color: #38bfa1; animation: spin .7s linear infinite reverse; position: absolute; top: 10px; left: 10px; }
+  .loading-screen h3 { font-family: var(--serif); font-size: 1.7rem; color: var(--ink); margin-bottom: .4rem; letter-spacing: -.02em; }
+  .loading-screen p { color: var(--muted); font-weight: 300; margin-bottom: 1.5rem; }
+  .loading-steps { display: flex; flex-direction: column; gap: .5rem; max-width: 320px; margin: 0 auto; }
   .loading-step {
-    font-size: 0.88rem; color: var(--muted);
-    padding: .5rem 1rem; border-radius: 8px;
-    background: var(--white); border: 1px solid var(--border);
-    opacity: 0; transition: opacity .4s, color .4s;
+    font-size: 0.88rem; color: var(--muted); padding: .6rem 1rem; border-radius: 10px;
+    background: var(--soft); border: 1px solid var(--border);
+    opacity: 0; transform: translateX(-10px);
+    transition: opacity .4s, transform .4s, color .3s, background .3s; text-align: left;
   }
-  .loading-step.visible { opacity: 1; }
-  .loading-step.done { color: #38bfa1; }
+  .loading-step.visible { opacity: 1; transform: none; color: var(--ink); }
+  .loading-step.done { background: #d1faf0; border-color: #38bfa1; color: #1a9e80; }
 
-  /* RESULT */
-  .result-card {
-    display: none;
-    animation: fadeUp .6s cubic-bezier(0.16,1,.3,1) both;
-  }
+  .result-card { display: none; animation: fadeUp .6s cubic-bezier(0.16,1,.3,1) both; }
   .result-card.active { display: block; }
   .result-header {
-    background: var(--blue);
-    border-radius: 18px 18px 0 0;
-    padding: 1.5rem 2rem;
-    color: #fff;
+    background: linear-gradient(135deg, #4a7cf6, #2851c8); border-radius: 22px 22px 0 0;
+    padding: 1.6rem 2rem; color: #fff; position: relative; overflow: hidden;
   }
-  .result-header h3 { font-size: 1.1rem; font-weight: 600; }
-  .result-header p { font-size: 0.85rem; opacity: .75; margin-top: .2rem; }
+  .result-header::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(255,255,255,.1) 1px, transparent 1px); background-size: 24px 24px; pointer-events: none; }
+  .result-header h3 { font-size: 1.05rem; font-weight: 600; position: relative; z-index: 1; }
+  .result-header p { font-size: 0.82rem; opacity: .75; margin-top: .2rem; position: relative; z-index: 1; }
   .result-body {
-    background: var(--white);
-    border: 1.5px solid var(--border);
-    border-top: none;
-    border-radius: 0 0 18px 18px;
-    padding: 2rem;
-    font-size: 0.95rem; line-height: 1.8;
-    color: var(--ink);
-    white-space: pre-wrap;
-    max-height: 500px; overflow-y: auto;
+    background: var(--white); border: 1.5px solid var(--border); border-top: none;
+    border-radius: 0 0 22px 22px; padding: 2rem;
+    font-size: 0.95rem; line-height: 1.85; color: var(--ink); white-space: pre-wrap;
+    max-height: 480px; overflow-y: auto;
   }
-  .result-actions {
-    display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;
-  }
-  .btn-copy {
-    flex: 1; padding: .85rem;
-    background: var(--soft); color: var(--ink);
-    border: 1.5px solid var(--border); border-radius: 12px;
-    font-family: var(--sans); font-size: 0.95rem; font-weight: 600;
-    cursor: pointer; transition: all .2s;
-  }
+  .result-actions { display: flex; gap: 1rem; margin-top: 1.2rem; }
+  .btn-copy { flex: 1; padding: .9rem; background: var(--soft); color: var(--ink); border: 1.5px solid var(--border); border-radius: 14px; font-family: var(--sans); font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: all .25s; }
   .btn-copy:hover { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
-  .btn-new {
-    flex: 1; padding: .85rem;
-    background: var(--blue); color: #fff;
-    border: none; border-radius: 12px;
-    font-family: var(--sans); font-size: 0.95rem; font-weight: 600;
-    cursor: pointer; transition: all .2s;
-  }
-  .btn-new:hover { background: #3567e0; }
+  .btn-new { flex: 1; padding: .9rem; background: var(--blue); color: #fff; border: none; border-radius: 14px; font-family: var(--sans); font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: all .25s; box-shadow: 0 4px 14px rgba(74,124,246,.3); }
+  .btn-new:hover { background: #3567e0; transform: translateY(-1px); }
 </style>
 </head>
 <body>
@@ -344,13 +198,8 @@
 <nav>
   <a href="index.html" class="logo">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="150" height="37">
-      <defs>
-        <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#5b8df8"/>
-          <stop offset="100%" style="stop-color:#2851c8"/>
-        </linearGradient>
-      </defs>
-      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#iconGrad)"/>
+      <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
+      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
       <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
       <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
       <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
@@ -367,13 +216,12 @@
 </nav>
 
 <div class="app-container">
-
   <div class="app-header">
+    <div class="app-header-badge">✦ AI-Powered</div>
     <h1><span class="white">Get your </span><em>study plan</em></h1>
-    <p style="color:rgba(255,255,255,.75);">Upload your lesson and answer 3 quick questions — done in under a minute.</p>
+    <p>Paste your notes · Answer 3 questions · Get your personalized plan</p>
   </div>
 
-  <!-- STEPS INDICATOR -->
   <div class="steps-indicator">
     <div class="step-dot active" id="dot-1">1</div>
     <div class="step-line" id="line-1"></div>
@@ -382,121 +230,121 @@
     <div class="step-dot" id="dot-3">3</div>
   </div>
 
-  <!-- STEP 1: Upload -->
+  <!-- STEP 1 -->
   <div class="card active" id="step-1">
-    <h2>Upload your <em>lesson</em></h2>
-    <p class="card-sub">Drop a file or paste your notes below.</p>
+    <div class="card-icon" style="font-size:1.2rem; color:var(--blue); font-weight:700;">01</div>
+    <h2>Paste your <em>notes</em></h2>
+    <p class="card-sub">Upload a file or paste your lesson text — the more detail, the better your plan.</p>
 
-    <div class="upload-zone" id="upload-zone">
-      <input type="file" id="file-input" accept=".pdf,.txt,.doc,.docx,.pptx,.md" />
-      <div class="upload-icon-big">📄</div>
-      <strong>Drop your file here</strong>
-      <span>PDF, Word, PowerPoint, or text files</span>
+    <label class="field-label">Upload a file</label>
+    <div id="upload-zone" style="border:2px dashed rgba(74,124,246,.3); border-radius:16px; padding:2rem 1.5rem; text-align:center; background:var(--blue-light); cursor:pointer; transition:all .3s; position:relative; margin-bottom:1rem;">
+      <input type="file" id="file-input" accept=".pdf,.txt,.doc,.docx,.pptx,.md" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />
+      <div style="font-size:1.5rem; margin-bottom:.5rem;">↑</div>
+      <strong style="display:block; font-size:0.98rem; color:var(--ink); margin-bottom:.25rem;">Drop your file here</strong>
+      <span style="font-size:0.82rem; color:var(--muted);">PDF, Word, PowerPoint, or text files</span>
     </div>
-    <div class="file-selected" id="file-selected">✓ File ready!</div>
+    <div class="file-selected" id="file-selected" style="display:none; margin-bottom:1rem; padding:.75rem 1rem; background:#d1faf0; border-radius:12px; font-size:0.88rem; color:#1a9e80; font-weight:500; border:1px solid #38bfa1;"></div>
 
-    <span class="paste-label">Or paste your notes directly</span>
-    <textarea id="notes-input" placeholder="Paste your lesson notes, study guide, or any text here..."></textarea>
+    <div class="divider">or paste text</div>
 
-    <button class="btn-next" id="btn-step1" onclick="goToStep2()">Continue →</button>
+    <label class="field-label">Your lesson notes</label>
+    <textarea id="notes-input" placeholder="Paste your notes here..."></textarea>
+
+    <div style="margin-top:1.2rem;">
+      <label class="field-label">Subject <span>(optional)</span></label>
+      <input type="text" class="text-input" id="subject-input" placeholder="e.g. Biology, History, Algebra..." />
+    </div>
+
+    <button class="btn-next" onclick="goToStep2()">Continue →</button>
   </div>
 
-  <!-- STEP 2: Questions -->
+  <!-- STEP 2 -->
   <div class="card" id="step-2">
-    <h2>A few quick <em>questions</em></h2>
-    <p class="card-sub">This helps us build the perfect plan for you.</p>
-
+    <div class="card-icon" style="font-size:1.2rem; color:var(--blue); font-weight:700;">02</div>
+    <h2>Quick <em>questions</em></h2>
+    <p class="card-sub">Just 3 things — helps us build the perfect plan for exactly where you're at.</p>
     <div class="field">
-      <label>What's your goal? <span>Pick one</span></label>
+      <span class="field-label">What's your goal?</span>
       <div class="options-grid">
-        <button class="option-btn" onclick="selectOption(this, 'goal')">Pass the exam</button>
-        <button class="option-btn" onclick="selectOption(this, 'goal')">Deep understanding</button>
-        <button class="option-btn" onclick="selectOption(this, 'goal')">Quick review</button>
-        <button class="option-btn" onclick="selectOption(this, 'goal')">Get an A</button>
+        <button class="option-btn" onclick="selectOption(this,'goal')">Pass the exam</button>
+        <button class="option-btn" onclick="selectOption(this,'goal')">Get an A</button>
+        <button class="option-btn" onclick="selectOption(this,'goal')">Deep understanding</button>
+        <button class="option-btn" onclick="selectOption(this,'goal')">Quick review</button>
       </div>
     </div>
-
     <div class="field">
-      <label>How difficult does this feel? <span>Be honest</span></label>
+      <span class="field-label">How hard does this feel?</span>
       <div class="options-grid">
-        <button class="option-btn" onclick="selectOption(this, 'difficulty')">Easy</button>
-        <button class="option-btn" onclick="selectOption(this, 'difficulty')">Medium</button>
-        <button class="option-btn" onclick="selectOption(this, 'difficulty')">Hard</button>
-        <button class="option-btn" onclick="selectOption(this, 'difficulty')">Very hard</button>
+        <button class="option-btn" onclick="selectOption(this,'difficulty')">Easy</button>
+        <button class="option-btn" onclick="selectOption(this,'difficulty')">Medium</button>
+        <button class="option-btn" onclick="selectOption(this,'difficulty')">Hard</button>
+        <button class="option-btn" onclick="selectOption(this,'difficulty')">Very hard</button>
       </div>
     </div>
-
     <div class="field">
-      <label>When is your exam or deadline?</label>
-      <input type="date" id="deadline-input" />
+      <span class="field-label">Exam date <span>(optional)</span></span>
+      <input type="date" class="text-input" id="deadline-input" />
     </div>
-
-    <div class="field">
-      <label>Subject <span>(optional)</span></label>
-      <input type="text" id="subject-input" placeholder="e.g. Biology, History, Math..." />
-    </div>
-
-    <button class="btn-next" id="btn-step2" onclick="generatePlan()">Generate my study plan ✦</button>
+    <button class="btn-next" onclick="generatePlan()">✦ Generate my study plan</button>
     <button class="btn-back" onclick="goToStep(1)">← Back</button>
   </div>
 
   <!-- LOADING -->
   <div class="loading-screen" id="loading">
-    <div class="spinner"></div>
+    <div class="spinner-wrap">
+      <div class="spinner"></div>
+      <div class="spinner-inner"></div>
+    </div>
     <h3>Building your plan...</h3>
-    <p>Our AI is analyzing your lesson right now.</p>
+    <p>AI is reading your lesson right now.</p>
     <div class="loading-steps">
-      <div class="loading-step" id="ls-1">📖 Reading your lesson...</div>
-      <div class="loading-step" id="ls-2">🧠 Identifying key topics...</div>
-      <div class="loading-step" id="ls-3">📅 Scheduling your sessions...</div>
-      <div class="loading-step" id="ls-4">✦ Finalizing your plan...</div>
+      <div class="loading-step" id="ls-1">Reading your lesson...</div>
+      <div class="loading-step" id="ls-2">Identifying key topics...</div>
+      <div class="loading-step" id="ls-3">Scheduling your sessions...</div>
+      <div class="loading-step" id="ls-4">Finalizing your plan...</div>
     </div>
   </div>
 
   <!-- RESULT -->
   <div class="result-card" id="result">
     <div class="result-header">
-      <h3 id="result-title">Your Study Plan</h3>
+      <h3 id="result-title">✦ Your Study Plan</h3>
       <p id="result-subtitle">Personalized just for you</p>
     </div>
     <div class="result-body" id="result-body"></div>
     <div class="result-actions">
       <button class="btn-copy" onclick="copyPlan()">📋 Copy plan</button>
-      <button class="btn-new" onclick="startOver()">Create new plan →</button>
+      <button class="btn-new" onclick="startOver()">New plan →</button>
     </div>
   </div>
-
 </div>
 
 <script>
-  var selectedGoal = '';
-  var selectedDifficulty = '';
-  var fileContent = '';
-  var generatedPlan = '';
+  var selectedGoal = '', selectedDifficulty = '', generatedPlan = '', fileContent = '';
 
-  // File upload handling
+  // File upload
   var fileInput = document.getElementById('file-input');
+  var uploadZone = document.getElementById('upload-zone');
+
   fileInput.addEventListener('change', function() {
     var file = fileInput.files[0];
     if (file) {
       document.getElementById('file-selected').style.display = 'block';
-      document.getElementById('file-selected').textContent = '✓ ' + file.name + ' ready!';
+      document.getElementById('file-selected').textContent = 'File ready: ' + file.name;
       var reader = new FileReader();
       reader.onload = function(e) { fileContent = e.target.result; };
       reader.readAsText(file);
     }
   });
 
-  // Drag and drop
-  var zone = document.getElementById('upload-zone');
-  zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.classList.add('dragover'); });
-  zone.addEventListener('dragleave', function() { zone.classList.remove('dragover'); });
-  zone.addEventListener('drop', function(e) {
-    e.preventDefault(); zone.classList.remove('dragover');
+  uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.style.borderColor = 'var(--blue)'; uploadZone.style.background = '#d0e4ff'; });
+  uploadZone.addEventListener('dragleave', function() { uploadZone.style.borderColor = 'rgba(74,124,246,.3)'; uploadZone.style.background = 'var(--blue-light)'; });
+  uploadZone.addEventListener('drop', function(e) {
+    e.preventDefault(); uploadZone.style.borderColor = 'rgba(74,124,246,.3)'; uploadZone.style.background = 'var(--blue-light)';
     var file = e.dataTransfer.files[0];
     if (file) {
       document.getElementById('file-selected').style.display = 'block';
-      document.getElementById('file-selected').textContent = '✓ ' + file.name + ' ready!';
+      document.getElementById('file-selected').textContent = 'File ready: ' + file.name;
       var reader = new FileReader();
       reader.onload = function(e) { fileContent = e.target.result; };
       reader.readAsText(file);
@@ -504,20 +352,14 @@
   });
 
   function selectOption(btn, group) {
-    document.querySelectorAll('[onclick*="' + group + '"]').forEach(function(b) {
-      b.classList.remove('selected');
-    });
+    document.querySelectorAll('[onclick*="' + group + '"]').forEach(function(b) { b.classList.remove('selected'); });
     btn.classList.add('selected');
     if (group === 'goal') selectedGoal = btn.textContent;
     if (group === 'difficulty') selectedDifficulty = btn.textContent;
   }
 
   function goToStep2() {
-    var notes = document.getElementById('notes-input').value;
-    if (!notes && !fileContent) {
-      alert('Please upload a file or paste your notes first!');
-      return;
-    }
+    if (!document.getElementById('notes-input').value.trim()) { alert('Please paste your notes first!'); return; }
     goToStep(2);
   }
 
@@ -525,82 +367,66 @@
     document.querySelectorAll('.card').forEach(function(c) { c.classList.remove('active'); });
     document.getElementById('loading').classList.remove('active');
     document.getElementById('result').classList.remove('active');
-    document.getElementById('step-' + n).classList.add('active');
+    var card = document.getElementById('step-' + n);
+    if (card) card.classList.add('active');
     updateDots(n);
   }
 
   function updateDots(active) {
     for (var i = 1; i <= 3; i++) {
       var dot = document.getElementById('dot-' + i);
-      dot.classList.remove('active', 'done');
+      dot.classList.remove('active','done');
       if (i < active) dot.classList.add('done');
       else if (i === active) dot.classList.add('active');
       if (i < 3) {
         var line = document.getElementById('line-' + i);
-        line.classList.toggle('done', i < active);
+        line.classList.remove('done');
+        if (i < active) line.classList.add('done');
       }
     }
   }
 
   function generatePlan() {
     if (!selectedGoal) { alert('Please select your goal!'); return; }
-    if (!selectedDifficulty) { alert('Please select difficulty level!'); return; }
+    if (!selectedDifficulty) { alert('Please select a difficulty!'); return; }
 
-    var notes = document.getElementById('notes-input').value || fileContent;
+    var notes = fileContent || document.getElementById('notes-input').value;
+    if (!notes.trim()) { alert('Please upload a file or paste your notes!'); goToStep(1); return; }
     var deadline = document.getElementById('deadline-input').value;
     var subject = document.getElementById('subject-input').value || 'this subject';
 
-    // Show loading
     document.querySelectorAll('.card').forEach(function(c) { c.classList.remove('active'); });
     document.getElementById('loading').classList.add('active');
     updateDots(3);
 
-    // Animate loading steps
-    var steps = ['ls-1', 'ls-2', 'ls-3', 'ls-4'];
+    var steps = ['ls-1','ls-2','ls-3','ls-4'];
     steps.forEach(function(id, i) {
       setTimeout(function() {
         document.getElementById(id).classList.add('visible');
         if (i > 0) document.getElementById(steps[i-1]).classList.add('done');
-      }, i * 1200);
+      }, i * 1100);
     });
 
-    // Build prompt
-    var deadlineText = deadline ? 'Exam/deadline date: ' + deadline : 'No specific deadline given';
-    var prompt = 'You are StudyFlow, an expert AI study coach. Create a detailed, personalized study plan based on the following:\n\nSUBJECT: ' + subject + '\nSTUDENT GOAL: ' + selectedGoal + '\nDIFFICULTY LEVEL: ' + selectedDifficulty + '\n' + deadlineText + '\n\nLESSON CONTENT:\n' + notes.substring(0, 8000) + '\n\nCreate a clear study plan with:\n1. A brief analysis of the key topics in this lesson\n2. Day-by-day study sessions with specific topics and time estimates\n3. What to focus on most based on difficulty\n4. 3-5 specific study tips for this material\n5. A quick summary of what to review right before the exam\n\nFormat it clearly with sections and make it feel personalized and encouraging. Keep it practical and actionable.';
+    var prompt = 'You are StudyFlow, an expert AI study coach. Create a detailed personalized study plan.\n\nSUBJECT: ' + subject + '\nGOAL: ' + selectedGoal + '\nDIFFICULTY: ' + selectedDifficulty + '\nDEADLINE: ' + (deadline || 'Not specified') + '\n\nLESSON CONTENT:\n' + notes.substring(0, 6000) + '\n\nCreate a clear study plan with:\n1. Key Topics Overview\n2. Day-by-Day Study Schedule with time estimates\n3. Focus Areas\n4. 3-5 Study Tips\n5. Pre-Exam Quick Recap\n\nBe encouraging and practical!';
 
-    // Call Gemini API
-    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBrpHGcca_zkcWExT-hQqVgqC55H638yNo', {
+    fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
-      })
+      body: JSON.stringify({ prompt: prompt })
     })
-    .then(function(res) {
-      if (!res.ok) throw new Error('API error: ' + res.status);
-      return res.json();
-    })
+    .then(function(res) { return res.json(); })
     .then(function(data) {
-      if (!data.candidates || !data.candidates[0]) throw new Error('No response');
-      var plan = data.candidates[0].content.parts[0].text;
-      generatedPlan = plan;
-      showResult(plan, subject, deadline);
-    })
-    .catch(function(err) {
-      console.error('Error:', err);
+      generatedPlan = data.plan;
       document.getElementById('loading').classList.remove('active');
-      alert('Something went wrong: ' + err.message + '. Please try pasting your notes instead of uploading a file.');
+      document.getElementById('result-title').textContent = '✦ Your Study Plan — ' + subject;
+      document.getElementById('result-subtitle').textContent = deadline ? 'Exam: ' + new Date(deadline + 'T12:00:00').toLocaleDateString('en-US', {weekday:'long',month:'long',day:'numeric'}) : 'Personalized just for you';
+      document.getElementById('result-body').textContent = generatedPlan;
+      document.getElementById('result').classList.add('active');
+    })
+    .catch(function() {
+      alert('Something went wrong. Please try again!');
       goToStep(2);
     });
-  }
-
-  function showResult(plan, subject, deadline) {
-    document.getElementById('loading').classList.remove('active');
-    document.getElementById('result-title').textContent = 'Your Study Plan — ' + subject;
-    document.getElementById('result-subtitle').textContent = deadline ? 'Deadline: ' + new Date(deadline).toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'}) : 'Personalized just for you';
-    document.getElementById('result-body').textContent = plan;
-    document.getElementById('result').classList.add('active');
   }
 
   function copyPlan() {
@@ -612,15 +438,12 @@
   }
 
   function startOver() {
-    selectedGoal = '';
-    selectedDifficulty = '';
-    fileContent = '';
-    generatedPlan = '';
+    selectedGoal = ''; selectedDifficulty = ''; generatedPlan = ''; fileContent = '';
     document.getElementById('notes-input').value = '';
-    document.getElementById('file-selected').style.display = 'none';
-    document.getElementById('deadline-input').value = '';
     document.getElementById('subject-input').value = '';
+    document.getElementById('deadline-input').value = '';
     document.querySelectorAll('.option-btn').forEach(function(b) { b.classList.remove('selected'); });
+    ['ls-1','ls-2','ls-3','ls-4'].forEach(function(id) { var el = document.getElementById(id); el.classList.remove('visible','done'); });
     document.getElementById('result').classList.remove('active');
     goToStep(1);
   }
