@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StudyFlow — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #1a1d2e; --muted: #6b7280; --soft: #f4f6fb;
+    --blue: #4a7cf6; --blue-light: #dce8ff; --white: #fff; --border: #e8ecf4;
+    --green: #38bfa1; --orange: #f59e0b;
+    --sidebar-w: 240px;
+    --sans: 'DM Sans', sans-serif; --serif: 'Instrument Serif', Georgia, serif;
+  }
+  html, body { height: 100%; }
+  body { font-family: var(--sans); color: var(--ink); background: var(--soft); display: flex; flex-direction: column; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+  @keyframes ringFill { from{stroke-dashoffset:220} to{stroke-dashoffset:var(--offset)} }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(74,124,246,.4)} 50%{box-shadow:0 0 0 8px rgba(74,124,246,0)} }
+
+  /* NAV */
+  nav {
+    background:#fff; border-bottom:1px solid var(--border);
+    padding:.85rem 2rem; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:200; box-shadow:0 1px 12px rgba(74,124,246,.07);
+  }
+  .logo { text-decoration:none; display:flex; align-items:center; }
+  .nav-right { display:flex; align-items:center; gap:1rem; }
+  .nav-avatar {
+    width:34px; height:34px; border-radius:50%;
+    background:linear-gradient(135deg,#4a7cf6,#2851c8);
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:700; font-size:0.85rem; cursor:pointer;
+  }
+  .btn-new {
+    background:var(--blue); color:#fff; padding:.45rem 1rem; border-radius:8px;
+    font-family:var(--sans); font-size:0.85rem; font-weight:600;
+    border:none; cursor:pointer; text-decoration:none;
+    transition:background .2s; box-shadow:0 3px 10px rgba(74,124,246,.3);
+  }
+  .btn-new:hover { background:#3567e0; }
+
+  /* LAYOUT */
+  .app-layout { display:flex; flex:1; overflow:hidden; height:calc(100vh - 57px); }
+
+  /* SIDEBAR */
+  .sidebar {
+    width:var(--sidebar-w); flex-shrink:0;
+    background:#fff; border-right:1px solid var(--border);
+    overflow-y:auto; display:flex; flex-direction:column;
+    animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both;
+  }
+  .sidebar-top { padding:1.2rem 1rem 0; }
+  .sidebar-label { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:.7rem; padding:0 .3rem; }
+  .day-item {
+    display:flex; align-items:center; gap:.75rem;
+    padding:.75rem .9rem; border-radius:12px; cursor:pointer;
+    margin-bottom:.3rem; border:1.5px solid transparent;
+    transition:all .2s;
+  }
+  .day-item:hover { background:var(--soft); border-color:var(--border); }
+  .day-item.active { background:var(--blue-light); border-color:var(--blue); }
+  .day-item.completed { opacity:.7; }
+  .day-num {
+    width:30px; height:30px; border-radius:8px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.75rem; font-weight:700;
+    background:var(--soft); color:var(--muted); border:1.5px solid var(--border);
+  }
+  .day-item.active .day-num { background:var(--blue); color:#fff; border-color:var(--blue); }
+  .day-item.completed .day-num { background:var(--green); color:#fff; border-color:var(--green); }
+  .day-item.locked .day-num { background:var(--soft); color:var(--border); }
+  .day-info { flex:1; min-width:0; }
+  .day-title { font-size:0.82rem; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .day-item.active .day-title { color:var(--blue); }
+  .day-meta { font-size:0.7rem; color:var(--muted); margin-top:.1rem; }
+  .day-badge {
+    font-size:0.62rem; font-weight:700; padding:.15rem .45rem; border-radius:999px;
+    background:var(--blue-light); color:var(--blue);
+  }
+  .day-badge.final { background:#fff0e0; color:#c06b1a; }
+  .day-badge.done { background:#d1faf0; color:#1a9e80; }
+  .sidebar-divider { height:1px; background:var(--border); margin:.8rem 1rem; }
+  .sidebar-plan-title { font-size:0.78rem; font-weight:600; color:var(--ink); padding:.3rem .9rem .6rem; }
+
+  /* MAIN */
+  .main { flex:1; overflow-y:auto; padding:2rem 2.5rem 4rem; animation:fadeUp .5s .1s cubic-bezier(0.16,1,.3,1) both; }
+
+  /* WELCOME */
+  .welcome { margin-bottom:2rem; }
+  .welcome h1 { font-family:var(--serif); font-size:clamp(1.6rem,3vw,2.2rem); letter-spacing:-0.03em; color:var(--ink); }
+  .welcome h1 em { font-style:italic; color:var(--blue); }
+  .welcome p { color:var(--muted); font-weight:300; margin-top:.3rem; font-size:0.95rem; }
+
+  /* STATS */
+  .stats-row { display:grid; grid-template-columns:auto 1fr 1fr 1fr; gap:1rem; margin-bottom:2rem; }
+  .ring-card {
+    background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.3rem;
+    display:flex; align-items:center; gap:1.2rem;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .ring-card:hover { border-color:var(--blue); box-shadow:0 4px 16px rgba(74,124,246,.1); }
+  .ring-track { fill:none; stroke:var(--blue-light); stroke-width:10; }
+  .ring-fill {
+    fill:none; stroke:var(--blue); stroke-width:10; stroke-linecap:round;
+    stroke-dasharray:220; stroke-dashoffset:220;
+    transform:rotate(-90deg); transform-origin:center;
+    animation:ringFill 1.5s 1s cubic-bezier(0.16,1,.3,1) forwards;
+    --offset:80;
+  }
+  .ring-label { font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:.3rem; }
+  .ring-val { font-size:1.5rem; font-weight:700; color:var(--ink); letter-spacing:-0.02em; line-height:1; }
+  .ring-sub { font-size:0.72rem; color:var(--muted); margin-top:.2rem; }
+  .stat-card {
+    background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.3rem;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .stat-card:hover { border-color:var(--blue); box-shadow:0 4px 16px rgba(74,124,246,.1); }
+  .stat-label { font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:.5rem; }
+  .stat-value { font-size:1.8rem; font-weight:700; color:var(--ink); letter-spacing:-0.02em; line-height:1; }
+  .stat-sub { font-size:0.72rem; color:var(--muted); margin-top:.3rem; }
+
+  /* TODAY CARD */
+  .today-card {
+    background:linear-gradient(135deg,#4a7cf6,#2851c8);
+    border-radius:24px; padding:2rem; margin-bottom:2rem;
+    position:relative; overflow:hidden;
+    box-shadow:0 12px 40px rgba(74,124,246,.25);
+  }
+  .today-card::before {
+    content:''; position:absolute; inset:0;
+    background-image:radial-gradient(circle,rgba(255,255,255,.1) 1px,transparent 1px);
+    background-size:24px 24px; pointer-events:none;
+  }
+  .today-badge {
+    display:inline-flex; align-items:center; gap:.4rem;
+    background:rgba(255,255,255,.2); color:#fff;
+    font-size:0.7rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+    padding:.3rem .8rem; border-radius:999px; border:1px solid rgba(255,255,255,.3);
+    margin-bottom:.9rem; position:relative; z-index:1;
+  }
+  .today-card h2 { font-family:var(--serif); font-size:1.6rem; color:#fff; letter-spacing:-0.02em; margin-bottom:.4rem; position:relative; z-index:1; }
+  .today-card p { color:rgba(255,255,255,.75); font-size:0.9rem; font-weight:300; margin-bottom:1.4rem; position:relative; z-index:1; line-height:1.6; }
+  .btn-start {
+    background:#fff; color:var(--blue); padding:.8rem 1.8rem; border-radius:12px;
+    font-family:var(--sans); font-size:0.95rem; font-weight:700;
+    border:none; cursor:pointer; text-decoration:none; display:inline-block;
+    transition:transform .2s, box-shadow .2s; position:relative; z-index:1;
+    box-shadow:0 4px 16px rgba(0,0,0,.15);
+  }
+  .btn-start:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.2); }
+
+  /* CALENDAR */
+  .cal-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.5rem; margin-bottom:2rem; }
+  .cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+  .cal-header h3 { font-size:0.92rem; font-weight:600; }
+  .cal-header span { font-size:0.78rem; color:var(--muted); }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:.25rem; }
+  .cal-day-label { font-size:0.65rem; font-weight:600; text-align:center; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; padding-bottom:.3rem; }
+  .cal-day { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:0.78rem; color:var(--ink); border-radius:7px; cursor:pointer; transition:all .2s; }
+  .cal-day:hover { background:var(--blue-light); color:var(--blue); }
+  .cal-day.today { background:var(--blue); color:#fff; font-weight:600; }
+  .cal-day.study-day { background:var(--blue-light); color:var(--blue); font-weight:600; }
+  .cal-day.exam { background:#fff0e0; color:#c06b1a; font-weight:700; position:relative; }
+  .cal-day.exam::after { content:''; position:absolute; bottom:2px; left:50%; transform:translateX(-50%); width:3px; height:3px; border-radius:50%; background:#c06b1a; }
+  .cal-day.empty { opacity:0; pointer-events:none; }
+
+  /* SECTION TITLE */
+  .section-label { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:.8rem; }
+
+  /* NO PLAN */
+  .no-plan {
+    text-align:center; padding:4rem 2rem;
+    background:#fff; border:1.5px solid var(--border); border-radius:24px;
+  }
+  .no-plan h2 { font-family:var(--serif); font-size:1.8rem; color:var(--ink); margin-bottom:.5rem; }
+  .no-plan h2 em { font-style:italic; color:var(--blue); }
+  .no-plan p { color:var(--muted); font-size:0.95rem; font-weight:300; margin-bottom:1.5rem; }
+
+  /* LOADING */
+  .loading-overlay {
+    display:none; position:fixed; inset:0; background:rgba(255,255,255,.95);
+    z-index:500; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:2rem;
+  }
+  .loading-overlay.active { display:flex; }
+  .spinner { width:52px; height:52px; border-radius:50%; border:3px solid var(--blue-light); border-top-color:var(--blue); animation:spin 1s linear infinite; margin-bottom:1.5rem; }
+  .loading-overlay h3 { font-family:var(--serif); font-size:1.8rem; color:var(--ink); margin-bottom:.4rem; }
+  .loading-overlay p { color:var(--muted); font-size:0.9rem; }
+  .loading-msg { margin-top:1rem; font-size:0.85rem; color:var(--blue); font-weight:500; background:var(--blue-light); padding:.5rem 1rem; border-radius:8px; }
+
+  @media(max-width:768px) { .sidebar{display:none;} .main{padding:1.2rem;} .stats-row{grid-template-columns:1fr 1fr;} }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <h3>Building your plan...</h3>
+  <p>AI is generating your full multi-day study plan.</p>
+  <div class="loading-msg" id="loading-msg">Analyzing your notes...</div>
+</div>
+
+<nav>
+  <a href="index.html" class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
+      <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
+      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
+      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
+      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
+      <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
+      <rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/>
+      <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
+      <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
+      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
+      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
+        <tspan fill="#1a1d2e">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
+      </text>
+    </svg>
+  </a>
+  <div class="nav-right">
+    <a href="https://studyflow-ten-vert.vercel.app/app.html" class="btn-new">+ New plan</a>
+    <div class="nav-avatar" id="user-avatar">E</div>
+  </div>
+</nav>
+
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-label">Study Plans</div>
+      <div id="sidebar-days"></div>
+    </div>
+  </aside>
+
+  <main class="main" id="main-content">
+    <div id="no-plan-view" style="display:none;">
+      <div class="no-plan">
+        <h2>No plan <em>yet</em></h2>
+        <p>Upload your lesson notes and we'll build your personalized multi-day study plan.</p>
+        <a href="https://studyflow-ten-vert.vercel.app/app.html" class="btn-start">Create your study plan →</a>
+      </div>
+    </div>
+
+    <div id="plan-view" style="display:none;">
+      <div class="welcome">
+        <h1>Good <span id="greeting-time">day</span>, <em id="user-name">Student</em>.</h1>
+        <p id="welcome-sub">Here's your study plan — let's get it done!</p>
+      </div>
+
+      <div class="stats-row">
+        <div class="ring-card">
+          <svg width="72" height="72" viewBox="0 0 80 80">
+            <circle class="ring-track" cx="40" cy="40" r="35"/>
+            <circle class="ring-fill" cx="40" cy="40" r="35" id="progress-ring"/>
+            <text x="40" y="36" font-size="14" font-weight="700" fill="#1a1d2e" text-anchor="middle" dominant-baseline="middle" font-family="DM Sans, sans-serif" id="progress-text">0%</text>
+            <text x="40" y="50" font-size="7" fill="#6b7280" text-anchor="middle" dominant-baseline="middle" font-family="DM Sans, sans-serif">done</text>
+          </svg>
+          <div>
+            <div class="ring-label">Overall</div>
+            <div class="ring-val" id="days-done-val">0/0</div>
+            <div class="ring-sub">days completed</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Current Day</div>
+          <div class="stat-value" id="current-day-val">1</div>
+          <div class="stat-sub" id="current-day-sub">of your plan</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Days Left</div>
+          <div class="stat-value" id="days-left-val">—</div>
+          <div class="stat-sub">until exam</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Subject</div>
+          <div class="stat-value" style="font-size:1.1rem;" id="subject-val">—</div>
+          <div class="stat-sub" id="goal-val">—</div>
+        </div>
+      </div>
+
+      <div class="today-card" id="today-card">
+        <div class="today-badge">✦ Today — Day <span id="today-day-num">1</span></div>
+        <h2 id="today-title">Loading...</h2>
+        <p id="today-description">Getting your plan ready...</p>
+        <button class="btn-start" onclick="startToday()">Start today's lesson →</button>
+      </div>
+
+      <div class="cal-card">
+        <div class="cal-header">
+          <h3 id="cal-month">April 2026</h3>
+          <span id="cal-exam-label">Exam coming up</span>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  var plan = null;
+  var currentDayIndex = 0;
+
+  function getGreeting() {
+    var h = new Date().getHours();
+    if (h < 12) return 'morning';
+    if (h < 17) return 'afternoon';
+    return 'evening';
+  }
+
+  function loadPlan() {
+    var saved = localStorage.getItem('studyflow_plan');
+    if (!saved) {
+      document.getElementById('no-plan-view').style.display = 'block';
+      return;
+    }
+    try {
+      plan = JSON.parse(saved);
+      document.getElementById('plan-view').style.display = 'block';
+      renderDashboard();
+    } catch(e) {
+      document.getElementById('no-plan-view').style.display = 'block';
+    }
+  }
+
+  function renderDashboard() {
+    document.getElementById('greeting-time').textContent = getGreeting();
+    document.getElementById('user-name').textContent = plan.subject || 'Student';
+    document.getElementById('welcome-sub').textContent = 'Your ' + plan.days.length + '-day ' + plan.subject + ' plan is ready.';
+    document.getElementById('subject-val').textContent = plan.subject || '—';
+    document.getElementById('goal-val').textContent = plan.goal || '—';
+
+    var completed = plan.days.filter(function(d){ return d.completed; }).length;
+    var total = plan.days.length;
+    var pct = Math.round((completed / total) * 100);
+    var offset = 220 - (220 * pct / 100);
+    document.getElementById('progress-ring').style.setProperty('--offset', offset);
+    document.getElementById('progress-text').textContent = pct + '%';
+    document.getElementById('days-done-val').textContent = completed + '/' + total;
+    document.getElementById('current-day-val').textContent = completed + 1 > total ? total : completed + 1;
+    document.getElementById('current-day-sub').textContent = 'of ' + total + ' days';
+
+    if (plan.deadline) {
+      var daysLeft = Math.ceil((new Date(plan.deadline) - new Date()) / 86400000);
+      document.getElementById('days-left-val').textContent = daysLeft > 0 ? daysLeft : '0';
+    }
+
+    currentDayIndex = completed < total ? completed : total - 1;
+    renderSidebar();
+    renderToday();
+    renderCalendar();
+  }
+
+  function renderSidebar() {
+    var html = '';
+    plan.days.forEach(function(day, i) {
+      var isActive = i === currentDayIndex;
+      var isCompleted = day.completed;
+      var isLocked = i > currentDayIndex;
+      var cls = 'day-item' + (isActive ? ' active' : '') + (isCompleted ? ' completed' : '') + (isLocked ? ' locked' : '');
+      var badge = '';
+      if (isCompleted) badge = '<span class="day-badge done">Done</span>';
+      else if (day.isFinal) badge = '<span class="day-badge final">Final</span>';
+      else if (isActive) badge = '<span class="day-badge">Today</span>';
+      html += '<div class="' + cls + '" onclick="selectDay(' + i + ')">' +
+        '<div class="day-num">' + (isCompleted ? '✓' : (i + 1)) + '</div>' +
+        '<div class="day-info">' +
+          '<div class="day-title">' + (day.title || 'Day ' + (i+1)) + '</div>' +
+          '<div class="day-meta">' + (day.duration || '—') + ' min</div>' +
+        '</div>' + badge + '</div>';
+    });
+    document.getElementById('sidebar-days').innerHTML = html;
+  }
+
+  function selectDay(i) {
+    if (i > plan.days.filter(function(d){return d.completed;}).length) return;
+    currentDayIndex = i;
+    renderSidebar();
+    renderToday();
+  }
+
+  function renderToday() {
+    var day = plan.days[currentDayIndex];
+    if (!day) return;
+    document.getElementById('today-day-num').textContent = currentDayIndex + 1;
+    document.getElementById('today-title').textContent = day.title || 'Day ' + (currentDayIndex + 1);
+    document.getElementById('today-description').textContent = day.briefing || day.description || '';
+    if (day.completed) {
+      document.querySelector('.btn-start').textContent = 'Review this day →';
+    } else if (day.isFinal) {
+      document.querySelector('.btn-start').textContent = 'Start final exam →';
+    } else {
+      document.querySelector('.btn-start').textContent = 'Start today\'s lesson →';
+    }
+  }
+
+  function renderCalendar() {
+    var now = new Date();
+    var year = now.getFullYear();
+    var month = now.getMonth();
+    var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    document.getElementById('cal-month').textContent = months[month] + ' ' + year;
+
+    var firstDay = new Date(year, month, 1).getDay();
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    var today = now.getDate();
+
+    var examDate = plan.deadline ? new Date(plan.deadline).getDate() : null;
+    var examMonth = plan.deadline ? new Date(plan.deadline).getMonth() : null;
+
+    var studyDays = [];
+    plan.days.forEach(function(d, i) {
+      var sd = new Date();
+      sd.setDate(sd.getDate() + i);
+      if (sd.getMonth() === month) studyDays.push(sd.getDate());
+    });
+
+    var html = '';
+    ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(function(d){ html += '<div class="cal-day-label">' + d + '</div>'; });
+    for (var i = 0; i < firstDay; i++) html += '<div class="cal-day empty"></div>';
+    for (var d = 1; d <= daysInMonth; d++) {
+      var cls = 'cal-day';
+      if (d === today) cls += ' today';
+      else if (examDate === d && examMonth === month) cls += ' exam';
+      else if (studyDays.indexOf(d) > -1 && d > today) cls += ' study-day';
+      html += '<div class="' + cls + '">' + d + '</div>';
+    }
+    document.getElementById('cal-grid').innerHTML = html;
+  }
+
+  function startToday() {
+    localStorage.setItem('studyflow_current_day', currentDayIndex);
+    window.location.href = 'lesson.html';
+  }
+
+  loadPlan();
+</script>
+</body>
+</html>
