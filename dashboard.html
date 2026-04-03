@@ -329,7 +329,9 @@
 
   function renderDashboard() {
     document.getElementById('greeting-time').textContent = getGreeting();
-    document.getElementById('user-name').textContent = plan.subject || 'Student';
+    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var name = user.name || user.email || 'Student';
+    document.getElementById('user-name').textContent = name.split(' ')[0];
     document.getElementById('welcome-sub').textContent = 'Your ' + plan.days.length + '-day ' + plan.subject + ' plan is ready.';
     document.getElementById('subject-val').textContent = plan.subject || '—';
     document.getElementById('goal-val').textContent = plan.goal || '—';
