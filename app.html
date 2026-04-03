@@ -407,9 +407,9 @@
       }, i * 1100);
     });
 
-    var prompt = 'You are StudyFlow, an expert AI study coach. Create a detailed personalized study plan.\n\nSUBJECT: ' + subject + '\nGOAL: ' + selectedGoal + '\nDIFFICULTY: ' + selectedDifficulty + '\nDEADLINE: ' + (deadline || 'Not specified') + '\n\nLESSON CONTENT:\n' + notes.substring(0, 6000) + '\n\nCreate a clear study plan with:\n1. Key Topics Overview\n2. Day-by-Day Study Schedule with time estimates\n3. Focus Areas\n4. 3-5 Study Tips\n5. Pre-Exam Quick Recap\n\nBe encouraging and practical!';
+    var prompt = 'You are StudyFlow, an AI study coach. Create a concise personalized study plan.\n\nSUBJECT: ' + subject + '\nGOAL: ' + selectedGoal + '\nDIFFICULTY: ' + selectedDifficulty + '\nDEADLINE: ' + (deadline || 'Not specified') + '\n\nNOTES:\n' + notes.substring(0, 2000) + '\n\nGive me:\n1. Key topics (3-5 bullet points)\n2. Study schedule (day by day)\n3. Top 3 study tips\n\nBe concise and practical!';
 
-    fetch('https://studyflow-j17wr1g23-e787-blips-projects.vercel.app/api/generate', {
+    fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: prompt })
