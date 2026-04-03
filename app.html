@@ -407,24 +407,25 @@
       }, i * 1100);
     });
 
-    var prompt = 'You are StudyFlow, an AI study coach. Create a concise personalized study plan.\n\nSUBJECT: ' + subject + '\nGOAL: ' + selectedGoal + '\nDIFFICULTY: ' + selectedDifficulty + '\nDEADLINE: ' + (deadline || 'Not specified') + '\n\nNOTES:\n' + notes.substring(0, 2000) + '\n\nGive me:\n1. Key topics (3-5 bullet points)\n2. Study schedule (day by day)\n3. Top 3 study tips\n\nBe concise and practical!';
+    var prompt = 'You are StudyFlow, an expert AI study coach. Generate a complete multi-day study plan as valid JSON only. No extra text, no markdown, just pure JSON.\n\nSUBJECT: ' + subject + '\nGOAL: ' + selectedGoal + '\nDIFFICULTY: ' + selectedDifficulty + '\nDEADLINE: ' + (deadline || 'Not specified') + '\nNOTES:\n' + notes.substring(0, 2000) + '\n\nReturn ONLY this JSON structure:\n{\n  "subject": "' + subject + '",\n  "goal": "' + selectedGoal + '",\n  "deadline": "' + (deadline || '') + '",\n  "days": [\n    {\n      "title": "Introduction to [topic]",\n      "briefing": "Today we start with the basics...",\n      "content": "Full lesson content here with explanations...",\n      "keyTerms": [{"term": "example", "definition": "meaning"}],\n      "duration": 30,\n      "isFinal": false,\n      "completed": false,\n      "questions": [\n        {\n          "type": "mcq",\n          "question": "Question text?",\n          "options": ["A", "B", "C", "D"],\n          "correctIndex": 0,\n          "hint": "Think about...",\n          "explanation": "The correct answer is A because...",\n          "difficulty": "Easy"\n        },\n        {\n          "type": "truefalse",\n          "question": "True or false statement?",\n          "correct": "True",\n          "hint": "Think about...",\n          "explanation": "This is true because...",\n          "difficulty": "Easy"\n        }\n      ]\n    }\n  ]\n}\n\nRules:\n- Number of days = days until deadline (max 7, min 3)\n- Day 1: basics, background, easy questions (2 MCQ + 1 TF)\n- Middle days: progressively harder content and questions (3 MCQ + 2 TF)\n- Last day: isFinal=true, test-level difficulty, hardest questions (4 MCQ + 2 TF)\n- All keyTerms only on day 1\n- Make content detailed and educational\n- Return ONLY valid JSON, nothing else';
 
     fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: prompt })
+      body: JSON.stringify({ prompt: prompt, mode: 'plan' })
     })
     .then(function(res) { return res.json(); })
     .then(function(data) {
-      generatedPlan = data.plan;
-      document.getElementById('loading').classList.remove('active');
-      document.getElementById('result-title').textContent = '✦ Your Study Plan — ' + subject;
-      document.getElementById('result-subtitle').textContent = deadline ? 'Exam: ' + new Date(deadline + 'T12:00:00').toLocaleDateString('en-US', {weekday:'long',month:'long',day:'numeric'}) : 'Personalized just for you';
-      document.getElementById('result-body').textContent = generatedPlan;
-      document.getElementById('result').classList.add('active');
+      var raw = data.result || data.plan || '';
+      var jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('No JSON found');
+      var plan = JSON.parse(jsonMatch[0]);
+      localStorage.setItem('studyflow_plan', JSON.stringify(plan));
+      window.location.href = 'dashboard.html';
     })
-    .catch(function() {
-      alert('Something went wrong. Please try again!');
+    .catch(function(err) {
+      console.error(err);
+      alert('Something went wrong generating your plan. Please try again!');
       goToStep(2);
     });
   }
