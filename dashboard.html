@@ -86,7 +86,60 @@
   .day-badge.final { background:#fff0e0; color:#c06b1a; }
   .day-badge.done { background:#d1faf0; color:#1a9e80; }
   .sidebar-divider { height:1px; background:var(--border); margin:.8rem 1rem; }
-  .sidebar-plan-title { font-size:0.78rem; font-weight:600; color:var(--ink); padding:.3rem .9rem .6rem; }
+
+  /* TOPIC GROUP in sidebar */
+  .topic-group { margin-bottom:.5rem; }
+  .topic-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:.75rem .9rem; border-radius:12px; cursor:pointer;
+    border:1.5px solid transparent; transition:all .2s;
+    background:var(--soft);
+  }
+  .topic-header:hover { border-color:var(--border); background:#eef2ff; }
+  .topic-name { font-size:0.88rem; font-weight:700; color:var(--ink); }
+  .topic-meta { font-size:0.7rem; color:var(--muted); margin-top:.1rem; }
+  .topic-arrow { font-size:0.75rem; color:var(--muted); transition:transform .25s; }
+  .topic-group.open .topic-arrow { transform:rotate(90deg); }
+  .topic-days { display:none; padding-left:.6rem; margin-top:.3rem; }
+  .topic-group.open .topic-days { display:block; }
+
+  /* TIME MODAL */
+  .modal-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(26,29,46,.5); backdrop-filter:blur(4px);
+    z-index:300; align-items:center; justify-content:center;
+  }
+  .modal-overlay.active { display:flex; }
+  .modal-box {
+    background:#fff; border-radius:28px; padding:2.5rem; max-width:400px; width:90%;
+    box-shadow:0 24px 64px rgba(74,124,246,.2);
+    animation:fadeUp .4s cubic-bezier(0.16,1,.3,1) both;
+  }
+  .modal-box h2 { font-family:var(--serif); font-size:1.6rem; color:var(--ink); margin-bottom:.3rem; letter-spacing:-0.02em; }
+  .modal-box h2 em { font-style:italic; color:var(--blue); }
+  .modal-box p { color:var(--muted); font-size:0.88rem; font-weight:300; margin-bottom:1.5rem; line-height:1.6; }
+  .time-options { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-bottom:1.2rem; }
+  .time-btn {
+    padding:.9rem; border-radius:14px; border:1.5px solid var(--border);
+    background:var(--soft); font-family:var(--sans); font-size:0.9rem; font-weight:600;
+    color:var(--ink); cursor:pointer; transition:all .2s; text-align:center;
+  }
+  .time-btn:hover { border-color:var(--blue); background:var(--blue-light); color:var(--blue); }
+  .time-btn.selected { border-color:var(--blue); background:var(--blue); color:#fff; }
+  .time-custom { display:flex; align-items:center; gap:.75rem; margin-bottom:1.5rem; }
+  .time-custom input {
+    flex:1; padding:.75rem 1rem; border:1.5px solid var(--border); border-radius:12px;
+    font-family:var(--sans); font-size:0.92rem; color:var(--ink); background:var(--soft); outline:none;
+    transition:border-color .2s;
+  }
+  .time-custom input:focus { border-color:var(--blue); }
+  .time-custom span { font-size:0.88rem; color:var(--muted); white-space:nowrap; }
+  .btn-start-lesson {
+    width:100%; padding:.95rem; background:var(--blue); color:#fff; border:none; border-radius:14px;
+    font-family:var(--sans); font-size:0.95rem; font-weight:600; cursor:pointer;
+    transition:all .3s; box-shadow:0 4px 14px rgba(74,124,246,.3);
+  }
+  .btn-start-lesson:hover { background:#3567e0; transform:translateY(-1px); }
 
   /* MAIN */
   .main { flex:1; overflow-y:auto; padding:2rem 2.5rem 4rem; animation:fadeUp .5s .1s cubic-bezier(0.16,1,.3,1) both; }
@@ -204,6 +257,25 @@
   <h3>Building your plan...</h3>
   <p>AI is generating your full multi-day study plan.</p>
   <div class="loading-msg" id="loading-msg">Analyzing your notes...</div>
+</div>
+
+<!-- TIME MODAL -->
+<div class="modal-overlay" id="time-modal">
+  <div class="modal-box">
+    <h2>How much time do you <em>have today?</em></h2>
+    <p>We'll pace your lesson to fit your schedule — covering everything faster or slower based on your time.</p>
+    <div class="time-options">
+      <button class="time-btn" onclick="selectTime(15)">15 min</button>
+      <button class="time-btn" onclick="selectTime(30)">30 min</button>
+      <button class="time-btn" onclick="selectTime(45)">45 min</button>
+      <button class="time-btn" onclick="selectTime(60)">60 min</button>
+    </div>
+    <div class="time-custom">
+      <input type="number" id="custom-time" placeholder="Custom" min="5" max="180" />
+      <span>minutes</span>
+    </div>
+    <button class="btn-start-lesson" onclick="confirmTime()">Start lesson →</button>
+  </div>
 </div>
 
 <nav>
@@ -358,31 +430,58 @@
   }
 
   function renderSidebar() {
-    var html = '';
+    var subject = plan.subject || 'Study Plan';
+    var completed = plan.days.filter(function(d){ return d.completed; }).length;
+    var total = plan.days.length;
+
+    var daysHtml = '';
     plan.days.forEach(function(day, i) {
       var isActive = i === currentDayIndex;
       var isCompleted = day.completed;
-      var isLocked = i > currentDayIndex;
+      var isLocked = i > completed;
       var cls = 'day-item' + (isActive ? ' active' : '') + (isCompleted ? ' completed' : '') + (isLocked ? ' locked' : '');
-      var badge = '';
-      if (isCompleted) badge = '<span class="day-badge done">Done</span>';
-      else if (day.isFinal) badge = '<span class="day-badge final">Final</span>';
-      else if (isActive) badge = '<span class="day-badge">Today</span>';
-      html += '<div class="' + cls + '" onclick="selectDay(' + i + ')">' +
+      var badge = isCompleted ? '<span class="day-badge done">Done</span>' : (day.isFinal ? '<span class="day-badge final">Final</span>' : (isActive ? '<span class="day-badge">Today</span>' : ''));
+      daysHtml += '<div class="' + cls + '" onclick="' + (isLocked ? '' : 'selectDay(' + i + ')') + '">' +
         '<div class="day-num">' + (isCompleted ? '✓' : (i + 1)) + '</div>' +
-        '<div class="day-info">' +
-          '<div class="day-title">' + (day.title || 'Day ' + (i+1)) + '</div>' +
-          '<div class="day-meta">' + (day.duration || '—') + ' min</div>' +
-        '</div>' + badge + '</div>';
+        '<div class="day-info"><div class="day-title">' + (day.title || 'Day ' + (i+1)) + '</div><div class="day-meta">' + (day.duration || '—') + ' min</div></div>' +
+        badge + '</div>';
     });
+
+    var html = '<div class="topic-group open" id="topic-group-0">' +
+      '<div class="topic-header" onclick="toggleTopic(0)">' +
+        '<div><div class="topic-name">' + subject + '</div><div class="topic-meta">' + completed + '/' + total + ' days done</div></div>' +
+        '<span class="topic-arrow">›</span>' +
+      '</div>' +
+      '<div class="topic-days">' + daysHtml + '</div>' +
+      '</div>';
+
     document.getElementById('sidebar-days').innerHTML = html;
   }
 
+  function toggleTopic(i) {
+    var group = document.getElementById('topic-group-' + i);
+    group.classList.toggle('open');
+  }
+
   function selectDay(i) {
-    if (i > plan.days.filter(function(d){return d.completed;}).length) return;
+    var completed = plan.days.filter(function(d){ return d.completed; }).length;
+    if (i > completed) return;
     currentDayIndex = i;
     renderSidebar();
     renderToday();
+  }
+
+  var selectedMinutes = 30;
+
+  function startToday() {
+    document.getElementById('time-modal').classList.add('active');
+  }
+
+  function selectTime(mins) {
+    selectedMinutes = mins;
+    document.querySelectorAll('.time-btn').forEach(function(b){ b.classList.remove('selected'); });
+    event.target.classList.add('selected');
+    document.getElementById('custom-time').value = '';
   }
 
   function renderToday() {
@@ -398,6 +497,16 @@
     } else {
       document.querySelector('.btn-start').textContent = 'Start today\'s lesson →';
     }
+  }
+
+  function confirmTime() {
+    var custom = document.getElementById('custom-time').value;
+    if (custom) selectedMinutes = parseInt(custom);
+    if (!selectedMinutes || selectedMinutes < 5) { alert('Please select or enter a time!'); return; }
+    document.getElementById('time-modal').classList.remove('active');
+    localStorage.setItem('studyflow_current_day', currentDayIndex);
+    localStorage.setItem('studyflow_minutes', selectedMinutes);
+    window.location.href = 'lesson.html';
   }
 
   function renderCalendar() {
