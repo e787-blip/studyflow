@@ -321,6 +321,7 @@
 
 <script>
   var selectedGoal = '', selectedDifficulty = '', generatedPlan = '', fileContent = '';
+  var fileReading = false;
 
   // Load PDF.js
   var pdfjsScript = document.createElement('script');
@@ -329,39 +330,55 @@
 
   function handleFile(file) {
     if (!file) return;
+    fileContent = '';
+    fileReading = true;
     document.getElementById('file-selected').style.display = 'block';
-    document.getElementById('file-selected').textContent = 'Reading: ' + file.name + '...';
+    document.getElementById('file-selected').textContent = 'Reading ' + file.name + '... please wait';
+    document.getElementById('file-selected').style.background = '#fff8e0';
+    document.getElementById('file-selected').style.color = '#92400e';
+    document.getElementById('file-selected').style.borderColor = '#f59e0b';
 
     if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
-      // Read PDF
       var reader = new FileReader();
       reader.onload = function(e) {
-        var typedArray = new Uint8Array(e.target.result);
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        window.pdfjsLib.getDocument(typedArray).promise.then(function(pdf) {
-          var textPromises = [];
-          for (var i = 1; i <= pdf.numPages; i++) {
-            textPromises.push(pdf.getPage(i).then(function(page) {
-              return page.getTextContent().then(function(tc) {
-                return tc.items.map(function(item) { return item.str; }).join(' ');
-              });
-            }));
-          }
-          Promise.all(textPromises).then(function(pages) {
-            fileContent = pages.join('\n');
-            document.getElementById('file-selected').textContent = 'File ready: ' + file.name + ' (' + pdf.numPages + ' pages)';
+        var tryPDF = function() {
+          if (!window.pdfjsLib) { setTimeout(tryPDF, 200); return; }
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          var typedArray = new Uint8Array(e.target.result);
+          window.pdfjsLib.getDocument(typedArray).promise.then(function(pdf) {
+            var textPromises = [];
+            for (var i = 1; i <= pdf.numPages; i++) {
+              textPromises.push(pdf.getPage(i).then(function(page) {
+                return page.getTextContent().then(function(tc) {
+                  return tc.items.map(function(item) { return item.str; }).join(' ');
+                });
+              }));
+            }
+            Promise.all(textPromises).then(function(pages) {
+              fileContent = pages.join('\n');
+              fileReading = false;
+              document.getElementById('file-selected').textContent = 'File ready: ' + file.name + ' (' + pdf.numPages + ' pages)';
+              document.getElementById('file-selected').style.background = '#d1faf0';
+              document.getElementById('file-selected').style.color = '#1a9e80';
+              document.getElementById('file-selected').style.borderColor = '#38bfa1';
+            });
+          }).catch(function(err) {
+            fileReading = false;
+            document.getElementById('file-selected').textContent = 'Could not read PDF — please paste your notes instead.';
           });
-        }).catch(function() {
-          document.getElementById('file-selected').textContent = 'Could not read PDF — try pasting text instead.';
-        });
+        };
+        tryPDF();
       };
       reader.readAsArrayBuffer(file);
     } else {
-      // Read as plain text for txt/doc etc
       var reader = new FileReader();
       reader.onload = function(e) {
         fileContent = e.target.result;
+        fileReading = false;
         document.getElementById('file-selected').textContent = 'File ready: ' + file.name;
+        document.getElementById('file-selected').style.background = '#d1faf0';
+        document.getElementById('file-selected').style.color = '#1a9e80';
+        document.getElementById('file-selected').style.borderColor = '#38bfa1';
       };
       reader.readAsText(file);
     }
@@ -388,7 +405,9 @@
   }
 
   function goToStep2() {
-    if (!document.getElementById('notes-input').value.trim()) { alert('Please paste your notes first!'); return; }
+    if (fileReading) { alert('Still reading your file — please wait a moment!'); return; }
+    var notes = fileContent || document.getElementById('notes-input').value;
+    if (!notes.trim()) { alert('Please upload a file or paste your notes first!'); return; }
     goToStep(2);
   }
 
