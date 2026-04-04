@@ -322,33 +322,62 @@
 <script>
   var selectedGoal = '', selectedDifficulty = '', generatedPlan = '', fileContent = '';
 
+  // Load PDF.js
+  var pdfjsScript = document.createElement('script');
+  pdfjsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  document.head.appendChild(pdfjsScript);
+
+  function handleFile(file) {
+    if (!file) return;
+    document.getElementById('file-selected').style.display = 'block';
+    document.getElementById('file-selected').textContent = 'Reading: ' + file.name + '...';
+
+    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      // Read PDF
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var typedArray = new Uint8Array(e.target.result);
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        window.pdfjsLib.getDocument(typedArray).promise.then(function(pdf) {
+          var textPromises = [];
+          for (var i = 1; i <= pdf.numPages; i++) {
+            textPromises.push(pdf.getPage(i).then(function(page) {
+              return page.getTextContent().then(function(tc) {
+                return tc.items.map(function(item) { return item.str; }).join(' ');
+              });
+            }));
+          }
+          Promise.all(textPromises).then(function(pages) {
+            fileContent = pages.join('\n');
+            document.getElementById('file-selected').textContent = 'File ready: ' + file.name + ' (' + pdf.numPages + ' pages)';
+          });
+        }).catch(function() {
+          document.getElementById('file-selected').textContent = 'Could not read PDF — try pasting text instead.';
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // Read as plain text for txt/doc etc
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        fileContent = e.target.result;
+        document.getElementById('file-selected').textContent = 'File ready: ' + file.name;
+      };
+      reader.readAsText(file);
+    }
+  }
+
   // File upload
   var fileInput = document.getElementById('file-input');
   var uploadZone = document.getElementById('upload-zone');
 
-  fileInput.addEventListener('change', function() {
-    var file = fileInput.files[0];
-    if (file) {
-      document.getElementById('file-selected').style.display = 'block';
-      document.getElementById('file-selected').textContent = 'File ready: ' + file.name;
-      var reader = new FileReader();
-      reader.onload = function(e) { fileContent = e.target.result; };
-      reader.readAsText(file);
-    }
-  });
+  fileInput.addEventListener('change', function() { handleFile(fileInput.files[0]); });
 
   uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.style.borderColor = 'var(--blue)'; uploadZone.style.background = '#d0e4ff'; });
   uploadZone.addEventListener('dragleave', function() { uploadZone.style.borderColor = 'rgba(74,124,246,.3)'; uploadZone.style.background = 'var(--blue-light)'; });
   uploadZone.addEventListener('drop', function(e) {
     e.preventDefault(); uploadZone.style.borderColor = 'rgba(74,124,246,.3)'; uploadZone.style.background = 'var(--blue-light)';
-    var file = e.dataTransfer.files[0];
-    if (file) {
-      document.getElementById('file-selected').style.display = 'block';
-      document.getElementById('file-selected').textContent = 'File ready: ' + file.name;
-      var reader = new FileReader();
-      reader.onload = function(e) { fileContent = e.target.result; };
-      reader.readAsText(file);
-    }
+    handleFile(e.dataTransfer.files[0]);
   });
 
   function selectOption(btn, group) {
