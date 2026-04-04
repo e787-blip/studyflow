@@ -199,10 +199,22 @@
   function init() {
     var saved = localStorage.getItem('studyflow_plan');
     dayIndex = parseInt(localStorage.getItem('studyflow_current_day') || '0');
+    var minutes = parseInt(localStorage.getItem('studyflow_minutes') || '30');
     if (!saved) { window.location.href = 'dashboard.html'; return; }
     plan = JSON.parse(saved);
-    day = plan.days[dayIndex];
+    day = JSON.parse(JSON.stringify(plan.days[dayIndex])); // deep copy
     if (!day) { window.location.href = 'dashboard.html'; return; }
+
+    // Adapt questions based on time
+    if (day.questions && day.questions.length > 0) {
+      var qPerMin = 0.15; // roughly 1 question per 6-7 min
+      var maxQ = Math.max(1, Math.round(minutes * qPerMin));
+      if (minutes <= 15) maxQ = Math.min(2, day.questions.length);
+      else if (minutes <= 30) maxQ = Math.min(4, day.questions.length);
+      else maxQ = day.questions.length;
+      day.questions = day.questions.slice(0, maxQ);
+    }
+
     buildSteps();
     renderStep();
   }
