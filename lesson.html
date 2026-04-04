@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>StudyFlow — Today's Lesson</title>
+<title>StudyFlow — Study Session</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
 <style>
@@ -20,84 +20,99 @@
   @keyframes fadeIn { from{opacity:0} to{opacity:1} }
   @keyframes spin { to{transform:rotate(360deg)} }
   @keyframes shake { 0%,100%{transform:none} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+  @keyframes timeWarning { 0%,100%{background:#ef4444} 50%{background:#dc2626} }
+  @keyframes progressPulse { 0%,100%{opacity:1} 50%{opacity:.7} }
 
   /* NAV */
   nav {
-    background:#fff; border-bottom:1px solid var(--border); padding:.85rem 2rem;
+    background:#fff; border-bottom:1px solid var(--border); padding:.75rem 2rem;
     display:flex; align-items:center; justify-content:space-between;
     position:sticky; top:0; z-index:100; box-shadow:0 1px 12px rgba(74,124,246,.07);
   }
   .logo { text-decoration:none; display:flex; align-items:center; }
-  .nav-back { font-size:0.85rem; color:var(--muted); text-decoration:none; font-weight:500; padding:.4rem .9rem; border-radius:8px; border:1px solid var(--border); transition:all .2s; }
+  .nav-back { font-size:0.82rem; color:var(--muted); text-decoration:none; font-weight:500; padding:.35rem .8rem; border-radius:8px; border:1px solid var(--border); transition:all .2s; }
   .nav-back:hover { color:var(--blue); border-color:var(--blue); background:var(--blue-light); }
-  .nav-center { display:flex; flex-direction:column; align-items:center; gap:.3rem; }
-  .nav-step-label { font-size:0.72rem; color:var(--muted); font-weight:500; }
-  .progress-bar { width:160px; height:5px; background:var(--border); border-radius:3px; overflow:hidden; }
-  .progress-fill { height:100%; background:var(--blue); border-radius:3px; transition:width .5s cubic-bezier(0.16,1,.3,1); }
+
+  /* TIME BAR */
+  .time-bar-wrap {
+    background:#fff; border-bottom:1px solid var(--border);
+    padding:.75rem 2rem; display:flex; align-items:center; gap:1.2rem;
+  }
+  .time-label { font-size:0.78rem; font-weight:600; color:var(--muted); white-space:nowrap; min-width:80px; }
+  .time-bar-track { flex:1; height:8px; background:var(--border); border-radius:4px; overflow:hidden; }
+  .time-bar-fill { height:100%; background:var(--blue); border-radius:4px; transition:width 1s linear; }
+  .time-bar-fill.warning { background:var(--orange); }
+  .time-bar-fill.critical { background:var(--red); animation:progressPulse 1s ease infinite; }
+  .session-stats { display:flex; align-items:center; gap:1rem; white-space:nowrap; }
+  .stat-pill { font-size:0.75rem; font-weight:600; padding:.25rem .7rem; border-radius:999px; }
+  .stat-pill.correct { background:#d1faf0; color:#1a9e80; }
+  .stat-pill.total { background:var(--blue-light); color:var(--blue); }
 
   /* CONTAINER */
-  .container { max-width:680px; margin:0 auto; padding:2.5rem 1.5rem 6rem; }
+  .container { max-width:680px; margin:0 auto; padding:2rem 1.5rem 6rem; }
 
   /* CARD */
-  .step-card {
-    background:#fff; border:1.5px solid var(--border); border-radius:28px;
-    overflow:hidden; box-shadow:0 8px 32px rgba(74,124,246,.08);
-    animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both;
+  .session-card {
+    background:#fff; border:1.5px solid var(--border); border-radius:24px;
+    overflow:hidden; box-shadow:0 6px 28px rgba(74,124,246,.08);
+    animation:fadeUp .4s cubic-bezier(0.16,1,.3,1) both;
   }
 
-  /* CARD HEADER */
   .card-header {
     background:linear-gradient(135deg,#4a7cf6,#2851c8);
-    padding:1.8rem 2rem; position:relative; overflow:hidden;
+    padding:1.5rem 2rem; position:relative; overflow:hidden;
   }
   .card-header::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle,rgba(255,255,255,.1) 1px,transparent 1px); background-size:24px 24px; pointer-events:none; }
-  .card-header-badge { display:inline-flex; align-items:center; gap:.4rem; background:rgba(255,255,255,.2); color:#fff; font-size:0.7rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:.28rem .75rem; border-radius:999px; border:1px solid rgba(255,255,255,.3); margin-bottom:.7rem; position:relative; z-index:1; }
-  .card-header h1 { font-family:var(--serif); font-size:clamp(1.4rem,3vw,1.9rem); color:#fff; letter-spacing:-0.02em; position:relative; z-index:1; line-height:1.2; }
+  .card-badge { display:inline-flex; align-items:center; gap:.4rem; background:rgba(255,255,255,.2); color:#fff; font-size:0.68rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:.25rem .7rem; border-radius:999px; border:1px solid rgba(255,255,255,.3); margin-bottom:.6rem; position:relative; z-index:1; }
+  .card-header h2 { font-family:var(--serif); font-size:clamp(1.3rem,3vw,1.7rem); color:#fff; letter-spacing:-0.02em; position:relative; z-index:1; line-height:1.2; }
 
-  /* CARD BODY */
-  .card-body { padding:2rem; }
+  .card-body { padding:1.8rem 2rem; }
 
-  /* WELCOME */
-  .welcome-text { font-size:1rem; color:var(--muted); font-weight:300; line-height:1.8; margin-bottom:1.5rem; }
-
-  /* LESSON CONTENT */
-  .lesson-content { font-size:0.97rem; color:var(--ink); line-height:1.85; font-weight:300; }
-  .lesson-content p { margin-bottom:1rem; }
-  .lesson-content p:last-child { margin-bottom:0; }
-  .lesson-content strong { font-weight:600; color:var(--ink); }
+  /* CONTENT */
+  .content-text { font-size:0.96rem; color:var(--ink); line-height:1.85; font-weight:300; }
+  .content-text p { margin-bottom:.9rem; }
+  .content-text p:last-child { margin-bottom:0; }
+  .content-text strong { font-weight:600; }
+  .content-text .highlight { background:var(--blue-light); color:var(--blue); padding:.1rem .35rem; border-radius:4px; font-weight:600; font-size:0.88rem; }
 
   /* KEY TERMS */
-  .terms-list { display:flex; flex-direction:column; gap:.75rem; }
-  .term-item { background:var(--soft); border:1.5px solid var(--border); border-radius:14px; padding:1rem 1.2rem; }
-  .term-word { font-size:0.92rem; font-weight:700; color:var(--blue); margin-bottom:.3rem; }
-  .term-def { font-size:0.88rem; color:var(--muted); font-weight:300; line-height:1.6; }
+  .terms-list { display:flex; flex-direction:column; gap:.6rem; }
+  .term-item { background:var(--soft); border:1.5px solid var(--border); border-radius:12px; padding:.9rem 1.1rem; }
+  .term-word { font-size:0.9rem; font-weight:700; color:var(--blue); margin-bottom:.25rem; }
+  .term-def { font-size:0.85rem; color:var(--muted); font-weight:300; line-height:1.5; }
 
   /* QUESTION */
-  .q-header { margin-bottom:1.2rem; }
-  .q-difficulty { display:inline-block; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.25rem .7rem; border-radius:999px; margin-bottom:.6rem; }
+  .q-meta { display:flex; align-items:center; gap:.6rem; margin-bottom:.9rem; }
+  .q-type-label { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.2rem .6rem; border-radius:999px; }
+  .q-type-label.mcq { background:var(--blue-light); color:var(--blue); }
+  .q-type-label.tf { background:#fff0e0; color:#c06b1a; }
+  .q-type-label.write { background:#f0fdf9; color:#1a9e80; }
+  .q-difficulty { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.2rem .6rem; border-radius:999px; }
   .q-difficulty.easy { background:#d1faf0; color:#1a9e80; }
   .q-difficulty.medium { background:#fff0e0; color:#c06b1a; }
   .q-difficulty.hard { background:#fee2e2; color:#dc2626; }
-  .q-text { font-size:1rem; font-weight:600; color:var(--ink); line-height:1.5; }
-  .q-options { display:flex; flex-direction:column; gap:.5rem; margin-top:1.2rem; }
+  .q-text { font-size:1rem; font-weight:600; color:var(--ink); line-height:1.5; margin-bottom:1.2rem; }
+
+  /* MCQ OPTIONS */
+  .q-options { display:flex; flex-direction:column; gap:.5rem; }
   .q-option {
-    padding:.85rem 1.1rem; border-radius:14px; border:1.5px solid var(--border);
-    background:var(--soft); font-family:var(--sans); font-size:0.92rem; font-weight:500;
+    padding:.8rem 1rem; border-radius:12px; border:1.5px solid var(--border);
+    background:var(--soft); font-family:var(--sans); font-size:0.9rem; font-weight:500;
     color:var(--ink); cursor:pointer; text-align:left; transition:all .2s;
-    display:flex; align-items:center; gap:.75rem;
+    display:flex; align-items:center; gap:.7rem;
   }
   .q-option:hover:not(:disabled) { border-color:var(--blue); background:var(--blue-light); color:var(--blue); }
   .q-option.selected { border-color:var(--blue); background:var(--blue); color:#fff; }
   .q-option.correct { border-color:var(--green); background:#d1faf0; color:#1a9e80; }
   .q-option.wrong { border-color:var(--red); background:#fee2e2; color:#dc2626; animation:shake .3s ease; }
   .q-option:disabled { cursor:not-allowed; }
-  .option-letter { width:26px; height:26px; border-radius:7px; background:rgba(0,0,0,.06); display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700; flex-shrink:0; }
-  .q-option.selected .option-letter { background:rgba(255,255,255,.25); color:#fff; }
+  .opt-letter { width:24px; height:24px; border-radius:6px; background:rgba(0,0,0,.06); display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; flex-shrink:0; }
+  .q-option.selected .opt-letter { background:rgba(255,255,255,.25); }
 
   /* TRUE FALSE */
-  .tf-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-top:1.2rem; }
+  .tf-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
   .tf-btn {
-    padding:1rem; border-radius:14px; border:1.5px solid var(--border);
+    padding:1rem; border-radius:12px; border:1.5px solid var(--border);
     background:var(--soft); font-family:var(--sans); font-size:1rem; font-weight:600;
     color:var(--ink); cursor:pointer; transition:all .2s; text-align:center;
   }
@@ -107,54 +122,95 @@
   .tf-btn.wrong { border-color:var(--red); background:#fee2e2; color:#dc2626; }
   .tf-btn:disabled { cursor:not-allowed; }
 
+  /* WRITING */
+  .write-area {
+    width:100%; min-height:120px; padding:1rem 1.2rem;
+    border:1.5px solid var(--border); border-radius:14px;
+    font-family:var(--sans); font-size:0.95rem; color:var(--ink);
+    background:var(--soft); resize:vertical; outline:none; line-height:1.7;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .write-area:focus { border-color:var(--blue); box-shadow:0 0 0 4px rgba(74,124,246,.1); }
+  .write-area::placeholder { color:#9ca3af; }
+  .write-submit {
+    margin-top:.75rem; padding:.75rem 1.5rem; background:var(--blue); color:#fff;
+    border:none; border-radius:10px; font-family:var(--sans); font-size:0.88rem;
+    font-weight:600; cursor:pointer; transition:all .2s;
+  }
+  .write-submit:hover { background:#3567e0; }
+
   /* HINT */
-  .hint-row { margin-top:1.2rem; }
-  .hint-btn { background:none; border:1.5px solid var(--border); color:var(--muted); padding:.45rem .9rem; border-radius:8px; font-family:var(--sans); font-size:0.82rem; font-weight:500; cursor:pointer; transition:all .2s; }
+  .hint-row { margin-top:1rem; }
+  .hint-btn { background:none; border:1.5px solid var(--border); color:var(--muted); padding:.4rem .85rem; border-radius:8px; font-family:var(--sans); font-size:0.8rem; font-weight:500; cursor:pointer; transition:all .2s; }
   .hint-btn:hover { border-color:var(--orange); color:var(--orange); background:#fff8e0; }
-  .hint-box { display:none; margin-top:.75rem; padding:.8rem 1rem; background:#fff8e0; border:1px solid #f59e0b; border-radius:10px; font-size:0.85rem; color:#92400e; line-height:1.6; }
+  .hint-box { display:none; margin-top:.65rem; padding:.75rem 1rem; background:#fff8e0; border:1px solid #f59e0b; border-radius:10px; font-size:0.83rem; color:#92400e; line-height:1.6; }
   .hint-box.show { display:block; animation:fadeIn .3s ease; }
 
   /* FEEDBACK */
-  .feedback-box { margin-top:1.2rem; border-radius:14px; padding:1rem 1.2rem; display:none; animation:fadeIn .3s ease; }
+  .feedback-box { margin-top:1rem; border-radius:12px; padding:.9rem 1.1rem; display:none; animation:fadeIn .3s ease; }
   .feedback-box.show { display:block; }
   .feedback-box.correct-fb { background:#d1faf0; border:1.5px solid var(--green); }
   .feedback-box.wrong-fb { background:#fee2e2; border:1.5px solid var(--red); }
-  .feedback-label { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; }
+  .feedback-box.info-fb { background:var(--blue-light); border:1.5px solid var(--blue); }
+  .feedback-label { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; }
   .correct-fb .feedback-label { color:#1a9e80; }
   .wrong-fb .feedback-label { color:#dc2626; }
-  .feedback-text { font-size:0.88rem; line-height:1.6; }
+  .info-fb .feedback-label { color:var(--blue); }
+  .feedback-text { font-size:0.86rem; line-height:1.6; }
   .correct-fb .feedback-text { color:#065f46; }
   .wrong-fb .feedback-text { color:#7f1d1d; }
+  .info-fb .feedback-text { color:#1e40af; }
 
   /* CARD FOOTER */
-  .card-footer { padding:1.5rem 2rem; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
-  .step-counter { font-size:0.8rem; color:var(--muted); font-weight:500; }
+  .card-footer { padding:1.4rem 2rem; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .streak-info { font-size:0.78rem; color:var(--muted); font-weight:500; }
+  .streak-info span { color:var(--blue); font-weight:700; }
   .btn-next {
-    background:var(--blue); color:#fff; padding:.85rem 2rem; border-radius:12px;
-    font-family:var(--sans); font-size:0.95rem; font-weight:600; border:none; cursor:pointer;
+    background:var(--blue); color:#fff; padding:.8rem 1.8rem; border-radius:12px;
+    font-family:var(--sans); font-size:0.92rem; font-weight:600; border:none; cursor:pointer;
     transition:all .3s cubic-bezier(0.16,1,.3,1); box-shadow:0 4px 14px rgba(74,124,246,.3);
   }
-  .btn-next:hover { background:#3567e0; transform:translateY(-2px); box-shadow:0 8px 22px rgba(74,124,246,.4); }
+  .btn-next:hover { background:#3567e0; transform:translateY(-2px); box-shadow:0 8px 20px rgba(74,124,246,.4); }
   .btn-next:disabled { background:var(--border); color:var(--muted); cursor:not-allowed; transform:none; box-shadow:none; }
 
+  /* STRUGGLING BANNER */
+  .struggling-banner {
+    background:#fff8e0; border:1.5px solid var(--orange); border-radius:14px;
+    padding:1rem 1.3rem; margin-bottom:1.5rem; display:none;
+    animation:fadeIn .3s ease;
+  }
+  .struggling-banner.show { display:flex; align-items:center; gap:.75rem; }
+  .struggling-banner p { font-size:0.85rem; color:#92400e; font-weight:500; line-height:1.5; }
+
+  /* END SESSION */
+  .end-btn {
+    display:block; margin:1.5rem auto 0; background:none; border:1.5px solid var(--border);
+    color:var(--muted); padding:.65rem 1.5rem; border-radius:10px;
+    font-family:var(--sans); font-size:0.85rem; cursor:pointer; transition:all .2s;
+  }
+  .end-btn:hover { border-color:var(--red); color:var(--red); background:#fef2f2; }
+
   /* RESULTS */
-  .results-card { background:#fff; border:1.5px solid var(--border); border-radius:28px; overflow:hidden; box-shadow:0 8px 32px rgba(74,124,246,.08); display:none; animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both; }
-  .results-card.show { display:block; }
-  .results-top { padding:2.5rem 2rem; text-align:center; }
-  .results-top.great { background:linear-gradient(135deg,#38bfa1,#059669); }
-  .results-top.good { background:linear-gradient(135deg,#4a7cf6,#2851c8); }
-  .results-top.retry { background:linear-gradient(135deg,#f59e0b,#d97706); }
-  .results-score { font-size:4.5rem; font-weight:700; color:#fff; line-height:1; }
-  .results-msg { font-size:1rem; color:rgba(255,255,255,.85); margin-top:.5rem; }
-  .results-body { padding:2rem; }
-  .results-body h3 { font-family:var(--serif); font-size:1.3rem; color:var(--ink); margin-bottom:1rem; }
-  .wrong-item { background:var(--soft); border:1.5px solid var(--border); border-left:4px solid var(--red); border-radius:14px; padding:1.2rem 1.5rem; margin-bottom:.8rem; }
-  .wi-q { font-size:0.92rem; font-weight:600; color:var(--ink); margin-bottom:.4rem; }
+  .results-wrap { display:none; animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both; }
+  .results-wrap.show { display:block; }
+  .results-top { border-radius:24px; padding:2.5rem 2rem; text-align:center; margin-bottom:1.5rem; }
+  .results-top.great { background:linear-gradient(135deg,#38bfa1,#059669); box-shadow:0 12px 40px rgba(56,191,161,.25); }
+  .results-top.good { background:linear-gradient(135deg,#4a7cf6,#2851c8); box-shadow:0 12px 40px rgba(74,124,246,.25); }
+  .results-top.retry { background:linear-gradient(135deg,#f59e0b,#d97706); box-shadow:0 12px 40px rgba(245,158,11,.25); }
+  .results-score { font-size:4rem; font-weight:700; color:#fff; line-height:1; }
+  .results-msg { font-size:1rem; color:rgba(255,255,255,.85); margin-top:.4rem; }
+  .results-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:1.5rem; }
+  .r-stat { background:#fff; border:1.5px solid var(--border); border-radius:16px; padding:1.2rem; text-align:center; }
+  .r-stat-val { font-size:1.8rem; font-weight:700; color:var(--ink); letter-spacing:-0.02em; }
+  .r-stat-label { font-size:0.72rem; color:var(--muted); margin-top:.2rem; text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+  .wrong-reviews { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.8rem; margin-bottom:1.5rem; }
+  .wrong-reviews h3 { font-family:var(--serif); font-size:1.3rem; color:var(--ink); margin-bottom:1rem; }
+  .wrong-item { border-left:4px solid var(--red); padding:.9rem 1.1rem; margin-bottom:.8rem; background:var(--soft); border-radius:0 10px 10px 0; }
+  .wi-q { font-size:0.9rem; font-weight:600; color:var(--ink); margin-bottom:.3rem; }
   .wi-yours { font-size:0.82rem; color:#dc2626; margin-bottom:.2rem; }
-  .wi-correct { font-size:0.82rem; color:#1a9e80; margin-bottom:.5rem; }
-  .wi-why { font-size:0.82rem; color:var(--muted); line-height:1.6; padding:.65rem .9rem; background:#fff; border-radius:8px; }
-  .all-correct-msg { background:#d1faf0; border:1.5px solid var(--green); border-radius:14px; padding:1.2rem; text-align:center; color:#1a9e80; font-weight:600; font-size:0.95rem; margin-bottom:1rem; }
-  .btn-dashboard { width:100%; padding:1rem; background:var(--blue); color:#fff; border:none; border-radius:14px; font-family:var(--sans); font-size:1rem; font-weight:600; cursor:pointer; transition:all .3s; box-shadow:0 4px 14px rgba(74,124,246,.3); margin-top:1.5rem; }
+  .wi-correct { font-size:0.82rem; color:#1a9e80; margin-bottom:.4rem; }
+  .wi-why { font-size:0.82rem; color:var(--muted); line-height:1.6; }
+  .btn-dashboard { width:100%; padding:1rem; background:var(--blue); color:#fff; border:none; border-radius:14px; font-family:var(--sans); font-size:1rem; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(74,124,246,.3); transition:all .3s; }
   .btn-dashboard:hover { background:#3567e0; transform:translateY(-2px); }
 </style>
 </head>
@@ -162,7 +218,7 @@
 
 <nav>
   <a href="dashboard.html" class="logo">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="130" height="32">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="120" height="30">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
       <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
       <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
@@ -177,175 +233,202 @@
       </text>
     </svg>
   </a>
-  <div class="nav-center">
-    <div class="nav-step-label" id="nav-step-label">Loading...</div>
-    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-  </div>
   <a href="dashboard.html" class="nav-back">← Dashboard</a>
 </nav>
 
+<!-- TIME PROGRESS BAR -->
+<div class="time-bar-wrap">
+  <span class="time-label" id="time-label">30 min left</span>
+  <div class="time-bar-track">
+    <div class="time-bar-fill" id="time-bar" style="width:100%"></div>
+  </div>
+  <div class="session-stats">
+    <span class="stat-pill correct" id="correct-pill">0 correct</span>
+    <span class="stat-pill total" id="total-pill">0 done</span>
+  </div>
+</div>
+
 <div class="container">
-  <div class="step-card" id="step-card"></div>
-  <div class="results-card" id="results-card"></div>
+  <div class="struggling-banner" id="struggling-banner">
+    <span style="font-size:1.2rem">💡</span>
+    <p>You're getting a few wrong — let's slow down and make sure this clicks before moving on.</p>
+  </div>
+
+  <!-- SESSION CARD -->
+  <div id="session-card"></div>
+
+  <button class="end-btn" onclick="endSession()">End session early</button>
+
+  <!-- RESULTS -->
+  <div class="results-wrap" id="results-wrap"></div>
 </div>
 
 <script>
-  var plan, day, dayIndex;
-  var steps = [];
-  var currentStep = 0;
-  var answers = {};
+  var plan, day, dayIndex, totalMinutes;
+  var cardIndex = 0;
+  var correctCount = 0;
+  var totalAnswered = 0;
   var wrongItems = [];
+  var recentWrong = 0; // track recent wrong streak
+  var sessionCards = []; // the full queue of cards
+  var timerInterval;
+  var secondsLeft;
+  var sessionActive = true;
+  var currentAnswered = false;
 
   function init() {
     var saved = localStorage.getItem('studyflow_plan');
     dayIndex = parseInt(localStorage.getItem('studyflow_current_day') || '0');
-    var minutes = parseInt(localStorage.getItem('studyflow_minutes') || '30');
+    totalMinutes = parseInt(localStorage.getItem('studyflow_minutes') || '30');
     if (!saved) { window.location.href = 'dashboard.html'; return; }
     plan = JSON.parse(saved);
-    day = JSON.parse(JSON.stringify(plan.days[dayIndex])); // deep copy
+    day = JSON.parse(JSON.stringify(plan.days[dayIndex]));
     if (!day) { window.location.href = 'dashboard.html'; return; }
 
-    // Adapt questions based on time
-    if (day.questions && day.questions.length > 0) {
-      var qPerMin = 0.15; // roughly 1 question per 6-7 min
-      var maxQ = Math.max(1, Math.round(minutes * qPerMin));
-      if (minutes <= 15) maxQ = Math.min(2, day.questions.length);
-      else if (minutes <= 30) maxQ = Math.min(4, day.questions.length);
-      else maxQ = day.questions.length;
-      day.questions = day.questions.slice(0, maxQ);
-    }
-
-    buildSteps();
-    renderStep();
+    secondsLeft = totalMinutes * 60;
+    buildQueue();
+    startTimer();
+    showNextCard();
   }
 
-  function buildSteps() {
-    steps = [];
-    // Step 1: Welcome
-    steps.push({ type: 'welcome' });
-    // Step 2: Lesson content
-    if (day.content) steps.push({ type: 'lesson' });
-    // Step 3: Key terms (day 1 only)
-    if (dayIndex === 0 && day.keyTerms && day.keyTerms.length) steps.push({ type: 'terms' });
-    // Questions — one per step
+  function buildQueue() {
+    // Always start: welcome → lesson → key terms (day 1)
+    sessionCards.push({ type: 'welcome' });
+    if (day.content) sessionCards.push({ type: 'lesson' });
+    if (dayIndex === 0 && day.keyTerms && day.keyTerms.length) sessionCards.push({ type: 'terms' });
+
+    // Then add all questions
     if (day.questions) {
-      day.questions.forEach(function(q, i) { steps.push({ type: 'question', index: i }); });
+      day.questions.forEach(function(q, i) {
+        sessionCards.push({ type: 'question', q: q, qi: i });
+      });
     }
+
+    // After questions, loop back with harder content + more questions
+    // We'll generate more on the fly as needed
   }
 
-  function updateProgress() {
-    var pct = Math.round((currentStep / (steps.length - 1)) * 100);
-    document.getElementById('progress-fill').style.width = pct + '%';
-    document.getElementById('nav-step-label').textContent = 'Step ' + (currentStep + 1) + ' of ' + steps.length;
+  function getNextCard() {
+    if (cardIndex < sessionCards.length) {
+      return sessionCards[cardIndex];
+    }
+    // Generate more cards dynamically - cycle through questions with increasing difficulty
+    var questions = day.questions || [];
+    if (questions.length === 0) return { type: 'done' };
+
+    // Pick a random question - weight towards ones that were wrong
+    var wrongQs = wrongItems.map(function(w){ return w.q; });
+    var pool = wrongQs.length > 0 && Math.random() < 0.6 ? wrongQs : questions;
+    var q = pool[Math.floor(Math.random() * pool.length)];
+
+    // Occasionally add a writing prompt
+    if (Math.random() < 0.25 && questions.length > 0) {
+      return { type: 'write', q: q };
+    }
+    return { type: 'question', q: q, qi: Math.floor(Math.random() * questions.length) };
   }
 
-  function renderStep() {
-    updateProgress();
-    var step = steps[currentStep];
+  function showNextCard() {
+    if (!sessionActive) return;
+    currentAnswered = false;
+    var card = getNextCard();
+    cardIndex++;
+    renderCard(card);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function renderCard(card) {
     var html = '';
-    var isLast = currentStep === steps.length - 1;
-    var stepNum = currentStep + 1;
-    var totalSteps = steps.length;
 
-    if (step.type === 'welcome') {
+    if (card.type === 'welcome') {
       var dayLabel = dayIndex === 0 ? 'Introduction' : (day.isFinal ? 'Final Exam Day' : 'Day ' + (dayIndex + 1));
-      html = '<div class="card-header">' +
-        '<div class="card-header-badge">✦ ' + dayLabel + '</div>' +
-        '<h1>' + (day.title || 'Day ' + (dayIndex + 1)) + '</h1>' +
-        '</div>' +
-        '<div class="card-body">' +
-        '<p class="welcome-text">' + (day.briefing || '') + '</p>' +
-        '</div>' +
-        '<div class="card-footer">' +
-        '<span class="step-counter">' + stepNum + ' / ' + totalSteps + '</span>' +
-        '<button class="btn-next" onclick="nextStep()">Let\'s go →</button>' +
-        '</div>';
+      html = '<div class="session-card"><div class="card-header"><div class="card-badge">✦ ' + dayLabel + '</div><h2>' + (day.title || 'Day ' + (dayIndex+1)) + '</h2></div>' +
+        '<div class="card-body"><p class="content-text">' + (day.briefing || '') + '</p></div>' +
+        '<div class="card-footer"><span class="streak-info">Session: <span>' + totalMinutes + ' min</span></span>' +
+        '<button class="btn-next" onclick="showNextCard()">Let\'s go →</button></div></div>';
     }
 
-    else if (step.type === 'lesson') {
-      html = '<div class="card-header">' +
-        '<div class="card-header-badge">Today\'s Lesson</div>' +
-        '<h1>' + (day.title || '') + '</h1>' +
-        '</div>' +
-        '<div class="card-body">' +
-        '<div class="lesson-content">' + formatContent(day.content) + '</div>' +
-        '</div>' +
-        '<div class="card-footer">' +
-        '<span class="step-counter">' + stepNum + ' / ' + totalSteps + '</span>' +
-        '<button class="btn-next" onclick="nextStep()">Next →</button>' +
-        '</div>';
+    else if (card.type === 'lesson') {
+      html = '<div class="session-card"><div class="card-header"><div class="card-badge">Today\'s Lesson</div><h2>' + (day.title || '') + '</h2></div>' +
+        '<div class="card-body"><div class="content-text">' + formatContent(day.content) + '</div></div>' +
+        '<div class="card-footer"><span class="streak-info">Read carefully</span>' +
+        '<button class="btn-next" onclick="showNextCard()">Got it →</button></div></div>';
     }
 
-    else if (step.type === 'terms') {
+    else if (card.type === 'terms') {
       var termsHtml = '<div class="terms-list">';
       day.keyTerms.forEach(function(t) {
         termsHtml += '<div class="term-item"><div class="term-word">' + t.term + '</div><div class="term-def">' + t.definition + '</div></div>';
       });
       termsHtml += '</div>';
-      html = '<div class="card-header">' +
-        '<div class="card-header-badge">Key Terms</div>' +
-        '<h1>Words to Know</h1>' +
-        '</div>' +
+      html = '<div class="session-card"><div class="card-header"><div class="card-badge">Key Terms</div><h2>Words to Know</h2></div>' +
         '<div class="card-body">' + termsHtml + '</div>' +
-        '<div class="card-footer">' +
-        '<span class="step-counter">' + stepNum + ' / ' + totalSteps + '</span>' +
-        '<button class="btn-next" onclick="nextStep()">Next →</button>' +
-        '</div>';
+        '<div class="card-footer"><span class="streak-info">Learn these</span>' +
+        '<button class="btn-next" onclick="showNextCard()">Next →</button></div></div>';
     }
 
-    else if (step.type === 'question') {
-      var qi = step.index;
-      var q = day.questions[qi];
-      var qNum = day.questions.indexOf(q) + 1;
-      var totalQ = day.questions.length;
-      var diffClass = (q.difficulty || 'easy').toLowerCase();
-      var answered = answers[qi] !== undefined;
+    else if (card.type === 'question') {
+      var q = card.q;
+      var diffClass = (q.difficulty || 'medium').toLowerCase();
+      var typeLabel = q.type === 'truefalse' ? 'True / False' : 'Multiple Choice';
+      var typeClass = q.type === 'truefalse' ? 'tf' : 'mcq';
 
       var optionsHtml = '';
       if (q.type === 'truefalse') {
-        var tSel = answers[qi] === 'True' ? ' selected' : '';
-        var fSel = answers[qi] === 'False' ? ' selected' : '';
         optionsHtml = '<div class="tf-grid">' +
-          '<button class="tf-btn' + tSel + '" onclick="selectTF(' + qi + ', \'True\')" id="tf-' + qi + '-True">True</button>' +
-          '<button class="tf-btn' + fSel + '" onclick="selectTF(' + qi + ', \'False\')" id="tf-' + qi + '-False">False</button>' +
+          '<button class="tf-btn" onclick="answerTF(this,\'True\',\'' + escQ(q.correct) + '\',\'' + escQ(q.explanation) + '\')" >True</button>' +
+          '<button class="tf-btn" onclick="answerTF(this,\'False\',\'' + escQ(q.correct) + '\',\'' + escQ(q.explanation) + '\')">False</button>' +
           '</div>';
       } else {
-        optionsHtml = '<div class="q-options">';
         var letters = ['A','B','C','D'];
-        q.options.forEach(function(opt, oi) {
-          var sel = answers[qi] === oi ? ' selected' : '';
-          optionsHtml += '<button class="q-option' + sel + '" onclick="selectMCQ(' + qi + ',' + oi + ')" id="opt-' + qi + '-' + oi + '">' +
-            '<span class="option-letter">' + letters[oi] + '</span>' + opt + '</button>';
+        optionsHtml = '<div class="q-options">';
+        (q.options || []).forEach(function(opt, oi) {
+          optionsHtml += '<button class="q-option" onclick="answerMCQ(this,' + oi + ',' + q.correctIndex + ',\'' + escQ(q.explanation) + '\')">' +
+            '<span class="opt-letter">' + letters[oi] + '</span><span>' + opt + '</span></button>';
         });
         optionsHtml += '</div>';
       }
 
-      html = '<div class="card-header">' +
-        '<div class="card-header-badge">Question ' + qNum + ' of ' + totalQ + '</div>' +
-        '<h1>' + (day.isFinal ? 'Final Test' : 'Practice Questions') + '</h1>' +
-        '</div>' +
+      html = '<div class="session-card">' +
+        '<div class="card-header"><div class="card-badge">Question</div><h2>' + (day.isFinal ? 'Final Test' : 'Practice') + '</h2></div>' +
         '<div class="card-body">' +
-        '<div class="q-header">' +
-        '<span class="q-difficulty ' + diffClass + '">' + (q.difficulty || 'Medium') + '</span>' +
+        '<div class="q-meta"><span class="q-type-label ' + typeClass + '">' + typeLabel + '</span><span class="q-difficulty ' + diffClass + '">' + (q.difficulty || 'Medium') + '</span></div>' +
         '<div class="q-text">' + q.question + '</div>' +
-        '</div>' +
         optionsHtml +
-        '<div class="hint-row">' +
-        '<button class="hint-btn" onclick="toggleHint(' + qi + ')">Show hint</button>' +
-        '<div class="hint-box" id="hint-' + qi + '">' + (q.hint || 'Think carefully about today\'s lesson.') + '</div>' +
+        '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+        '<div class="hint-box" id="hint-box">' + (q.hint || 'Think carefully about today\'s lesson.') + '</div></div>' +
+        '<div class="feedback-box" id="feedback-box"></div>' +
         '</div>' +
-        '<div class="feedback-box" id="fb-' + qi + '"></div>' +
-        '</div>' +
-        '<div class="card-footer">' +
-        '<span class="step-counter">Q' + qNum + ' / ' + totalQ + '</span>' +
-        '<button class="btn-next" id="btn-next-q" onclick="nextStep()" ' + (answered ? '' : 'disabled') + '>' + (isLast ? 'See results →' : 'Next →') + '</button>' +
-        '</div>';
+        '<div class="card-footer"><span class="streak-info">Correct: <span id="correct-count">' + correctCount + '</span> / ' + totalAnswered + '</span>' +
+        '<button class="btn-next" id="btn-next" onclick="showNextCard()" disabled>Next →</button></div></div>';
     }
 
-    document.getElementById('step-card').innerHTML = html;
-    document.getElementById('step-card').style.animation = 'none';
-    void document.getElementById('step-card').offsetWidth;
-    document.getElementById('step-card').style.animation = 'fadeUp .4s cubic-bezier(0.16,1,.3,1) both';
+    else if (card.type === 'write') {
+      var q = card.q;
+      html = '<div class="session-card">' +
+        '<div class="card-header"><div class="card-badge">Writing Prompt</div><h2>Explain It</h2></div>' +
+        '<div class="card-body">' +
+        '<div class="q-type-label write" style="margin-bottom:1rem;display:inline-block;">Written Response</div>' +
+        '<div class="q-text">In your own words, explain: ' + q.question + '</div>' +
+        '<textarea class="write-area" id="write-input" placeholder="Type your answer here..."></textarea>' +
+        '<button class="write-submit" onclick="submitWrite(\'' + escQ(q.explanation) + '\')">Submit →</button>' +
+        '<div class="feedback-box" id="feedback-box"></div>' +
+        '</div>' +
+        '<div class="card-footer"><span class="streak-info">Writing helps memory</span>' +
+        '<button class="btn-next" id="btn-next" onclick="showNextCard()" disabled>Next →</button></div></div>';
+    }
+
+    else if (card.type === 'done') {
+      endSession();
+      return;
+    }
+
+    document.getElementById('session-card').innerHTML = html;
+    updateStruggling();
+  }
+
+  function escQ(str) {
+    return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
   }
 
   function formatContent(content) {
@@ -355,115 +438,168 @@
     }).join('');
   }
 
-  function selectMCQ(qi, oi) {
-    if (answers[qi] !== undefined) return;
-    var q = day.questions[qi];
-    answers[qi] = oi;
-    var opts = document.querySelectorAll('[id^="opt-' + qi + '-"]');
-    opts.forEach(function(o) { o.disabled = true; o.classList.remove('selected'); });
-    document.getElementById('opt-' + qi + '-' + oi).classList.add('selected');
-    var isCorrect = oi === q.correctIndex;
-    showFeedback(qi, isCorrect, q);
+  function answerMCQ(btn, selected, correct, explanation) {
+    if (currentAnswered) return;
+    currentAnswered = true;
+    totalAnswered++;
+
+    var opts = document.querySelectorAll('.q-option');
+    opts.forEach(function(o){ o.disabled = true; });
+
+    var isCorrect = selected === correct;
+    btn.classList.add(isCorrect ? 'correct' : 'wrong');
     if (!isCorrect) {
-      document.getElementById('opt-' + qi + '-' + oi).classList.add('wrong');
-      document.getElementById('opt-' + qi + '-' + q.correctIndex).classList.add('correct');
-      wrongItems.push({ q: q, userAns: q.options[oi] });
+      opts[correct].classList.add('correct');
+      recentWrong++;
+      wrongItems.push({ q: day.questions[selected] || { question: btn.textContent }, userAns: btn.textContent });
     } else {
-      document.getElementById('opt-' + qi + '-' + oi).classList.add('correct');
+      correctCount++;
+      recentWrong = Math.max(0, recentWrong - 1);
     }
-    document.getElementById('btn-next-q').disabled = false;
+
+    showFeedback(isCorrect, explanation || '');
+    updateStats();
+    document.getElementById('btn-next').disabled = false;
   }
 
-  function selectTF(qi, val) {
-    if (answers[qi] !== undefined) return;
-    var q = day.questions[qi];
-    answers[qi] = val;
-    document.getElementById('tf-' + qi + '-True').disabled = true;
-    document.getElementById('tf-' + qi + '-False').disabled = true;
-    document.getElementById('tf-' + qi + '-' + val).classList.add('selected');
-    var isCorrect = val === q.correct;
-    showFeedback(qi, isCorrect, q);
+  function answerTF(btn, selected, correct, explanation) {
+    if (currentAnswered) return;
+    currentAnswered = true;
+    totalAnswered++;
+
+    document.querySelectorAll('.tf-btn').forEach(function(b){ b.disabled = true; });
+    var isCorrect = selected === correct;
+    btn.classList.add(isCorrect ? 'correct' : 'wrong');
     if (!isCorrect) {
-      document.getElementById('tf-' + qi + '-' + val).classList.add('wrong');
-      document.getElementById('tf-' + qi + '-' + q.correct).classList.add('correct');
-      wrongItems.push({ q: q, userAns: val });
+      document.querySelectorAll('.tf-btn').forEach(function(b){
+        if (b.textContent === correct) b.classList.add('correct');
+      });
+      recentWrong++;
+      wrongItems.push({ q: { question: 'True/False' }, userAns: selected, correctAns: correct, explanation: explanation });
     } else {
-      document.getElementById('tf-' + qi + '-' + val).classList.add('correct');
+      correctCount++;
+      recentWrong = Math.max(0, recentWrong - 1);
     }
-    document.getElementById('btn-next-q').disabled = false;
+
+    showFeedback(isCorrect, explanation || '');
+    updateStats();
+    document.getElementById('btn-next').disabled = false;
   }
 
-  function showFeedback(qi, isCorrect, q) {
-    var fb = document.getElementById('fb-' + qi);
+  function submitWrite(modelAnswer) {
+    var answer = document.getElementById('write-input').value.trim();
+    if (!answer) { alert('Please write something first!'); return; }
+    currentAnswered = true;
+    totalAnswered++;
+    document.querySelector('.write-submit').disabled = true;
+
+    var fb = document.getElementById('feedback-box');
+    fb.className = 'feedback-box info-fb show';
+    fb.innerHTML = '<div class="feedback-label">Good effort!</div><div class="feedback-text"><strong>Model answer:</strong> ' + (modelAnswer || 'Review your notes and compare your answer.') + '</div>';
+    document.getElementById('btn-next').disabled = false;
+  }
+
+  function showFeedback(isCorrect, explanation) {
+    var fb = document.getElementById('feedback-box');
     if (!fb) return;
     fb.className = 'feedback-box show ' + (isCorrect ? 'correct-fb' : 'wrong-fb');
     fb.innerHTML = '<div class="feedback-label">' + (isCorrect ? 'Correct!' : 'Not quite') + '</div>' +
-      '<div class="feedback-text">' + (q.explanation || (isCorrect ? 'Great job!' : 'Review the explanation and keep going.')) + '</div>';
+      '<div class="feedback-text">' + (explanation || (isCorrect ? 'Great job!' : 'Review this concept.')) + '</div>';
   }
 
-  function toggleHint(qi) {
-    var box = document.getElementById('hint-' + qi);
+  function toggleHint() {
+    var box = document.getElementById('hint-box');
     box.classList.toggle('show');
     var btn = box.previousElementSibling;
     btn.textContent = box.classList.contains('show') ? 'Hide hint' : 'Show hint';
   }
 
-  function nextStep() {
-    if (currentStep < steps.length - 1) {
-      currentStep++;
-      renderStep();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+  function updateStats() {
+    document.getElementById('correct-pill').textContent = correctCount + ' correct';
+    document.getElementById('total-pill').textContent = totalAnswered + ' done';
+    var el = document.getElementById('correct-count');
+    if (el) el.textContent = correctCount;
+  }
+
+  function updateStruggling() {
+    var banner = document.getElementById('struggling-banner');
+    if (recentWrong >= 3) {
+      banner.classList.add('show');
     } else {
-      showResults();
+      banner.classList.remove('show');
     }
   }
 
-  function showResults() {
-    document.getElementById('step-card').style.display = 'none';
-    var totalQ = day.questions ? day.questions.length : 0;
-    var correct = totalQ - wrongItems.length;
-    var pct = totalQ > 0 ? Math.round((correct / totalQ) * 100) : 100;
-    document.getElementById('progress-fill').style.width = '100%';
-    document.getElementById('nav-step-label').textContent = 'Complete!';
+  function startTimer() {
+    var bar = document.getElementById('time-bar');
+    var label = document.getElementById('time-label');
+    timerInterval = setInterval(function() {
+      if (!sessionActive) return;
+      secondsLeft--;
+      var pct = (secondsLeft / (totalMinutes * 60)) * 100;
+      bar.style.width = pct + '%';
+      bar.className = 'time-bar-fill' + (pct < 10 ? ' critical' : (pct < 25 ? ' warning' : ''));
 
+      var minsLeft = Math.ceil(secondsLeft / 60);
+      label.textContent = secondsLeft < 60 ? secondsLeft + 's left' : minsLeft + ' min left';
+
+      if (secondsLeft <= 0) {
+        clearInterval(timerInterval);
+        sessionActive = false;
+        endSession();
+      }
+    }, 1000);
+  }
+
+  function endSession() {
+    clearInterval(timerInterval);
+    sessionActive = false;
+    document.getElementById('session-card').style.display = 'none';
+    document.querySelector('.end-btn').style.display = 'none';
+    document.getElementById('struggling-banner').style.display = 'none';
+
+    var pct = totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : 100;
     var topClass = pct >= 80 ? 'great' : (pct >= 60 ? 'good' : 'retry');
-    var msg = pct >= 80 ? 'Excellent work — you nailed it!' : (pct >= 60 ? 'Good job — review the ones you missed.' : 'Keep studying — you\'ll get it!');
+    var msg = pct >= 80 ? 'Excellent session — you crushed it!' : (pct >= 60 ? 'Solid work — keep building on this!' : 'Keep grinding — consistency is key!');
 
     var wrongHtml = '';
-    if (wrongItems.length === 0) {
-      wrongHtml = '<div class="all-correct-msg">Perfect score! Every answer was correct!</div>';
-    } else {
-      wrongHtml = '<h3>Review — What to Study More</h3>';
-      wrongItems.forEach(function(item) {
-        var correctAns = item.q.type === 'truefalse' ? item.q.correct : item.q.options[item.q.correctIndex];
+    if (wrongItems.length > 0) {
+      wrongHtml = '<div class="wrong-reviews"><h3>Review — Study These Again</h3>';
+      wrongItems.slice(0, 8).forEach(function(item) {
         wrongHtml += '<div class="wrong-item">' +
-          '<div class="wi-q">' + item.q.question + '</div>' +
-          '<div class="wi-yours">Your answer: ' + item.userAns + '</div>' +
-          '<div class="wi-correct">Correct answer: ' + correctAns + '</div>' +
-          '<div class="wi-why">' + (item.q.explanation || 'Review this in your notes.') + '</div>' +
+          '<div class="wi-q">' + (item.q.question || 'Question') + '</div>' +
+          '<div class="wi-yours">Your answer: ' + (item.userAns || '—') + '</div>' +
+          (item.correctAns ? '<div class="wi-correct">Correct: ' + item.correctAns + '</div>' : '') +
+          '<div class="wi-why">' + (item.q.explanation || item.explanation || 'Review this in your notes.') + '</div>' +
           '</div>';
       });
+      wrongHtml += '</div>';
+    } else if (totalAnswered > 0) {
+      wrongHtml = '<div style="background:#d1faf0;border:1.5px solid #38bfa1;border-radius:16px;padding:1.2rem;text-align:center;color:#1a9e80;font-weight:600;margin-bottom:1.5rem;">Perfect session — every answer correct!</div>';
     }
 
-    var nextLabel = day.isFinal || dayIndex >= plan.days.length - 1 ? 'Back to dashboard →' : 'Continue to Day ' + (dayIndex + 2) + ' →';
-
-    document.getElementById('results-card').innerHTML =
+    var timeStudied = totalMinutes - Math.ceil(secondsLeft / 60);
+    document.getElementById('results-wrap').innerHTML =
       '<div class="results-top ' + topClass + '">' +
-        '<div class="results-score">' + correct + '/' + totalQ + '</div>' +
+        '<div class="results-score">' + correctCount + '/' + totalAnswered + '</div>' +
         '<div class="results-msg">' + msg + '</div>' +
       '</div>' +
-      '<div class="results-body">' + wrongHtml +
-        '<button class="btn-dashboard" onclick="finishDay()">' + nextLabel + '</button>' +
-      '</div>';
+      '<div class="results-stats">' +
+        '<div class="r-stat"><div class="r-stat-val">' + Math.max(1, timeStudied) + 'm</div><div class="r-stat-label">Time studied</div></div>' +
+        '<div class="r-stat"><div class="r-stat-val">' + totalAnswered + '</div><div class="r-stat-label">Questions done</div></div>' +
+        '<div class="r-stat"><div class="r-stat-val">' + pct + '%</div><div class="r-stat-label">Accuracy</div></div>' +
+      '</div>' +
+      wrongHtml +
+      '<button class="btn-dashboard" onclick="goToDashboard()">Back to dashboard →</button>';
 
-    document.getElementById('results-card').classList.add('show');
+    document.getElementById('results-wrap').classList.add('show');
 
     plan.days[dayIndex].completed = true;
     plan.days[dayIndex].score = pct;
     localStorage.setItem('studyflow_plan', JSON.stringify(plan));
   }
 
-  function finishDay() {
+  function goToDashboard() {
     if (!day.isFinal && dayIndex < plan.days.length - 1) {
       localStorage.setItem('studyflow_current_day', dayIndex + 1);
     }
