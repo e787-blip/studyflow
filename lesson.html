@@ -495,7 +495,20 @@
 
     var fb = document.getElementById('feedback-box');
     fb.className = 'feedback-box info-fb show';
-    fb.innerHTML = '<div class="feedback-label">Good effort!</div><div class="feedback-text"><strong>Model answer:</strong> ' + (modelAnswer || 'Review your notes and compare your answer.') + '</div>';
+
+    // Check if their answer mentions key concepts from model answer
+    var modelWords = (modelAnswer || '').toLowerCase().split(' ').filter(function(w){ return w.length > 4; });
+    var answerLower = answer.toLowerCase();
+    var matchCount = modelWords.filter(function(w){ return answerLower.includes(w); }).length;
+    var coverage = modelWords.length > 0 ? Math.round((matchCount / modelWords.length) * 100) : 50;
+
+    var quality = coverage >= 60 ? 'Great answer!' : (coverage >= 30 ? 'Good start — you\'re on the right track.' : 'You\'re missing some key points.');
+
+    fb.innerHTML = '<div class="feedback-label">' + quality + '</div>' +
+      '<div class="feedback-text">' +
+      '<strong>Model answer:</strong> ' + (modelAnswer || 'Review your notes for the full answer.') +
+      (coverage < 60 ? '<br><br><strong>What you missed:</strong> Make sure your answer covers the key concepts in the model answer above.' : '<br><br><strong>Well done!</strong> Your answer covered the main points.') +
+      '</div>';
     document.getElementById('btn-next').disabled = false;
   }
 
