@@ -285,7 +285,15 @@
     day = JSON.parse(JSON.stringify(plan.days[dayIndex]));
     if (!day) { window.location.href = 'dashboard.html'; return; }
 
-    secondsLeft = totalMinutes * 60;
+    // Restore timer if returning mid-session
+    var savedSeconds = localStorage.getItem('studyflow_seconds_left');
+    var savedDay = localStorage.getItem('studyflow_timer_day');
+    if (savedSeconds && savedDay === String(dayIndex) && parseInt(savedSeconds) > 0) {
+      secondsLeft = parseInt(savedSeconds);
+    } else {
+      secondsLeft = totalMinutes * 60;
+    }
+
     buildQueue();
     startTimer();
     showNextCard();
@@ -553,19 +561,21 @@
   function startTimer() {
     var bar = document.getElementById('time-bar');
     var label = document.getElementById('time-label');
+    localStorage.setItem('studyflow_timer_day', dayIndex);
     timerInterval = setInterval(function() {
       if (!sessionActive) return;
       secondsLeft--;
+      localStorage.setItem('studyflow_seconds_left', secondsLeft);
       var pct = (secondsLeft / (totalMinutes * 60)) * 100;
       bar.style.width = pct + '%';
       bar.className = 'time-bar-fill' + (pct < 10 ? ' critical' : (pct < 25 ? ' warning' : ''));
-
       var minsLeft = Math.ceil(secondsLeft / 60);
       label.textContent = secondsLeft < 60 ? secondsLeft + 's left' : minsLeft + ' min left';
-
       if (secondsLeft <= 0) {
         clearInterval(timerInterval);
         sessionActive = false;
+        localStorage.removeItem('studyflow_seconds_left');
+        localStorage.removeItem('studyflow_timer_day');
         endSession();
       }
     }, 1000);
@@ -574,6 +584,8 @@
   function endSession() {
     clearInterval(timerInterval);
     sessionActive = false;
+    localStorage.removeItem('studyflow_seconds_left');
+    localStorage.removeItem('studyflow_timer_day');
     document.getElementById('session-card').style.display = 'none';
     document.querySelector('.end-btn').style.display = 'none';
     document.getElementById('struggling-banner').style.display = 'none';
