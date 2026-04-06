@@ -492,24 +492,31 @@
     currentAnswered = true;
     totalAnswered++;
     document.querySelector('.write-submit').disabled = true;
+    document.getElementById('btn-next').disabled = true;
 
     var fb = document.getElementById('feedback-box');
     fb.className = 'feedback-box info-fb show';
+    fb.innerHTML = '<div class="feedback-label">Analyzing your response...</div><div class="feedback-text">Checking your answer...</div>';
 
-    // Check if their answer mentions key concepts from model answer
-    var modelWords = (modelAnswer || '').toLowerCase().split(' ').filter(function(w){ return w.length > 4; });
-    var answerLower = answer.toLowerCase();
-    var matchCount = modelWords.filter(function(w){ return answerLower.includes(w); }).length;
-    var coverage = modelWords.length > 0 ? Math.round((matchCount / modelWords.length) * 100) : 50;
+    var prompt = 'A student wrote this response to a study question.\n\nQUESTION: ' + (day.questions && day.questions[0] ? day.questions[0].question : 'Explain the concept') + '\n\nMODEL ANSWER: ' + modelAnswer + '\n\nSTUDENT WROTE: ' + answer + '\n\nAnalyze the student\'s response in 3-4 sentences. Tell them:\n1. What they got RIGHT (be specific)\n2. What key concepts they MISSED or got wrong (be specific)\n3. One clear piece of advice to improve\n\nBe encouraging but honest. Reference specific facts from the model answer. Do NOT say "good effort" generically — give real specific feedback.';
 
-    var quality = coverage >= 60 ? 'Great answer!' : (coverage >= 30 ? 'Good start — you\'re on the right track.' : 'You\'re missing some key points.');
-
-    fb.innerHTML = '<div class="feedback-label">' + quality + '</div>' +
-      '<div class="feedback-text">' +
-      '<strong>Model answer:</strong> ' + (modelAnswer || 'Review your notes for the full answer.') +
-      (coverage < 60 ? '<br><br><strong>What you missed:</strong> Make sure your answer covers the key concepts in the model answer above.' : '<br><br><strong>Well done!</strong> Your answer covered the main points.') +
-      '</div>';
-    document.getElementById('btn-next').disabled = false;
+    fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      var feedback = data.result || data.plan || 'Good attempt! Compare your answer to the model answer below.';
+      fb.className = 'feedback-box info-fb show';
+      fb.innerHTML = '<div class="feedback-label">AI Feedback</div>' +
+        '<div class="feedback-text">' + feedback + '<br><br><strong>Model answer:</strong> ' + modelAnswer + '</div>';
+      document.getElementById('btn-next').disabled = false;
+    })
+    .catch(function() {
+      fb.innerHTML = '<div class="feedback-label">Feedback</div><div class="feedback-text"><strong>Model answer:</strong> ' + modelAnswer + '</div>';
+      document.getElementById('btn-next').disabled = false;
+    });
   }
 
   function showFeedback(isCorrect, explanation) {
