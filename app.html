@@ -250,12 +250,7 @@
     <label class="field-label">Your lesson notes</label>
     <textarea id="notes-input" placeholder="Paste your notes here..."></textarea>
 
-    <div style="margin-top:1.2rem;">
-      <label class="field-label">Subject <span>(optional)</span></label>
-      <input type="text" class="text-input" id="subject-input" placeholder="e.g. Biology, History, Algebra..." />
-    </div>
-
-    <button class="btn-next" onclick="goToStep2()">Continue →</button>
+    <button class="btn-next" onclick="goToStep2()" style="margin-top:1.2rem;">Continue →</button>
   </div>
 
   <!-- STEP 2 -->
@@ -447,7 +442,7 @@
     if (!notes.trim()) { alert('Please upload a file or paste your notes!'); goToStep(1); return; }
     var deadline = document.getElementById('deadline-input').value;
     if (!deadline) { alert('Please enter your exam date!'); return; }
-    var subject = document.getElementById('subject-input').value || 'this subject';
+    var subject = 'auto-detect from notes';
 
     document.querySelectorAll('.card').forEach(function(c) { c.classList.remove('active'); });
     document.getElementById('loading').classList.add('active');
@@ -467,7 +462,7 @@
       numDays = Math.min(7, Math.max(3, daysLeft));
     }
 
-    var prompt = 'You are an expert study coach. Analyze these notes and create a ' + numDays + '-day study plan for: ' + subject + '. Goal: ' + selectedGoal + '. Difficulty: ' + selectedDifficulty + '.\n\nNOTES TO ANALYZE:\n' + notes.substring(0, 800) + '\n\nIMPORTANT RULES FOR HINTS AND EXPLANATIONS:\n- hints must be SPECIFIC to the content in the notes above — never say "look back at the lesson" or generic advice\n- hints should give a real clue like "Remember that mitosis has 4 phases starting with P" or "Think about what happens to chromosome number in meiosis"\n- explanations must clearly explain WHY the answer is correct using specific facts from the notes\n- writing prompt model answers must be detailed, informative, and based on the actual notes content\n\nReturn ONLY valid JSON like this example:\n{"subject":"' + subject + '","goal":"' + selectedGoal + '","deadline":"' + (deadline||'') + '","days":[{"title":"Intro to [topic from notes]","briefing":"Specific intro based on notes.","content":"Detailed explanation of concepts from the notes.","keyTerms":[{"term":"actual term from notes","definition":"actual definition from notes"}],"duration":30,"isFinal":false,"completed":false,"questions":[{"type":"mcq","question":"Specific question about the notes?","options":["Real option A","Real option B","Real option C","Real option D"],"correctIndex":0,"hint":"Specific clue from the notes e.g. recall that X does Y","explanation":"A is correct because [specific fact from notes]","difficulty":"Easy"},{"type":"truefalse","question":"Specific true/false about the notes.","correct":"True","hint":"Specific clue from notes","explanation":"This is true because [specific fact from notes]","difficulty":"Easy"}]},{"title":"Day 2 title","briefing":"Building on day 1.","content":"More content from notes.","keyTerms":[],"duration":35,"isFinal":false,"completed":false,"questions":[{"type":"mcq","question":"Harder specific question?","options":["A","B","C","D"],"correctIndex":1,"hint":"Specific hint from notes","explanation":"B because [specific fact]","difficulty":"Medium"},{"type":"truefalse","question":"Harder statement.","correct":"False","hint":"Specific hint","explanation":"False because [specific fact]","difficulty":"Medium"}]},{"title":"Final Test","briefing":"Test everything you learned.","content":"Full review of all concepts.","keyTerms":[],"duration":45,"isFinal":true,"completed":false,"questions":[{"type":"mcq","question":"Hard specific question?","options":["A","B","C","D"],"correctIndex":2,"hint":"Deep specific clue","explanation":"C because [specific fact]","difficulty":"Hard"},{"type":"truefalse","question":"Hard specific statement.","correct":"True","hint":"Specific deep hint","explanation":"True because [specific fact]","difficulty":"Hard"}]}]}\n\nNow generate the REAL plan using the actual content from the notes. Make ALL hints and explanations specific to the notes. Return ONLY JSON.';
+    var prompt = 'Analyze these notes and create a ' + numDays + '-day study plan. Goal: ' + selectedGoal + '. Difficulty: ' + selectedDifficulty + '.\n\nNOTES:\n' + notes.substring(0, 600) + '\n\nFirst detect the subject automatically from the notes (e.g. Biology, Algebra, History, Chemistry, etc.).\n\nIMPORTANT RULES:\n- If subject is MATH/PHYSICS/CHEMISTRY: use equation-based questions, number problems, calculation MCQs. Minimize writing prompts. Use fill-in-the-blank with numbers/equations.\n- If subject is SCIENCE/BIOLOGY: mix diagrams descriptions, process-based MCQs, true/false about concepts.\n- If subject is HISTORY/ENGLISH: use timeline questions, cause-effect MCQs, short written responses.\n- ALL subjects: hints must be SPECIFIC facts from notes. Explanations must reference actual content.\n\nReturn ONLY valid JSON:\n{"subject":"[detected subject]","goal":"' + selectedGoal + '","deadline":"' + (deadline||'') + '","subjectType":"[math|science|humanities]","days":[{"title":"Day 1 title","briefing":"Specific intro.","content":"Detailed lesson from notes.","keyTerms":[{"term":"real term","definition":"real definition"}],"duration":30,"isFinal":false,"completed":false,"questions":[{"type":"mcq","question":"Specific question?","options":["Real A","Real B","Real C","Real D"],"correctIndex":0,"hint":"Specific fact clue","explanation":"A because [specific fact]","difficulty":"Easy"},{"type":"truefalse","question":"Specific statement.","correct":"True","hint":"Specific clue","explanation":"True because [fact]","difficulty":"Easy"}]},{"title":"Day 2","briefing":"Building on day 1.","content":"More content.","keyTerms":[],"duration":35,"isFinal":false,"completed":false,"questions":[{"type":"mcq","question":"Harder question?","options":["A","B","C","D"],"correctIndex":1,"hint":"Specific hint","explanation":"B because [fact]","difficulty":"Medium"},{"type":"truefalse","question":"Statement.","correct":"False","hint":"Hint","explanation":"False because [fact]","difficulty":"Medium"}]},{"title":"Final Test","briefing":"Test time.","content":"Full review.","keyTerms":[],"duration":45,"isFinal":true,"completed":false,"questions":[{"type":"mcq","question":"Hard question?","options":["A","B","C","D"],"correctIndex":2,"hint":"Deep clue","explanation":"C because [fact]","difficulty":"Hard"},{"type":"truefalse","question":"Hard statement.","correct":"True","hint":"Hint","explanation":"True because [fact]","difficulty":"Hard"}]}]}\n\nGenerate ' + numDays + ' real days. Return ONLY JSON.';
 
     fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
       method: 'POST',
@@ -501,7 +496,6 @@
   function startOver() {
     selectedGoal = ''; selectedDifficulty = ''; generatedPlan = ''; fileContent = '';
     document.getElementById('notes-input').value = '';
-    document.getElementById('subject-input').value = '';
     document.getElementById('deadline-input').value = '';
     document.querySelectorAll('.option-btn').forEach(function(b) { b.classList.remove('selected'); });
     ['ls-1','ls-2','ls-3','ls-4'].forEach(function(id) { var el = document.getElementById(id); el.classList.remove('visible','done'); });
