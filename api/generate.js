@@ -9,6 +9,7 @@ module.exports = async function handler(req, res) {
   if (!prompt) return res.status(400).json({ error: 'No prompt' });
 
   try {
+    const maxTokens = mode === 'plan' ? 4000 : 800;
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -18,11 +19,10 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: mode === 'plan' ? 2000 : 800,
+        max_tokens: maxTokens,
         temperature: 0.7
       })
     });
-
     const data = await response.json();
     if (!data.choices || !data.choices[0]) return res.status(500).json({ error: 'No response', raw: data });
     return res.status(200).json({ result: data.choices[0].message.content });
