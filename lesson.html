@@ -501,11 +501,15 @@
     if (day.content) sessionCards.push({ type: 'lesson' });
     if (dayIndex === 0 && day.keyTerms && day.keyTerms.length) sessionCards.push({ type: 'terms' });
     if (day.questions) {
-      day.questions.forEach(function(q, i) {
+      // Shuffle questions so they never repeat in same order
+      var shuffled = day.questions.slice().sort(function(){ return Math.random() - 0.5; });
+      shuffled.forEach(function(q, i) {
         sessionCards.push({ type: 'question', q: q, qi: i });
       });
     }
   }
+
+  var recentlyShown = [];
 
   function getNextCard() {
     if (cardIndex < sessionCards.length) return sessionCards[cardIndex];
@@ -513,21 +517,32 @@
     if (!questions.length) return { type: 'done' };
 
     // Weight wrong questions 60%
-    var pool = wrongItems.length > 0 && Math.random() < 0.6
-      ? wrongItems.map(function(w){ return w.q; }).filter(Boolean)
-      : questions;
-    var q = pool[Math.floor(Math.random() * pool.length)] || questions[0];
+    var wrongQs = wrongItems.map(function(w){ return w.q; }).filter(Boolean);
+    var pool = wrongQs.length > 0 && Math.random() < 0.6 ? wrongQs : questions;
 
-    // Difficulty ramp — get harder over time
+    // Filter out recently shown to avoid immediate repeats
+    var available = pool.filter(function(q){
+      return recentlyShown.indexOf(q.question) === -1;
+    });
+    if (available.length === 0) {
+      recentlyShown = [];
+      available = pool;
+    }
+
+    // Difficulty ramp
     var elapsed = totalSeconds - secondsLeft;
     var progress = elapsed / totalSeconds;
-    if (progress > 0.6 && questions.length > 1) {
-      var hardQs = questions.filter(function(q){ return (q.difficulty||'').toLowerCase() === 'hard'; });
-      if (hardQs.length) q = hardQs[Math.floor(Math.random() * hardQs.length)];
+    if (progress > 0.6) {
+      var hardQs = available.filter(function(q){ return (q.difficulty||'').toLowerCase() === 'hard'; });
+      if (hardQs.length) available = hardQs;
     } else if (progress > 0.3) {
-      var medQs = questions.filter(function(q){ var d = (q.difficulty||'').toLowerCase(); return d === 'medium' || d === 'hard'; });
-      if (medQs.length) q = medQs[Math.floor(Math.random() * medQs.length)];
+      var medQs = available.filter(function(q){ var d = (q.difficulty||'').toLowerCase(); return d === 'medium' || d === 'hard'; });
+      if (medQs.length) available = medQs;
     }
+
+    var q = available[Math.floor(Math.random() * available.length)];
+    recentlyShown.push(q.question);
+    if (recentlyShown.length > 3) recentlyShown.shift();
 
     // Pro+: fill-in-blank every ~6th card
     if ((userPlan === 'pro' || userPlan === 'vip') && cardIndex % 6 === 0 && cardIndex > 0) {
