@@ -287,7 +287,45 @@
   body.dark .btn-new { box-shadow:none; }
   body.dark .nav-avatar { box-shadow:none; }
 
-  @media(max-width:768px) { .sidebar{display:none;} .main{padding:1.2rem;} .stats-row{grid-template-columns:1fr 1fr;} }
+  /* ── MOBILE ── */
+  @media(max-width:768px) {
+    nav { padding:.75rem 1.2rem; }
+    .btn-new { padding:.4rem .75rem; font-size:0.78rem; }
+    .app-layout { height:auto; flex-direction:column; }
+    .sidebar { display:none; width:100%; border-right:none; border-bottom:1px solid var(--border); }
+    .sidebar.mobile-open { display:flex; flex-direction:column; }
+    .main { padding:1rem 1rem 5rem; overflow:visible; }
+    .stats-row { grid-template-columns:1fr 1fr; gap:.6rem; }
+    .ring-card { padding:1rem; gap:.8rem; }
+    .stat-card { padding:1rem; }
+    .ring-val { font-size:1.2rem; }
+    .stat-value { font-size:1.5rem; }
+    .today-card { padding:1.5rem 1.2rem; }
+    .today-card h2 { font-size:1.3rem; }
+    .welcome h1 { font-size:1.6rem; }
+    .cal-card { padding:1.1rem; }
+    .modal-box { padding:1.8rem 1.3rem; }
+    .time-options { grid-template-columns:1fr 1fr; gap:.5rem; }
+
+    /* Mobile bottom nav */
+    .mobile-bottom-nav {
+      display:flex; position:fixed; bottom:0; left:0; right:0;
+      background:#fff; border-top:1px solid var(--border);
+      padding:.6rem 0 .8rem; z-index:200;
+      box-shadow:0 -4px 16px rgba(0,0,0,.06);
+    }
+    .mobile-nav-btn {
+      flex:1; display:flex; flex-direction:column; align-items:center; gap:.2rem;
+      background:none; border:none; cursor:pointer; padding:.3rem;
+      font-family:var(--sans); font-size:0.62rem; font-weight:600; color:var(--muted);
+      transition:color .2s;
+    }
+    .mobile-nav-btn.active { color:var(--blue); }
+    .mobile-nav-btn span { font-size:1.2rem; }
+  }
+  @media(min-width:769px) { .mobile-bottom-nav { display:none !important; } }
+
+  body.dark .mobile-bottom-nav { background:#161b28; border-color:#222840; }
 </style>
 </head>
 <body>
@@ -671,10 +709,29 @@
     document.addEventListener('DOMContentLoaded', function() {
       var btn = document.getElementById('dark-toggle');
       if (btn) btn.textContent = '☀️';
+      var icon = document.getElementById('dark-icon');
+      if (icon) icon.textContent = '☀️';
     });
+  }
+
+  function mobilePage(page) {
+    document.querySelectorAll('.mobile-nav-btn').forEach(function(b){ b.classList.remove('active'); });
+    event.currentTarget.classList.add('active');
+    if (page === 'plans') {
+      document.querySelector('.sidebar').classList.toggle('mobile-open');
+    }
   }
 
   loadPlan();
 </script>
+
+<!-- MOBILE BOTTOM NAV -->
+<div class="mobile-bottom-nav">
+  <button class="mobile-nav-btn active" onclick="mobilePage('home')"><span>⌂</span>Home</button>
+  <button class="mobile-nav-btn" onclick="mobilePage('plans')"><span>≡</span>Plans</button>
+  <button class="mobile-nav-btn" onclick="window.location.href='https://studyflow-ten-vert.vercel.app/app.html'"><span>+</span>New</button>
+  <button class="mobile-nav-btn" onclick="mobilePage('progress')"><span>◎</span>Progress</button>
+</div>
+
 </body>
 </html>
