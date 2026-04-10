@@ -255,6 +255,38 @@
   .loading-overlay p { color:var(--muted); font-size:0.9rem; }
   .loading-msg { margin-top:1rem; font-size:0.85rem; color:var(--blue); font-weight:500; background:var(--blue-light); padding:.5rem 1rem; border-radius:8px; }
 
+  .dark-toggle {
+    background:var(--soft); border:1.5px solid var(--border); border-radius:8px;
+    padding:.35rem .7rem; cursor:pointer; font-size:1rem; transition:all .2s;
+  }
+  .dark-toggle:hover { border-color:var(--blue); background:var(--blue-light); }
+
+  /* DARK MODE */
+  body.dark { --ink:#e8eeff; --muted:#7a8aaa; --soft:#0f1117; --white:#161b28; --border:#222840; }
+  body.dark nav { background:#161b28; }
+  body.dark .sidebar { background:#161b28; }
+  body.dark .main { background:#0f1117; }
+  body.dark .stat-card { background:#161b28; }
+  body.dark .ring-card { background:#161b28; }
+  body.dark .cal-card { background:#161b28; }
+  body.dark .today-card { box-shadow:0 12px 40px rgba(74,124,246,.15); }
+  body.dark .topic-header { background:#1e2336; }
+  body.dark .day-item:hover { background:#1e2336; }
+  body.dark .day-item.active { background:rgba(74,124,246,.15); }
+  body.dark .modal-box { background:#161b28; }
+  body.dark .time-btn { background:#1e2336; border-color:#222840; color:#e8eeff; }
+  body.dark .time-btn:hover { border-color:var(--blue); background:rgba(74,124,246,.15); }
+  body.dark .time-custom input { background:#1e2336; border-color:#222840; color:#e8eeff; }
+  body.dark .plan-switcher-item:hover { background:#1e2336; }
+  body.dark .plan-switcher-item.active { background:rgba(74,124,246,.15); }
+  body.dark .loading-overlay { background:rgba(15,17,23,.95); }
+  body.dark .ring-track { stroke:#222840; }
+  body.dark .cal-day { color:#7a8aaa; }
+  body.dark .cal-day.today { background:var(--blue); color:#fff; }
+  body.dark .cal-day.study-day { background:rgba(74,124,246,.15); color:var(--blue); }
+  body.dark .btn-new { box-shadow:none; }
+  body.dark .nav-avatar { box-shadow:none; }
+
   @media(max-width:768px) { .sidebar{display:none;} .main{padding:1.2rem;} .stats-row{grid-template-columns:1fr 1fr;} }
 </style>
 </head>
@@ -305,6 +337,7 @@
   </a>
   <div class="nav-right">
     <a href="https://studyflow-ten-vert.vercel.app/app.html" class="btn-new">+ New plan</a>
+    <button class="dark-toggle" onclick="toggleDark()" id="dark-toggle">🌙</button>
     <div class="nav-avatar" id="user-avatar">E</div>
   </div>
 </nav>
@@ -624,6 +657,21 @@
   function startToday() {
     localStorage.setItem('studyflow_current_day', currentDayIndex);
     window.location.href = 'lesson.html';
+  }
+
+  function toggleDark() {
+    var isDark = document.body.classList.toggle('dark');
+    localStorage.setItem('studyflow_dark', isDark ? '1' : '0');
+    document.getElementById('dark-toggle').textContent = isDark ? '☀️' : '🌙';
+  }
+
+  // Apply saved dark mode
+  if (localStorage.getItem('studyflow_dark') === '1') {
+    document.body.classList.add('dark');
+    document.addEventListener('DOMContentLoaded', function() {
+      var btn = document.getElementById('dark-toggle');
+      if (btn) btn.textContent = '☀️';
+    });
   }
 
   loadPlan();
