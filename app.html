@@ -474,8 +474,18 @@
       var raw = data.result || data.plan || '';
       var jsonMatch = raw.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('No JSON found');
-      var plan = JSON.parse(jsonMatch[0]);
-      localStorage.setItem('studyflow_plan', JSON.stringify(plan));
+      var newPlan = JSON.parse(jsonMatch[0]);
+      newPlan.id = Date.now();
+      newPlan.createdAt = new Date().toISOString();
+
+      // Save to plans array
+      var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+      allPlans.push(newPlan);
+      localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
+
+      // Set as active plan
+      localStorage.setItem('studyflow_active_plan', newPlan.id);
+      localStorage.setItem('studyflow_plan', JSON.stringify(newPlan));
       window.location.href = 'dashboard.html';
     })
     .catch(function(err) {
