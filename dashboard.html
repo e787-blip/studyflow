@@ -85,7 +85,15 @@
   }
   .day-badge.final { background:#fff0e0; color:#c06b1a; }
   .day-badge.done { background:#d1faf0; color:#1a9e80; }
-  .sidebar-divider { height:1px; background:var(--border); margin:.8rem 1rem; }
+  .plan-switcher-item {
+    display:flex; align-items:center; gap:.6rem;
+    padding:.6rem .8rem; border-radius:10px; cursor:pointer;
+    margin-bottom:.3rem; border:1.5px solid transparent;
+    transition:all .2s;
+  }
+  .plan-switcher-item:hover { background:var(--soft); border-color:var(--border); }
+  .plan-switcher-item.active { background:var(--blue-light); border-color:var(--blue); }
+  .psw-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 
   /* TOPIC GROUP in sidebar */
   .topic-group { margin-bottom:.5rem; }
@@ -375,6 +383,7 @@
 
 <script>
   var plan = null;
+  var allPlans = [];
   var currentDayIndex = 0;
 
   function getGreeting() {
@@ -385,17 +394,59 @@
   }
 
   function loadPlan() {
-    var saved = localStorage.getItem('studyflow_plan');
-    if (!saved) {
+    // Load all plans
+    allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+
+    // Migrate old single plan if exists
+    var oldPlan = localStorage.getItem('studyflow_plan');
+    if (oldPlan && allPlans.length === 0) {
+      try {
+        var p = JSON.parse(oldPlan);
+        p.id = p.id || Date.now();
+        p.createdAt = p.createdAt || new Date().toISOString();
+        allPlans.push(p);
+        localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
+        localStorage.setItem('studyflow_active_plan', p.id);
+      } catch(e) {}
+    }
+
+    if (allPlans.length === 0) {
       document.getElementById('no-plan-view').style.display = 'block';
       return;
     }
-    try {
-      plan = JSON.parse(saved);
-      document.getElementById('plan-view').style.display = 'block';
+
+    // Load active plan
+    var activeId = localStorage.getItem('studyflow_active_plan');
+    plan = allPlans.find(function(p){ return String(p.id) === String(activeId); }) || allPlans[allPlans.length - 1];
+    localStorage.setItem('studyflow_plan', JSON.stringify(plan));
+
+    document.getElementById('plan-view').style.display = 'block';
+    renderDashboard();
+  }
+
+  function switchPlan(id) {
+    plan = allPlans.find(function(p){ return String(p.id) === String(id); });
+    if (!plan) return;
+    localStorage.setItem('studyflow_active_plan', plan.id);
+    localStorage.setItem('studyflow_plan', JSON.stringify(plan));
+    localStorage.setItem('studyflow_current_day', 0);
+    currentDayIndex = 0;
+    renderDashboard();
+  }
+
+  function deletePlan(id) {
+    if (!confirm('Delete this study plan?')) return;
+    allPlans = allPlans.filter(function(p){ return String(p.id) !== String(id); });
+    localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
+    if (allPlans.length === 0) {
+      localStorage.removeItem('studyflow_plan');
+      localStorage.removeItem('studyflow_active_plan');
+      window.location.reload();
+    } else {
+      plan = allPlans[allPlans.length - 1];
+      localStorage.setItem('studyflow_active_plan', plan.id);
+      localStorage.setItem('studyflow_plan', JSON.stringify(plan));
       renderDashboard();
-    } catch(e) {
-      document.getElementById('no-plan-view').style.display = 'block';
     }
   }
 
@@ -434,6 +485,26 @@
     var completed = plan.days.filter(function(d){ return d.completed; }).length;
     var total = plan.days.length;
 
+    // All plans switcher at top
+    var plansHtml = '';
+    if (allPlans.length > 1) {
+      plansHtml = '<div class="sidebar-label" style="margin-bottom:.5rem;">All Plans</div>';
+      allPlans.forEach(function(p) {
+        var isActive = String(p.id) === String(plan.id);
+        var done = p.days.filter(function(d){ return d.completed; }).length;
+        plansHtml += '<div class="plan-switcher-item' + (isActive ? ' active' : '') + '" onclick="switchPlan(' + p.id + ')">' +
+          '<div class="psw-dot" style="background:' + (isActive ? 'var(--blue)' : 'var(--border)') + '"></div>' +
+          '<div style="flex:1;min-width:0;">' +
+          '<div style="font-size:0.82rem;font-weight:' + (isActive ? '700' : '500') + ';color:' + (isActive ? 'var(--blue)' : 'var(--ink)') + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (p.subject || 'Plan') + '</div>' +
+          '<div style="font-size:0.68rem;color:var(--muted);">' + done + '/' + p.days.length + ' days</div>' +
+          '</div>' +
+          '<button onclick="event.stopPropagation();deletePlan(' + p.id + ')" style="background:none;border:none;color:var(--border);cursor:pointer;font-size:0.9rem;padding:.2rem;" title="Delete">✕</button>' +
+          '</div>';
+      });
+      plansHtml += '<div class="sidebar-divider"></div>';
+    }
+
+    // Days for current plan
     var daysHtml = '';
     plan.days.forEach(function(day, i) {
       var isActive = i === currentDayIndex;
@@ -443,16 +514,17 @@
       var badge = isCompleted ? '<span class="day-badge done">Done</span>' : (day.isFinal ? '<span class="day-badge final">Final</span>' : (isActive ? '<span class="day-badge">Today</span>' : ''));
       daysHtml += '<div class="' + cls + '" onclick="' + (isLocked ? '' : 'selectDay(' + i + ')') + '">' +
         '<div class="day-num">' + (isCompleted ? '✓' : (i + 1)) + '</div>' +
-        '<div class="day-info"><div class="day-title">' + (day.title || 'Day ' + (i+1)) + '</div><div class="day-meta">' + (day.duration || '—') + ' min</div></div>' +
+        '<div class="day-info"><div class="day-title">' + (day.title || 'Day ' + (i+1)) + '</div><div class="day-meta">' + (day.duration || 30) + ' min</div></div>' +
         badge + '</div>';
     });
 
-    var html = '<div class="topic-group open" id="topic-group-0">' +
-      '<div class="topic-header" onclick="toggleTopic(0)">' +
-        '<div><div class="topic-name">' + subject + '</div><div class="topic-meta">' + completed + '/' + total + ' days done</div></div>' +
-        '<span class="topic-arrow">›</span>' +
-      '</div>' +
-      '<div class="topic-days">' + daysHtml + '</div>' +
+    var html = plansHtml +
+      '<div class="topic-group open" id="topic-group-0">' +
+        '<div class="topic-header" onclick="toggleTopic(0)">' +
+          '<div><div class="topic-name">' + subject + '</div><div class="topic-meta">' + completed + '/' + total + ' days done</div></div>' +
+          '<span class="topic-arrow">›</span>' +
+        '</div>' +
+        '<div class="topic-days">' + daysHtml + '</div>' +
       '</div>';
 
     document.getElementById('sidebar-days').innerHTML = html;
