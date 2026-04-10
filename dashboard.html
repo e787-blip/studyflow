@@ -261,6 +261,35 @@
   }
   .dark-toggle:hover { border-color:var(--blue); background:var(--blue-light); }
 
+  /* NOTIFICATION BANNER */
+  .notif-banner {
+    background:linear-gradient(135deg,#fff8e0,#fff3cc);
+    border:1.5px solid #f59e0b; border-radius:20px; padding:1.2rem 1.5rem;
+    margin-bottom:1.5rem; animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both;
+  }
+  .notif-content { display:flex; align-items:center; gap:1rem; margin-bottom:.9rem; }
+  .notif-icon { font-size:1.5rem; flex-shrink:0; }
+  .notif-title { font-size:0.92rem; font-weight:700; color:#92400e; margin-bottom:.2rem; }
+  .notif-msg { font-size:0.82rem; color:#92400e; font-weight:300; }
+  .notif-actions { display:flex; gap:.6rem; }
+  .notif-btn-yes { background:#f59e0b; color:#fff; border:none; border-radius:8px; padding:.5rem 1.1rem; font-family:var(--sans); font-size:0.85rem; font-weight:600; cursor:pointer; transition:background .2s; }
+  .notif-btn-yes:hover { background:#d97706; }
+  .notif-btn-no { background:none; border:1.5px solid #f59e0b; color:#92400e; border-radius:8px; padding:.5rem 1rem; font-family:var(--sans); font-size:0.85rem; font-weight:500; cursor:pointer; }
+
+  /* SCORE HISTORY */
+  .score-history-card { background:var(--white); border:1.5px solid var(--border); border-radius:20px; padding:1.5rem; margin-bottom:1.5rem; }
+  .score-chart { display:flex; align-items:flex-end; gap:.5rem; height:80px; margin-top:1rem; }
+  .score-bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:.3rem; }
+  .score-bar { width:100%; border-radius:6px 6px 0 0; transition:height .6s cubic-bezier(0.16,1,.3,1); min-height:4px; }
+  .score-bar.high { background:var(--green); }
+  .score-bar.mid { background:var(--blue); }
+  .score-bar.low { background:var(--orange); }
+  .score-bar-label { font-size:0.62rem; color:var(--muted); font-weight:600; }
+  .score-bar-val { font-size:0.65rem; font-weight:700; color:var(--ink); }
+
+  /* STREAK FIRE */
+  .stat-value.streak-fire { color:#f59e0b; }
+
   /* DARK MODE */
   body.dark { --ink:#e8eeff; --muted:#7a8aaa; --soft:#0f1117; --white:#161b28; --border:#222840; }
   body.dark nav { background:#161b28; }
@@ -286,6 +315,12 @@
   body.dark .cal-day.study-day { background:rgba(74,124,246,.15); color:var(--blue); }
   body.dark .btn-new { box-shadow:none; }
   body.dark .nav-avatar { box-shadow:none; }
+  body.dark .notif-banner { background:#2a1800; border-color:#f59e0b; }
+  body.dark .notif-title, body.dark .notif-msg { color:#fcd34d; }
+  body.dark .notif-btn-no { border-color:#f59e0b; color:#fcd34d; }
+  body.dark .score-history-card { background:#161b28; }
+  body.dark .score-bar-label { color:#7a8aaa; }
+  body.dark .score-bar-val { color:#e8eeff; }
 
   /* ── MOBILE ── */
   @media(max-width:768px) {
@@ -418,9 +453,9 @@
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Current Day</div>
-          <div class="stat-value" id="current-day-val">1</div>
-          <div class="stat-sub" id="current-day-sub">of your plan</div>
+          <div class="stat-label">Study Streak</div>
+          <div class="stat-value" id="streak-val">0</div>
+          <div class="stat-sub" id="streak-sub">days in a row</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Days Left</div>
@@ -428,9 +463,24 @@
           <div class="stat-sub">until exam</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Subject</div>
-          <div class="stat-value" style="font-size:1.1rem;" id="subject-val">—</div>
-          <div class="stat-sub" id="goal-val">—</div>
+          <div class="stat-label">Best Score</div>
+          <div class="stat-value" id="best-score-val">—</div>
+          <div class="stat-sub" id="avg-score-sub">avg accuracy</div>
+        </div>
+      </div>
+
+      <!-- NOTIFICATION BANNER -->
+      <div class="notif-banner" id="notif-banner" style="display:none;">
+        <div class="notif-content">
+          <div class="notif-icon">🔔</div>
+          <div>
+            <div class="notif-title">Stay on track!</div>
+            <div class="notif-msg">Enable daily study reminders so you never miss a session.</div>
+          </div>
+        </div>
+        <div class="notif-actions">
+          <button class="notif-btn-yes" onclick="enableNotifications()">Enable</button>
+          <button class="notif-btn-no" onclick="dismissNotif()">Not now</button>
         </div>
       </div>
 
@@ -439,6 +489,12 @@
         <h2 id="today-title">Loading...</h2>
         <p id="today-description">Getting your plan ready...</p>
         <button class="btn-start" onclick="startToday()">Start today's lesson →</button>
+      </div>
+
+      <!-- SCORE HISTORY -->
+      <div class="score-history-card" id="score-history-card" style="display:none;">
+        <div class="section-label">Score History</div>
+        <div class="score-chart" id="score-chart"></div>
       </div>
 
       <div class="cal-card">
@@ -527,8 +583,6 @@
     var name = user.name || user.email || 'Student';
     document.getElementById('user-name').textContent = name.split(' ')[0];
     document.getElementById('welcome-sub').textContent = 'Your ' + plan.days.length + '-day ' + plan.subject + ' plan is ready.';
-    document.getElementById('subject-val').textContent = plan.subject || '—';
-    document.getElementById('goal-val').textContent = plan.goal || '—';
 
     var completed = plan.days.filter(function(d){ return d.completed; }).length;
     var total = plan.days.length;
@@ -537,8 +591,6 @@
     document.getElementById('progress-ring').style.setProperty('--offset', offset);
     document.getElementById('progress-text').textContent = pct + '%';
     document.getElementById('days-done-val').textContent = completed + '/' + total;
-    document.getElementById('current-day-val').textContent = completed + 1 > total ? total : completed + 1;
-    document.getElementById('current-day-sub').textContent = 'of ' + total + ' days';
 
     if (plan.deadline) {
       var daysLeft = Math.ceil((new Date(plan.deadline) - new Date()) / 86400000);
@@ -546,9 +598,145 @@
     }
 
     currentDayIndex = completed < total ? completed : total - 1;
+
+    // STREAK
+    renderStreak();
+
+    // SCORE HISTORY
+    renderScoreHistory();
+
+    // NOTIFICATIONS
+    checkNotificationPrompt();
+
     renderSidebar();
     renderToday();
     renderCalendar();
+  }
+
+  function renderStreak() {
+    var streak = calculateStreak();
+    var streakEl = document.getElementById('streak-val');
+    var streakSub = document.getElementById('streak-sub');
+    streakEl.textContent = streak;
+    if (streak >= 3) {
+      streakEl.classList.add('streak-fire');
+      streakSub.textContent = 'day streak!';
+    } else if (streak === 1) {
+      streakSub.textContent = 'day in a row';
+    } else {
+      streakSub.textContent = 'days in a row';
+    }
+  }
+
+  function calculateStreak() {
+    var history = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
+    if (!history.length) return 0;
+    history.sort(function(a,b){ return new Date(b) - new Date(a); });
+    var streak = 0;
+    var today = new Date();
+    today.setHours(0,0,0,0);
+    for (var i = 0; i < history.length; i++) {
+      var d = new Date(history[i]);
+      d.setHours(0,0,0,0);
+      var diff = Math.round((today - d) / 86400000);
+      if (diff === streak) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
+
+  function recordStudyToday() {
+    var history = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
+    var today = new Date().toDateString();
+    if (history.indexOf(today) === -1) {
+      history.push(today);
+      localStorage.setItem('studyflow_study_history', JSON.stringify(history));
+    }
+  }
+
+  function renderScoreHistory() {
+    var scores = [];
+    plan.days.forEach(function(d, i) {
+      if (d.completed && d.score !== undefined) {
+        scores.push({ day: i + 1, score: d.score });
+      }
+    });
+
+    if (scores.length === 0) {
+      document.getElementById('score-history-card').style.display = 'none';
+      document.getElementById('best-score-val').textContent = '—';
+      document.getElementById('avg-score-sub').textContent = 'no sessions yet';
+      return;
+    }
+
+    document.getElementById('score-history-card').style.display = 'block';
+
+    var best = Math.max.apply(null, scores.map(function(s){ return s.score; }));
+    var avg = Math.round(scores.reduce(function(a,s){ return a + s.score; }, 0) / scores.length);
+    document.getElementById('best-score-val').textContent = best + '%';
+    document.getElementById('avg-score-sub').textContent = avg + '% avg accuracy';
+
+    var html = '';
+    scores.forEach(function(s) {
+      var cls = s.score >= 80 ? 'high' : (s.score >= 60 ? 'mid' : 'low');
+      var h = Math.round((s.score / 100) * 70);
+      html += '<div class="score-bar-wrap">' +
+        '<div class="score-bar-val">' + s.score + '%</div>' +
+        '<div class="score-bar ' + cls + '" style="height:' + h + 'px"></div>' +
+        '<div class="score-bar-label">D' + s.day + '</div>' +
+        '</div>';
+    });
+    document.getElementById('score-chart').innerHTML = html;
+  }
+
+  function checkNotificationPrompt() {
+    var dismissed = localStorage.getItem('studyflow_notif_dismissed');
+    var permitted = localStorage.getItem('studyflow_notif_enabled');
+    if (!dismissed && !permitted && 'Notification' in window && Notification.permission === 'default') {
+      document.getElementById('notif-banner').style.display = 'block';
+    }
+  }
+
+  function enableNotifications() {
+    Notification.requestPermission().then(function(perm) {
+      if (perm === 'granted') {
+        localStorage.setItem('studyflow_notif_enabled', '1');
+        scheduleStudyReminder();
+        document.getElementById('notif-banner').style.display = 'none';
+      } else {
+        dismissNotif();
+      }
+    });
+  }
+
+  function dismissNotif() {
+    localStorage.setItem('studyflow_notif_dismissed', '1');
+    document.getElementById('notif-banner').style.display = 'none';
+  }
+
+  function scheduleStudyReminder() {
+    if (Notification.permission !== 'granted') return;
+    var now = new Date();
+    var reminder = new Date();
+    reminder.setHours(18, 0, 0, 0);
+    if (reminder <= now) reminder.setDate(reminder.getDate() + 1);
+    var delay = reminder - now;
+    setTimeout(function() {
+      new Notification('StudyFlow reminder', {
+        body: 'Time to study! Open your plan and keep that streak going.',
+        icon: '/favicon.ico'
+      });
+      // Reschedule for next day
+      setInterval(function() {
+        new Notification('StudyFlow reminder', {
+          body: 'Time to study! Open your plan and keep that streak going.',
+          icon: '/favicon.ico'
+        });
+      }, 86400000);
+    }, delay);
   }
 
   function renderSidebar() {
@@ -655,6 +843,7 @@
     document.getElementById('time-modal').classList.remove('active');
     localStorage.setItem('studyflow_current_day', currentDayIndex);
     localStorage.setItem('studyflow_minutes', selectedMinutes);
+    recordStudyToday();
     window.location.href = 'lesson.html';
   }
 
