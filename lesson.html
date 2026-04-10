@@ -326,7 +326,31 @@
   body.dark .chat-input { background:#1e2336; border-color:#222840; color:#e8eeff; }
   body.dark .end-btn { border-color:#222840; color:#7a8aaa; }
 
-  @media(max-width:600px) { .chat-panel { width:calc(100vw - 2rem); right:1rem; } }
+  /* ── MOBILE ── */
+  @media(max-width:600px) {
+    nav { padding:.65rem 1rem; }
+    .time-bar-wrap { padding:.6rem 1rem; gap:.6rem; }
+    .time-label { min-width:55px; font-size:0.7rem; }
+    .stat-pill { font-size:0.65rem; padding:.18rem .5rem; }
+    .container { padding:1rem 1rem 5rem; }
+    .card-header { padding:1.2rem 1.3rem; }
+    .card-header h2 { font-size:1.2rem; }
+    .card-body { padding:1.3rem; }
+    .card-footer { padding:1rem 1.3rem; }
+    .btn-next { padding:.72rem 1.3rem; font-size:0.88rem; }
+    .q-text { font-size:0.93rem; }
+    .q-option { padding:.7rem .85rem; font-size:0.85rem; }
+    .tf-btn { padding:.8rem; font-size:0.9rem; }
+    .write-area { min-height:90px; font-size:0.88rem; }
+    .results-score { font-size:3rem; }
+    .results-stats { grid-template-columns:repeat(3,1fr); gap:.5rem; }
+    .r-stat { padding:.8rem .5rem; }
+    .r-stat-val { font-size:1.3rem; }
+    .chat-fab { bottom:1.2rem; right:1.2rem; width:46px; height:46px; font-size:1.1rem; }
+    .chat-panel { width:calc(100vw - 2rem); right:1rem; bottom:5rem; }
+    .milestone-banner { padding:.9rem 1rem; }
+    .struggling-banner { padding:.85rem 1rem; }
+  }
 </style>
 </head>
 <body>
@@ -349,7 +373,7 @@
     </svg>
   </a>
   <a href="dashboard.html" class="nav-back">← Dashboard</a>
-  <button onclick="toggleDark()" id="dark-toggle" style="background:var(--soft);border:1.5px solid var(--border);border-radius:8px;padding:.35rem .7rem;cursor:pointer;font-size:1rem;transition:all .2s;">🌙</button>
+  <button onclick="toggleDark()" id="dark-toggle" style="background:var(--soft);border:1.5px solid var(--border);border-radius:8px;padding:.35rem .7rem;cursor:pointer;font-size:1rem;transition:all .2s;"">🌙</button>
 </nav>
 
 <!-- TIME BAR -->
@@ -361,14 +385,14 @@
   <div class="session-stats">
     <span class="stat-pill correct" id="correct-pill">0 ✓</span>
     <span class="stat-pill total" id="total-pill">0 done</span>
-    <span class="streak-pill" id="streak-pill">🔥 <span id="streak-num">0</span></span>
+    <span class="streak-pill" id="streak-pill">! <span id="streak-num">0</span></span>
   </div>
 </div>
 
 <div class="container">
   <!-- MILESTONE BANNER -->
   <div class="milestone-banner" id="milestone-banner">
-    <span class="milestone-icon" id="milestone-icon">🎉</span>
+    <span class="milestone-icon" id="milestone-icon">*</span>
     <div class="milestone-text">
       <h4 id="milestone-title">Halfway there!</h4>
       <p id="milestone-msg">Keep it up — you're doing great!</p>
@@ -378,7 +402,7 @@
 
   <!-- STRUGGLING BANNER -->
   <div class="struggling-banner" id="struggling-banner">
-    <span class="struggling-icon">💡</span>
+    <span class="struggling-icon">!</span>
     <div class="struggling-text">
       <h4>Let's slow down a bit</h4>
       <p>You've missed a few in a row — no worries. Review the lesson content and try again.</p>
@@ -388,7 +412,7 @@
 
   <!-- RECAP CARD -->
   <div class="recap-card" id="recap-card">
-    <h3>📋 10-Minute Recap</h3>
+    <h3>> 10-Minute Recap</h3>
     <ul class="recap-list" id="recap-list"></ul>
     <button class="btn-recap-next" onclick="closeRecap()">Keep grinding →</button>
   </div>
@@ -413,7 +437,7 @@
     <button class="chat-close" onclick="toggleChat()">×</button>
   </div>
   <div class="chat-messages" id="chat-messages">
-    <div class="chat-msg ai">Hi! I'm your AI tutor. Ask me anything about today's lesson! 📚</div>
+    <div class="chat-msg ai">Hi! I'm your AI tutor. Ask me anything about today's lesson! ~</div>
   </div>
   <div class="chat-input-row">
     <input class="chat-input" id="chat-input" placeholder="Ask a question..." onkeydown="if(event.key==='Enter')sendChat()" />
@@ -612,11 +636,11 @@
     var body = '<div class="q-meta"><span class="q-type-label ' + typeClass + '">' + typeLabel + '</span>' +
       '<span class="q-difficulty ' + diffClass + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       '<div class="q-text">' + q.question + '</div>' + optHtml +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">💡 Show hint</button>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Think about the key concepts from today\'s lesson.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
-    var streak = currentStreak > 1 ? '🔥 ' + currentStreak + ' streak' : correctCount + ' ✓ / ' + totalAnswered;
+    var streak = currentStreak > 1 ? '! ' + currentStreak + ' streak' : correctCount + ' ✓ / ' + totalAnswered;
     return '<div class="session-card">' +
       '<div class="card-header' + (isReview ? ' struggling-header' : '') + '"><div class="card-badge">✦ ' + badge + '</div><h2>' + (day.isFinal ? 'Final Test' : 'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
@@ -633,7 +657,7 @@
       '<input class="fill-input" id="fill-input" placeholder="Type your answer..." />' +
       '<button class="fill-submit" onclick="answerFill(\'' + esc(answer) + '\',\'' + esc(q.explanation) + '\')">Check →</button>' +
       '</div>' +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">💡 Show hint</button>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Think carefully.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
     return '<div class="session-card">' +
@@ -791,7 +815,7 @@
     if (!box) return;
     box.classList.toggle('show');
     var btn = box.previousElementSibling;
-    btn.textContent = box.classList.contains('show') ? '💡 Hide hint' : '💡 Show hint';
+    btn.textContent = box.classList.contains('show') ? 'Hide hint' : 'Show hint';
   }
 
   /* ── STREAK ── */
@@ -841,12 +865,12 @@
     var pct = (totalSeconds - secondsLeft) / totalSeconds;
     if (pct >= 0.5 && !showedHalfMilestone) {
       showedHalfMilestone = true;
-      showMilestone('🎉', 'Halfway there!', 'You\'re killing it — keep that momentum going!');
+      showMilestone('*', 'Halfway there!', 'You\'re killing it — keep that momentum going!');
     } else if (correctCount === 5 && !showedQuarterMilestone) {
       showedQuarterMilestone = true;
-      showMilestone('🔥', '5 correct in a row!', 'You\'re on fire — keep grinding!');
+      showMilestone('!', '5 correct in a row!', 'You\'re on fire — keep grinding!');
     } else if (currentStreak === 10) {
-      showMilestone('⚡', '10 streak!', 'Absolutely crushing it right now!');
+      showMilestone('!', '10 streak!', 'Absolutely crushing it right now!');
     }
   }
 
@@ -979,7 +1003,7 @@
       });
       wrongHtml += '</div>';
     } else if (totalAnswered > 0) {
-      wrongHtml = '<div style="background:#d1faf0;border:1.5px solid #38bfa1;border-radius:14px;padding:1.1rem;text-align:center;color:#1a9e80;font-weight:600;margin-bottom:1.2rem;">Perfect session — every answer correct! 🎉</div>';
+      wrongHtml = '<div style="background:#d1faf0;border:1.5px solid #38bfa1;border-radius:14px;padding:1.1rem;text-align:center;color:#1a9e80;font-weight:600;margin-bottom:1.2rem;">Perfect session — every answer correct! *</div>';
     }
 
     document.getElementById('results-wrap').innerHTML =
