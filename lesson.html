@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>StudyFlow — Study Session</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
 <style>
@@ -16,7 +17,16 @@
   }
   body { font-family: var(--sans); color: var(--ink); background: var(--soft); min-height: 100vh; }
 
-  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
+  @keyframes bookBounce { 0%,100%{transform:translateY(0)} 40%{transform:translateY(-18px)} 60%{transform:translateY(-10px)} }
+  @keyframes shadowPulse { 0%,100%{transform:scaleX(1);opacity:.3} 40%{transform:scaleX(.6);opacity:.1} }
+  @keyframes loaderFade { to{opacity:0;visibility:hidden;pointer-events:none} }
+  .page-loader { position:fixed;inset:0;z-index:9999;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6rem; }
+  .page-loader.hidden { animation:loaderFade .4s .1s forwards; }
+  body.dark .page-loader { background:#0f1117; }
+  .loader-book { animation:bookBounce .9s ease infinite; }
+  .loader-shadow { width:40px;height:6px;border-radius:50%;background:rgba(74,124,246,.25);margin-top:.2rem;animation:shadowPulse .9s ease infinite; }
+  .loader-text { font-family:'Inter',sans-serif;font-size:1rem;font-weight:700;letter-spacing:-0.02em;margin-top:.5rem;color:var(--ink); }
+  .loader-text span { color:var(--blue); }
   @keyframes fadeIn { from{opacity:0} to{opacity:1} }
   @keyframes spin { to{transform:rotate(360deg)} }
   @keyframes shake { 0%,100%{transform:none} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
@@ -355,18 +365,34 @@
 </head>
 <body>
 
+<div class="page-loader" id="page-loader">
+  <svg class="loader-book" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="72" height="72">
+    <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
+    
+    <rect x="14" y="14" width="22" height="30" rx="4" fill="#dce8ff" opacity="1"/>
+    <rect x="18" y="14" width="22" height="30" rx="4" fill="#c5d9ff" opacity="1"/>
+    <rect x="22" y="14" width="22" height="30" rx="4" fill="#f0f4ff"/>
+    <rect x="27" y="22" width="12" height="2.5" rx="1.25" fill="#3567e0"/>
+    <rect x="27" y="28" width="9" height="2.5" rx="1.25" fill="#3567e0" opacity="0.7"/>
+    <rect x="27" y="34" width="11" height="2.5" rx="1.25" fill="#3567e0" opacity="0.5"/>
+    <path d="M46 10 L47.4 14.5 L52 16 L47.4 17.5 L46 22 L44.6 17.5 L40 16 L44.6 14.5 Z" fill="#f0f4ff"/>
+  </svg>
+  <div class="loader-shadow"></div>
+  <div class="loader-text">Study<span>Flow</span></div>
+</div>
+
 <nav>
   <a href="dashboard.html" class="logo">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="120" height="30">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
       <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
-      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
+      <rect x="8" y="10" width="17" height="22" rx="3" fill="#dce8ff" opacity="1"/>
       <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
-      <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
-      <rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/>
-      <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
+      <rect x="14" y="10" width="17" height="22" rx="3" fill="#f0f4ff"/>
+      <rect x="17" y="16" width="11" height="2" rx="1" fill="#3567e0"/>
+      <rect x="17" y="21" width="8" height="2" rx="1" fill="#3567e0" opacity="0.7"/>
       <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
-      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
+      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="#f0f4ff"/>
       <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
         <tspan fill="#1a1d2e">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
       </text>
@@ -656,7 +682,8 @@
     var diffClass = (q.difficulty || 'medium').toLowerCase();
     var typeLabel = q.type === 'truefalse' ? 'True / False' : 'Multiple Choice';
     var typeClass = q.type === 'truefalse' ? 'tf' : 'mcq';
-    var badge = isReview ? 'Review Question' : 'Question';
+    var badge = isReview ? 'Review Question' : (day.isFinal ? 'Final Exam' : 'Day ' + (dayIndex + 1) + ' — Practice');
+    var title = day.title || (day.isFinal ? 'Final Test' : 'Practice Questions');
     var optHtml = '';
 
     if (q.type === 'truefalse') {
@@ -683,7 +710,7 @@
 
     var streak = currentStreak > 1 ? '! ' + currentStreak + ' streak' : correctCount + ' ✓ / ' + totalAnswered;
     return '<div class="session-card">' +
-      '<div class="card-header' + (isReview ? ' struggling-header' : '') + '"><div class="card-badge">✦ ' + badge + '</div><h2>' + (day.isFinal ? 'Final Test' : 'Practice') + '</h2></div>' +
+      '<div class="card-header' + (isReview ? ' struggling-header' : '') + '"><div class="card-badge">✦ ' + badge + '</div><h2>' + title + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -1094,6 +1121,12 @@
     document.body.classList.add('dark');
     document.getElementById('dark-toggle').textContent = '☀️';
   }
+
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      document.getElementById('page-loader').classList.add('hidden');
+    }, 700);
+  });
 
   init();
 </script>
