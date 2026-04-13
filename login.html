@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <title>StudyFlow — Sign In</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
@@ -114,8 +115,33 @@
     .right-panel { padding: 2rem 1.5rem; }
   }
 </style>
+<style>
+  @keyframes bookBounce { 0%,100%{transform:translateY(0)} 40%{transform:translateY(-18px)} 60%{transform:translateY(-10px)} }
+  @keyframes shadowPulse { 0%,100%{transform:scaleX(1);opacity:.3} 40%{transform:scaleX(.6);opacity:.1} }
+  @keyframes loaderFade { to{opacity:0;visibility:hidden;pointer-events:none} }
+  .page-loader { position:fixed;inset:0;z-index:9999;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6rem; }
+  .page-loader.hidden { animation:loaderFade .4s .1s forwards; }
+  .loader-book { animation:bookBounce .9s ease infinite; }
+  .loader-shadow { width:40px;height:6px;border-radius:50%;background:rgba(74,124,246,.2);margin-top:.2rem;animation:shadowPulse .9s ease infinite; }
+  .loader-text { font-family:Inter,sans-serif;font-size:1rem;font-weight:700;letter-spacing:-0.02em;margin-top:.5rem;color:#1a1d2e; }
+  .loader-text span { color:#4a7cf6; }
+</style>
 </head>
 <body>
+
+<div class="page-loader" id="page-loader">
+  <svg class="loader-book" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="72" height="72">
+    <rect x="14" y="14" width="22" height="30" rx="4" fill="#dce8ff"/>
+    <rect x="18" y="14" width="22" height="30" rx="4" fill="#c5d9ff"/>
+    <rect x="22" y="14" width="22" height="30" rx="4" fill="#f0f4ff"/>
+    <rect x="27" y="22" width="12" height="2.5" rx="1.25" fill="#3567e0"/>
+    <rect x="27" y="28" width="9" height="2.5" rx="1.25" fill="#3567e0" opacity="0.7"/>
+    <rect x="27" y="34" width="11" height="2.5" rx="1.25" fill="#3567e0" opacity="0.5"/>
+    <path d="M46 10 L47.4 14.5 L52 16 L47.4 17.5 L46 22 L44.6 17.5 L40 16 L44.6 14.5 Z" fill="#4a7cf6"/>
+  </svg>
+  <div class="loader-shadow"></div>
+  <div class="loader-text">Study<span>Flow</span></div>
+</div>
 
 <!-- LEFT PANEL -->
 <div class="left-panel">
@@ -226,6 +252,10 @@
 </div>
 
 <script>
+  window.addEventListener('load', function() {
+    setTimeout(function() { document.getElementById('page-loader').classList.add('hidden'); }, 500);
+  });
+
   function switchTab(tab) {
     document.getElementById('tab-login').classList.toggle('active', tab === 'login');
     document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
@@ -240,36 +270,52 @@
   }
 
   function handleLogin() {
-    var email = document.getElementById('login-email').value;
+    var email = document.getElementById('login-email').value.trim();
     var password = document.getElementById('login-password').value;
     if (!email || !email.includes('@')) { showMsg('login-msg', 'error', 'Please enter a valid email.'); return; }
-    if (!password || password.length < 6) { showMsg('login-msg', 'error', 'Please enter your password.'); return; }
-    // Save user session
-    localStorage.setItem('studyflow_user', JSON.stringify({ email: email, name: email.split('@')[0] }));
-    showMsg('login-msg', 'success', 'Signing you in...');
+    if (!password || password.length < 6) { showMsg('login-msg', 'error', 'Password must be at least 6 characters.'); return; }
+
+    // Check if account exists
+    var accounts = JSON.parse(localStorage.getItem('studyflow_accounts') || '{}');
+    if (!accounts[email]) { showMsg('login-msg', 'error', 'No account found. Please create one.'); return; }
+    if (accounts[email].password !== password) { showMsg('login-msg', 'error', 'Incorrect password. Please try again.'); return; }
+
+    localStorage.setItem('studyflow_user', JSON.stringify({ email: email, name: accounts[email].name }));
+    showMsg('login-msg', 'success', 'Welcome back! Signing you in...');
     setTimeout(function() { window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html'; }, 800);
   }
 
   function handleSignup() {
-    var name = document.getElementById('signup-name').value;
-    var email = document.getElementById('signup-email').value;
+    var name = document.getElementById('signup-name').value.trim();
+    var email = document.getElementById('signup-email').value.trim();
     var password = document.getElementById('signup-password').value;
     if (!name) { showMsg('signup-msg', 'error', 'Please enter your name.'); return; }
     if (!email || !email.includes('@')) { showMsg('signup-msg', 'error', 'Please enter a valid email.'); return; }
     if (!password || password.length < 8) { showMsg('signup-msg', 'error', 'Password must be at least 8 characters.'); return; }
+
+    // Check if account already exists
+    var accounts = JSON.parse(localStorage.getItem('studyflow_accounts') || '{}');
+    if (accounts[email]) { showMsg('signup-msg', 'error', 'An account with this email already exists. Please sign in.'); return; }
+
+    // Save account
+    accounts[email] = { name: name, password: password };
+    localStorage.setItem('studyflow_accounts', JSON.stringify(accounts));
     localStorage.setItem('studyflow_user', JSON.stringify({ email: email, name: name }));
     showMsg('signup-msg', 'success', 'Account created! Taking you to StudyFlow...');
     setTimeout(function() { window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html'; }, 800);
   }
 
   function googleAuth() {
-    // Simulated Google auth - redirects to app
-    var mockName = 'Student';
-    localStorage.setItem('studyflow_user', JSON.stringify({ email: 'student@gmail.com', name: mockName, google: true }));
+    var name = prompt('Enter your name for Google sign in:') || 'Student';
+    var email = 'student@gmail.com';
+    var accounts = JSON.parse(localStorage.getItem('studyflow_accounts') || '{}');
+    accounts[email] = { name: name, password: 'google' };
+    localStorage.setItem('studyflow_accounts', JSON.stringify(accounts));
+    localStorage.setItem('studyflow_user', JSON.stringify({ email: email, name: name, google: true }));
     window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
   }
 
-  // Check if already logged in
+  // If already logged in skip to app
   if (localStorage.getItem('studyflow_user')) {
     window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
   }
