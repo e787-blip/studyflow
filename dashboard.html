@@ -556,7 +556,10 @@
     if (!plan) return;
     localStorage.setItem('studyflow_active_plan', plan.id);
     localStorage.setItem('studyflow_plan', JSON.stringify(plan));
-    localStorage.setItem('studyflow_current_day', 0);
+    localStorage.setItem('studyflow_current_day', '0');
+    localStorage.removeItem('studyflow_seconds_left');
+    localStorage.removeItem('studyflow_timer_day');
+    localStorage.removeItem('studyflow_minutes');
     currentDayIndex = 0;
     renderDashboard();
   }
