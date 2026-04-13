@@ -490,6 +490,10 @@
       // Set as active plan
       localStorage.setItem('studyflow_active_plan', newPlan.id);
       localStorage.setItem('studyflow_plan', JSON.stringify(newPlan));
+      localStorage.removeItem('studyflow_seconds_left');
+      localStorage.removeItem('studyflow_timer_day');
+      localStorage.removeItem('studyflow_minutes');
+      localStorage.setItem('studyflow_current_day', '0');
       window.location.href = 'dashboard.html';
     })
     .catch(function(err) {
