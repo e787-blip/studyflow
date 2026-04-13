@@ -510,51 +510,77 @@
   }
 
   var recentlyShown = [];
+  var generatingNew = false;
+  var questionBuffer = [];
 
   function getNextCard() {
     if (cardIndex < sessionCards.length) return sessionCards[cardIndex];
+
     var questions = day.questions || [];
     if (!questions.length) return { type: 'done' };
 
-    // Weight wrong questions 60%
-    var wrongQs = wrongItems.map(function(w){ return w.q; }).filter(Boolean);
-    var pool = wrongQs.length > 0 && Math.random() < 0.6 ? wrongQs : questions;
+    // Writing prompt every ~5th card after first pass
+    if (cardIndex % 5 === 0 && cardIndex > sessionCards.length) {
+      var wq = questions[Math.floor(Math.random() * questions.length)];
+      return { type: 'write', q: wq };
+    }
 
-    // Filter out recently shown to avoid immediate repeats
-    var available = pool.filter(function(q){
+    // Use buffered AI-generated question if available
+    if (questionBuffer.length > 0) {
+      var q = questionBuffer.shift();
+      // Trigger generation of more in background
+      if (questionBuffer.length < 2) generateMoreQuestions();
+      return { type: 'question', q: q, qi: -1 };
+    }
+
+    // Fallback: pick from existing questions avoiding recent repeats
+    var available = questions.filter(function(q){
       return recentlyShown.indexOf(q.question) === -1;
     });
-    if (available.length === 0) {
-      recentlyShown = [];
-      available = pool;
-    }
+    if (available.length === 0) { recentlyShown = []; available = questions; }
 
-    // Difficulty ramp
-    var elapsed = totalSeconds - secondsLeft;
-    var progress = elapsed / totalSeconds;
-    if (progress > 0.6) {
-      var hardQs = available.filter(function(q){ return (q.difficulty||'').toLowerCase() === 'hard'; });
-      if (hardQs.length) available = hardQs;
-    } else if (progress > 0.3) {
-      var medQs = available.filter(function(q){ var d = (q.difficulty||'').toLowerCase(); return d === 'medium' || d === 'hard'; });
-      if (medQs.length) available = medQs;
-    }
+    var picked = available[Math.floor(Math.random() * available.length)];
+    recentlyShown.push(picked.question);
+    if (recentlyShown.length > 20) recentlyShown.shift();
 
-    var q = available[Math.floor(Math.random() * available.length)];
-    recentlyShown.push(q.question);
-    if (recentlyShown.length > 3) recentlyShown.shift();
+    // Start generating new questions in background
+    if (!generatingNew) generateMoreQuestions();
 
-    // Pro+: fill-in-blank every ~6th card
-    if ((userPlan === 'pro' || userPlan === 'vip') && cardIndex % 6 === 0 && cardIndex > 0) {
-      return { type: 'fill', q: q };
-    }
+    return { type: 'question', q: picked, qi: questions.indexOf(picked) };
+  }
 
-    // Writing prompt every ~4th card after first pass
-    if (cardIndex % 4 === 0 && cardIndex > sessionCards.length) {
-      return { type: 'write', q: q };
-    }
+  function generateMoreQuestions() {
+    if (generatingNew) return;
+    generatingNew = true;
 
-    return { type: 'question', q: q, qi: questions.indexOf(q) };
+    var allShown = sessionCards.map(function(c){ return c.q ? c.q.question : ''; }).filter(Boolean);
+    var recentList = allShown.slice(-20).join(' | ');
+
+    var prompt = 'Generate 10 completely NEW and UNIQUE practice questions about: ' + (plan.subject || day.title) + '. Topic content: ' + (day.content || '').substring(0, 300) + '.\n\nDO NOT repeat or closely resemble any of these already-used questions: ' + recentList + '\n\nRULES:\n- Every question must cover a DIFFERENT concept or angle\n- Mix MCQ and true/false\n- Vary difficulty: some easy, some medium, some hard\n- Hints must be specific facts, not generic\n\nReturn ONLY a JSON array of 10 questions:\n[{"type":"mcq","question":"unique question?","options":["A","B","C","D"],"correctIndex":0,"hint":"specific fact","explanation":"why correct","difficulty":"Medium"},{"type":"truefalse","question":"unique statement","correct":"True","hint":"specific fact","explanation":"why","difficulty":"Easy"}]';
+
+    fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: prompt })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      var raw = data.result || data.plan || '[]';
+      var match = raw.match(/\[[\s\S]*\]/);
+      if (match) {
+        var newQs = JSON.parse(match[0]);
+        // Filter out any that are too similar to existing questions
+        var existingQs = (day.questions || []).map(function(q){ return q.question.toLowerCase(); });
+        newQs = newQs.filter(function(q) {
+          return !existingQs.some(function(eq) {
+            return eq.includes(q.question.toLowerCase().substring(0, 15));
+          });
+        });
+        questionBuffer = questionBuffer.concat(newQs);
+      }
+      generatingNew = false;
+    })
+    .catch(function() { generatingNew = false; });
   }
 
   /* ── SHOW NEXT ── */
