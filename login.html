@@ -87,7 +87,9 @@
   .form-input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(74,124,246,.1); }
   .form-input::placeholder { color: #9ca3af; }
 
-  .forgot { font-size: 0.78rem; color: var(--blue); text-decoration: none; float: right; margin-top: -2rem; margin-bottom: 1.2rem; display: block; font-weight: 500; }
+  .role-btn { flex:1; padding:.7rem; border-radius:10px; border:1.5px solid var(--border); background:var(--soft); font-family:var(--sans); font-size:0.88rem; font-weight:600; color:var(--muted); cursor:pointer; transition:all .2s; }
+  .role-btn:hover { border-color:var(--blue); color:var(--blue); }
+  .role-btn.active { background:var(--blue); color:#fff; border-color:var(--blue); } text-decoration: none; float: right; margin-top: -2rem; margin-bottom: 1.2rem; display: block; font-weight: 500; }
   .forgot:hover { text-decoration: underline; }
 
   .btn-submit {
@@ -219,6 +221,17 @@
         <label class="form-label">Password</label>
         <input type="password" class="form-input" id="signup-password" placeholder="Min. 8 characters" />
       </div>
+      <div class="form-field">
+        <label class="form-label">Class code <span style="font-weight:300;text-transform:none;letter-spacing:0;">(optional — enter if your teacher gave you one)</span></label>
+        <input type="text" class="form-input" id="signup-classcode" placeholder="e.g. MS-7401" style="text-transform:uppercase;" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">I am a...</label>
+        <div style="display:flex;gap:.6rem;">
+          <button class="role-btn active" id="role-student" onclick="selectRole('student')">Student</button>
+          <button class="role-btn" id="role-teacher" onclick="selectRole('teacher')">Teacher</button>
+        </div>
+      </div>
       <button class="btn-submit" onclick="handleSignup()">Create account →</button>
       <p class="terms">By creating an account you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</p>
     </div>
@@ -255,29 +268,69 @@
     if (!accounts[email]) { showMsg('login-msg', 'error', 'No account found. Please create one.'); return; }
     if (accounts[email].password !== password) { showMsg('login-msg', 'error', 'Incorrect password. Please try again.'); return; }
 
-    localStorage.setItem('studyflow_user', JSON.stringify({ email: email, name: accounts[email].name }));
+    localStorage.setItem('studyflow_user', JSON.stringify({ email: email, name: accounts[email].name, role: accounts[email].role || 'student' }));
     showMsg('login-msg', 'success', 'Welcome back! Signing you in...');
-    setTimeout(function() { window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html'; }, 800);
+    setTimeout(function() {
+      var role = accounts[email].role || 'student';
+      window.location.href = role === 'teacher'
+        ? 'https://studyflow-ten-vert.vercel.app/teacher.html'
+        : 'https://studyflow-ten-vert.vercel.app/app.html';
+    }, 800);
+  }
+
+  var selectedRole = 'student';
+
+  function selectRole(role) {
+    selectedRole = role;
+    document.getElementById('role-student').classList.toggle('active', role === 'student');
+    document.getElementById('role-teacher').classList.toggle('active', role === 'teacher');
   }
 
   function handleSignup() {
     var name = document.getElementById('signup-name').value.trim();
     var email = document.getElementById('signup-email').value.trim();
     var password = document.getElementById('signup-password').value;
+    var classCode = (document.getElementById('signup-classcode').value || '').trim().toUpperCase();
     if (!name) { showMsg('signup-msg', 'error', 'Please enter your name.'); return; }
     if (!email || !email.includes('@')) { showMsg('signup-msg', 'error', 'Please enter a valid email.'); return; }
     if (!password || password.length < 8) { showMsg('signup-msg', 'error', 'Password must be at least 8 characters.'); return; }
 
-    // Check if account already exists
     var accounts = JSON.parse(localStorage.getItem('studyflow_accounts') || '{}');
-    if (accounts[email]) { showMsg('signup-msg', 'error', 'An account with this email already exists. Please sign in.'); return; }
+    if (accounts[email]) { showMsg('signup-msg', 'error', 'Account already exists. Please sign in.'); return; }
 
-    // Save account
-    accounts[email] = { name: name, password: password };
+    accounts[email] = { name: name, password: password, role: selectedRole, classCode: classCode };
     localStorage.setItem('studyflow_accounts', JSON.stringify(accounts));
-    localStorage.setItem('studyflow_user', JSON.stringify({ email: email, name: name }));
+
+    var user = { email: email, name: name, role: selectedRole, classCode: classCode };
+    localStorage.setItem('studyflow_user', JSON.stringify(user));
+
+    // If student with class code, register with teacher's class
+    if (selectedRole === 'student' && classCode) {
+      registerWithClass(classCode, user);
+    }
+
     showMsg('signup-msg', 'success', 'Account created! Taking you to StudyFlow...');
-    setTimeout(function() { window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html'; }, 800);
+    setTimeout(function() {
+      window.location.href = selectedRole === 'teacher'
+        ? 'https://studyflow-ten-vert.vercel.app/teacher.html'
+        : 'https://studyflow-ten-vert.vercel.app/app.html';
+    }, 800);
+  }
+
+  function registerWithClass(code, user) {
+    var classKey = 'studyflow_class_' + code;
+    var classStudents = JSON.parse(localStorage.getItem(classKey) || '[]');
+    var exists = classStudents.find(function(s){ return s.email === user.email; });
+    if (!exists) {
+      classStudents.push({
+        name: user.name, email: user.email,
+        joinedAt: new Date().toISOString(),
+        avgScore: null, streak: 0,
+        daysCompleted: 0, totalDays: 0,
+        lastActive: null, sessions: 0
+      });
+      localStorage.setItem(classKey, JSON.stringify(classStudents));
+    }
   }
 
   function googleAuth() {
