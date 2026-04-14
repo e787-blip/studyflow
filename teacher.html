@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StudyFlow — Teacher Dashboard</title>
+<link rel="icon" type="image/png" href="/studyflow/favicon.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  :root {
+    --ink:#1a1d2e; --muted:#6b7280; --soft:#f4f6fb;
+    --blue:#4a7cf6; --blue-light:#dce8ff; --white:#fff; --border:#e8ecf4;
+    --green:#38bfa1; --orange:#f59e0b; --red:#ef4444;
+    --sans:'DM Sans',sans-serif; --serif:'Instrument Serif',Georgia,serif;
+  }
+  body { font-family:var(--sans); color:var(--ink); background:var(--soft); min-height:100vh; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+
+  nav {
+    background:#fff; border-bottom:1px solid var(--border); padding:.85rem 2rem;
+    display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:100; box-shadow:0 1px 12px rgba(74,124,246,.07);
+  }
+  .logo { text-decoration:none; display:flex; align-items:center; }
+  .nav-right { display:flex; align-items:center; gap:1rem; }
+  .nav-badge { background:var(--blue-light); color:var(--blue); font-size:0.75rem; font-weight:700; padding:.3rem .8rem; border-radius:999px; }
+  .nav-avatar { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#4a7cf6,#2851c8); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:0.85rem; }
+  .btn-logout { font-size:0.82rem; color:var(--muted); background:none; border:1.5px solid var(--border); border-radius:8px; padding:.35rem .8rem; cursor:pointer; font-family:var(--sans); transition:all .2s; }
+  .btn-logout:hover { color:var(--red); border-color:var(--red); }
+
+  .container { max-width:1100px; margin:0 auto; padding:2rem 1.5rem 5rem; }
+
+  /* HEADER */
+  .page-header { margin-bottom:2rem; animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both; }
+  .page-header h1 { font-family:var(--serif); font-size:clamp(1.8rem,3vw,2.4rem); letter-spacing:-0.03em; color:var(--ink); margin-bottom:.3rem; }
+  .page-header h1 em { font-style:italic; color:var(--blue); }
+  .page-header p { color:var(--muted); font-size:0.95rem; font-weight:300; }
+
+  /* CLASS CODE CARD */
+  .class-code-card {
+    background:linear-gradient(135deg,#4a7cf6,#2851c8);
+    border-radius:24px; padding:2rem; margin-bottom:2rem;
+    display:flex; align-items:center; justify-content:space-between;
+    box-shadow:0 12px 40px rgba(74,124,246,.25); position:relative; overflow:hidden;
+    animation:fadeUp .5s .1s cubic-bezier(0.16,1,.3,1) both;
+  }
+  .class-code-card::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle,rgba(255,255,255,.1) 1px,transparent 1px); background-size:24px 24px; }
+  .code-left { position:relative; z-index:1; }
+  .code-label { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:rgba(255,255,255,.7); margin-bottom:.5rem; }
+  .code-value { font-size:2.2rem; font-weight:700; color:#fff; letter-spacing:.15em; font-family:'Inter',sans-serif; }
+  .code-sub { font-size:0.82rem; color:rgba(255,255,255,.7); margin-top:.4rem; }
+  .code-right { display:flex; gap:.75rem; position:relative; z-index:1; }
+  .btn-copy-code { background:rgba(255,255,255,.2); color:#fff; border:1.5px solid rgba(255,255,255,.3); padding:.7rem 1.3rem; border-radius:12px; font-family:var(--sans); font-size:0.88rem; font-weight:600; cursor:pointer; transition:all .2s; }
+  .btn-copy-code:hover { background:rgba(255,255,255,.3); }
+  .btn-share-code { background:#fff; color:var(--blue); border:none; padding:.7rem 1.3rem; border-radius:12px; font-family:var(--sans); font-size:0.88rem; font-weight:700; cursor:pointer; transition:all .2s; box-shadow:0 4px 14px rgba(0,0,0,.15); }
+  .btn-share-code:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(0,0,0,.2); }
+
+  /* STATS ROW */
+  .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:2rem; animation:fadeUp .5s .15s cubic-bezier(0.16,1,.3,1) both; }
+  .stat-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.3rem; transition:border-color .2s; }
+  .stat-card:hover { border-color:var(--blue); }
+  .stat-label { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:.5rem; }
+  .stat-value { font-size:1.9rem; font-weight:700; color:var(--ink); letter-spacing:-0.02em; line-height:1; }
+  .stat-sub { font-size:0.72rem; color:var(--muted); margin-top:.3rem; }
+
+  /* TABS */
+  .tabs { display:flex; gap:.5rem; margin-bottom:1.5rem; background:#fff; border:1.5px solid var(--border); border-radius:16px; padding:.4rem; width:fit-content; animation:fadeUp .5s .2s cubic-bezier(0.16,1,.3,1) both; }
+  .tab-btn { padding:.6rem 1.2rem; border-radius:10px; border:none; background:none; font-family:var(--sans); font-size:0.88rem; font-weight:600; color:var(--muted); cursor:pointer; transition:all .2s; }
+  .tab-btn.active { background:var(--blue); color:#fff; box-shadow:0 3px 10px rgba(74,124,246,.3); }
+
+  /* STUDENT TABLE */
+  .table-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; overflow:hidden; animation:fadeUp .5s .25s cubic-bezier(0.16,1,.3,1) both; }
+  .table-header { padding:1.2rem 1.5rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .table-header h3 { font-size:0.95rem; font-weight:700; color:var(--ink); }
+  .search-input { padding:.5rem 1rem; border:1.5px solid var(--border); border-radius:10px; font-family:var(--sans); font-size:0.85rem; outline:none; transition:border-color .2s; width:200px; }
+  .search-input:focus { border-color:var(--blue); }
+  table { width:100%; border-collapse:collapse; }
+  th { padding:.9rem 1.5rem; text-align:left; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); border-bottom:1px solid var(--border); }
+  td { padding:1rem 1.5rem; border-bottom:1px solid var(--border); font-size:0.88rem; color:var(--ink); }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:var(--soft); }
+  .student-name { font-weight:600; color:var(--ink); }
+  .student-email { font-size:0.78rem; color:var(--muted); margin-top:.15rem; }
+  .score-pill { display:inline-block; padding:.2rem .65rem; border-radius:999px; font-size:0.75rem; font-weight:700; }
+  .score-pill.high { background:#d1faf0; color:#1a9e80; }
+  .score-pill.mid { background:var(--blue-light); color:var(--blue); }
+  .score-pill.low { background:#fff0e0; color:#c06b1a; }
+  .score-pill.none { background:var(--soft); color:var(--muted); }
+  .streak-badge { display:inline-flex; align-items:center; gap:.3rem; font-size:0.82rem; font-weight:600; color:var(--orange); }
+  .status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:.4rem; }
+  .status-dot.active { background:var(--green); }
+  .status-dot.inactive { background:var(--border); }
+
+  /* ASSIGN NOTES */
+  .assign-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.8rem; animation:fadeUp .5s .3s cubic-bezier(0.16,1,.3,1) both; }
+  .assign-card h3 { font-family:var(--serif); font-size:1.3rem; color:var(--ink); margin-bottom:.3rem; }
+  .assign-card h3 em { font-style:italic; color:var(--blue); }
+  .assign-card p { color:var(--muted); font-size:0.88rem; font-weight:300; margin-bottom:1.5rem; }
+  .assign-form { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  .form-field { display:flex; flex-direction:column; gap:.4rem; }
+  .form-label { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--ink); }
+  .form-input { padding:.8rem 1rem; border:1.5px solid var(--border); border-radius:12px; font-family:var(--sans); font-size:0.9rem; color:var(--ink); background:var(--soft); outline:none; transition:border-color .2s; }
+  .form-input:focus { border-color:var(--blue); }
+  textarea.form-input { min-height:100px; resize:vertical; line-height:1.6; grid-column:1/-1; }
+  .btn-assign { grid-column:1/-1; padding:.9rem; background:var(--blue); color:#fff; border:none; border-radius:12px; font-family:var(--sans); font-size:0.92rem; font-weight:600; cursor:pointer; transition:all .3s; box-shadow:0 4px 14px rgba(74,124,246,.3); }
+  .btn-assign:hover { background:#3567e0; transform:translateY(-1px); }
+
+  /* INSIGHTS */
+  .insights-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  .insight-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.5rem; }
+  .insight-card h4 { font-size:0.88rem; font-weight:700; color:var(--ink); margin-bottom:1rem; }
+  .topic-bar { margin-bottom:.75rem; }
+  .topic-bar-label { display:flex; justify-content:space-between; font-size:0.82rem; color:var(--ink); margin-bottom:.3rem; }
+  .topic-bar-track { height:6px; background:var(--soft); border-radius:3px; overflow:hidden; }
+  .topic-bar-fill { height:100%; border-radius:3px; background:var(--blue); }
+  .topic-bar-fill.warn { background:var(--orange); }
+  .topic-bar-fill.danger { background:var(--red); }
+
+  /* EMPTY STATE */
+  .empty-state { text-align:center; padding:3rem 2rem; color:var(--muted); }
+  .empty-state h4 { font-size:1rem; font-weight:600; color:var(--ink); margin-bottom:.4rem; }
+  .empty-state p { font-size:0.88rem; font-weight:300; }
+
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  @media(max-width:768px) { .stats-row{grid-template-columns:1fr 1fr;} .assign-form{grid-template-columns:1fr;} .insights-grid{grid-template-columns:1fr;} .code-right{flex-direction:column;} }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
+      <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
+      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
+      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
+      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
+      <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
+      <rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/>
+      <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
+      <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
+      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
+      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
+        <tspan fill="#1a1d2e">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
+      </text>
+    </svg>
+  </a>
+  <div class="nav-right">
+    <span class="nav-badge">Teacher</span>
+    <div class="nav-avatar" id="teacher-avatar">T</div>
+    <button class="btn-logout" onclick="logout()">Sign out</button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="page-header">
+    <h1><em>Your classroom</em></h1>
+    <p id="teacher-welcome">Welcome back — here's how your class is doing today.</p>
+  </div>
+
+  <!-- CLASS CODE -->
+  <div class="class-code-card">
+    <div class="code-left">
+      <div class="code-label">Your class code</div>
+      <div class="code-value" id="class-code">SF-XXXX</div>
+      <div class="code-sub">Share this code with your students to join your class</div>
+    </div>
+    <div class="code-right">
+      <button class="btn-copy-code" onclick="copyCode()">Copy code</button>
+      <button class="btn-share-code" onclick="shareCode()">Share →</button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Students</div>
+      <div class="stat-value" id="stat-students">0</div>
+      <div class="stat-sub">in your class</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active today</div>
+      <div class="stat-value" id="stat-active">0</div>
+      <div class="stat-sub">studied today</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Class average</div>
+      <div class="stat-value" id="stat-avg">—</div>
+      <div class="stat-sub">accuracy score</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg streak</div>
+      <div class="stat-value" id="stat-streak">—</div>
+      <div class="stat-sub">days in a row</div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('roster')">Roster</button>
+    <button class="tab-btn" onclick="switchTab('insights')">Insights</button>
+    <button class="tab-btn" onclick="switchTab('assign')">Assign notes</button>
+  </div>
+
+  <!-- ROSTER TAB -->
+  <div class="tab-content active" id="tab-roster">
+    <div class="table-card">
+      <div class="table-header">
+        <h3>Student roster</h3>
+        <input class="search-input" placeholder="Search students..." oninput="filterStudents(this.value)" />
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Status</th>
+            <th>Current plan</th>
+            <th>Avg score</th>
+            <th>Streak</th>
+            <th>Last active</th>
+          </tr>
+        </thead>
+        <tbody id="student-tbody">
+          <tr><td colspan="6"><div class="empty-state"><h4>No students yet</h4><p>Share your class code and students will appear here when they join.</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- INSIGHTS TAB -->
+  <div class="tab-content" id="tab-insights">
+    <div class="insights-grid">
+      <div class="insight-card">
+        <h4>Topics students struggle with</h4>
+        <div id="struggle-topics">
+          <div class="empty-state"><p>Complete data will appear once students start studying.</p></div>
+        </div>
+      </div>
+      <div class="insight-card">
+        <h4>Score distribution</h4>
+        <div id="score-dist">
+          <div class="empty-state"><p>Score data will appear once students complete sessions.</p></div>
+        </div>
+      </div>
+      <div class="insight-card">
+        <h4>Study activity this week</h4>
+        <div id="activity-chart" style="display:flex;align-items:flex-end;gap:.5rem;height:80px;margin-top:1rem;"></div>
+      </div>
+      <div class="insight-card">
+        <h4>Top performers</h4>
+        <div id="top-performers">
+          <div class="empty-state"><p>Rankings will appear once students start scoring.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ASSIGN TAB -->
+  <div class="tab-content" id="tab-assign">
+    <div class="assign-card">
+      <h3>Assign <em>notes to your class</em></h3>
+      <p>Upload your lesson notes once and every student in your class gets a personalized study plan built from the same material.</p>
+      <div class="assign-form">
+        <div class="form-field">
+          <label class="form-label">Topic / Unit name</label>
+          <input type="text" class="form-input" id="assign-topic" placeholder="e.g. Cell Division Chapter 7" />
+        </div>
+        <div class="form-field">
+          <label class="form-label">Exam date</label>
+          <input type="date" class="form-input" id="assign-date" />
+        </div>
+        <div class="form-field" style="grid-column:1/-1;">
+          <label class="form-label">Paste your lesson notes</label>
+          <textarea class="form-input" id="assign-notes" placeholder="Paste your lesson notes here — students will get a study plan built from this content..."></textarea>
+        </div>
+        <button class="btn-assign" onclick="assignNotes()">Assign to class →</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  var teacher = JSON.parse(localStorage.getItem('studyflow_teacher') || '{}');
+  var classData = JSON.parse(localStorage.getItem('studyflow_class_' + teacher.classCode) || '{"students":[]}');
+
+  function init() {
+    if (!teacher.classCode) {
+      // First time — generate class code
+      var code = 'SF-' + Math.random().toString(36).substring(2,6).toUpperCase();
+      teacher.classCode = code;
+      localStorage.setItem('studyflow_teacher', JSON.stringify(teacher));
+    }
+
+    document.getElementById('class-code').textContent = teacher.classCode;
+    document.getElementById('teacher-avatar').textContent = (teacher.name || 'T')[0].toUpperCase();
+    document.getElementById('teacher-welcome').textContent = 'Welcome back' + (teacher.name ? ', ' + teacher.name.split(' ')[0] : '') + ' — here\'s how your class is doing today.';
+    renderStats();
+    renderRoster();
+    renderInsights();
+  }
+
+  function renderStats() {
+    var students = classData.students || [];
+    var active = students.filter(function(s){ return s.lastActive === new Date().toDateString(); }).length;
+    var scores = students.filter(function(s){ return s.avgScore; }).map(function(s){ return s.avgScore; });
+    var avg = scores.length ? Math.round(scores.reduce(function(a,b){ return a+b; },0)/scores.length) : null;
+    var streaks = students.filter(function(s){ return s.streak; }).map(function(s){ return s.streak; });
+    var avgStreak = streaks.length ? Math.round(streaks.reduce(function(a,b){ return a+b; },0)/streaks.length) : null;
+
+    document.getElementById('stat-students').textContent = students.length;
+    document.getElementById('stat-active').textContent = active;
+    document.getElementById('stat-avg').textContent = avg ? avg + '%' : '—';
+    document.getElementById('stat-streak').textContent = avgStreak ? avgStreak + 'd' : '—';
+  }
+
+  function renderRoster() {
+    var students = classData.students || [];
+    if (students.length === 0) return;
+
+    var html = '';
+    students.forEach(function(s) {
+      var scoreClass = !s.avgScore ? 'none' : (s.avgScore >= 80 ? 'high' : (s.avgScore >= 60 ? 'mid' : 'low'));
+      var scoreLabel = s.avgScore ? s.avgScore + '%' : 'No data';
+      var isActive = s.lastActive === new Date().toDateString();
+      html += '<tr>' +
+        '<td><div class="student-name">' + s.name + '</div><div class="student-email">' + s.email + '</div></td>' +
+        '<td><span class="status-dot ' + (isActive?'active':'inactive') + '"></span>' + (isActive?'Active today':'Inactive') + '</td>' +
+        '<td>' + (s.subject || '—') + '</td>' +
+        '<td><span class="score-pill ' + scoreClass + '">' + scoreLabel + '</span></td>' +
+        '<td><span class="streak-badge">' + (s.streak || 0) + ' days</span></td>' +
+        '<td>' + (s.lastActive || 'Never') + '</td>' +
+        '</tr>';
+    });
+    document.getElementById('student-tbody').innerHTML = html;
+  }
+
+  function renderInsights() {
+    // Activity chart — last 7 days
+    var days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    var html = '';
+    days.forEach(function(d, i) {
+      var h = Math.round(Math.random() * 60 + 10);
+      html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:.3rem;">' +
+        '<div style="width:100%;height:' + h + 'px;background:var(--blue-light);border-radius:4px 4px 0 0;"></div>' +
+        '<div style="font-size:0.62rem;color:var(--muted);">' + d + '</div></div>';
+    });
+    document.getElementById('activity-chart').innerHTML = html;
+  }
+
+  function filterStudents(val) {
+    var rows = document.querySelectorAll('#student-tbody tr');
+    rows.forEach(function(row) {
+      var text = row.textContent.toLowerCase();
+      row.style.display = text.includes(val.toLowerCase()) ? '' : 'none';
+    });
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
+    event.target.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+  }
+
+  function copyCode() {
+    navigator.clipboard.writeText(teacher.classCode);
+    var btn = event.target;
+    btn.textContent = 'Copied!';
+    setTimeout(function(){ btn.textContent = 'Copy code'; }, 2000);
+  }
+
+  function shareCode() {
+    var text = 'Join my StudyFlow class with code: ' + teacher.classCode + '\nSign up at studyflow-ten-vert.vercel.app/login.html';
+    if (navigator.share) {
+      navigator.share({ title: 'Join my StudyFlow class', text: text });
+    } else {
+      navigator.clipboard.writeText(text);
+      alert('Share message copied to clipboard!');
+    }
+  }
+
+  function assignNotes() {
+    var topic = document.getElementById('assign-topic').value;
+    var date = document.getElementById('assign-date').value;
+    var notes = document.getElementById('assign-notes').value;
+    if (!topic || !notes) { alert('Please fill in the topic and notes!'); return; }
+    if (!date) { alert('Please set an exam date!'); return; }
+
+    // Save assignment for students to pick up
+    var assignment = { topic: topic, date: date, notes: notes, assignedAt: new Date().toISOString(), classCode: teacher.classCode };
+    localStorage.setItem('studyflow_assignment_' + teacher.classCode, JSON.stringify(assignment));
+    alert('Notes assigned! Students will see this when they next open StudyFlow.');
+    document.getElementById('assign-topic').value = '';
+    document.getElementById('assign-date').value = '';
+    document.getElementById('assign-notes').value = '';
+  }
+
+  function logout() {
+    localStorage.removeItem('studyflow_teacher');
+    window.location.href = 'teacher-login.html';
+  }
+
+  init();
+</script>
+</body>
+</html>
