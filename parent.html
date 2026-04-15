@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StudyFlow — Parent View</title>
+<link rel="icon" type="image/png" href="/studyflow/favicon.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  :root { --ink:#1a1d2e; --muted:#6b7280; --soft:#f4f6fb; --blue:#4a7cf6; --blue-light:#dce8ff; --white:#fff; --border:#e8ecf4; --green:#38bfa1; --orange:#f59e0b; --sans:'DM Sans',sans-serif; --serif:'Instrument Serif',Georgia,serif; }
+  body { font-family:var(--sans); color:var(--ink); background:var(--soft); min-height:100vh; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+
+  nav { background:#fff; border-bottom:1px solid var(--border); padding:.85rem 2rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:0 1px 12px rgba(74,124,246,.07); }
+  .logo { text-decoration:none; }
+  .nav-right { display:flex; align-items:center; gap:1rem; }
+  .nav-badge { background:#fff0e0; color:#c06b1a; font-size:0.75rem; font-weight:700; padding:.3rem .8rem; border-radius:999px; }
+  .btn-logout { font-size:0.82rem; color:var(--muted); background:none; border:1.5px solid var(--border); border-radius:8px; padding:.35rem .8rem; cursor:pointer; font-family:var(--sans); transition:all .2s; }
+
+  .container { max-width:900px; margin:0 auto; padding:2rem 1.5rem 5rem; }
+
+  .page-header { margin-bottom:2rem; animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both; }
+  .page-header h1 { font-family:var(--serif); font-size:clamp(1.8rem,3vw,2.4rem); letter-spacing:-0.03em; color:var(--ink); margin-bottom:.3rem; }
+  .page-header h1 em { font-style:italic; color:var(--blue); }
+  .page-header p { color:var(--muted); font-size:0.95rem; font-weight:300; }
+
+  /* CHILD SELECTOR */
+  .child-selector { display:flex; gap:.75rem; margin-bottom:2rem; flex-wrap:wrap; animation:fadeUp .5s .1s cubic-bezier(0.16,1,.3,1) both; }
+  .child-btn { display:flex; align-items:center; gap:.75rem; padding:.8rem 1.2rem; border-radius:14px; border:1.5px solid var(--border); background:#fff; cursor:pointer; transition:all .2s; font-family:var(--sans); }
+  .child-btn:hover { border-color:var(--blue); }
+  .child-btn.active { border-color:var(--blue); background:var(--blue-light); }
+  .child-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#4a7cf6,#2851c8); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:0.9rem; flex-shrink:0; }
+  .child-name { font-size:0.9rem; font-weight:600; color:var(--ink); }
+  .child-grade { font-size:0.75rem; color:var(--muted); }
+
+  /* SUMMARY CARD */
+  .summary-card { background:linear-gradient(135deg,#4a7cf6,#2851c8); border-radius:24px; padding:2rem; margin-bottom:1.5rem; box-shadow:0 12px 40px rgba(74,124,246,.25); position:relative; overflow:hidden; animation:fadeUp .5s .15s cubic-bezier(0.16,1,.3,1) both; }
+  .summary-card::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle,rgba(255,255,255,.1) 1px,transparent 1px); background-size:24px 24px; }
+  .summary-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1.5rem; position:relative; z-index:1; }
+  .summary-stat { text-align:center; }
+  .summary-val { font-size:2rem; font-weight:700; color:#fff; line-height:1; }
+  .summary-label { font-size:0.72rem; color:rgba(255,255,255,.7); margin-top:.3rem; text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
+
+  /* STATS ROW */
+  .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:1.5rem; animation:fadeUp .5s .2s cubic-bezier(0.16,1,.3,1) both; }
+  .stat-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.3rem; }
+  .stat-label { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:.5rem; }
+  .stat-value { font-size:1.8rem; font-weight:700; color:var(--ink); letter-spacing:-0.02em; line-height:1; }
+  .stat-sub { font-size:0.72rem; color:var(--muted); margin-top:.3rem; }
+
+  /* PROGRESS CARD */
+  .progress-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.5rem; margin-bottom:1.5rem; animation:fadeUp .5s .25s cubic-bezier(0.16,1,.3,1) both; }
+  .progress-card h3 { font-size:0.92rem; font-weight:700; color:var(--ink); margin-bottom:1rem; }
+  .plan-progress { margin-bottom:1rem; }
+  .plan-progress-header { display:flex; justify-content:space-between; font-size:0.85rem; color:var(--ink); margin-bottom:.4rem; }
+  .plan-progress-sub { font-size:0.75rem; color:var(--muted); }
+  .progress-track { height:8px; background:var(--soft); border-radius:4px; overflow:hidden; margin-top:.4rem; }
+  .progress-fill { height:100%; border-radius:4px; background:var(--blue); transition:width .6s cubic-bezier(0.16,1,.3,1); }
+
+  /* SCORE HISTORY */
+  .score-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.5rem; margin-bottom:1.5rem; animation:fadeUp .5s .3s cubic-bezier(0.16,1,.3,1) both; }
+  .score-card h3 { font-size:0.92rem; font-weight:700; color:var(--ink); margin-bottom:1rem; }
+  .score-chart { display:flex; align-items:flex-end; gap:.5rem; height:80px; }
+  .score-bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:.3rem; }
+  .score-bar { width:100%; border-radius:4px 4px 0 0; min-height:4px; }
+  .score-bar.high { background:var(--green); }
+  .score-bar.mid { background:var(--blue); }
+  .score-bar.low { background:var(--orange); }
+  .score-bar-label { font-size:0.62rem; color:var(--muted); font-weight:600; }
+  .score-bar-val { font-size:0.65rem; font-weight:700; color:var(--ink); }
+
+  /* WEEKLY REPORT */
+  .report-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.5rem; animation:fadeUp .5s .35s cubic-bezier(0.16,1,.3,1) both; }
+  .report-card h3 { font-size:0.92rem; font-weight:700; color:var(--ink); margin-bottom:.4rem; }
+  .report-card p { font-size:0.82rem; color:var(--muted); font-weight:300; margin-bottom:1.2rem; }
+  .report-row { display:flex; align-items:center; justify-content:space-between; padding:.75rem 0; border-bottom:1px solid var(--border); }
+  .report-row:last-child { border:none; }
+  .report-day { font-size:0.85rem; font-weight:600; color:var(--ink); }
+  .report-detail { font-size:0.8rem; color:var(--muted); }
+  .report-score { font-size:0.85rem; font-weight:700; }
+  .report-score.high { color:var(--green); }
+  .report-score.mid { color:var(--blue); }
+  .report-score.none { color:var(--muted); }
+
+  /* LINK CHILD */
+  .link-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.8rem; text-align:center; animation:fadeUp .5s .1s cubic-bezier(0.16,1,.3,1) both; }
+  .link-card h3 { font-family:var(--serif); font-size:1.3rem; color:var(--ink); margin-bottom:.4rem; }
+  .link-card h3 em { font-style:italic; color:var(--blue); }
+  .link-card p { color:var(--muted); font-size:0.88rem; font-weight:300; margin-bottom:1.5rem; }
+  .link-input-row { display:flex; gap:.75rem; max-width:380px; margin:0 auto; }
+  .link-input { flex:1; padding:.8rem 1rem; border:1.5px solid var(--border); border-radius:12px; font-family:var(--sans); font-size:0.9rem; outline:none; transition:border-color .2s; }
+  .link-input:focus { border-color:var(--blue); }
+  .btn-link { padding:.8rem 1.3rem; background:var(--blue); color:#fff; border:none; border-radius:12px; font-family:var(--sans); font-size:0.88rem; font-weight:600; cursor:pointer; white-space:nowrap; }
+
+  @media(max-width:768px) { .summary-grid{grid-template-columns:repeat(2,1fr);} .stats-row{grid-template-columns:1fr 1fr;} }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
+      <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
+      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
+      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
+      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
+      <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
+      <rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/>
+      <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
+      <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
+      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
+      <text x="48" y="28" font-family="Inter,sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3"><tspan fill="#1a1d2e">Study</tspan><tspan fill="#4a7cf6">Flow</tspan></text>
+    </svg>
+  </a>
+  <div class="nav-right">
+    <span class="nav-badge">Parent view</span>
+    <button class="btn-logout" onclick="window.location.href='index.html'">← Back to home</button>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Your child's <em>progress</em></h1>
+    <p>See how your student is studying and what they need help with.</p>
+  </div>
+
+  <div id="no-child-view">
+    <div class="link-card">
+      <h3>Link your <em>child's account</em></h3>
+      <p>Enter your child's StudyFlow email to see their progress. They need to have a StudyFlow account first.</p>
+      <div class="link-input-row">
+        <input class="link-input" id="child-email-input" type="email" placeholder="child@email.com" />
+        <button class="btn-link" onclick="linkChild()">Link account →</button>
+      </div>
+      <p style="margin-top:1rem;font-size:0.78rem;color:var(--muted);">Your child will see a notification to approve this request.</p>
+    </div>
+  </div>
+
+  <div id="child-view" style="display:none;">
+    <div class="child-selector" id="child-selector"></div>
+
+    <div class="summary-card">
+      <div class="summary-grid">
+        <div class="summary-stat">
+          <div class="summary-val" id="sum-streak">0</div>
+          <div class="summary-label">Day streak</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-val" id="sum-score">—</div>
+          <div class="summary-label">Avg score</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-val" id="sum-days">0</div>
+          <div class="summary-label">Days studied</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-val" id="sum-plans">0</div>
+          <div class="summary-label">Active plans</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Current subject</div>
+        <div class="stat-value" id="child-subject" style="font-size:1.1rem;">—</div>
+        <div class="stat-sub" id="child-goal">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Days until exam</div>
+        <div class="stat-value" id="child-days-left">—</div>
+        <div class="stat-sub">keep studying!</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Best score</div>
+        <div class="stat-value" id="child-best">—</div>
+        <div class="stat-sub">personal best</div>
+      </div>
+    </div>
+
+    <div class="progress-card">
+      <h3>Plan progress</h3>
+      <div id="plan-progress-list"></div>
+    </div>
+
+    <div class="score-card">
+      <h3>Score history</h3>
+      <div class="score-chart" id="parent-score-chart"></div>
+    </div>
+
+    <div class="report-card">
+      <h3>This week's activity</h3>
+      <p>Daily breakdown of your child's study sessions.</p>
+      <div id="weekly-report"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var linkedChildren = JSON.parse(localStorage.getItem('studyflow_parent_children') || '[]');
+  var activeChild = null;
+
+  function init() {
+    if (linkedChildren.length > 0) {
+      showChildView();
+    }
+  }
+
+  function linkChild() {
+    var email = document.getElementById('child-email-input').value.trim();
+    if (!email || !email.includes('@')) { alert('Please enter a valid email.'); return; }
+
+    // Check if child has an account
+    var accounts = JSON.parse(localStorage.getItem('studyflow_accounts') || '{}');
+    if (!accounts[email]) { alert('No StudyFlow account found with that email. Make sure your child has signed up first.'); return; }
+
+    if (linkedChildren.indexOf(email) === -1) {
+      linkedChildren.push(email);
+      localStorage.setItem('studyflow_parent_children', JSON.stringify(linkedChildren));
+    }
+    showChildView();
+  }
+
+  function showChildView() {
+    document.getElementById('no-child-view').style.display = 'none';
+    document.getElementById('child-view').style.display = 'block';
+
+    var html = '';
+    linkedChildren.forEach(function(email, i) {
+      var accounts = JSON.parse(localStorage.getItem('studyflow_accounts') || '{}');
+      var name = accounts[email] ? accounts[email].name : email;
+      html += '<button class="child-btn ' + (i===0?'active':'') + '" onclick="selectChild(\'' + email + '\',this)">' +
+        '<div class="child-avatar">' + name[0].toUpperCase() + '</div>' +
+        '<div><div class="child-name">' + name + '</div><div class="child-grade">' + email + '</div></div>' +
+        '</button>';
+    });
+    document.getElementById('child-selector').innerHTML = html;
+
+    if (linkedChildren.length > 0) selectChild(linkedChildren[0], document.querySelector('.child-btn'));
+  }
+
+  function selectChild(email, btn) {
+    document.querySelectorAll('.child-btn').forEach(function(b){ b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    activeChild = email;
+
+    // Load child's plan data
+    var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+    var plan = allPlans[allPlans.length - 1] || null;
+    var studyHistory = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
+
+    // Streak
+    var streak = studyHistory.length;
+    document.getElementById('sum-streak').textContent = streak;
+
+    // Plans
+    document.getElementById('sum-plans').textContent = allPlans.length;
+    document.getElementById('sum-days').textContent = studyHistory.length;
+
+    if (plan) {
+      document.getElementById('child-subject').textContent = plan.subject || '—';
+      document.getElementById('child-goal').textContent = plan.goal || '—';
+
+      if (plan.deadline) {
+        var dl = Math.ceil((new Date(plan.deadline) - new Date()) / 86400000);
+        document.getElementById('child-days-left').textContent = dl > 0 ? dl : '0';
+      }
+
+      // Scores
+      var scores = plan.days.filter(function(d){ return d.score; }).map(function(d){ return d.score; });
+      var best = scores.length ? Math.max.apply(null,scores) : null;
+      var avg = scores.length ? Math.round(scores.reduce(function(a,b){return a+b;},0)/scores.length) : null;
+      document.getElementById('sum-score').textContent = avg ? avg + '%' : '—';
+      document.getElementById('child-best').textContent = best ? best + '%' : '—';
+
+      // Progress bars
+      var ph = '';
+      allPlans.forEach(function(p) {
+        var done = p.days.filter(function(d){ return d.completed; }).length;
+        var pct = Math.round((done/p.days.length)*100);
+        ph += '<div class="plan-progress">' +
+          '<div class="plan-progress-header"><span>' + p.subject + '</span><span style="font-weight:700;">' + pct + '%</span></div>' +
+          '<div class="plan-progress-sub">' + done + ' of ' + p.days.length + ' days completed</div>' +
+          '<div class="progress-track"><div class="progress-fill" style="width:' + pct + '%"></div></div>' +
+          '</div>';
+      });
+      document.getElementById('plan-progress-list').innerHTML = ph || '<p style="color:var(--muted);font-size:.85rem;">No plans yet.</p>';
+
+      // Score chart
+      var ch = '';
+      plan.days.filter(function(d){ return d.score; }).forEach(function(d, i) {
+        var cls = d.score >= 80 ? 'high' : (d.score >= 60 ? 'mid' : 'low');
+        var h = Math.round((d.score/100)*70);
+        ch += '<div class="score-bar-wrap">' +
+          '<div class="score-bar-val">' + d.score + '%</div>' +
+          '<div class="score-bar ' + cls + '" style="height:' + h + 'px"></div>' +
+          '<div class="score-bar-label">D' + (i+1) + '</div></div>';
+      });
+      document.getElementById('parent-score-chart').innerHTML = ch || '<p style="color:var(--muted);font-size:.85rem;">No scores yet.</p>';
+    }
+
+    // Weekly report
+    var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var wh = '';
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(); d.setDate(d.getDate()-i);
+      var ds = d.toDateString();
+      var studied = studyHistory.indexOf(ds) > -1;
+      var dayName = i === 0 ? 'Today' : (i === 1 ? 'Yesterday' : days[d.getDay()]);
+      var scoreClass = 'none';
+      wh += '<div class="report-row">' +
+        '<div><div class="report-day">' + dayName + '</div><div class="report-detail">' + d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '</div></div>' +
+        '<div class="report-score ' + scoreClass + '">' + (studied ? 'Studied' : 'No activity') + '</div>' +
+        '</div>';
+    }
+    document.getElementById('weekly-report').innerHTML = wh;
+  }
+
+  init();
+</script>
+</body>
+</html>
