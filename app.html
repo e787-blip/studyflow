@@ -332,11 +332,6 @@
     window.location.href = 'login.html';
   }
 
-  // Load PDF.js
-  var pdfjsScript = document.createElement('script');
-  pdfjsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-  document.head.appendChild(pdfjsScript);
-
   function handleFile(file) {
     if (!file) return;
     fileContent = '';
@@ -348,41 +343,38 @@
     document.getElementById('file-selected').style.borderColor = '#f59e0b';
 
     if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      // Convert PDF to base64 and send to backend for extraction
       var reader = new FileReader();
       reader.onload = function(e) {
-        var tryPDF = function() {
-          if (!window.pdfjsLib) { setTimeout(tryPDF, 200); return; }
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-          var typedArray = new Uint8Array(e.target.result);
-          window.pdfjsLib.getDocument(typedArray).promise.then(function(pdf) {
-            var textPromises = [];
-            for (var i = 1; i <= pdf.numPages; i++) {
-              textPromises.push(pdf.getPage(i).then(function(page) {
-                return page.getTextContent().then(function(tc) {
-                  return tc.items.map(function(item) { return item.str; }).join(' ');
-                });
-              }));
-            }
-            Promise.all(textPromises).then(function(pages) {
-              fileContent = pages.join('\n');
-              fileReading = false;
-              document.getElementById('file-selected').textContent = 'File ready: ' + file.name + ' (' + pdf.numPages + ' pages)';
-              document.getElementById('file-selected').style.background = '#d1faf0';
-              document.getElementById('file-selected').style.color = '#1a9e80';
-              document.getElementById('file-selected').style.borderColor = '#38bfa1';
-              // Show warning if content is very long
-              if (fileContent.length > 2000) {
-                document.getElementById('notes-warning').style.display = 'block';
-              }
-            });
-          }).catch(function(err) {
+        var base64 = e.target.result.split(',')[1];
+        fetch('https://studyflow-ten-vert.vercel.app/api/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pdf: base64 })
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          if (data.text && data.text.trim()) {
+            fileContent = data.text;
             fileReading = false;
-            document.getElementById('file-selected').textContent = 'Could not read PDF — please paste your notes instead.';
-          });
-        };
-        tryPDF();
+            document.getElementById('file-selected').textContent = 'File ready: ' + file.name;
+            document.getElementById('file-selected').style.background = '#d1faf0';
+            document.getElementById('file-selected').style.color = '#1a9e80';
+            document.getElementById('file-selected').style.borderColor = '#38bfa1';
+            if (fileContent.length > 2000) document.getElementById('notes-warning').style.display = 'block';
+          } else {
+            throw new Error('No text extracted');
+          }
+        })
+        .catch(function() {
+          fileReading = false;
+          document.getElementById('file-selected').textContent = 'Could not read PDF — please paste your notes as text instead.';
+          document.getElementById('file-selected').style.background = '#fee2e2';
+          document.getElementById('file-selected').style.color = '#dc2626';
+          document.getElementById('file-selected').style.borderColor = '#ef4444';
+        });
       };
-      reader.readAsArrayBuffer(file);
+      reader.readAsDataURL(file);
     } else {
       var reader = new FileReader();
       reader.onload = function(e) {
@@ -501,9 +493,17 @@
     .then(function(res) { return res.json(); })
     .then(function(data) {
       var raw = data.result || data.plan || '';
+      if (!raw || raw.trim() === '') {
+        throw new Error('AI returned empty response. Error: ' + (data.error || 'unknown'));
+      }
       var jsonMatch = raw.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('No JSON found');
+      if (!jsonMatch) {
+        throw new Error('Could not find JSON in response. Raw: ' + raw.substring(0, 150));
+      }
       var newPlan = JSON.parse(jsonMatch[0]);
+      if (!newPlan.days || newPlan.days.length === 0) {
+        throw new Error('Plan generated but has no days');
+      }
       newPlan.id = Date.now();
       newPlan.createdAt = new Date().toISOString();
 
@@ -522,8 +522,8 @@
       window.location.href = 'dashboard.html';
     })
     .catch(function(err) {
-      console.error(err);
-      alert('Something went wrong generating your plan. Please try again!');
+      console.error('Plan generation error:', err);
+      alert('Error: ' + err.message + '\n\nCheck Vercel logs for more details.');
       goToStep(2);
     });
   }
