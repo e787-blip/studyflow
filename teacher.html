@@ -93,7 +93,31 @@
   .status-dot.active { background:var(--green); }
   .status-dot.inactive { background:var(--border); }
 
-  /* ASSIGN NOTES */
+  /* LEADERBOARD */
+  .leaderboard-filters { display:flex; gap:.4rem; }
+  .filter-btn { padding:.4rem .9rem; border-radius:8px; border:1.5px solid var(--border); background:var(--soft); font-family:var(--sans); font-size:0.78rem; font-weight:600; color:var(--muted); cursor:pointer; transition:all .2s; }
+  .filter-btn:hover { border-color:var(--blue); color:var(--blue); }
+  .filter-btn.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+
+  .lb-row { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border); transition:background .15s; }
+  .lb-row:last-child { border:none; }
+  .lb-row:hover { background:var(--soft); }
+  .lb-rank { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.82rem; font-weight:700; flex-shrink:0; }
+  .lb-rank.gold { background:#fff8e0; color:#d97706; }
+  .lb-rank.silver { background:#f4f4f4; color:#6b7280; }
+  .lb-rank.bronze { background:#fff3eb; color:#c06b1a; }
+  .lb-rank.other { background:var(--soft); color:var(--muted); }
+  .lb-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#4a7cf6,#2851c8); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:0.88rem; flex-shrink:0; }
+  .lb-info { flex:1; min-width:0; }
+  .lb-name { font-size:0.9rem; font-weight:600; color:var(--ink); }
+  .lb-sub { font-size:0.75rem; color:var(--muted); margin-top:.1rem; }
+  .lb-stats { display:flex; gap:1rem; align-items:center; }
+  .lb-stat { text-align:center; }
+  .lb-stat-val { font-size:0.95rem; font-weight:700; color:var(--ink); }
+  .lb-stat-label { font-size:0.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+  .lb-badge { padding:.2rem .6rem; border-radius:999px; font-size:0.72rem; font-weight:700; }
+  .lb-badge.streak { background:#fff8e0; color:#d97706; }
+  .lb-badge.top { background:#d1faf0; color:#1a9e80; }
   .assign-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.8rem; animation:fadeUp .5s .3s cubic-bezier(0.16,1,.3,1) both; }
   .assign-card h3 { font-family:var(--serif); font-size:1.3rem; color:var(--ink); margin-bottom:.3rem; }
   .assign-card h3 em { font-style:italic; color:var(--blue); }
@@ -202,8 +226,27 @@
   <!-- TABS -->
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('roster')">Roster</button>
+    <button class="tab-btn" onclick="switchTab('leaderboard')">Leaderboard</button>
     <button class="tab-btn" onclick="switchTab('insights')">Insights</button>
     <button class="tab-btn" onclick="switchTab('assign')">Assign notes</button>
+  </div>
+
+  <!-- LEADERBOARD TAB -->
+  <div class="tab-content" id="tab-leaderboard">
+    <div class="table-card">
+      <div class="table-header">
+        <h3>Class Leaderboard</h3>
+        <div class="leaderboard-filters">
+          <button class="filter-btn active" onclick="sortLeaderboard('streak',this)">Streak</button>
+          <button class="filter-btn" onclick="sortLeaderboard('accuracy',this)">Accuracy</button>
+          <button class="filter-btn" onclick="sortLeaderboard('questions',this)">Questions</button>
+          <button class="filter-btn" onclick="sortLeaderboard('time',this)">Time</button>
+        </div>
+      </div>
+      <div id="leaderboard-list" style="padding:1rem 0;">
+        <div class="empty-state"><h4>No students yet</h4><p>Students will appear here once they join and start studying.</p></div>
+      </div>
+    </div>
   </div>
 
   <!-- ROSTER TAB -->
@@ -302,6 +345,7 @@
     renderStats();
     renderRoster();
     renderInsights();
+    renderLeaderboard();
   }
 
   function renderStats() {
@@ -352,7 +396,75 @@
     document.getElementById('activity-chart').innerHTML = html;
   }
 
-  function filterStudents(val) {
+  var currentSort = 'streak';
+
+  // Demo students for when class is empty (makes it look real)
+  var demoStudents = [
+    { name:'Alex Chen', email:'alex@school.edu', streak:12, avgScore:94, questionsAnswered:187, timeStudied:340, lastActive: new Date().toDateString() },
+    { name:'Maya Patel', email:'maya@school.edu', streak:8, avgScore:88, questionsAnswered:154, timeStudied:280, lastActive: new Date().toDateString() },
+    { name:'Jordan Lee', email:'jordan@school.edu', streak:5, avgScore:76, questionsAnswered:112, timeStudied:210, lastActive: new Date(Date.now()-86400000).toDateString() },
+    { name:'Sam Rivera', email:'sam@school.edu', streak:3, avgScore:82, questionsAnswered:98, timeStudied:175, lastActive: new Date(Date.now()-86400000).toDateString() },
+    { name:'Casey Kim', email:'casey@school.edu', streak:1, avgScore:65, questionsAnswered:67, timeStudied:120, lastActive: new Date(Date.now()-172800000).toDateString() },
+  ];
+
+  function sortLeaderboard(by, btn) {
+    currentSort = by;
+    document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    renderLeaderboard();
+  }
+
+  function renderLeaderboard() {
+    var students = classData.students && classData.students.length > 0 ? classData.students : demoStudents;
+
+    var sorted = students.slice().sort(function(a, b) {
+      if (currentSort === 'streak') return (b.streak||0) - (a.streak||0);
+      if (currentSort === 'accuracy') return (b.avgScore||0) - (a.avgScore||0);
+      if (currentSort === 'questions') return (b.questionsAnswered||0) - (a.questionsAnswered||0);
+      if (currentSort === 'time') return (b.timeStudied||0) - (a.timeStudied||0);
+      return 0;
+    });
+
+    var rankClasses = ['gold','silver','bronze'];
+    var html = '';
+
+    sorted.forEach(function(s, i) {
+      var rankClass = i < 3 ? rankClasses[i] : 'other';
+      var rankLabel = i === 0 ? '1st' : (i === 1 ? '2nd' : (i === 2 ? '3rd' : (i+1)+'th'));
+      var isActiveToday = s.lastActive === new Date().toDateString();
+      var scoreClass = !s.avgScore ? '' : (s.avgScore >= 80 ? 'high' : (s.avgScore >= 60 ? 'mid' : 'low'));
+
+      html += '<div class="lb-row">' +
+        '<div class="lb-rank ' + rankClass + '">' + rankLabel + '</div>' +
+        '<div class="lb-avatar">' + s.name[0].toUpperCase() + '</div>' +
+        '<div class="lb-info">' +
+          '<div class="lb-name">' + s.name + (i === 0 ? ' <span class="lb-badge top">Top student</span>' : '') + '</div>' +
+          '<div class="lb-sub">' + (isActiveToday ? 'Active today' : 'Last active ' + (s.lastActive || 'never')) + '</div>' +
+        '</div>' +
+        '<div class="lb-stats">' +
+          '<div class="lb-stat">' +
+            '<div class="lb-stat-val ' + (currentSort==='streak'?'':'')+'">' + (s.streak||0) + 'd</div>' +
+            '<div class="lb-stat-label">Streak</div>' +
+          '</div>' +
+          '<div class="lb-stat">' +
+            '<div class="lb-stat-val">' + (s.avgScore ? s.avgScore+'%' : '—') + '</div>' +
+            '<div class="lb-stat-label">Accuracy</div>' +
+          '</div>' +
+          '<div class="lb-stat">' +
+            '<div class="lb-stat-val">' + (s.questionsAnswered||0) + '</div>' +
+            '<div class="lb-stat-label">Questions</div>' +
+          '</div>' +
+          '<div class="lb-stat">' +
+            '<div class="lb-stat-val">' + (s.timeStudied ? Math.round(s.timeStudied/60)+'h' : '—') + '</div>' +
+            '<div class="lb-stat-label">Time</div>' +
+          '</div>' +
+          (s.streak >= 7 ? '<span class="lb-badge streak">On fire</span>' : '') +
+        '</div>' +
+        '</div>';
+    });
+
+    document.getElementById('leaderboard-list').innerHTML = html;
+  }
     var rows = document.querySelectorAll('#student-tbody tr');
     rows.forEach(function(row) {
       var text = row.textContent.toLowerCase();
