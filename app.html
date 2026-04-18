@@ -389,17 +389,19 @@
     }
   }
 
-  // File upload
-  var fileInput = document.getElementById('file-input');
-  var uploadZone = document.getElementById('upload-zone');
-
-  fileInput.addEventListener('change', function() { handleFile(fileInput.files[0]); });
-
-  uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.style.borderColor = 'var(--blue)'; uploadZone.style.background = '#d0e4ff'; });
-  uploadZone.addEventListener('dragleave', function() { uploadZone.style.borderColor = 'rgba(74,124,246,.3)'; uploadZone.style.background = 'var(--blue-light)'; });
-  uploadZone.addEventListener('drop', function(e) {
-    e.preventDefault(); uploadZone.style.borderColor = 'rgba(74,124,246,.3)'; uploadZone.style.background = 'var(--blue-light)';
-    handleFile(e.dataTransfer.files[0]);
+  // File upload — wrapped in DOMContentLoaded to prevent crash
+  document.addEventListener('DOMContentLoaded', function() {
+    var fileInput = document.getElementById('file-input');
+    var uploadZone = document.getElementById('upload-zone');
+    if (fileInput) fileInput.addEventListener('change', function() { handleFile(fileInput.files[0]); });
+    if (uploadZone) {
+      uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.style.borderColor = 'var(--blue)'; uploadZone.style.background = '#d0e4ff'; });
+      uploadZone.addEventListener('dragleave', function() { uploadZone.style.borderColor = 'rgba(74,124,246,.3)'; uploadZone.style.background = 'var(--blue-light)'; });
+      uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault(); uploadZone.style.borderColor = 'rgba(74,124,246,.3)'; uploadZone.style.background = 'var(--blue-light)';
+        handleFile(e.dataTransfer.files[0]);
+      });
+    }
   });
 
   function checkNotesLength(textarea) {
