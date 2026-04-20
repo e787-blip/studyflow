@@ -291,7 +291,7 @@
 
   <!-- LOADING -->
   <div class="loading-screen" id="loading" style="text-align:center;padding:2rem;">
-    <p style="color:var(--blue);font-weight:600;font-size:1rem;">Generating your plan... this takes about 10-20 seconds.</p>
+    <p style="color:var(--blue);font-weight:600;font-size:1rem;">Detecting subject...</p>
   </div>
 
   <!-- RESULT -->
@@ -314,7 +314,7 @@
 
   window.addEventListener('load', function() {
     var loader = document.getElementById('page-loader');
-    if (loader) setTimeout(function() { loader.classList.add('hidden'); }, 600);
+    if (loader) loader.style.display = 'none';
   });
 
   // Auth guard disabled until Firebase is set up
@@ -459,62 +459,105 @@
     document.getElementById('loading').classList.add('active');
     updateDots(3);
 
-    var numDays = 5;
+    var numDays = 3;
     if (deadline) {
       var daysLeft = Math.ceil((new Date(deadline) - new Date()) / 86400000);
-      numDays = Math.min(30, Math.max(3, daysLeft));
+      numDays = Math.min(7, Math.max(1, daysLeft));
     }
 
-    // For long plans, cap at 5 days per API call to avoid timeout
-    // then we'll generate remaining days separately
-    var daysToGenerate = Math.min(numDays, 5);
+    var allDays = [];
+    var notesShort = notes.substring(0, 500);
 
-    var prompt = 'Create a ' + daysToGenerate + '-day study plan as JSON only. Subject: auto-detect. Goal: ' + selectedGoal + '. Difficulty: ' + selectedDifficulty + '.\nNotes: ' + notes.substring(0, 600) + '\n\nRules: Day 1 easy, last day hardest with isFinal:true. Math=equations in questions. 6 MCQ + 4 truefalse per day. Hints=specific facts. Wrong options must be plausible.\n\nJSON format:\n{"subject":"X","goal":"Y","deadline":"' + (deadline||'') + '","subjectType":"math|science|humanities","days":[{"title":"T","briefing":"B","content":"C","keyTerms":[{"term":"t","definition":"d"}],"duration":30,"isFinal":false,"completed":false,"questions":[{"type":"mcq","question":"Q?","options":["A","B","C","D"],"correctIndex":0,"hint":"fact","explanation":"why","difficulty":"Easy"},{"type":"truefalse","question":"S.","correct":"True","hint":"fact","explanation":"why","difficulty":"Easy"}]}]}\n\nReturn ONLY JSON for all ' + daysToGenerate + ' days.';
+    function generateDay(dayNum, totalDays, callback) {
+      var isFirst = dayNum === 1;
+      var isLast = dayNum === totalDays;
+      var difficulty = isFirst ? 'Easy' : (isLast ? 'Hard' : 'Medium');
+      var dayType = isFirst ? 'introductory, covering basics and key terms' : (isLast ? 'final exam level, hardest questions, isFinal must be true' : 'building on previous days, medium difficulty');
+
+      var prompt = 'Create day ' + dayNum + ' of ' + totalDays + ' for a study plan. Subject: auto-detect. Goal: ' + selectedGoal + '. Notes: ' + notesShort + '\n\nThis is day ' + dayNum + ' — ' + dayType + '.\n\nReturn ONLY this JSON:\n{"title":"Day ' + dayNum + ' title","briefing":"1-2 sentence briefing","content":"3-4 sentence lesson content","keyTerms":' + (isFirst ? '[{"term":"term","definition":"def"}]' : '[]') + ',"duration":30,"isFinal":' + isLast + ',"completed":false,"questions":[{"type":"mcq","question":"Q from notes?","options":["A","B","C","D"],"correctIndex":0,"hint":"specific fact","explanation":"why A","difficulty":"' + difficulty + '"},{"type":"mcq","question":"Q2?","options":["A","B","C","D"],"correctIndex":1,"hint":"fact","explanation":"why B","difficulty":"' + difficulty + '"},{"type":"mcq","question":"Q3?","options":["A","B","C","D"],"correctIndex":2,"hint":"fact","explanation":"why C","difficulty":"' + difficulty + '"},{"type":"truefalse","question":"Statement.","correct":"True","hint":"fact","explanation":"why","difficulty":"' + difficulty + '"},{"type":"truefalse","question":"Statement 2.","correct":"False","hint":"fact","explanation":"why","difficulty":"' + difficulty + '"}]}\n\nUse REAL content from the notes. Return ONLY JSON.';
+
+      fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: prompt })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        var raw = data.result || data.plan || '';
+        var jsonMatch = raw.match(/\{[\s\S]*/);
+        if (!jsonMatch) throw new Error('No JSON for day ' + dayNum);
+        var jsonStr = jsonMatch[0];
+        // Fix truncated JSON
+        var opens = (jsonStr.match(/\[/g)||[]).length;
+        var closes = (jsonStr.match(/\]/g)||[]).length;
+        var ob = (jsonStr.match(/\{/g)||[]).length;
+        var cb = (jsonStr.match(/\}/g)||[]).length;
+        for (var i=0;i<opens-closes;i++) jsonStr+=']';
+        for (var i=0;i<ob-cb;i++) jsonStr+='}';
+        var day = JSON.parse(jsonStr);
+        callback(null, day);
+      })
+      .catch(function(err) { callback(err); });
+    }
 
     var timeoutId = setTimeout(function() {
-      alert('Taking too long — please try again with shorter notes.');
+      alert('Taking too long — please try again.');
       goToStep(2);
-    }, 25000);
+    }, 60000);
 
+    // Detect subject first then generate all days sequentially
+    var subjectPrompt = 'In 3 words max, what subject is this? Reply with ONLY the subject name.\nNotes: ' + notesShort;
     fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: prompt, mode: 'plan' })
+      body: JSON.stringify({ prompt: subjectPrompt })
     })
-    .then(function(res) { clearTimeout(timeoutId); return res.json(); })
+    .then(function(res) { return res.json(); })
     .then(function(data) {
-      var raw = data.result || data.plan || '';
-      if (!raw || raw.trim() === '') {
-        throw new Error('AI returned empty response. Error: ' + (data.error || 'unknown'));
-      }
-      var jsonMatch = raw.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Could not find JSON in response. Raw: ' + raw.substring(0, 150));
-      }
-      var newPlan = JSON.parse(jsonMatch[0]);
-      if (!newPlan.days || newPlan.days.length === 0) {
-        throw new Error('Plan generated but has no days');
-      }
-      newPlan.id = Date.now();
-      newPlan.createdAt = new Date().toISOString();
+      var subject = (data.result || data.plan || 'General').trim().split('\n')[0].substring(0, 30);
 
-      // Save to plans array
-      var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
-      allPlans.push(newPlan);
-      localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
-
-      // Set as active plan
-      localStorage.setItem('studyflow_active_plan', newPlan.id);
-      localStorage.setItem('studyflow_plan', JSON.stringify(newPlan));
-      localStorage.removeItem('studyflow_seconds_left');
-      localStorage.removeItem('studyflow_timer_day');
-      localStorage.removeItem('studyflow_minutes');
-      localStorage.setItem('studyflow_current_day', '0');
-      window.location.href = 'dashboard.html';
+      // Generate days sequentially
+      function generateNext(dayNum) {
+        document.getElementById('loading').querySelector('p').textContent = 'Generating day ' + dayNum + ' of ' + numDays + '...';
+        generateDay(dayNum, numDays, function(err, day) {
+          if (err) {
+            clearTimeout(timeoutId);
+            alert('Error on day ' + dayNum + ': ' + err.message);
+            goToStep(2);
+            return;
+          }
+          allDays.push(day);
+          if (dayNum < numDays) {
+            generateNext(dayNum + 1);
+          } else {
+            clearTimeout(timeoutId);
+            var newPlan = {
+              id: Date.now(),
+              createdAt: new Date().toISOString(),
+              subject: subject,
+              goal: selectedGoal,
+              deadline: deadline || '',
+              subjectType: 'general',
+              days: allDays
+            };
+            var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+            allPlans.push(newPlan);
+            localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
+            localStorage.setItem('studyflow_active_plan', newPlan.id);
+            localStorage.setItem('studyflow_plan', JSON.stringify(newPlan));
+            localStorage.removeItem('studyflow_seconds_left');
+            localStorage.removeItem('studyflow_timer_day');
+            localStorage.removeItem('studyflow_minutes');
+            localStorage.setItem('studyflow_current_day', '0');
+            window.location.href = 'dashboard.html';
+          }
+        });
+      }
+      generateNext(1);
     })
     .catch(function(err) {
-      console.error('Plan generation error:', err);
-      alert('Error: ' + err.message + '\n\nCheck Vercel logs for more details.');
+      clearTimeout(timeoutId);
+      alert('Error detecting subject: ' + err.message);
       goToStep(2);
     });
   }
