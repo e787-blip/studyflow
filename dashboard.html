@@ -672,11 +672,12 @@
   }
 
   function renderDashboard() {
+    try {
     document.getElementById('greeting-time').textContent = getGreeting();
     var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
     var name = user.name || user.email || 'Student';
     document.getElementById('user-name').textContent = name.split(' ')[0];
-    document.getElementById('welcome-sub').textContent = 'Your ' + plan.days.length + '-day ' + plan.subject + ' plan is ready.';
+    document.getElementById('welcome-sub').textContent = 'Your ' + plan.days.length + '-day ' + (plan.subject || 'study') + ' plan is ready.';
 
     var completed = plan.days.filter(function(d){ return d.completed; }).length;
     var total = plan.days.length;
@@ -693,18 +694,13 @@
 
     currentDayIndex = completed < total ? completed : total - 1;
 
-    // STREAK
     renderStreak();
-
-    // SCORE HISTORY
     renderScoreHistory();
-
-    // NOTIFICATIONS
     checkNotificationPrompt();
-
     renderSidebar();
     renderToday();
     renderCalendar();
+    } catch(e) { alert('Dashboard error: ' + e.message); }
   }
 
   function renderStreak() {
