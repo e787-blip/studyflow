@@ -226,11 +226,22 @@
   .cal-day-label { font-size:0.65rem; font-weight:600; text-align:center; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; padding-bottom:.3rem; }
   .cal-day { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:0.78rem; color:var(--ink); border-radius:7px; cursor:pointer; transition:all .2s; }
   .cal-day:hover { background:var(--blue-light); color:var(--blue); }
-  .cal-day.today { background:var(--blue); color:#fff; font-weight:600; }
-  .cal-day.study-day { background:var(--blue-light); color:var(--blue); font-weight:600; }
+  .cal-day.today { background:var(--blue); color:#fff; font-weight:700; }
+  .cal-day.study-today { background:var(--blue); color:#fff; font-weight:700; box-shadow:0 0 0 3px rgba(74,124,246,.3); }
+  .cal-day.upcoming { background:var(--blue-light); color:var(--blue); font-weight:600; }
+  .cal-day.studied { color:#fff; font-weight:700; }
+  .cal-day.studied.score-high { background:var(--green); }
+  .cal-day.studied.score-mid { background:#4a7cf6; }
+  .cal-day.studied.score-low { background:var(--orange); }
+  .cal-day.missed { background:#fee2e2; color:#dc2626; }
   .cal-day.exam { background:#fff0e0; color:#c06b1a; font-weight:700; position:relative; }
-  .cal-day.exam::after { content:''; position:absolute; bottom:2px; left:50%; transform:translateX(-50%); width:3px; height:3px; border-radius:50%; background:#c06b1a; }
+  .cal-exam-dot { display:block; width:4px; height:4px; border-radius:50%; background:#c06b1a; margin:1px auto 0; }
   .cal-day.empty { opacity:0; pointer-events:none; }
+
+  /* CALENDAR LEGEND */
+  .cal-legend { display:flex; gap:1rem; margin-top:1rem; flex-wrap:wrap; }
+  .cal-legend-item { display:flex; align-items:center; gap:.4rem; font-size:0.72rem; color:var(--muted); }
+  .cal-legend-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
 
   /* SECTION TITLE */
   .section-label { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:.8rem; }
@@ -589,6 +600,13 @@
           <span id="cal-exam-label">Exam coming up</span>
         </div>
         <div class="cal-grid" id="cal-grid"></div>
+        <div class="cal-legend">
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--green)"></div>Studied (80%+)</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--blue)"></div>Studied (60-79%)</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--orange)"></div>Studied (below 60%)</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#fee2e2;border:1px solid #dc2626"></div>Missed</div>
+          <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#fff0e0;border:1px solid #c06b1a"></div>Exam day</div>
+        </div>
       </div>
     </div>
   </main>
@@ -962,27 +980,74 @@
     var daysInMonth = new Date(year, month + 1, 0).getDate();
     var today = now.getDate();
 
-    var examDate = plan.deadline ? new Date(plan.deadline).getDate() : null;
-    var examMonth = plan.deadline ? new Date(plan.deadline).getMonth() : null;
+    var examDate = plan.deadline ? new Date(plan.deadline + 'T12:00:00') : null;
+    var examDay = examDate && examDate.getMonth() === month ? examDate.getDate() : null;
 
-    var studyDays = [];
+    // Build study day map — which calendar days are study days and their status
+    var studyDayMap = {};
+    var studyHistory = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
     plan.days.forEach(function(d, i) {
       var sd = new Date();
-      sd.setDate(sd.getDate() + i);
-      if (sd.getMonth() === month) studyDays.push(sd.getDate());
+      sd.setDate(sd.getDate() + i - (plan.days.filter(function(x,j){ return j < i && x.completed; }).length === i ? 0 : 0));
+      // Map by actual day index from today
+      var dayDate = new Date();
+      var completedBefore = plan.days.filter(function(x,j){ return j < i && x.completed; }).length;
+      dayDate.setDate(dayDate.getDate() + i);
+      if (dayDate.getMonth() === month) {
+        studyDayMap[dayDate.getDate()] = {
+          completed: d.completed,
+          score: d.score,
+          isFinal: d.isFinal,
+          isToday: dayDate.getDate() === today
+        };
+      }
+    });
+
+    // Mark actual study sessions from history
+    var studiedDays = {};
+    studyHistory.forEach(function(ds) {
+      var d = new Date(ds);
+      if (d.getMonth() === month && d.getFullYear() === year) {
+        studiedDays[d.getDate()] = true;
+      }
     });
 
     var html = '';
-    ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(function(d){ html += '<div class="cal-day-label">' + d + '</div>'; });
+    ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(function(d){
+      html += '<div class="cal-day-label">' + d + '</div>';
+    });
     for (var i = 0; i < firstDay; i++) html += '<div class="cal-day empty"></div>';
     for (var d = 1; d <= daysInMonth; d++) {
       var cls = 'cal-day';
-      if (d === today) cls += ' today';
-      else if (examDate === d && examMonth === month) cls += ' exam';
-      else if (studyDays.indexOf(d) > -1 && d > today) cls += ' study-day';
-      html += '<div class="' + cls + '">' + d + '</div>';
+      var tooltip = '';
+      var inner = d;
+      if (d === today && !examDay) { cls += ' today'; }
+      if (examDay && d === examDay) {
+        cls += ' exam';
+        inner = d + '<span class="cal-exam-dot"></span>';
+        tooltip = 'Exam day';
+      } else if (studyDayMap[d]) {
+        var info = studyDayMap[d];
+        if (info.completed && studiedDays[d]) {
+          cls += ' studied';
+          if (info.score >= 80) cls += ' score-high';
+          else if (info.score >= 60) cls += ' score-mid';
+          else cls += ' score-low';
+        } else if (d === today) {
+          cls += ' today study-today';
+        } else if (d > today) {
+          cls += ' upcoming';
+        } else if (d < today && !studiedDays[d]) {
+          cls += ' missed';
+        }
+      }
+      html += '<div class="' + cls + '" title="' + tooltip + '">' + inner + '</div>';
     }
+
     document.getElementById('cal-grid').innerHTML = html;
+
+    // Add legend
+    document.getElementById('cal-exam-label').textContent = examDate ? 'Exam: ' + examDate.toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
   }
 
   function startToday() {
@@ -999,14 +1064,15 @@
   // Hide loader when page is ready
   window.addEventListener('load', function() {
     setTimeout(function() {
-      document.getElementById('page-loader').classList.add('hidden');
+      document.getElementById('page-loader').style.display = 'none';
     }, 600);
   });
 
   // Apply saved dark mode
   if (localStorage.getItem('studyflow_dark') === '1') {
     document.body.classList.add('dark');
-    document.getElementById('page-loader').classList.add('dark-bg');
+    var loader = document.getElementById('page-loader');
+    if (loader) loader.style.background = '#0f1117';
   }
     document.addEventListener('DOMContentLoaded', function() {
       var btn = document.getElementById('dark-toggle');
