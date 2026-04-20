@@ -1059,19 +1059,38 @@
     var msg = pct >= 80 ? 'Excellent session — you crushed it!' : (pct >= 60 ? 'Solid work — keep building on this!' : 'Keep grinding — consistency is key!');
     var timeStudied = Math.max(1, Math.round((totalSeconds - secondsLeft) / 60));
 
+    // Categorize wrong answers by difficulty
+    var wrongByDiff = { Easy:[], Medium:[], Hard:[] };
+    wrongItems.forEach(function(item) {
+      var diff = (item.q && item.q.difficulty) || 'Medium';
+      if (wrongByDiff[diff]) wrongByDiff[diff].push(item);
+    });
+
     var wrongHtml = '';
-    if (wrongItems.length > 0) {
-      wrongHtml = '<div class="wrong-reviews"><h3>Review — Study These Again</h3>';
-      wrongItems.slice(0, 8).forEach(function(item) {
-        wrongHtml += '<div class="wrong-item">' +
-          '<div class="wi-q">' + (item.q && item.q.question ? item.q.question : 'Question') + '</div>' +
-          (item.userAns ? '<div class="wi-yours">Your answer: ' + item.userAns + '</div>' : '') +
-          '<div class="wi-why">' + (item.q && item.q.explanation ? item.q.explanation : item.explanation || 'Review this in your notes.') + '</div>' +
-          '</div>';
-      });
+    if (wrongItems.length === 0 && totalAnswered > 0) {
+      wrongHtml = '<div style="background:#d1faf0;border:1.5px solid #38bfa1;border-radius:14px;padding:1.2rem;text-align:center;color:#1a9e80;font-weight:600;font-size:1rem;margin-bottom:1.5rem;">Perfect session — every answer correct!</div>';
+    } else if (wrongItems.length > 0) {
+      wrongHtml = '<div class="wrong-reviews"><h3>Review — What to Study More</h3>';
+      if (wrongByDiff.Hard.length > 0) {
+        wrongHtml += '<div style="font-size:0.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#dc2626;margin:.8rem 0 .4rem;">Hard questions missed (' + wrongByDiff.Hard.length + ')</div>';
+        wrongByDiff.Hard.slice(0,3).forEach(function(item){ wrongHtml += buildWrongItem(item); });
+      }
+      if (wrongByDiff.Medium.length > 0) {
+        wrongHtml += '<div style="font-size:0.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#c06b1a;margin:.8rem 0 .4rem;">Medium questions missed (' + wrongByDiff.Medium.length + ')</div>';
+        wrongByDiff.Medium.slice(0,3).forEach(function(item){ wrongHtml += buildWrongItem(item); });
+      }
+      if (wrongByDiff.Easy.length > 0) {
+        wrongHtml += '<div style="font-size:0.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:.8rem 0 .4rem;">Easy questions missed (' + wrongByDiff.Easy.length + ')</div>';
+        wrongByDiff.Easy.slice(0,2).forEach(function(item){ wrongHtml += buildWrongItem(item); });
+      }
       wrongHtml += '</div>';
-    } else if (totalAnswered > 0) {
-      wrongHtml = '<div style="background:#d1faf0;border:1.5px solid #38bfa1;border-radius:14px;padding:1.1rem;text-align:center;color:#1a9e80;font-weight:600;margin-bottom:1.2rem;">Perfect session — every answer correct! *</div>';
+    }
+
+    var adviceHtml = '';
+    if (pct < 60) {
+      adviceHtml = '<div style="background:#fff8e0;border:1.5px solid #f59e0b;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.5rem;font-size:0.88rem;color:#92400e;line-height:1.6;"><strong>Study tip:</strong> Your accuracy is below 60%. Try re-reading today\'s lesson before your next session and focus on understanding why correct answers are right.</div>';
+    } else if (pct >= 80 && wrongItems.length > 0) {
+      adviceHtml = '<div style="background:#d1faf0;border:1.5px solid #38bfa1;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.5rem;font-size:0.88rem;color:#065f46;line-height:1.6;"><strong>Almost perfect!</strong> Review the ' + wrongItems.length + ' question' + (wrongItems.length>1?'s':'') + ' you missed below and you\'ll be fully ready.</div>';
     }
 
     document.getElementById('results-wrap').innerHTML =
@@ -1083,7 +1102,7 @@
         '<div class="r-stat"><div class="r-stat-val">' + timeStudied + 'm</div><div class="r-stat-label">Studied</div></div>' +
         '<div class="r-stat"><div class="r-stat-val">' + totalAnswered + '</div><div class="r-stat-label">Questions</div></div>' +
         '<div class="r-stat"><div class="r-stat-val">' + pct + '%</div><div class="r-stat-label">Accuracy</div></div>' +
-      '</div>' + wrongHtml +
+      '</div>' + adviceHtml + wrongHtml +
       '<button class="btn-dashboard" onclick="goToDashboard()">' +
       (day.isFinal || dayIndex >= plan.days.length - 1 ? 'Back to dashboard →' : 'Continue to Day ' + (dayIndex + 2) + ' →') +
       '</button>';
@@ -1092,6 +1111,16 @@
     plan.days[dayIndex].completed = true;
     plan.days[dayIndex].score = pct;
     localStorage.setItem('studyflow_plan', JSON.stringify(plan));
+  }
+
+  function buildWrongItem(item) {
+    var correctAns = item.q && item.q.type === 'truefalse' ? item.q.correct : (item.q && item.q.options ? item.q.options[item.q.correctIndex] : '—');
+    return '<div class="wrong-item">' +
+      '<div class="wi-q">' + (item.q && item.q.question ? item.q.question : 'Question') + '</div>' +
+      (item.userAns ? '<div class="wi-yours">Your answer: ' + item.userAns + '</div>' : '') +
+      '<div class="wi-correct">Correct: ' + correctAns + '</div>' +
+      '<div class="wi-why">' + (item.q && item.q.explanation ? item.q.explanation : 'Review this in your notes.') + '</div>' +
+      '</div>';
   }
 
   function goToDashboard() {
@@ -1124,7 +1153,7 @@
 
   window.addEventListener('load', function() {
     setTimeout(function() {
-      document.getElementById('page-loader').classList.add('hidden');
+      document.getElementById('page-loader').style.display = 'none';
     }, 700);
   });
 
