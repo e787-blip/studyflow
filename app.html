@@ -290,19 +290,8 @@
   </div>
 
   <!-- LOADING -->
-  <div class="loading-screen" id="loading">
-    <div class="spinner-wrap">
-      <div class="spinner"></div>
-      <div class="spinner-inner"></div>
-    </div>
-    <h3>Building your plan...</h3>
-    <p>AI is reading your lesson right now.</p>
-    <div class="loading-steps">
-      <div class="loading-step" id="ls-1">Reading your lesson...</div>
-      <div class="loading-step" id="ls-2">Identifying key topics...</div>
-      <div class="loading-step" id="ls-3">Scheduling your sessions...</div>
-      <div class="loading-step" id="ls-4">Finalizing your plan...</div>
-    </div>
+  <div class="loading-screen" id="loading" style="text-align:center;padding:2rem;">
+    <p style="color:var(--blue);font-weight:600;font-size:1rem;">Generating your plan... this takes about 10-20 seconds.</p>
   </div>
 
   <!-- RESULT -->
@@ -470,14 +459,6 @@
     document.getElementById('loading').classList.add('active');
     updateDots(3);
 
-    var steps = ['ls-1','ls-2','ls-3','ls-4'];
-    steps.forEach(function(id, i) {
-      setTimeout(function() {
-        document.getElementById(id).classList.add('visible');
-        if (i > 0) document.getElementById(steps[i-1]).classList.add('done');
-      }, i * 1100);
-    });
-
     var numDays = 5;
     if (deadline) {
       var daysLeft = Math.ceil((new Date(deadline) - new Date()) / 86400000);
@@ -490,12 +471,17 @@
 
     var prompt = 'Create a ' + daysToGenerate + '-day study plan as JSON only. Subject: auto-detect. Goal: ' + selectedGoal + '. Difficulty: ' + selectedDifficulty + '.\nNotes: ' + notes.substring(0, 600) + '\n\nRules: Day 1 easy, last day hardest with isFinal:true. Math=equations in questions. 6 MCQ + 4 truefalse per day. Hints=specific facts. Wrong options must be plausible.\n\nJSON format:\n{"subject":"X","goal":"Y","deadline":"' + (deadline||'') + '","subjectType":"math|science|humanities","days":[{"title":"T","briefing":"B","content":"C","keyTerms":[{"term":"t","definition":"d"}],"duration":30,"isFinal":false,"completed":false,"questions":[{"type":"mcq","question":"Q?","options":["A","B","C","D"],"correctIndex":0,"hint":"fact","explanation":"why","difficulty":"Easy"},{"type":"truefalse","question":"S.","correct":"True","hint":"fact","explanation":"why","difficulty":"Easy"}]}]}\n\nReturn ONLY JSON for all ' + daysToGenerate + ' days.';
 
+    var timeoutId = setTimeout(function() {
+      alert('Taking too long — please try again with shorter notes.');
+      goToStep(2);
+    }, 25000);
+
     fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: prompt, mode: 'plan' })
     })
-    .then(function(res) { return res.json(); })
+    .then(function(res) { clearTimeout(timeoutId); return res.json(); })
     .then(function(data) {
       var raw = data.result || data.plan || '';
       if (!raw || raw.trim() === '') {
