@@ -239,17 +239,29 @@
   </div>
 </div>
 
-<script>
-  window.addEventListener('load', function() {
-    setTimeout(function() { var l = document.getElementById('page-loader'); if(l) l.style.display='none'; }, 500);
-  });
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, updateProfile } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-  function switchTab(tab) {
-    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
-    document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
-    document.getElementById('login-view').style.display = tab === 'login' ? 'block' : 'none';
-    document.getElementById('signup-view').style.display = tab === 'signup' ? 'block' : 'none';
-  }
+  const firebaseConfig = {
+    apiKey: "AIzaSyCY4FI-6L9tsAokNFl6o5bsmCt-JD0H8HI",
+    authDomain: "studyflow-e59ef.firebaseapp.com",
+    projectId: "studyflow-e59ef",
+    storageBucket: "studyflow-e59ef.firebasestorage.app",
+    messagingSenderId: "723571132683",
+    appId: "1:723571132683:web:e659dc51095a767ca63a0e"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  // If already logged in go straight to app
+  onAuthStateChanged(auth, function(user) {
+    if (user) {
+      localStorage.setItem('studyflow_user', JSON.stringify({ email: user.email, name: user.displayName || user.email.split('@')[0], uid: user.uid }));
+      window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
+    }
+  });
 
   function showMsg(id, type, text) {
     var el = document.getElementById(id);
@@ -257,96 +269,84 @@
     el.textContent = text;
   }
 
+  function switchTab(tab) {
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+    document.getElementById('login-view').style.display = tab === 'login' ? 'block' : 'none';
+    document.getElementById('signup-view').style.display = tab === 'signup' ? 'block' : 'none';
+  }
+  window.switchTab = switchTab;
+
   function handleLogin() {
     var email = document.getElementById('login-email').value.trim();
     var password = document.getElementById('login-password').value;
     if (!email || !email.includes('@')) { showMsg('login-msg', 'error', 'Please enter a valid email.'); return; }
-    if (!password || password.length < 6) { showMsg('login-msg', 'error', 'Password must be at least 6 characters.'); return; }
-
-    // Check if account exists
-    var accounts = JSON.parse(localStorage.getItem('studyflow_accounts') || '{}');
-    if (!accounts[email]) { showMsg('login-msg', 'error', 'No account found. Please create one.'); return; }
-    if (accounts[email].password !== password) { showMsg('login-msg', 'error', 'Incorrect password. Please try again.'); return; }
-
-    localStorage.setItem('studyflow_user', JSON.stringify({ email: email, name: accounts[email].name, role: accounts[email].role || 'student' }));
-    showMsg('login-msg', 'success', 'Welcome back! Signing you in...');
-    setTimeout(function() {
-      var role = accounts[email].role || 'student';
-      window.location.href = role === 'teacher'
-        ? 'https://studyflow-ten-vert.vercel.app/teacher.html'
-        : 'https://studyflow-ten-vert.vercel.app/app.html';
-    }, 800);
+    if (!password) { showMsg('login-msg', 'error', 'Please enter your password.'); return; }
+    showMsg('login-msg', 'success', 'Signing you in...');
+    signInWithEmailAndPassword(auth, email, password)
+      .then(function(cred) {
+        localStorage.setItem('studyflow_user', JSON.stringify({ email: cred.user.email, name: cred.user.displayName || email.split('@')[0], uid: cred.user.uid }));
+        window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
+      })
+      .catch(function(err) {
+        var msg = err.code === 'auth/user-not-found' ? 'No account found. Please sign up.' :
+                  err.code === 'auth/wrong-password' ? 'Incorrect password.' :
+                  err.code === 'auth/invalid-credential' ? 'Incorrect email or password.' : err.message;
+        showMsg('login-msg', 'error', msg);
+      });
   }
-
-  var selectedRole = 'student';
-
-  function selectRole(role) {
-    selectedRole = role;
-    document.getElementById('role-student').classList.toggle('active', role === 'student');
-    document.getElementById('role-teacher').classList.toggle('active', role === 'teacher');
-  }
+  window.handleLogin = handleLogin;
 
   function handleSignup() {
     var name = document.getElementById('signup-name').value.trim();
     var email = document.getElementById('signup-email').value.trim();
     var password = document.getElementById('signup-password').value;
-    var classCode = (document.getElementById('signup-classcode').value || '').trim().toUpperCase();
+    var classCode = (document.getElementById('signup-classcode') ? document.getElementById('signup-classcode').value : '').trim().toUpperCase();
     if (!name) { showMsg('signup-msg', 'error', 'Please enter your name.'); return; }
     if (!email || !email.includes('@')) { showMsg('signup-msg', 'error', 'Please enter a valid email.'); return; }
-    if (!password || password.length < 8) { showMsg('signup-msg', 'error', 'Password must be at least 8 characters.'); return; }
-
-    var accounts = JSON.parse(localStorage.getItem('studyflow_accounts') || '{}');
-    if (accounts[email]) { showMsg('signup-msg', 'error', 'Account already exists. Please sign in.'); return; }
-
-    accounts[email] = { name: name, password: password, role: selectedRole, classCode: classCode };
-    localStorage.setItem('studyflow_accounts', JSON.stringify(accounts));
-
-    var user = { email: email, name: name, role: selectedRole, classCode: classCode };
-    localStorage.setItem('studyflow_user', JSON.stringify(user));
-
-    // If student with class code, register with teacher's class
-    if (selectedRole === 'student' && classCode) {
-      registerWithClass(classCode, user);
-    }
-
-    showMsg('signup-msg', 'success', 'Account created! Taking you to StudyFlow...');
-    setTimeout(function() {
-      window.location.href = selectedRole === 'teacher'
-        ? 'https://studyflow-ten-vert.vercel.app/teacher.html'
-        : 'https://studyflow-ten-vert.vercel.app/app.html';
-    }, 800);
-  }
-
-  function registerWithClass(code, user) {
-    var classKey = 'studyflow_class_' + code;
-    var classStudents = JSON.parse(localStorage.getItem(classKey) || '[]');
-    var exists = classStudents.find(function(s){ return s.email === user.email; });
-    if (!exists) {
-      classStudents.push({
-        name: user.name, email: user.email,
-        joinedAt: new Date().toISOString(),
-        avgScore: null, streak: 0,
-        daysCompleted: 0, totalDays: 0,
-        lastActive: null, sessions: 0
+    if (!password || password.length < 6) { showMsg('signup-msg', 'error', 'Password must be at least 6 characters.'); return; }
+    showMsg('signup-msg', 'success', 'Creating your account...');
+    createUserWithEmailAndPassword(auth, email, password)
+      .then(function(cred) {
+        return updateProfile(cred.user, { displayName: name }).then(function() { return cred; });
+      })
+      .then(function(cred) {
+        var user = { email: cred.user.email, name: name, uid: cred.user.uid, classCode: classCode || null };
+        localStorage.setItem('studyflow_user', JSON.stringify(user));
+        if (classCode) {
+          var classData = JSON.parse(localStorage.getItem('studyflow_class_' + classCode) || '{"students":[]}');
+          if (!classData.students.find(function(s){ return s.email === email; })) {
+            classData.students.push({ name: name, email: email, joinedAt: new Date().toISOString(), streak: 0, avgScore: null, lastActive: null });
+            localStorage.setItem('studyflow_class_' + classCode, JSON.stringify(classData));
+          }
+        }
+        window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
+      })
+      .catch(function(err) {
+        var msg = err.code === 'auth/email-already-in-use' ? 'Account already exists. Please sign in.' : err.message;
+        showMsg('signup-msg', 'error', msg);
       });
-      localStorage.setItem(classKey, JSON.stringify(classStudents));
-    }
   }
+  window.handleSignup = handleSignup;
 
   function googleAuth() {
-    var name = prompt('Enter your name for Google sign in:') || 'Student';
-    var email = 'student@gmail.com';
-    var accounts = JSON.parse(localStorage.getItem('studyflow_accounts') || '{}');
-    accounts[email] = { name: name, password: 'google' };
-    localStorage.setItem('studyflow_accounts', JSON.stringify(accounts));
-    localStorage.setItem('studyflow_user', JSON.stringify({ email: email, name: name, google: true }));
-    window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
+    var provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider)
+      .then(function(cred) {
+        localStorage.setItem('studyflow_user', JSON.stringify({ email: cred.user.email, name: cred.user.displayName, uid: cred.user.uid }));
+        window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
+      })
+      .catch(function(err) { alert('Google sign in failed: ' + err.message); });
   }
+  window.googleAuth = googleAuth;
 
-  // If already logged in skip to app
-  if (localStorage.getItem('studyflow_user')) {
-    window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
+  var selectedRole = 'student';
+  function selectRole(role) {
+    selectedRole = role;
+    document.getElementById('role-student').classList.toggle('active', role === 'student');
+    document.getElementById('role-teacher').classList.toggle('active', role === 'teacher');
   }
+  window.selectRole = selectRole;
 </script>
 </body>
 </html>
