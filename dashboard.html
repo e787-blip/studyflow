@@ -1061,12 +1061,9 @@
     document.getElementById('dark-toggle').textContent = isDark ? '☀️' : '🌙';
   }
 
-  // Hide loader when page is ready
-  window.addEventListener('load', function() {
-    setTimeout(function() {
-      document.getElementById('page-loader').style.display = 'none';
-    }, 600);
-  });
+  // Hide loader immediately
+  var _loader = document.getElementById('page-loader');
+  if (_loader) _loader.style.display = 'none';
 
   // Apply saved dark mode
   if (localStorage.getItem('studyflow_dark') === '1') {
