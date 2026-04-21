@@ -459,10 +459,14 @@
     document.getElementById('loading').classList.add('active');
     updateDots(3);
 
-    var numDays = 3;
+    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var tier = user.tier || 'free';
+    var maxDays = tier === 'vip' ? 999 : (tier === 'pro' ? 14 : 7);
+
+    var numDays = 7;
     if (deadline) {
       var daysLeft = Math.ceil((new Date(deadline) - new Date()) / 86400000);
-      numDays = Math.min(7, Math.max(1, daysLeft));
+      numDays = Math.min(maxDays, Math.max(1, daysLeft));
     }
 
     var allDays = [];
@@ -474,7 +478,7 @@
       var difficulty = isFirst ? 'Easy' : (isLast ? 'Hard' : 'Medium');
       var dayType = isFirst ? 'introductory, covering basics and key terms' : (isLast ? 'final exam level, hardest questions, isFinal must be true' : 'building on previous days, medium difficulty');
 
-      var prompt = 'Create day ' + dayNum + ' of ' + totalDays + ' for a study plan. Subject: auto-detect. Goal: ' + selectedGoal + '. Notes: ' + notesShort + '\n\nThis is day ' + dayNum + ' — ' + dayType + '.\n\nReturn ONLY this JSON:\n{"title":"Day ' + dayNum + ' title","briefing":"1-2 sentence briefing","content":"3-4 sentence lesson content","keyTerms":' + (isFirst ? '[{"term":"term","definition":"def"}]' : '[]') + ',"duration":30,"isFinal":' + isLast + ',"completed":false,"questions":[{"type":"mcq","question":"Q from notes?","options":["A","B","C","D"],"correctIndex":0,"hint":"specific fact","explanation":"why A","difficulty":"' + difficulty + '"},{"type":"mcq","question":"Q2?","options":["A","B","C","D"],"correctIndex":1,"hint":"fact","explanation":"why B","difficulty":"' + difficulty + '"},{"type":"mcq","question":"Q3?","options":["A","B","C","D"],"correctIndex":2,"hint":"fact","explanation":"why C","difficulty":"' + difficulty + '"},{"type":"truefalse","question":"Statement.","correct":"True","hint":"fact","explanation":"why","difficulty":"' + difficulty + '"},{"type":"truefalse","question":"Statement 2.","correct":"False","hint":"fact","explanation":"why","difficulty":"' + difficulty + '"}]}\n\nUse REAL content from the notes. Return ONLY JSON.';
+      var prompt = 'Create day ' + dayNum + ' of ' + totalDays + ' for a study plan. Subject: auto-detect. Goal: ' + selectedGoal + '. Notes: ' + notesShort + '\n\nThis is day ' + dayNum + ' — ' + dayType + '.\n\nCRITICAL: Return ONLY valid JSON. Do NOT use apostrophes or single quotes inside string values — use alternative wording instead. Do NOT use smart quotes. Only use plain ASCII characters.\n\nReturn ONLY this JSON:\n{"title":"Day ' + dayNum + ' title","briefing":"1-2 sentence briefing","content":"3-4 sentence lesson content","keyTerms":' + (isFirst ? '[{"term":"term","definition":"def"}]' : '[]') + ',"duration":30,"isFinal":' + isLast + ',"completed":false,"questions":[{"type":"mcq","question":"Q from notes?","options":["A","B","C","D"],"correctIndex":0,"hint":"specific fact","explanation":"why A","difficulty":"' + difficulty + '"},{"type":"mcq","question":"Q2?","options":["A","B","C","D"],"correctIndex":1,"hint":"fact","explanation":"why B","difficulty":"' + difficulty + '"},{"type":"mcq","question":"Q3?","options":["A","B","C","D"],"correctIndex":2,"hint":"fact","explanation":"why C","difficulty":"' + difficulty + '"},{"type":"truefalse","question":"Statement.","correct":"True","hint":"fact","explanation":"why","difficulty":"' + difficulty + '"},{"type":"truefalse","question":"Statement 2.","correct":"False","hint":"fact","explanation":"why","difficulty":"' + difficulty + '"}]}\n\nUse REAL content from the notes. No apostrophes. Return ONLY JSON.';
 
       fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
         method: 'POST',
@@ -487,14 +491,33 @@
         var jsonMatch = raw.match(/\{[\s\S]*/);
         if (!jsonMatch) throw new Error('No JSON for day ' + dayNum);
         var jsonStr = jsonMatch[0];
-        // Fix truncated JSON
+        // Clean special characters that break JSON
+        jsonStr = jsonStr
+          .replace(/[\u2018\u2019]/g, "'")   // smart single quotes
+          .replace(/[\u201C\u201D]/g, '"')   // smart double quotes
+          .replace(/[\u2013\u2014]/g, '-')   // em/en dashes
+          .replace(/\u00A0/g, ' ')           // non-breaking spaces
+          .replace(/[\x00-\x1F\x7F]/g, ' ') // control characters
+          .replace(/\\'/g, "'");             // escaped apostrophes
+        // Fix truncated JSON by closing open brackets
         var opens = (jsonStr.match(/\[/g)||[]).length;
         var closes = (jsonStr.match(/\]/g)||[]).length;
         var ob = (jsonStr.match(/\{/g)||[]).length;
         var cb = (jsonStr.match(/\}/g)||[]).length;
         for (var i=0;i<opens-closes;i++) jsonStr+=']';
         for (var i=0;i<ob-cb;i++) jsonStr+='}';
-        var day = JSON.parse(jsonStr);
+        var day;
+        try { day = JSON.parse(jsonStr); }
+        catch(e) {
+          // Last resort — strip everything after last valid closing brace
+          var lastBrace = jsonStr.lastIndexOf('}');
+          if (lastBrace > 0) {
+            jsonStr = jsonStr.substring(0, lastBrace + 1);
+            day = JSON.parse(jsonStr);
+          } else {
+            throw new Error('JSON parse failed for day ' + dayNum + ': ' + e.message);
+          }
+        }
         callback(null, day);
       })
       .catch(function(err) { callback(err); });
