@@ -474,7 +474,10 @@
   var showedHalfMilestone = false;
   var showedQuarterMilestone = false;
   var lastRecapTime = 0;
-  var userPlan = 'free'; // 'free', 'pro', 'vip'
+  var userPlan = 'free';
+
+  // Spaced repetition — tracks questions to reinject
+  var spacedRepeatQueue = []; // { q, reinjectAt } — reinject at specific cardIndex
 
   /* ── INIT ── */
   function init() {
@@ -499,7 +502,6 @@
     }
     totalSeconds = totalMinutes * 60;
 
-    // Show VIP chat
     if (userPlan === 'vip') document.getElementById('chat-fab').classList.add('show');
 
     buildQueue();
@@ -509,16 +511,40 @@
 
   /* ── QUEUE ── */
   function buildQueue() {
+    var questions = day.questions || [];
+    var shuffled = questions.slice().sort(function(){ return Math.random() - 0.5; });
+
+    // FEATURE 3: Pre-test on Day 1 — 3 questions BEFORE lesson content
+    if (dayIndex === 0 && questions.length >= 3) {
+      sessionCards.push({ type: 'pretest-intro' });
+      shuffled.slice(0, 3).forEach(function(q) {
+        sessionCards.push({ type: 'question', q: q, isPretest: true });
+      });
+      sessionCards.push({ type: 'pretest-done' });
+    }
+
+    // FEATURE 2: Day start review — show 3 hardest missed from previous day
+    if (dayIndex > 0) {
+      var prevDay = plan.days[dayIndex - 1];
+      var missedKey = 'studyflow_missed_day_' + (dayIndex - 1);
+      var prevMissed = JSON.parse(localStorage.getItem(missedKey) || '[]');
+      if (prevMissed.length > 0) {
+        sessionCards.push({ type: 'review-intro', count: Math.min(prevMissed.length, 3) });
+        prevMissed.slice(0, 3).forEach(function(q) {
+          sessionCards.push({ type: 'question', q: q, isReview: true });
+        });
+        sessionCards.push({ type: 'review-done' });
+      }
+    }
+
     sessionCards.push({ type: 'welcome' });
     if (day.content) sessionCards.push({ type: 'lesson' });
     if (dayIndex === 0 && day.keyTerms && day.keyTerms.length) sessionCards.push({ type: 'terms' });
-    if (day.questions) {
-      // Shuffle questions so they never repeat in same order
-      var shuffled = day.questions.slice().sort(function(){ return Math.random() - 0.5; });
-      shuffled.forEach(function(q, i) {
-        sessionCards.push({ type: 'question', q: q, qi: i });
-      });
-    }
+
+    // Main questions
+    shuffled.forEach(function(q, i) {
+      sessionCards.push({ type: 'question', q: q, qi: i });
+    });
   }
 
   var recentlyShown = [];
@@ -619,7 +645,27 @@
     var sc = document.getElementById('session-card');
     var html = '';
 
-    if (card.type === 'welcome') {
+    if (card.type === 'pretest-intro') {
+      html = buildCard('Quick Check', 'Before we start — test yourself!', false,
+        '<p class="content-text" style="text-align:center;">We\'re going to show you 3 questions <strong>before</strong> the lesson. Don\'t worry if you don\'t know the answers — this actually helps you learn better. It\'s backed by science! 🧠</p>',
+        'Takes 2 minutes', 'Let\'s try →', false);
+    }
+    else if (card.type === 'pretest-done') {
+      html = buildCard('Nice work!', 'Now let\'s learn the material', false,
+        '<p class="content-text" style="text-align:center;">Struggling with those questions is completely normal — and it actually primes your brain to absorb the lesson much better. Keep going!</p>',
+        '', 'Start the lesson →', false);
+    }
+    else if (card.type === 'review-intro') {
+      html = buildCard('📋 Quick Review', 'From yesterday\'s session', false,
+        '<p class="content-text" style="text-align:center;">You missed <strong>' + card.count + ' question' + (card.count > 1 ? 's' : '') + '</strong> last session. Let\'s try them again before today\'s new material — this is spaced repetition in action!</p>',
+        'Science-backed review', 'Let\'s review →', false);
+    }
+    else if (card.type === 'review-done') {
+      html = buildCard('Review complete!', 'Now for today\'s new content', false,
+        '<p class="content-text" style="text-align:center;">Great — reviewing yesterday\'s missed questions reinforces your memory right before it fades. Now let\'s build on top of that! 🚀</p>',
+        '', 'Continue →', false);
+    }
+    else if (card.type === 'welcome') {
       var dayLabel = dayIndex === 0 ? 'Introduction' : (day.isFinal ? 'Final Exam Day' : 'Day ' + (dayIndex + 1));
       html = buildCard(dayLabel, day.title || 'Day ' + (dayIndex+1), false,
         '<p class="content-text">' + (day.briefing || '') + '</p>',
@@ -640,6 +686,14 @@
     }
     else if (card.type === 'question') {
       html = renderQuestion(card.q, false);
+      // Add badge for spaced repeat and review questions
+      if (card.isSpacedRepeat) {
+        html = html.replace('class="card-tag"', 'class="card-tag" style="background:#fff8e0;color:#d97706;border-color:#f59e0b;"');
+        html = html.replace(/(<div class="card-tag"[^>]*>)[^<]*/,'$1🔁 Try again');
+      } else if (card.isReview) {
+        html = html.replace('class="card-tag"', 'class="card-tag" style="background:#dce8ff;color:#2851c8;border-color:#4a7cf6;"');
+        html = html.replace(/(<div class="card-tag"[^>]*>)[^<]*/,'$1📋 Review');
+      }
     }
     else if (card.type === 'fill') {
       html = renderFill(card.q);
@@ -800,12 +854,35 @@
     } else {
       currentStreak = 0;
       recentWrong++;
-      var wrongQ = null;
-      var questions = day.questions || [];
-      if (cardIndex <= sessionCards.length) {
-        wrongQ = sessionCards[cardIndex - 1] ? sessionCards[cardIndex - 1].q : null;
+      var wrongQ = sessionCards[cardIndex - 1] ? sessionCards[cardIndex - 1].q : null;
+      var wrongItem = { q: wrongQ || { question: 'Question', explanation: explanation }, userAns: wrongEl ? wrongEl.textContent : '—', explanation: explanation };
+      wrongItems.push(wrongItem);
+
+      // FEATURE 1: Spaced repetition — reinject this question 4 cards later
+      if (wrongQ && !sessionCards[cardIndex - 1].isReview && !sessionCards[cardIndex - 1].isPretest) {
+        var reinjectAt = cardIndex + 4;
+        // Insert spaced repeat card into sessionCards at that position
+        if (reinjectAt < sessionCards.length) {
+          sessionCards.splice(reinjectAt, 0, { type: 'question', q: wrongQ, isSpacedRepeat: true });
+        } else {
+          sessionCards.push({ type: 'question', q: wrongQ, isSpacedRepeat: true });
+        }
       }
-      wrongItems.push({ q: wrongQ || { question: 'Question', explanation: explanation }, userAns: wrongEl ? wrongEl.textContent : '—', explanation: explanation });
+
+      // Save missed questions for next day's review
+      if (wrongQ) {
+        var missedKey = 'studyflow_missed_day_' + dayIndex;
+        var missed = JSON.parse(localStorage.getItem(missedKey) || '[]');
+        // Only save if not already saved and not a review card
+        var alreadySaved = missed.find(function(m){ return m.question === wrongQ.question; });
+        if (!alreadySaved) {
+          missed.push(wrongQ);
+          // Keep only hardest 5
+          if (missed.length > 5) missed = missed.slice(-5);
+          localStorage.setItem(missedKey, JSON.stringify(missed));
+        }
+      }
+
       showFeedback(false, explanation);
       flashCard(false);
       updateStreak();
