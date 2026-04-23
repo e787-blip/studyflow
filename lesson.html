@@ -35,6 +35,23 @@
   @keyframes streakPop { 0%{transform:scale(0.8);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
   @keyframes milestoneIn { 0%{transform:translateY(-20px);opacity:0} 100%{transform:none;opacity:1} }
 
+  /* CONFIDENCE TAP */
+  .confidence-row { display:flex; align-items:center; gap:.6rem; margin:.75rem 0; flex-wrap:wrap; }
+  .confidence-label { font-size:0.78rem; font-weight:600; color:var(--muted); flex-shrink:0; }
+  .conf-btn { padding:.45rem .9rem; border-radius:999px; border:1.5px solid var(--border); background:var(--soft); font-family:var(--sans); font-size:0.82rem; font-weight:600; color:var(--muted); cursor:pointer; transition:all .2s; }
+  .conf-btn.sure:hover, .conf-btn.sure.selected { background:#d1faf0; border-color:#38bfa1; color:#1a9e80; }
+  .conf-btn.unsure:hover, .conf-btn.unsure.selected { background:#fff8e0; border-color:#f59e0b; color:#d97706; }
+
+  /* METACOGNITION INSIGHTS */
+  .meta-insight { font-size:0.78rem; font-weight:600; padding:.5rem .75rem; border-radius:8px; margin-bottom:.5rem; }
+  .meta-insight.sure-right { background:#d1faf0; color:#1a9e80; }
+  .meta-insight.unsure-right { background:var(--blue-light); color:var(--blue); }
+  .meta-insight.sure-wrong { background:#fee2e2; color:#dc2626; }
+  .meta-insight.unsure-wrong { background:#fff8e0; color:#d97706; }
+
+  /* GROWTH MINDSET FEEDBACK */
+  .feedback-growth { font-size:0.75rem; color:var(--muted); margin-top:.5rem; font-style:italic; }
+
   /* NAV */
   nav {
     background:#fff; border-bottom:1px solid var(--border); padding:.75rem 2rem;
@@ -476,8 +493,52 @@
   var lastRecapTime = 0;
   var userPlan = 'free';
 
-  // Spaced repetition — tracks questions to reinject
-  var spacedRepeatQueue = []; // { q, reinjectAt } — reinject at specific cardIndex
+  // TIER 3: SM-2 Algorithm — per question adaptive scheduling
+  // Stores: { question_hash: { easiness, interval, repetitions, nextReview } }
+  function getQuestionHash(q) {
+    var str = (q.question || '').substring(0, 30);
+    var hash = 0;
+    for (var i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash = hash & hash;
+    }
+    return 'q_' + Math.abs(hash);
+  }
+
+  function getSM2Data(q) {
+    var key = 'studyflow_sm2_' + getQuestionHash(q);
+    return JSON.parse(localStorage.getItem(key) || '{"easiness":2.5,"interval":1,"repetitions":0}');
+  }
+
+  function updateSM2(q, isCorrect) {
+    var key = 'studyflow_sm2_' + getQuestionHash(q);
+    var data = getSM2Data(q);
+    var grade = isCorrect ? 5 : 2; // SM-2 uses 0-5 scale
+
+    if (grade >= 3) {
+      if (data.repetitions === 0) data.interval = 1;
+      else if (data.repetitions === 1) data.interval = 6;
+      else data.interval = Math.round(data.interval * data.easiness);
+      data.repetitions++;
+    } else {
+      data.repetitions = 0;
+      data.interval = 1;
+    }
+
+    data.easiness = Math.max(1.3, data.easiness + 0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02));
+    data.nextReview = new Date(Date.now() + data.interval * 86400000).toISOString();
+    localStorage.setItem(key, JSON.stringify(data));
+    return data;
+  }
+
+  function getDueQuestions(questions) {
+    var now = new Date();
+    return questions.filter(function(q) {
+      var data = getSM2Data(q);
+      if (!data.nextReview) return false;
+      return new Date(data.nextReview) <= now;
+    });
+  } // { q, reinjectAt } — reinject at specific cardIndex
 
   /* ── INIT ── */
   function init() {
@@ -541,9 +602,28 @@
     if (day.content) sessionCards.push({ type: 'lesson' });
     if (dayIndex === 0 && day.keyTerms && day.keyTerms.length) sessionCards.push({ type: 'terms' });
 
-    // Main questions
+    // TIER 2: Interleaved review — every 3rd day mixes questions from ALL previous days
+    if (dayIndex > 0 && dayIndex % 3 === 0) {
+      var allPrevMissed = [];
+      for (var d = 0; d < dayIndex; d++) {
+        var mk = 'studyflow_missed_day_' + d;
+        var dm = JSON.parse(localStorage.getItem(mk) || '[]');
+        allPrevMissed = allPrevMissed.concat(dm);
+      }
+      if (allPrevMissed.length > 0) {
+        sessionCards.push({ type: 'interleave-intro', count: Math.min(allPrevMissed.length, 5) });
+        allPrevMissed.slice(0, 5).sort(function(){ return Math.random() - 0.5; }).forEach(function(q) {
+          sessionCards.push({ type: 'question', q: q, isReview: true });
+        });
+      }
+    }
+
+    // Main questions — add 1 elaborative interrogation prompt every 5 questions
     shuffled.forEach(function(q, i) {
       sessionCards.push({ type: 'question', q: q, qi: i });
+      if ((i + 1) % 5 === 0 && i < shuffled.length - 1) {
+        sessionCards.push({ type: 'elaboration', q: q });
+      }
     });
   }
 
@@ -665,6 +745,21 @@
         '<p class="content-text" style="text-align:center;">Great — reviewing yesterday\'s missed questions reinforces your memory right before it fades. Now let\'s build on top of that! 🚀</p>',
         '', 'Continue →', false);
     }
+    else if (card.type === 'interleave-intro') {
+      html = buildCard('🔀 Mixed Review', 'Questions from all your previous days', false,
+        '<p class="content-text" style="text-align:center;">Today is an <strong>interleaved review day</strong>. Research shows mixing questions from different days is one of the most powerful ways to build lasting memory. You\'ll see ' + card.count + ' questions from earlier sessions.</p>',
+        'Science-backed technique', 'Let\'s mix it up →', false);
+    }
+    else if (card.type === 'elaboration') {
+      var q = card.q;
+      html = buildCard('💭 Think Deeper', 'Elaborative Interrogation', false,
+        '<p class="content-text" style="margin-bottom:1rem;"><strong>You just answered this question:</strong></p>' +
+        '<p class="content-text" style="background:var(--soft);padding:.75rem;border-radius:10px;font-style:italic;margin-bottom:1rem;">"' + q.question + '"</p>' +
+        '<p class="content-text"><strong>Now ask yourself: WHY is this true?</strong></p>' +
+        '<p class="content-text" style="margin-top:.5rem;color:var(--muted);font-size:0.88rem;">Research shows that asking "why" forces deeper processing and doubles retention. Take 10 seconds and think about the reason before moving on.</p>' +
+        '<div style="margin-top:1rem;padding:.75rem 1rem;background:var(--blue-light);border-radius:10px;font-size:0.88rem;color:var(--blue);">💡 ' + (q.explanation || 'Think about the underlying concept.') + '</div>',
+        'Takes 10 seconds', 'Got it →', false);
+    }
     else if (card.type === 'welcome') {
       var dayLabel = dayIndex === 0 ? 'Introduction' : (day.isFinal ? 'Final Exam Day' : 'Day ' + (dayIndex + 1));
       html = buildCard(dayLabel, day.title || 'Day ' + (dayIndex+1), false,
@@ -741,9 +836,17 @@
       optHtml += '</div>';
     }
 
+    // TIER 2: Confidence tap — shown before answer buttons, hides after answered
+    var confidenceTap = '<div class="confidence-row" id="confidence-row">' +
+      '<span class="confidence-label">How confident are you?</span>' +
+      '<button class="conf-btn sure" onclick="setConfidence(\'sure\')">Sure 👍</button>' +
+      '<button class="conf-btn unsure" onclick="setConfidence(\'unsure\')">Not sure 🤔</button>' +
+      '</div>';
+
     var body = '<div class="q-meta"><span class="q-type-label ' + typeClass + '">' + typeLabel + '</span>' +
       '<span class="q-difficulty ' + diffClass + '">' + (q.difficulty || 'Medium') + '</span></div>' +
-      '<div class="q-text">' + q.question + '</div>' + optHtml +
+      '<div class="q-text">' + q.question + '</div>' +
+      confidenceTap + optHtml +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Think about the key concepts from today\'s lesson.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
@@ -754,6 +857,13 @@
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  var currentConfidence = null;
+  function setConfidence(val) {
+    currentConfidence = val;
+    document.querySelectorAll('.conf-btn').forEach(function(b){ b.classList.remove('selected'); });
+    event.target.classList.add('selected');
   }
 
   function renderFill(q) {
@@ -776,18 +886,20 @@
   }
 
   function renderWrite(q) {
-    var body = '<div class="q-meta"><span class="q-type-label write">Written Response</span></div>' +
-      '<div class="q-text">In your own words, explain: ' + q.question + '</div>' +
-      '<textarea class="write-area" id="write-input" placeholder="Write your answer here — the more detail the better..."></textarea>' +
+    var body = '<div class="q-meta"><span class="q-type-label write">Feynman Technique</span><span class="q-difficulty medium">Deep Learning</span></div>' +
+      '<div class="q-text">Explain this concept <strong>in your own words</strong>, as if teaching it to a friend who has never heard of it:</div>' +
+      '<div style="background:var(--blue-light);border-radius:10px;padding:.75rem 1rem;margin:.5rem 0 .75rem;font-size:0.88rem;color:var(--blue);font-weight:600;">' + q.question + '</div>' +
+      '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:.5rem;">💡 Research shows explaining concepts in your own words doubles retention. Don\'t look at your notes — just write what you know.</div>' +
+      '<textarea class="write-area" id="write-input" placeholder="Write your explanation here. The more specific the better — include examples, causes, effects, dates, names..."></textarea>' +
       '<div style="display:flex;align-items:center;gap:.75rem;margin-top:.65rem;">' +
-      '<button class="write-submit" onclick="submitWrite(\'' + esc(q.explanation) + '\',\'' + esc(q.question) + '\')">Submit →</button>' +
-      '<div class="write-analyzing" id="write-analyzing"><div class="mini-spinner"></div><span>Analyzing your response...</span></div>' +
+      '<button class="write-submit" onclick="submitWrite(\'' + esc(q.explanation) + '\',\'' + esc(q.question) + '\')">Get AI feedback →</button>' +
+      '<div class="write-analyzing" id="write-analyzing"><div class="mini-spinner"></div><span>Claude is analyzing your explanation...</span></div>' +
       '</div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Writing Prompt</div><h2>Explain It</h2></div>' +
+      '<div class="card-header"><div class="card-badge">✦ Feynman Technique</div><h2>Teach it back</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
-      '<div class="card-footer"><span class="footer-left">Writing = memory</span>' +
+      '<div class="card-footer"><span class="footer-left">Writing = strongest memory</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
@@ -847,6 +959,9 @@
       correctCount++;
       currentStreak++;
       recentWrong = 0;
+      // SM-2: Update algorithm — correct answer increases interval
+      var correctQ = sessionCards[cardIndex - 1] ? sessionCards[cardIndex - 1].q : null;
+      if (correctQ) updateSM2(correctQ, true);
       showFeedback(true, explanation);
       flashCard(true);
       updateStreak();
@@ -857,6 +972,9 @@
       var wrongQ = sessionCards[cardIndex - 1] ? sessionCards[cardIndex - 1].q : null;
       var wrongItem = { q: wrongQ || { question: 'Question', explanation: explanation }, userAns: wrongEl ? wrongEl.textContent : '—', explanation: explanation };
       wrongItems.push(wrongItem);
+
+      // SM-2: Update algorithm — wrong answer resets interval
+      if (wrongQ) updateSM2(wrongQ, false);
 
       // FEATURE 1: Spaced repetition — reinject this question 4 cards later
       if (wrongQ && !sessionCards[cardIndex - 1].isReview && !sessionCards[cardIndex - 1].isPretest) {
@@ -894,9 +1012,27 @@
   function showFeedback(isCorrect, explanation) {
     var fb = document.getElementById('feedback-box');
     if (!fb) return;
+
+    // Hide confidence row after answering
+    var cr = document.getElementById('confidence-row');
+    if (cr) cr.style.display = 'none';
+
+    // Metacognition insight — was their confidence calibrated?
+    var metaMsg = '';
+    if (currentConfidence) {
+      if (isCorrect && currentConfidence === 'sure') metaMsg = '<div class="meta-insight sure-right">Well calibrated — you knew it and got it! 🎯</div>';
+      else if (isCorrect && currentConfidence === 'unsure') metaMsg = '<div class="meta-insight unsure-right">You knew more than you thought! Trust yourself more. 💪</div>';
+      else if (!isCorrect && currentConfidence === 'sure') metaMsg = '<div class="meta-insight sure-wrong">You were confident but missed it — pay extra attention to this concept. ⚠️</div>';
+      else if (!isCorrect && currentConfidence === 'unsure') metaMsg = '<div class="meta-insight unsure-wrong">You sensed you weren\'t sure — good self-awareness. Focus on this one. 📌</div>';
+      currentConfidence = null;
+    }
+
+    // Growth mindset language — "Not yet" not "Wrong"
     fb.className = 'feedback-box show ' + (isCorrect ? 'correct-fb' : 'wrong-fb');
-    fb.innerHTML = '<div class="feedback-label">' + (isCorrect ? '✓ Correct!' : '✗ Not quite') + '</div>' +
-      '<div class="feedback-text">' + (explanation || (isCorrect ? 'Great job!' : 'Review this concept.')) + '</div>';
+    fb.innerHTML = metaMsg +
+      '<div class="feedback-label">' + (isCorrect ? '✓ Correct!' : '✗ Not yet — keep going') + '</div>' +
+      '<div class="feedback-text">' + (explanation || (isCorrect ? 'Great work — your brain just built a stronger connection!' : 'Review this concept and you\'ll get it next time.')) + '</div>' +
+      (isCorrect ? '' : '<div class="feedback-growth">Mistakes are how your brain grows. Every wrong answer = stronger memory when you get it right. 🧠</div>');
   }
 
   function flashCard(correct) {
@@ -916,7 +1052,8 @@
     document.querySelector('.write-submit').style.display = 'none';
     document.getElementById('write-analyzing').classList.add('show');
 
-    var prompt = 'A student answered a study question. Give specific, honest, encouraging feedback in 3-4 sentences.\n\nQUESTION: ' + question + '\nMODEL ANSWER: ' + modelAnswer + '\nSTUDENT WROTE: ' + answer + '\n\nTell them: 1) What they got right (specific), 2) What they missed or got wrong (specific), 3) One clear piece of advice. Reference actual facts. Do NOT be generic.';
+    // TIER 3: Feynman technique — AI identifies knowledge gaps specifically
+    var prompt = 'You are a tutor grading a student explanation using the Feynman Technique. Be specific, honest, and encouraging.\n\nCONCEPT: ' + question + '\nCORRECT EXPLANATION: ' + modelAnswer + '\nSTUDENT WROTE: ' + answer + '\n\nRespond in this exact format:\n SCORE: X/10\n WHAT YOU NAILED: [1-2 specific things they got right, reference their exact words]\n KNOWLEDGE GAPS: [specific concepts they missed or got wrong — be precise]\n ADVICE: [one concrete tip to fill the biggest gap]\n\nBe specific — reference actual content from their answer. Never be generic.';
 
     fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -926,10 +1063,35 @@
     .then(function(data) {
       document.getElementById('write-analyzing').classList.remove('show');
       var feedback = data.result || data.plan || 'Good attempt!';
+
+      // Parse score from feedback
+      var scoreMatch = feedback.match(/SCORE:\s*(\d+)\/10/i);
+      var score = scoreMatch ? parseInt(scoreMatch[1]) : null;
+      var scoreColor = score ? (score >= 8 ? '#38bfa1' : (score >= 5 ? '#4a7cf6' : '#ef4444')) : '#4a7cf6';
+      var scoreHtml = score ? '<div style="font-size:2rem;font-weight:700;color:' + scoreColor + ';margin-bottom:.5rem;">' + score + '/10</div>' : '';
+
+      // Format the feedback nicely
+      var formatted = feedback
+        .replace(/SCORE:[^\n]*/i, '')
+        .replace(/WHAT YOU NAILED:/gi, '<div style="font-weight:700;color:#38bfa1;margin-top:.75rem;">✓ What you nailed</div>')
+        .replace(/KNOWLEDGE GAPS:/gi, '<div style="font-weight:700;color:#ef4444;margin-top:.75rem;">✗ Knowledge gaps</div>')
+        .replace(/ADVICE:/gi, '<div style="font-weight:700;color:#4a7cf6;margin-top:.75rem;">💡 To improve</div>');
+
       var fb = document.getElementById('feedback-box');
       fb.className = 'feedback-box info-fb show';
-      fb.innerHTML = '<div class="feedback-label">AI Feedback</div><div class="feedback-text">' + feedback + '<br><br><strong>Model answer:</strong> ' + modelAnswer + '</div>';
+      fb.innerHTML = '<div class="feedback-label">🧠 Feynman Analysis</div>' +
+        scoreHtml +
+        '<div class="feedback-text">' + formatted + '</div>' +
+        '<div style="margin-top:1rem;padding:.75rem;background:var(--soft);border-radius:10px;font-size:0.82rem;color:var(--muted);">' +
+        '<strong>Model answer:</strong> ' + modelAnswer + '</div>';
       document.getElementById('btn-next').disabled = false;
+
+      // Save Feynman score for analytics
+      if (score) {
+        var feynmanScores = JSON.parse(localStorage.getItem('studyflow_feynman_scores') || '[]');
+        feynmanScores.push({ question: question, score: score, date: new Date().toISOString() });
+        localStorage.setItem('studyflow_feynman_scores', JSON.stringify(feynmanScores));
+      }
     })
     .catch(function() {
       document.getElementById('write-analyzing').classList.remove('show');
@@ -1156,6 +1318,19 @@
       adviceHtml = '<div style="background:#d1faf0;border:1.5px solid #38bfa1;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.5rem;font-size:0.88rem;color:#065f46;line-height:1.6;"><strong>Almost perfect!</strong> Review the ' + wrongItems.length + ' question' + (wrongItems.length>1?'s':'') + ' you missed below and you\'ll be fully ready.</div>';
     }
 
+    // TIER 2: Sleep tip — neuroscience backed
+    var sleepTip = '<div style="background:linear-gradient(135deg,#1a1d2e,#2851c8);border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.5rem;color:#fff;">' +
+      '<div style="font-size:0.88rem;font-weight:700;margin-bottom:.3rem;">🧠 Science tip for tonight</div>' +
+      '<div style="font-size:0.82rem;opacity:.85;line-height:1.6;">Your hippocampus will replay everything you just learned during sleep tonight, transferring it into long-term memory. Don\'t cram more — let your brain do its job.</div>' +
+      '</div>';
+
+    // TIER 2: Social proof nudge
+    var studyHistory = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
+    var socialProof = '';
+    if (studyHistory.length > 0) {
+      socialProof = '<div style="font-size:0.78rem;color:var(--muted);text-align:center;margin-bottom:1rem;">🔥 You\'ve studied ' + studyHistory.length + ' day' + (studyHistory.length>1?'s':'') + ' in a row — your brain is building stronger connections every session.</div>';
+    }
+
     document.getElementById('results-wrap').innerHTML =
       '<div class="results-top ' + topClass + '">' +
         '<div class="results-score">' + correctCount + '/' + totalAnswered + '</div>' +
@@ -1165,7 +1340,7 @@
         '<div class="r-stat"><div class="r-stat-val">' + timeStudied + 'm</div><div class="r-stat-label">Studied</div></div>' +
         '<div class="r-stat"><div class="r-stat-val">' + totalAnswered + '</div><div class="r-stat-label">Questions</div></div>' +
         '<div class="r-stat"><div class="r-stat-val">' + pct + '%</div><div class="r-stat-label">Accuracy</div></div>' +
-      '</div>' + adviceHtml + wrongHtml +
+      '</div>' + socialProof + sleepTip + adviceHtml + wrongHtml +
       '<button class="btn-dashboard" onclick="goToDashboard()">' +
       (day.isFinal || dayIndex >= plan.days.length - 1 ? 'Back to dashboard →' : 'Continue to Day ' + (dayIndex + 2) + ' →') +
       '</button>';
@@ -1174,6 +1349,13 @@
     plan.days[dayIndex].completed = true;
     plan.days[dayIndex].score = pct;
     localStorage.setItem('studyflow_plan', JSON.stringify(plan));
+
+    // TIER 3: Save study time for parent sleep report
+    var now = new Date();
+    var timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    var studyTimes = JSON.parse(localStorage.getItem('studyflow_study_times') || '{}');
+    studyTimes[now.toDateString()] = timeStr;
+    localStorage.setItem('studyflow_study_times', JSON.stringify(studyTimes));
   }
 
   function buildWrongItem(item) {
@@ -1199,6 +1381,13 @@
 
   function formatContent(content) {
     if (!content) return '';
+    // TIER 3: Dual coding — render [DIAGRAM: description] tags as visual callout boxes
+    content = content.replace(/\[DIAGRAM:\s*([^\]]+)\]/g, function(match, desc) {
+      return '</p><div style="margin:.75rem 0;padding:.9rem 1rem;background:linear-gradient(135deg,var(--blue-light),#f0f4ff);border-left:3px solid var(--blue);border-radius:0 10px 10px 0;font-size:0.85rem;color:var(--blue);">' +
+        '<div style="font-weight:700;margin-bottom:.3rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:.06em;">📊 Visual Aid</div>' +
+        '<div>' + desc.trim() + '</div>' +
+        '</div><p>';
+    });
     return content.split('\n').filter(function(l){ return l.trim(); }).map(function(l){
       return '<p>' + l + '</p>';
     }).join('');
