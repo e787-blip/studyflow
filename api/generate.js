@@ -9,23 +9,28 @@ module.exports = async function handler(req, res) {
   if (!prompt) return res.status(400).json({ error: 'No prompt' });
 
   try {
-    const maxTokens = mode === 'plan' ? 4000 : 800;
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const maxTokens = mode === 'plan' ? 4000 : 1000;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + process.env.GROQ_API_KEY
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
-        messages: [{ role: 'user', content: prompt }],
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: maxTokens,
-        temperature: 0.7
+        messages: [{ role: 'user', content: prompt }]
       })
     });
+
     const data = await response.json();
-    if (!data.choices || !data.choices[0]) return res.status(500).json({ error: 'No response', raw: data });
-    return res.status(200).json({ result: data.choices[0].message.content });
+    if (!data.content || !data.content[0]) {
+      return res.status(500).json({ error: 'No response from Claude', raw: data });
+    }
+
+    return res.status(200).json({ result: data.content[0].text });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
