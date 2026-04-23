@@ -565,6 +565,7 @@
       <div class="score-history-card" id="score-history-card" style="display:none;">
         <div class="section-label">Score History</div>
         <div class="score-chart" id="score-chart"></div>
+        <div id="score-analytics"></div>
       </div>
 
       <div class="cal-card">
@@ -770,6 +771,7 @@
     document.getElementById('best-score-val').textContent = best + '%';
     document.getElementById('avg-score-sub').textContent = avg + '% avg accuracy';
 
+    // Score bars
     var html = '';
     scores.forEach(function(s) {
       var cls = s.score >= 80 ? 'high' : (s.score >= 60 ? 'mid' : 'low');
@@ -781,6 +783,48 @@
         '</div>';
     });
     document.getElementById('score-chart').innerHTML = html;
+
+    // TIER 3: Cross-session analytics — trend and Feynman scores
+    var trendHtml = '';
+    if (scores.length >= 2) {
+      var first = scores[0].score;
+      var last = scores[scores.length - 1].score;
+      var diff = last - first;
+      var trendColor = diff >= 0 ? 'var(--green)' : 'var(--red)';
+      var trendArrow = diff >= 0 ? '↑' : '↓';
+      trendHtml = '<div style="display:flex;align-items:center;gap:.5rem;margin-top:.75rem;font-size:0.82rem;">' +
+        '<span style="color:' + trendColor + ';font-weight:700;">' + trendArrow + ' ' + Math.abs(diff) + '% ' + (diff >= 0 ? 'improvement' : 'drop') + ' since Day 1</span>' +
+        (diff >= 0 ? '<span style="color:var(--muted);">— your brain is building stronger connections 🧠</span>' : '<span style="color:var(--muted);">— keep going, consistency beats perfection</span>') +
+        '</div>';
+    }
+
+    // Feynman scores if any
+    var feynmanScores = JSON.parse(localStorage.getItem('studyflow_feynman_scores') || '[]');
+    var feynmanHtml = '';
+    if (feynmanScores.length > 0) {
+      var feynmanAvg = Math.round(feynmanScores.reduce(function(a,s){ return a + s.score; }, 0) / feynmanScores.length);
+      feynmanHtml = '<div style="margin-top:.75rem;padding:.6rem .9rem;background:var(--blue-light);border-radius:10px;font-size:0.82rem;color:var(--blue);">' +
+        '🧠 Feynman avg: <strong>' + feynmanAvg + '/10</strong> across ' + feynmanScores.length + ' explanation' + (feynmanScores.length > 1 ? 's' : '') + '</div>';
+    }
+
+    // SM-2 due questions count
+    var dueCount = 0;
+    (plan.days || []).forEach(function(d) {
+      (d.questions || []).forEach(function(q) {
+        var data = JSON.parse(localStorage.getItem('studyflow_sm2_' + (function(q2){
+          var str = (q2.question || '').substring(0, 30);
+          var hash = 0;
+          for (var i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash = hash & hash; }
+          return 'q_' + Math.abs(hash);
+        })(q)) || 'null');
+        if (data && data.nextReview && new Date(data.nextReview) <= new Date()) dueCount++;
+      });
+    });
+    var dueHtml = dueCount > 0 ? '<div style="margin-top:.75rem;padding:.6rem .9rem;background:#fff8e0;border-radius:10px;font-size:0.82rem;color:#d97706;">' +
+      '🔁 <strong>' + dueCount + ' question' + (dueCount > 1 ? 's' : '') + '</strong> due for spaced review today</div>' : '';
+
+    var analyticsEl = document.getElementById('score-analytics');
+    if (analyticsEl) analyticsEl.innerHTML = trendHtml + feynmanHtml + dueHtml;
   }
 
   function checkNotificationPrompt() {
