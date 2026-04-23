@@ -301,21 +301,38 @@
       document.getElementById('parent-score-chart').innerHTML = ch || '<p style="color:var(--muted);font-size:.85rem;">No scores yet.</p>';
     }
 
-    // Weekly report
+    // Weekly report with sleep tip
     var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     var wh = '';
+    var studyTimes = JSON.parse(localStorage.getItem('studyflow_study_times') || '{}');
     for (var i = 6; i >= 0; i--) {
       var d = new Date(); d.setDate(d.getDate()-i);
       var ds = d.toDateString();
       var studied = studyHistory.indexOf(ds) > -1;
       var dayName = i === 0 ? 'Today' : (i === 1 ? 'Yesterday' : days[d.getDay()]);
-      var scoreClass = 'none';
+      var studyTime = studyTimes[ds] || null;
+      var sleepTip = '';
+      if (studyTime) {
+        var hour = parseInt(studyTime.split(':')[0]);
+        if (hour >= 20) sleepTip = '<div style="font-size:0.72rem;color:#38bfa1;margin-top:.2rem;">🧠 Studied before sleep — memory consolidates tonight</div>';
+        else if (hour >= 14) sleepTip = '<div style="font-size:0.72rem;color:var(--muted);margin-top:.2rem;">Studied in the afternoon</div>';
+        else sleepTip = '<div style="font-size:0.72rem;color:var(--muted);margin-top:.2rem;">Studied in the morning</div>';
+      }
       wh += '<div class="report-row">' +
-        '<div><div class="report-day">' + dayName + '</div><div class="report-detail">' + d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '</div></div>' +
-        '<div class="report-score ' + scoreClass + '">' + (studied ? 'Studied' : 'No activity') + '</div>' +
+        '<div><div class="report-day">' + dayName + '</div>' +
+        '<div class="report-detail">' + d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + (studyTime ? ' · ' + studyTime : '') + '</div>' +
+        sleepTip + '</div>' +
+        '<div class="report-score ' + (studied ? 'high' : 'none') + '">' + (studied ? '✓ Studied' : 'No activity') + '</div>' +
         '</div>';
     }
-    document.getElementById('weekly-report').innerHTML = wh;
+
+    // TIER 3: Sleep report card
+    var sleepHtml = '<div style="margin-top:1rem;padding:1rem;background:linear-gradient(135deg,#1a1d2e,#2851c8);border-radius:14px;color:#fff;">' +
+      '<div style="font-weight:700;font-size:0.88rem;margin-bottom:.4rem;">🧠 Memory & Sleep Science</div>' +
+      '<div style="font-size:0.8rem;opacity:.85;line-height:1.6;">Studying in the evening before sleep is scientifically optimal. The hippocampus replays learned material during NREM sleep, transferring it from short-term to long-term memory. Consistent daily studying — even 20 minutes — compounds dramatically over time.</div>' +
+      '</div>';
+
+    document.getElementById('weekly-report').innerHTML = wh + sleepHtml;
   }
 
   init();
