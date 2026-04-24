@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
   if (!prompt) return res.status(400).json({ error: 'No prompt' });
 
   try {
-    const maxTokens = mode === 'plan' ? 16000 : 1500;
+    const maxTokens = mode === 'plan' ? 2000 : 1000;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -19,7 +19,7 @@ module.exports = async function handler(req, res) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: maxTokens,
         messages: [{ role: 'user', content: prompt }]
       })
