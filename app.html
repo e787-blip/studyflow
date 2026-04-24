@@ -463,14 +463,14 @@
     var tier = user.tier || 'free';
     var maxDays = tier === 'vip' ? 999 : (tier === 'pro' ? 14 : 7);
 
-    var numDays = 7;
+    var numDays = 3;
     if (deadline) {
       var daysLeft = Math.ceil((new Date(deadline) - new Date()) / 86400000);
-      numDays = Math.min(maxDays, Math.max(1, daysLeft));
+      numDays = Math.min(Math.min(maxDays, 3), Math.max(1, daysLeft));
     }
 
     var allDays = [];
-    var notesShort = notes.substring(0, 3000);
+    var notesShort = notes.substring(0, 800);
 
     function generateDay(dayNum, totalDays, callback) {
       var isFirst = dayNum === 1;
