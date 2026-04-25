@@ -9,8 +9,6 @@ module.exports = async function handler(req, res) {
   if (!prompt) return res.status(400).json({ error: 'No prompt' });
 
   try {
-    const maxTokens = mode === 'plan' ? 4000 : 1000;
-
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -20,14 +18,16 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: maxTokens,
+        max_tokens: 4096,
+        system: 'You are a study plan generator. You ONLY output valid compact JSON with no whitespace, no line breaks, no markdown. Keep all string values under 120 characters. Never truncate. Always complete the full JSON.',
         messages: [{ role: 'user', content: prompt }]
       })
     });
 
     const data = await response.json();
+
     if (!data.content || !data.content[0]) {
-      return res.status(500).json({ error: 'No response from Claude', raw: data });
+      return res.status(500).json({ error: 'No response from Claude', raw: JSON.stringify(data) });
     }
 
     return res.status(200).json({ result: data.content[0].text });
