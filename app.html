@@ -463,10 +463,10 @@
     var tier = user.tier || 'free';
     var maxDays = tier === 'vip' ? 999 : (tier === 'pro' ? 14 : 7);
 
-    var numDays = 3;
+    var numDays = 5;
     if (deadline) {
       var daysLeft = Math.ceil((new Date(deadline) - new Date()) / 86400000);
-      numDays = Math.min(Math.min(maxDays, 3), Math.max(1, daysLeft));
+      numDays = Math.min(Math.min(maxDays, 5), Math.max(1, daysLeft));
     }
 
     var allDays = [];
