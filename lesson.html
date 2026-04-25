@@ -774,8 +774,13 @@
     else if (card.type === 'terms') {
       var termsHtml = '<div class="terms-list">';
       (day.keyTerms || []).forEach(function(t) {
+        if (!t || !t.term || !t.definition) return;
+        if (t.term === 'undefined' || t.definition === 'undefined') return;
         termsHtml += '<div class="term-item"><div class="term-word">' + t.term + '</div><div class="term-def">' + t.definition + '</div></div>';
       });
+      if (termsHtml === '<div class="terms-list">') {
+        termsHtml += '<div class="term-item"><div class="term-def">Key terms will appear here as you study.</div></div>';
+      }
       termsHtml += '</div>';
       html = buildCard('Key Terms', 'Words to Know', false, termsHtml, 'Learn these', 'Next →', false);
     }
