@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StudyFlow — Plans</title>
+<link rel="icon" type="image/png" href="/studyflow/favicon.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  :root { --ink:#1a1d2e; --muted:#6b7280; --soft:#f4f6fb; --blue:#4a7cf6; --blue-light:#dce8ff; --white:#fff; --border:#e8ecf4; --green:#38bfa1; --sans:'DM Sans',sans-serif; --serif:'Instrument Serif',Georgia,serif; }
+  body { font-family:var(--sans); color:var(--ink); background:var(--soft); min-height:100vh; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+
+  nav { background:#fff; border-bottom:1px solid var(--border); padding:.85rem 2rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+  .logo { text-decoration:none; }
+  .btn-back { font-size:0.85rem; color:var(--muted); background:none; border:1.5px solid var(--border); border-radius:8px; padding:.4rem .9rem; cursor:pointer; font-family:var(--sans); text-decoration:none; transition:all .2s; }
+  .btn-back:hover { border-color:var(--blue); color:var(--blue); }
+
+  .hero { text-align:center; padding:4rem 2rem 2rem; animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both; }
+  .hero h1 { font-family:var(--serif); font-size:clamp(2rem,4vw,3rem); letter-spacing:-0.03em; margin-bottom:.75rem; }
+  .hero h1 em { font-style:italic; color:var(--blue); }
+  .hero p { color:var(--muted); font-size:0.95rem; font-weight:300; max-width:480px; margin:0 auto; }
+
+  .plans-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem; max-width:900px; margin:2.5rem auto; padding:0 1.5rem 4rem; animation:fadeUp .5s .1s cubic-bezier(0.16,1,.3,1) both; }
+
+  .plan-card { background:#fff; border:1.5px solid var(--border); border-radius:24px; padding:2rem; position:relative; transition:border-color .2s; }
+  .plan-card:hover { border-color:var(--blue); }
+  .plan-card.popular { background:linear-gradient(135deg,#4a7cf6,#2851c8); border:none; box-shadow:0 16px 48px rgba(74,124,246,.3); }
+  .popular-badge { position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f59e0b; color:#fff; font-size:0.72rem; font-weight:700; padding:.3rem .9rem; border-radius:999px; white-space:nowrap; }
+
+  .plan-label { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:.75rem; }
+  .plan-card.popular .plan-label { color:rgba(255,255,255,.7); }
+  .plan-price { font-size:2.5rem; font-weight:700; color:var(--ink); letter-spacing:-0.03em; line-height:1; }
+  .plan-card.popular .plan-price { color:#fff; }
+  .plan-period { font-size:0.82rem; color:var(--muted); margin-bottom:1.5rem; }
+  .plan-card.popular .plan-period { color:rgba(255,255,255,.7); }
+
+  .plan-features { list-style:none; display:flex; flex-direction:column; gap:.7rem; margin-bottom:1.8rem; }
+  .plan-features li { display:flex; gap:.6rem; font-size:0.88rem; color:var(--ink); align-items:flex-start; }
+  .plan-card.popular .plan-features li { color:#fff; }
+  .plan-features li .check { color:var(--green); font-weight:700; flex-shrink:0; }
+  .plan-card.popular .plan-features li .check { color:#93ffdb; }
+  .plan-features li .cross { color:var(--border); font-weight:700; flex-shrink:0; }
+
+  .btn-plan { width:100%; padding:.9rem; border-radius:12px; font-family:var(--sans); font-size:0.95rem; font-weight:700; cursor:pointer; transition:all .2s; border:none; }
+  .btn-plan.free { background:var(--soft); color:var(--ink); border:1.5px solid var(--border); }
+  .btn-plan.free:hover { border-color:var(--blue); }
+  .btn-plan.pro { background:#fff; color:var(--blue); box-shadow:0 4px 14px rgba(0,0,0,.15); }
+  .btn-plan.pro:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(0,0,0,.2); }
+  .btn-plan.vip { background:linear-gradient(135deg,#c77dff,#8b5cf6); color:#fff; box-shadow:0 4px 14px rgba(139,92,246,.4); }
+  .btn-plan.vip:hover { transform:translateY(-1px); }
+
+  .loading-overlay { display:none; position:fixed; inset:0; background:rgba(26,29,46,.5); backdrop-filter:blur(4px); z-index:999; align-items:center; justify-content:center; flex-direction:column; gap:1rem; }
+  .loading-overlay.show { display:flex; }
+  .loading-overlay p { color:#fff; font-weight:600; font-size:1rem; }
+  .spinner { width:40px; height:40px; border:3px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  .current-plan-badge { display:inline-block; background:var(--blue-light); color:var(--blue); font-size:0.72rem; font-weight:700; padding:.2rem .7rem; border-radius:999px; margin-left:.5rem; vertical-align:middle; }
+
+  @media(max-width:768px) { .plans-grid{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="dashboard.html" class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
+      <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
+      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
+      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
+      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
+      <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
+      <rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/>
+      <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
+      <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
+      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
+      <text x="48" y="28" font-family="Inter,sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3"><tspan fill="#1a1d2e">Study</tspan><tspan fill="#4a7cf6">Flow</tspan></text>
+    </svg>
+  </a>
+  <a href="dashboard.html" class="btn-back">← Back to dashboard</a>
+</nav>
+
+<div class="hero">
+  <h1>Simple, honest <em>pricing</em></h1>
+  <p>Start free. Upgrade when you want more. Cancel anytime.</p>
+</div>
+
+<div class="plans-grid">
+
+  <!-- FREE -->
+  <div class="plan-card">
+    <div class="plan-label">Free</div>
+    <div class="plan-price">$0</div>
+    <div class="plan-period">forever free</div>
+    <ul class="plan-features">
+      <li><span class="check">✓</span> 7-day study plans</li>
+      <li><span class="check">✓</span> AI questions + hints</li>
+      <li><span class="check">✓</span> Progress tracking</li>
+      <li><span class="check">✓</span> Streak counter</li>
+      <li><span class="cross">✕</span> Fill-in-the-blank</li>
+      <li><span class="cross">✕</span> AI chat assistant</li>
+      <li><span class="cross">✕</span> 14-day plans</li>
+    </ul>
+    <button class="btn-plan free" id="btn-free" onclick="selectFree()">Current plan</button>
+  </div>
+
+  <!-- PRO -->
+  <div class="plan-card popular">
+    <div class="popular-badge">Most popular</div>
+    <div class="plan-label">Pro</div>
+    <div class="plan-price">$7.99</div>
+    <div class="plan-period">per month</div>
+    <ul class="plan-features">
+      <li><span class="check">✓</span> Everything in Free</li>
+      <li><span class="check">✓</span> 14-day study plans</li>
+      <li><span class="check">✓</span> Fill-in-the-blank questions</li>
+      <li><span class="check">✓</span> Advanced analytics</li>
+      <li><span class="check">✓</span> Priority support</li>
+      <li><span class="cross">✕</span> AI chat assistant</li>
+    </ul>
+    <button class="btn-plan pro" onclick="checkout('price_1TPwMwFT9ZYak2K45yDRUoFB', 'pro')">Upgrade to Pro →</button>
+  </div>
+
+  <!-- VIP -->
+  <div class="plan-card">
+    <div class="plan-label">VIP</div>
+    <div class="plan-price">$14.99</div>
+    <div class="plan-period">per month</div>
+    <ul class="plan-features">
+      <li><span class="check">✓</span> Everything in Pro</li>
+      <li><span class="check">✓</span> Unlimited-day plans</li>
+      <li><span class="check">✓</span> AI chat assistant</li>
+      <li><span class="check">✓</span> Feynman teach-it-back</li>
+      <li><span class="check">✓</span> SM-2 spaced repetition</li>
+      <li><span class="check">✓</span> VIP support</li>
+    </ul>
+    <button class="btn-plan vip" onclick="checkout('price_1TPwPMFT9ZYak2K4nKFvrZsI', 'vip')">Upgrade to VIP →</button>
+  </div>
+
+</div>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <p>Taking you to secure checkout...</p>
+</div>
+
+<script>
+  var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+
+  // Show current plan
+  var currentTier = user.tier || 'free';
+  if (currentTier === 'pro') {
+    document.getElementById('btn-free').textContent = 'Downgrade';
+    document.querySelector('.plan-card.popular .btn-plan').textContent = 'Current plan ✓';
+    document.querySelector('.plan-card.popular .btn-plan').style.opacity = '0.7';
+    document.querySelector('.plan-card.popular .btn-plan').onclick = null;
+  } else if (currentTier === 'vip') {
+    document.querySelectorAll('.btn-plan')[2].textContent = 'Current plan ✓';
+    document.querySelectorAll('.btn-plan')[2].style.opacity = '0.7';
+    document.querySelectorAll('.btn-plan')[2].onclick = null;
+  }
+
+  function selectFree() {
+    alert('You are on the Free plan. Upgrade to Pro or VIP for more features!');
+  }
+
+  function checkout(priceId, plan) {
+    document.getElementById('loading-overlay').classList.add('show');
+    fetch('https://studyflow-ten-vert.vercel.app/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priceId: priceId, plan: plan, email: user.email || '' })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        document.getElementById('loading-overlay').classList.remove('show');
+        alert('Error: ' + (data.error || 'Could not start checkout'));
+      }
+    })
+    .catch(function(err) {
+      document.getElementById('loading-overlay').classList.remove('show');
+      alert('Error: ' + err.message);
+    });
+  }
+
+  // Handle successful upgrade redirect
+  var params = new URLSearchParams(window.location.search);
+  var upgraded = params.get('upgraded');
+  if (upgraded) {
+    user.tier = upgraded;
+    localStorage.setItem('studyflow_user', JSON.stringify(user));
+    alert('Welcome to StudyFlow ' + upgraded.toUpperCase() + '! Your plan has been upgraded.');
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+</script>
+</body>
+</html>
