@@ -400,17 +400,30 @@
     .mobile-bottom-nav {
       display:flex; position:fixed; bottom:0; left:0; right:0;
       background:#fff; border-top:1px solid var(--border);
-      padding:.6rem 0 .8rem; z-index:200;
-      box-shadow:0 -4px 16px rgba(0,0,0,.06);
+      padding:.5rem 0 calc(.5rem + env(safe-area-inset-bottom)); z-index:200;
+      box-shadow:0 -4px 20px rgba(0,0,0,.08);
     }
     .mobile-nav-btn {
       flex:1; display:flex; flex-direction:column; align-items:center; gap:.2rem;
-      background:none; border:none; cursor:pointer; padding:.3rem;
-      font-family:var(--sans); font-size:0.62rem; font-weight:600; color:var(--muted);
-      transition:color .2s;
+      background:none; border:none; cursor:pointer; padding:.4rem .5rem;
+      font-family:var(--sans); font-size:0.58rem; font-weight:700; color:var(--muted);
+      transition:all .2s; letter-spacing:.02em; text-transform:uppercase;
     }
     .mobile-nav-btn.active { color:var(--blue); }
-    .mobile-nav-btn span { font-size:1.2rem; }
+    .mobile-nav-btn span {
+      font-size:1.3rem; line-height:1;
+      transition:transform .2s;
+    }
+    .mobile-nav-btn.active span { transform:scale(1.15); }
+    .mobile-nav-btn.new-btn { color:var(--blue); }
+    .mobile-nav-btn.new-btn span {
+      width:40px; height:40px; border-radius:50%;
+      background:linear-gradient(135deg,#4a7cf6,#2851c8);
+      display:flex; align-items:center; justify-content:center;
+      color:#fff; font-size:1.4rem; font-weight:300;
+      box-shadow:0 4px 12px rgba(74,124,246,.4);
+      margin-top:-12px;
+    }
   }
   @media(min-width:769px) { .mobile-bottom-nav { display:none !important; } }
 
@@ -480,6 +493,7 @@
   </a>
   <div class="nav-right">
     <a href="https://studyflow-ten-vert.vercel.app/pricing.html" style="font-size:0.82rem;font-weight:700;color:var(--blue);background:var(--blue-light);border:1.5px solid var(--blue);border-radius:8px;padding:.35rem .8rem;text-decoration:none;margin-right:.5rem;">⚡ Upgrade</a>
+    <button onclick="shareCurrentPlan()" style="font-size:0.82rem;font-weight:600;color:var(--muted);background:none;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .8rem;cursor:pointer;font-family:var(--sans);margin-right:.5rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">🔗 Share</button>
     <a href="https://studyflow-ten-vert.vercel.app/app.html" class="btn-new">+ New plan</a>
     <button class="dark-toggle" onclick="toggleDark()" id="dark-toggle">🌙</button>
     <div class="nav-avatar" id="user-avatar">E</div>
@@ -1086,23 +1100,70 @@
     if (icon) icon.textContent = '☀️';
   }
 
-  function mobilePage(page) {
+  function mobilePage(page, btn) {
     document.querySelectorAll('.mobile-nav-btn').forEach(function(b){ b.classList.remove('active'); });
-    event.currentTarget.classList.add('active');
-    if (page === 'plans') {
-      document.querySelector('.sidebar').classList.toggle('mobile-open');
+    if (btn) btn.classList.add('active');
+    var mainContent = document.getElementById('main-content');
+    var sidebar = document.querySelector('.sidebar');
+
+    if (page === 'home') {
+      if (mainContent) mainContent.style.display = '';
+      if (sidebar) sidebar.classList.remove('mobile-open');
+    } else if (page === 'plans') {
+      if (sidebar) sidebar.classList.toggle('mobile-open');
+    } else if (page === 'progress') {
+      // Scroll to score history
+      var scoreCard = document.getElementById('score-history-card');
+      if (scoreCard) scoreCard.scrollIntoView({ behavior: 'smooth' });
+    } else if (page === 'upgrade') {
+      window.location.href = 'https://studyflow-ten-vert.vercel.app/pricing.html';
     }
+  }
+
+  function shareCurrentPlan() {
+    if (!plan) { alert('No active plan to share!'); return; }
+    var shareData = {
+      subject: plan.subject || 'Study',
+      days: plan.days.length,
+      goal: plan.goal || '',
+      createdAt: plan.createdAt || new Date().toISOString()
+    };
+    var encoded = btoa(JSON.stringify(shareData));
+    var shareUrl = 'https://studyflow-ten-vert.vercel.app/app.html?ref=' + encoded;
+    var shareText = 'I\'m studying ' + (plan.subject || 'for my exam') + ' with StudyFlow — ' + plan.days.length + '-day AI study plan. Join me! 📚';
+
+    if (navigator.share) {
+      navigator.share({ title: 'StudyFlow — ' + (plan.subject || 'Study Plan'), text: shareText, url: shareUrl });
+    } else {
+      navigator.clipboard.writeText(shareText + '\n' + shareUrl).then(function(){
+        showShareToast();
+      });
+    }
+  }
+
+  function showShareToast() {
+    var toast = document.getElementById('share-toast');
+    if (!toast) return;
+    toast.classList.add('show');
+    setTimeout(function(){ toast.classList.remove('show'); }, 2500);
   }
 
   loadPlan();
 </script>
 
+<!-- SHARE TOAST -->
+<div id="share-toast" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:.6rem 1.2rem;border-radius:999px;font-size:0.85rem;font-weight:600;z-index:500;opacity:0;transition:opacity .3s;pointer-events:none;">
+  Link copied! 🎉
+</div>
+<style>#share-toast.show{opacity:1;}</style>
+
 <!-- MOBILE BOTTOM NAV -->
 <div class="mobile-bottom-nav">
-  <button class="mobile-nav-btn active" onclick="mobilePage('home')"><span>⌂</span>Home</button>
-  <button class="mobile-nav-btn" onclick="mobilePage('plans')"><span>≡</span>Plans</button>
-  <button class="mobile-nav-btn" onclick="window.location.href='https://studyflow-ten-vert.vercel.app/app.html'"><span>+</span>New</button>
-  <button class="mobile-nav-btn" onclick="mobilePage('progress')"><span>◎</span>Progress</button>
+  <button class="mobile-nav-btn active" onclick="mobilePage('home',this)"><span>🏠</span>Home</button>
+  <button class="mobile-nav-btn" onclick="mobilePage('plans',this)"><span>📋</span>Plans</button>
+  <button class="mobile-nav-btn new-btn" onclick="window.location.href='https://studyflow-ten-vert.vercel.app/app.html'"><span>+</span>New</button>
+  <button class="mobile-nav-btn" onclick="shareCurrentPlan()"><span>🔗</span>Share</button>
+  <button class="mobile-nav-btn" onclick="mobilePage('upgrade',this)"><span>⚡</span>Upgrade</button>
 </div>
 
 </body>
