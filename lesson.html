@@ -27,7 +27,10 @@
   
   
   
-  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+  .typing-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--muted); margin:0 2px; animation:typingBounce 1.2s infinite; }
+  .typing-dot:nth-child(2) { animation-delay:.2s; }
+  .typing-dot:nth-child(3) { animation-delay:.4s; }
   @keyframes spin { to{transform:rotate(360deg)} }
   @keyframes shake { 0%,100%{transform:none} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
   @keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.08)} 100%{transform:scale(1)} }
@@ -459,14 +462,20 @@
 <button class="chat-fab" id="chat-fab" onclick="toggleChat()">💬</button>
 <div class="chat-panel" id="chat-panel">
   <div class="chat-header">
-    <div>
-      <h4>AI Study Assistant</h4>
-      <p>Ask anything about today's lesson</p>
+    <div style="display:flex;align-items:center;gap:.6rem;">
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4a7cf6,#2851c8);display:flex;align-items:center;justify-content:center;font-size:0.9rem;">🧠</div>
+      <div>
+        <h4>AI Study Tutor</h4>
+        <p style="font-size:0.7rem;color:var(--muted);margin:0;">Ask anything about today's lesson</p>
+      </div>
     </div>
-    <button class="chat-close" onclick="toggleChat()">×</button>
+    <div style="display:flex;gap:.5rem;align-items:center;">
+      <button onclick="clearChat()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.75rem;font-family:var(--sans);">Clear</button>
+      <button class="chat-close" onclick="toggleChat()">×</button>
+    </div>
   </div>
   <div class="chat-messages" id="chat-messages">
-    <div class="chat-msg ai">Hi! I'm your AI tutor. Ask me anything about today's lesson! ~</div>
+    <div class="chat-msg ai">Hi! I'm your AI tutor for today's session. I know your lesson content and what you've answered so far. Ask me anything — I'll give you a specific, helpful answer. 🎯</div>
   </div>
   <div class="chat-input-row">
     <input class="chat-input" id="chat-input" placeholder="Ask a question..." onkeydown="if(event.key==='Enter')sendChat()" />
@@ -618,9 +627,17 @@
       }
     }
 
-    // Main questions — add 1 elaborative interrogation prompt every 5 questions
+    // Main questions — add elaborative interrogation every 5 questions
+    // Pro users get fill-in-blank every 3rd question
     shuffled.forEach(function(q, i) {
       sessionCards.push({ type: 'question', q: q, qi: i });
+
+      // FILL IN BLANK — Pro and VIP only, every 3rd question
+      if ((userPlan === 'pro' || userPlan === 'vip') && (i + 1) % 3 === 0 && i < shuffled.length - 1) {
+        sessionCards.push({ type: 'fill', q: shuffled[i + 1] });
+      }
+
+      // ELABORATION — every 5 questions
       if ((i + 1) % 5 === 0 && i < shuffled.length - 1) {
         sessionCards.push({ type: 'elaboration', q: q });
       }
@@ -872,12 +889,33 @@
   }
 
   function renderFill(q) {
+    // If not pro/vip, show upgrade prompt instead
+    if (userPlan !== 'pro' && userPlan !== 'vip') {
+      return '<div class="session-card">' +
+        '<div class="card-header"><div class="card-badge">✦ Pro Feature</div><h2>Fill in the Blank</h2></div>' +
+        '<div class="card-body" style="text-align:center;padding:2rem 1rem;">' +
+        '<div style="font-size:3rem;margin-bottom:1rem;">⚡</div>' +
+        '<h3 style="font-family:var(--serif);font-size:1.3rem;margin-bottom:.5rem;">Unlock Fill in the Blank</h3>' +
+        '<p style="color:var(--muted);font-size:0.88rem;margin-bottom:1.5rem;">Fill-in-the-blank questions are proven to be more effective than multiple choice for long-term retention. Upgrade to Pro to unlock them.</p>' +
+        '<a href="https://studyflow-ten-vert.vercel.app/pricing.html" style="display:inline-block;background:var(--blue);color:#fff;padding:.85rem 1.8rem;border-radius:12px;font-weight:700;font-size:0.92rem;text-decoration:none;">Upgrade to Pro →</a>' +
+        '</div>' +
+        '<div class="card-footer"><span class="footer-left"></span>' +
+        '<button class="btn-next" id="btn-next" onclick="showNextCard()">Skip →</button></div></div>';
+    }
+
     var answer = q.type === 'truefalse' ? q.correct : (q.options ? q.options[q.correctIndex] : '');
+    var questionText = q.question;
+    // Replace the answer in the question with blank if it appears, otherwise add blank at end
+    if (questionText.toLowerCase().includes(answer.toLowerCase())) {
+      questionText = questionText.replace(new RegExp(answer, 'i'), '_______');
+    } else {
+      questionText = questionText.replace('?', '') + ': _______';
+    }
     var body = '<div class="q-meta"><span class="q-type-label fill">Fill in the Blank</span>' +
       '<span class="q-difficulty medium">Pro Feature</span></div>' +
-      '<div class="q-text">' + q.question.replace(answer, '_______') + '</div>' +
+      '<div class="q-text">' + questionText + '</div>' +
       '<div class="fill-wrap">' +
-      '<input class="fill-input" id="fill-input" placeholder="Type your answer..." />' +
+      '<input class="fill-input" id="fill-input" placeholder="Type your answer..." onkeydown="if(event.key===\'Enter\')answerFill(\'' + esc(answer) + '\',\'' + esc(q.explanation) + '\')" />' +
       '<button class="fill-submit" onclick="answerFill(\'' + esc(answer) + '\',\'' + esc(q.explanation) + '\')">Check →</button>' +
       '</div>' +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
@@ -886,7 +924,7 @@
     return '<div class="session-card">' +
       '<div class="card-header"><div class="card-badge">✦ Fill in the Blank</div><h2>Complete the sentence</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
-      '<div class="card-footer"><span class="footer-left">Pro feature</span>' +
+      '<div class="card-footer"><span class="footer-left">Pro feature — type your answer</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
@@ -1233,8 +1271,18 @@
   }
 
   /* ── VIP CHAT ── */
+  var chatHistory = [];
+  var chatOpen = false;
+
   function toggleChat() {
-    document.getElementById('chat-panel').classList.toggle('open');
+    chatOpen = !chatOpen;
+    document.getElementById('chat-panel').classList.toggle('open', chatOpen);
+    if (chatOpen) document.getElementById('chat-input').focus();
+  }
+
+  function clearChat() {
+    chatHistory = [];
+    document.getElementById('chat-messages').innerHTML = '<div class="chat-msg ai">Chat cleared! Ask me anything about today\'s lesson. 🎯</div>';
   }
 
   function sendChat() {
@@ -1244,29 +1292,56 @@
     input.value = '';
     addChatMsg(msg, 'user');
 
-    var prompt = 'You are a helpful study tutor. The student is studying: ' + (day.title || plan.subject) + '. Lesson content: ' + (day.content || '').substring(0, 500) + '\n\nStudent asks: ' + msg + '\n\nAnswer helpfully in 2-3 sentences. Be specific to the lesson content.';
+    // Build context-aware system prompt
+    var missedQs = wrongItems.map(function(w){ return w.q ? w.q.question : ''; }).filter(Boolean).join(', ');
+    var systemContext = 'You are a helpful, specific AI study tutor. ' +
+      'Subject: ' + (plan.subject || 'General') + '. ' +
+      'Today\'s lesson: ' + (day.title || '') + '. ' +
+      'Lesson content: ' + (day.content || '').substring(0, 300) + '. ' +
+      (missedQs ? 'Student has struggled with: ' + missedQs.substring(0, 200) + '. ' : '') +
+      'Student accuracy so far: ' + (totalAnswered > 0 ? Math.round((correctCount/totalAnswered)*100) + '%' : 'session just started') + '. ' +
+      'Answer in 2-3 sentences max. Be specific and helpful. Reference actual lesson content. Never be generic.';
 
-    addChatMsg('Thinking...', 'ai');
+    // Build full conversation for context
+    var messages = chatHistory.map(function(m){ return { role: m.role, content: m.content }; });
+    messages.push({ role: 'user', content: msg });
+
+    var fullPrompt = systemContext + '\n\nConversation:\n' + messages.map(function(m){ return m.role + ': ' + m.content; }).join('\n');
+
+    chatHistory.push({ role: 'user', content: msg });
+    addChatMsg('', 'ai thinking');
+
     fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: prompt })
+      body: JSON.stringify({ prompt: fullPrompt })
     })
     .then(function(r){ return r.json(); })
     .then(function(data) {
+      var reply = data.result || data.plan || 'I\'m not sure — try reviewing your notes!';
       var msgs = document.getElementById('chat-messages');
-      msgs.lastChild.textContent = data.result || data.plan || 'I\'m not sure — try reviewing your notes!';
-      msgs.scrollTop = msgs.scrollHeight;
+      var thinking = msgs.querySelector('.thinking');
+      if (thinking) thinking.remove();
+      chatHistory.push({ role: 'assistant', content: reply });
+      addChatMsg(reply, 'ai');
     })
     .catch(function() {
-      document.getElementById('chat-messages').lastChild.textContent = 'Sorry, something went wrong. Try again!';
+      var msgs = document.getElementById('chat-messages');
+      var thinking = msgs.querySelector('.thinking');
+      if (thinking) thinking.remove();
+      addChatMsg('Something went wrong — try again!', 'ai');
     });
   }
 
   function addChatMsg(text, who) {
     var msgs = document.getElementById('chat-messages');
     var div = document.createElement('div');
-    div.className = 'chat-msg ' + who;
-    div.textContent = text;
+    if (who === 'ai thinking') {
+      div.className = 'chat-msg ai thinking';
+      div.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+    } else {
+      div.className = 'chat-msg ' + who;
+      div.textContent = text;
+    }
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
   }
