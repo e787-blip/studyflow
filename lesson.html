@@ -982,17 +982,36 @@
     var input = document.getElementById('fill-input');
     var val = input.value.trim().toLowerCase();
     var correctLower = correct.toLowerCase();
-    var isCorrect = val === correctLower || correctLower.includes(val) && val.length > 2;
+
+    // Smart fuzzy matching — accepts partial answers, ignores punctuation
+    var valClean = val.replace(/[^a-z0-9 ]/g, '').trim();
+    var correctClean = correctLower.replace(/[^a-z0-9 ]/g, '').trim();
+    var isExact = valClean === correctClean;
+    var isPartial = correctClean.includes(valClean) && valClean.length >= 3;
+    var correctIncludesVal = valClean.split(' ').every(function(word) {
+      return word.length < 2 || correctClean.includes(word);
+    });
+    var isCorrect = isExact || (isPartial && valClean.length > 3) || (correctIncludesVal && valClean.length >= Math.floor(correctClean.length * 0.6));
+
     currentAnswered = true;
     totalAnswered++;
     input.disabled = true;
     document.querySelector('.fill-submit').disabled = true;
-    input.classList.add(isCorrect ? 'correct' : 'wrong');
-    if (!isCorrect) {
-      var fb = document.getElementById('feedback-box');
-      fb.className = 'feedback-box wrong-fb show';
-      fb.innerHTML = '<div class="feedback-label">Not quite</div><div class="feedback-text">The correct answer is: <strong>' + correct + '</strong>. ' + (explanation || '') + '</div>';
+    input.style.borderColor = isCorrect ? 'var(--green)' : 'var(--red)';
+    input.style.background = isCorrect ? '#d1faf0' : '#fee2e2';
+
+    var fb = document.getElementById('feedback-box');
+    fb.className = 'feedback-box show ' + (isCorrect ? 'correct-fb' : 'wrong-fb');
+
+    if (isCorrect) {
+      fb.innerHTML = '<div class="feedback-label">✓ Correct!</div>' +
+        '<div class="feedback-text">' + (explanation || 'Great job — your brain just built a stronger connection!') + '</div>';
+    } else {
+      fb.innerHTML = '<div class="feedback-label">✗ Not yet — keep going</div>' +
+        '<div class="feedback-text">The correct answer is: <strong>' + correct + '</strong>. ' + (explanation || '') + '</div>' +
+        '<div class="feedback-growth">Fill-in-the-blank is harder than MCQ — that\'s the point. The struggle builds stronger memory. 🧠</div>';
     }
+
     handleResult(isCorrect, explanation, null);
     document.getElementById('btn-next').disabled = false;
   }
@@ -1291,33 +1310,31 @@
     if (!msg) return;
     input.value = '';
     addChatMsg(msg, 'user');
-
-    // Build context-aware system prompt
-    var missedQs = wrongItems.map(function(w){ return w.q ? w.q.question : ''; }).filter(Boolean).join(', ');
-    var systemContext = 'You are a helpful, specific AI study tutor. ' +
-      'Subject: ' + (plan.subject || 'General') + '. ' +
-      'Today\'s lesson: ' + (day.title || '') + '. ' +
-      'Lesson content: ' + (day.content || '').substring(0, 300) + '. ' +
-      (missedQs ? 'Student has struggled with: ' + missedQs.substring(0, 200) + '. ' : '') +
-      'Student accuracy so far: ' + (totalAnswered > 0 ? Math.round((correctCount/totalAnswered)*100) + '%' : 'session just started') + '. ' +
-      'Answer in 2-3 sentences max. Be specific and helpful. Reference actual lesson content. Never be generic.';
-
-    // Build full conversation for context
-    var messages = chatHistory.map(function(m){ return { role: m.role, content: m.content }; });
-    messages.push({ role: 'user', content: msg });
-
-    var fullPrompt = systemContext + '\n\nConversation:\n' + messages.map(function(m){ return m.role + ': ' + m.content; }).join('\n');
-
     chatHistory.push({ role: 'user', content: msg });
+
+    // Full context object sent to dedicated chat endpoint
+    var context = {
+      subject: plan.subject || 'General',
+      lessonTitle: day.title || '',
+      lessonContent: day.content || '',
+      missedQuestions: wrongItems.map(function(w){ return w.q ? w.q.question : ''; }).filter(Boolean),
+      accuracy: totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : null,
+      currentQuestion: sessionCards[cardIndex] && sessionCards[cardIndex].q ? sessionCards[cardIndex].q.question : null
+    };
+
     addChatMsg('', 'ai thinking');
 
-    fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: fullPrompt })
+    fetch('https://studyflow-ten-vert.vercel.app/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: chatHistory.slice(), // full conversation history
+        context: context
+      })
     })
     .then(function(r){ return r.json(); })
     .then(function(data) {
-      var reply = data.result || data.plan || 'I\'m not sure — try reviewing your notes!';
+      var reply = data.reply || 'I\'m not sure — try reviewing your notes!';
       var msgs = document.getElementById('chat-messages');
       var thinking = msgs.querySelector('.thinking');
       if (thinking) thinking.remove();
