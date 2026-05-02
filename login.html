@@ -255,18 +255,33 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  // If already logged in go straight to app
+  // Only redirect if user is already signed in AND they didn't just sign out
+  var redirecting = false;
   onAuthStateChanged(auth, function(user) {
-    if (user) {
-      localStorage.setItem('studyflow_user', JSON.stringify({ email: user.email, name: user.displayName || user.email.split('@')[0], uid: user.uid }));
-      window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
+    if (user && !redirecting) {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('signout') !== '1') {
+        redirecting = true;
+        localStorage.setItem('studyflow_user', JSON.stringify({
+          email: user.email,
+          name: user.displayName || user.email.split('@')[0],
+          uid: user.uid
+        }));
+        window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
+      }
     }
   });
 
   function showMsg(id, type, text) {
     var el = document.getElementById(id);
+    if (!el) return;
     el.className = 'msg-box show ' + type;
     el.textContent = text;
+  }
+
+  function setLoading(btn, loading) {
+    btn.disabled = loading;
+    btn.textContent = loading ? 'Please wait...' : btn.dataset.label;
   }
 
   function switchTab(tab) {
@@ -282,16 +297,26 @@
     var password = document.getElementById('login-password').value;
     if (!email || !email.includes('@')) { showMsg('login-msg', 'error', 'Please enter a valid email.'); return; }
     if (!password) { showMsg('login-msg', 'error', 'Please enter your password.'); return; }
+    var btn = document.querySelector('#login-view .btn-submit');
+    if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
     showMsg('login-msg', 'success', 'Signing you in...');
     signInWithEmailAndPassword(auth, email, password)
       .then(function(cred) {
-        localStorage.setItem('studyflow_user', JSON.stringify({ email: cred.user.email, name: cred.user.displayName || email.split('@')[0], uid: cred.user.uid }));
+        localStorage.setItem('studyflow_user', JSON.stringify({
+          email: cred.user.email,
+          name: cred.user.displayName || email.split('@')[0],
+          uid: cred.user.uid
+        }));
         window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
       })
       .catch(function(err) {
-        var msg = err.code === 'auth/user-not-found' ? 'No account found. Please sign up.' :
-                  err.code === 'auth/wrong-password' ? 'Incorrect password.' :
-                  err.code === 'auth/invalid-credential' ? 'Incorrect email or password.' : err.message;
+        if (btn) { btn.disabled = false; btn.textContent = 'Sign in →'; }
+        var msg = err.code === 'auth/user-not-found' ? 'No account found with that email. Please sign up.' :
+                  err.code === 'auth/wrong-password' ? 'Incorrect password. Try again.' :
+                  err.code === 'auth/invalid-credential' ? 'Incorrect email or password.' :
+                  err.code === 'auth/too-many-requests' ? 'Too many attempts. Try again in a few minutes.' :
+                  err.code === 'auth/network-request-failed' ? 'Network error. Check your connection.' :
+                  'Error: ' + err.message;
         showMsg('login-msg', 'error', msg);
       });
   }
@@ -301,17 +326,20 @@
     var name = document.getElementById('signup-name').value.trim();
     var email = document.getElementById('signup-email').value.trim();
     var password = document.getElementById('signup-password').value;
-    var classCode = (document.getElementById('signup-classcode') ? document.getElementById('signup-classcode').value : '').trim().toUpperCase();
+    var classCodeEl = document.getElementById('signup-classcode');
+    var classCode = classCodeEl ? classCodeEl.value.trim().toUpperCase() : '';
     if (!name) { showMsg('signup-msg', 'error', 'Please enter your name.'); return; }
     if (!email || !email.includes('@')) { showMsg('signup-msg', 'error', 'Please enter a valid email.'); return; }
     if (!password || password.length < 6) { showMsg('signup-msg', 'error', 'Password must be at least 6 characters.'); return; }
+    var btn = document.querySelector('#signup-view .btn-submit');
+    if (btn) { btn.disabled = true; btn.textContent = 'Creating account...'; }
     showMsg('signup-msg', 'success', 'Creating your account...');
     createUserWithEmailAndPassword(auth, email, password)
       .then(function(cred) {
         return updateProfile(cred.user, { displayName: name }).then(function() { return cred; });
       })
       .then(function(cred) {
-        var user = { email: cred.user.email, name: name, uid: cred.user.uid, classCode: classCode || null };
+        var user = { email: cred.user.email, name: name, uid: cred.user.uid, classCode: classCode || null, tier: 'free' };
         localStorage.setItem('studyflow_user', JSON.stringify(user));
         if (classCode) {
           var classData = JSON.parse(localStorage.getItem('studyflow_class_' + classCode) || '{"students":[]}');
@@ -323,7 +351,11 @@
         window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
       })
       .catch(function(err) {
-        var msg = err.code === 'auth/email-already-in-use' ? 'Account already exists. Please sign in.' : err.message;
+        if (btn) { btn.disabled = false; btn.textContent = 'Create account →'; }
+        var msg = err.code === 'auth/email-already-in-use' ? 'An account already exists with that email. Please sign in.' :
+                  err.code === 'auth/weak-password' ? 'Password is too weak. Use at least 6 characters.' :
+                  err.code === 'auth/network-request-failed' ? 'Network error. Check your connection.' :
+                  'Error: ' + err.message;
         showMsg('signup-msg', 'error', msg);
       });
   }
@@ -333,10 +365,20 @@
     var provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider)
       .then(function(cred) {
-        localStorage.setItem('studyflow_user', JSON.stringify({ email: cred.user.email, name: cred.user.displayName, uid: cred.user.uid }));
+        localStorage.setItem('studyflow_user', JSON.stringify({
+          email: cred.user.email,
+          name: cred.user.displayName,
+          uid: cred.user.uid,
+          tier: 'free'
+        }));
         window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
       })
-      .catch(function(err) { alert('Google sign in failed: ' + err.message); });
+      .catch(function(err) {
+        var msg = err.code === 'auth/popup-closed-by-user' ? 'Sign in cancelled.' :
+                  err.code === 'auth/popup-blocked' ? 'Popup was blocked. Please allow popups for this site.' :
+                  'Google sign in failed: ' + err.message;
+        showMsg('login-msg', 'error', msg);
+      });
   }
   window.googleAuth = googleAuth;
 
