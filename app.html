@@ -217,7 +217,67 @@
 </nav>
 
 <div class="app-container">
-  <div class="app-header">
+<!-- ONBOARDING OVERLAY -->
+<div id="onboarding-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,29,46,.85);backdrop-filter:blur(8px);z-index:9998;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:28px;padding:2.5rem 2rem;max-width:420px;width:90%;animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both;text-align:center;position:relative;">
+    <div id="onboard-step-1">
+      <div style="font-size:3rem;margin-bottom:1rem;">📚</div>
+      <h2 style="font-family:var(--serif);font-size:1.6rem;letter-spacing:-0.02em;margin-bottom:.5rem;">Welcome to <em style="color:var(--blue);">StudyFlow</em></h2>
+      <p style="color:var(--muted);font-size:0.9rem;line-height:1.6;margin-bottom:1.5rem;">The AI study tool built on real cognitive science. Here's how it works in 3 steps.</p>
+      <div style="display:flex;flex-direction:column;gap:.75rem;text-align:left;margin-bottom:1.8rem;">
+        <div style="display:flex;gap:.9rem;align-items:flex-start;">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">1</div>
+          <div><strong style="font-size:0.9rem;">Paste your notes</strong><br><span style="font-size:0.82rem;color:var(--muted);">Any subject — history, bio, math, English</span></div>
+        </div>
+        <div style="display:flex;gap:.9rem;align-items:flex-start;">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">2</div>
+          <div><strong style="font-size:0.9rem;">Set your goal and exam date</strong><br><span style="font-size:0.82rem;color:var(--muted);">AI builds a personalized multi-day plan</span></div>
+        </div>
+        <div style="display:flex;gap:.9rem;align-items:flex-start;">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">3</div>
+          <div><strong style="font-size:0.9rem;">Study daily and track progress</strong><br><span style="font-size:0.82rem;color:var(--muted);">Questions get harder as your exam gets closer</span></div>
+        </div>
+      </div>
+      <button onclick="nextOnboard(2)" style="width:100%;padding:.95rem;background:var(--blue);color:#fff;border:none;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(74,124,246,.3);">Let's go →</button>
+    </div>
+
+    <div id="onboard-step-2" style="display:none;">
+      <div style="font-size:3rem;margin-bottom:1rem;">🧠</div>
+      <h2 style="font-family:var(--serif);font-size:1.5rem;letter-spacing:-0.02em;margin-bottom:.5rem;">Built on real <em style="color:var(--blue);">science</em></h2>
+      <p style="color:var(--muted);font-size:0.88rem;line-height:1.7;margin-bottom:1.5rem;">StudyFlow uses the same techniques that top students and memory champions use:</p>
+      <div style="display:flex;flex-direction:column;gap:.6rem;text-align:left;margin-bottom:1.8rem;">
+        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>🔁 Spaced repetition</strong> — missed questions come back automatically</div>
+        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>📈 Difficulty ramping</strong> — starts easy, gets harder toward exam day</div>
+        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>💭 Active recall</strong> — answering questions beats re-reading by 84%</div>
+        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>🌙 Sleep science</strong> — your brain consolidates learning while you sleep</div>
+      </div>
+      <button onclick="nextOnboard(3)" style="width:100%;padding:.95rem;background:var(--blue);color:#fff;border:none;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(74,124,246,.3);">Got it →</button>
+    </div>
+
+    <div id="onboard-step-3" style="display:none;">
+      <div style="font-size:3rem;margin-bottom:1rem;">🎯</div>
+      <h2 style="font-family:var(--serif);font-size:1.5rem;letter-spacing:-0.02em;margin-bottom:.5rem;">One tip before you <em style="color:var(--blue);">start</em></h2>
+      <p style="color:var(--muted);font-size:0.88rem;line-height:1.7;margin-bottom:1.5rem;">The more detailed your notes, the better your plan. Don't just paste the chapter title — paste the actual content, definitions, dates, formulas.</p>
+      <div style="background:var(--blue-light);border-radius:14px;padding:1rem;text-align:left;margin-bottom:1.5rem;">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem;">Pro tip</div>
+        <div style="font-size:0.85rem;color:var(--ink);line-height:1.6;">After studying, sleep on it. Your hippocampus replays everything you learned tonight. That's not a metaphor — it's neuroscience.</div>
+      </div>
+      <button onclick="closeOnboard()" style="width:100%;padding:.95rem;background:linear-gradient(135deg,#4a7cf6,#2851c8);color:#fff;border:none;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(74,124,246,.35);">Build my study plan →</button>
+    </div>
+
+    <!-- Step dots -->
+    <div style="display:flex;justify-content:center;gap:.4rem;margin-top:1.5rem;">
+      <div class="onboard-dot active" id="odot-1"></div>
+      <div class="onboard-dot" id="odot-2"></div>
+      <div class="onboard-dot" id="odot-3"></div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .onboard-dot { width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .3s; }
+  .onboard-dot.active { background:var(--blue); }
+</style>
     <div class="app-header-badge">✦ AI-Powered</div>
     <h1><span class="white">Get your </span><em>study plan</em></h1>
     <p>Paste your notes · Answer 3 questions · Get your personalized plan</p>
@@ -316,6 +376,28 @@
     var loader = document.getElementById('page-loader');
     if (loader) loader.style.display = 'none';
   });
+
+  // ONBOARDING — show for first time users
+  function showOnboarding() {
+    var seen = localStorage.getItem('studyflow_onboarded');
+    if (!seen) {
+      document.getElementById('onboarding-overlay').style.display = 'flex';
+    }
+  }
+
+  function nextOnboard(step) {
+    document.querySelectorAll('[id^="onboard-step-"]').forEach(function(el){ el.style.display = 'none'; });
+    document.querySelectorAll('.onboard-dot').forEach(function(el){ el.classList.remove('active'); });
+    document.getElementById('onboard-step-' + step).style.display = 'block';
+    document.getElementById('odot-' + step).classList.add('active');
+  }
+
+  function closeOnboard() {
+    localStorage.setItem('studyflow_onboarded', '1');
+    document.getElementById('onboarding-overlay').style.display = 'none';
+  }
+
+  showOnboarding();
 
   // Auth guard disabled until Firebase is set up
   // if (!localStorage.getItem('studyflow_user')) {
