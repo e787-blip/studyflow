@@ -194,7 +194,7 @@
         <div>
           <h4>Email us</h4>
           <p>For general questions and support</p>
-          <a href="mailto:support@studyflow.app">support@studyflow.app</a>
+          <a href="/cdn-cgi/l/email-protection#3a494f4a4a55484e7a494e4f5e435c56554d145b4a4a"><span class="__cf_email__" data-cfemail="9be8eeebebf4e9efdbe8efeeffe2fdf7f4ecb5faebeb">[email&#160;protected]</span></a>
         </div>
       </div>
 
@@ -203,7 +203,7 @@
         <div>
           <h4>Feature requests</h4>
           <p>Have an idea to make StudyFlow better?</p>
-          <a href="mailto:ideas@studyflow.app">ideas@studyflow.app</a>
+          <a href="/cdn-cgi/l/email-protection#c6afa2a3a7b586b5b2b3a2bfa0aaa9b1e8a7b6b6"><span class="__cf_email__" data-cfemail="0c6568696d7f4c7f787968756a60637b226d7c7c">[email&#160;protected]</span></a>
         </div>
       </div>
 
@@ -273,7 +273,7 @@
     </div>
     <div class="faq-item">
       <button class="faq-q" onclick="toggleFaq(this)">How do I cancel my subscription? <span class="faq-icon">+</span></button>
-      <div class="faq-a">You can cancel anytime from your account settings — no questions asked. If you need help, just email us at support@studyflow.app.</div>
+      <div class="faq-a">You can cancel anytime from your account settings — no questions asked. If you need help, just email us at <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="9ae9efeaeaf5e8eedae9eeeffee3fcf6f5edb4fbeaea">[email&#160;protected]</a>.</div>
     </div>
     <div class="faq-item">
       <button class="faq-q" onclick="toggleFaq(this)">Is my data private? <span class="faq-icon">+</span></button>
@@ -286,7 +286,7 @@
   <p>© 2026 <strong>StudyFlow</strong> · Built for students who want to stop guessing and start learning.</p>
 </footer>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
   var selectedTopic = '';
 
   function selectTopic(btn) {
@@ -296,21 +296,46 @@
   }
 
   function submitForm() {
-    var name = document.getElementById('contact-name').value;
-    var email = document.getElementById('contact-email').value;
-    var message = document.getElementById('contact-message').value;
+    var name = document.getElementById('contact-name').value.trim();
+    var email = document.getElementById('contact-email').value.trim();
+    var message = document.getElementById('contact-message').value.trim();
+    var topic = document.querySelector('.topic-btn.selected');
     if (!name || !email || !message) { alert('Please fill out all fields!'); return; }
-    if (!email.includes('@')) { alert('Please enter a valid email!'); return; }
-    document.getElementById('form-content').style.display = 'none';
-    document.getElementById('success-msg').style.display = 'block';
-  }
+    if (!email.includes('@')) { alert('Please enter a valid email.'); return; }
 
-  function toggleFaq(btn) {
-    var item = btn.parentElement;
-    var isOpen = item.classList.contains('open');
-    document.querySelectorAll('.faq-item').forEach(function(el) { el.classList.remove('open'); });
-    if (!isOpen) item.classList.add('open');
+    var btn = document.querySelector('.btn-submit');
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    // Send via Formspree — free contact form service
+    fetch('https://formspree.io/f/xwkgpqry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        name: name,
+        email: email,
+        topic: topic ? topic.textContent : 'General',
+        message: message
+      })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (data.ok || data.next) {
+        btn.textContent = '✓ Message sent!';
+        btn.style.background = '#38bfa1';
+        document.getElementById('contact-name').value = '';
+        document.getElementById('contact-email').value = '';
+        document.getElementById('contact-message').value = '';
+      } else {
+        throw new Error('Send failed');
+      }
+    })
+    .catch(function() {
+      // Fallback — open email client
+      var subject = encodeURIComponent('[StudyFlow] ' + (topic ? topic.textContent : 'Message'));
+      var body = encodeURIComponent('Name: ' + name + '\n\n' + message);
+      window.open('mailto:support@studyflow.app?subject=' + subject + '&body=' + body);
+      btn.disabled = false;
+      btn.textContent = 'Send message →';
+    });
   }
-</script>
-</body>
-</html>
