@@ -496,7 +496,18 @@
     <button onclick="shareCurrentPlan()" style="font-size:0.82rem;font-weight:600;color:var(--muted);background:none;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .8rem;cursor:pointer;font-family:var(--sans);margin-right:.5rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">🔗 Share</button>
     <a href="https://studyflow-ten-vert.vercel.app/app.html" class="btn-new">+ New plan</a>
     <button class="dark-toggle" onclick="toggleDark()" id="dark-toggle">🌙</button>
-    <div class="nav-avatar" id="user-avatar">E</div>
+    <div class="user-menu-wrap" style="position:relative;">
+      <div class="nav-avatar" id="user-avatar" onclick="toggleUserMenu()" style="cursor:pointer;">E</div>
+      <div id="user-menu" style="display:none;position:absolute;right:0;top:44px;background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:.5rem;min-width:180px;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:300;">
+        <div style="padding:.6rem .9rem;border-bottom:1px solid var(--border);margin-bottom:.3rem;">
+          <div style="font-size:0.82rem;font-weight:700;color:var(--ink);" id="menu-name">Student</div>
+          <div style="font-size:0.72rem;color:var(--muted);" id="menu-email">email@email.com</div>
+          <div style="font-size:0.7rem;font-weight:700;color:var(--blue);margin-top:.2rem;text-transform:uppercase;letter-spacing:.05em;" id="menu-tier">Free plan</div>
+        </div>
+        <a href="https://studyflow-ten-vert.vercel.app/pricing.html" style="display:flex;align-items:center;gap:.6rem;padding:.6rem .9rem;border-radius:10px;text-decoration:none;color:var(--ink);font-size:0.85rem;font-weight:600;transition:background .15s;" onmouseover="this.style.background='var(--soft)'" onmouseout="this.style.background='none'">⚡ Upgrade plan</a>
+        <button onclick="signOut()" style="display:flex;align-items:center;gap:.6rem;width:100%;padding:.6rem .9rem;border-radius:10px;background:none;border:none;color:#ef4444;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:var(--sans);text-align:left;transition:background .15s;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='none'">→ Sign out</button>
+      </div>
+    </div>
   </div>
 </nav>
 
@@ -688,6 +699,26 @@
     }
   }
 
+  function toggleUserMenu() {
+    var menu = document.getElementById('user-menu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  }
+  // Close menu when clicking outside
+  document.addEventListener('click', function(e) {
+    var wrap = document.querySelector('.user-menu-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+      document.getElementById('user-menu').style.display = 'none';
+    }
+  });
+
+  function signOut() {
+    localStorage.removeItem('studyflow_user');
+    localStorage.removeItem('studyflow_plan');
+    localStorage.removeItem('studyflow_plans');
+    localStorage.removeItem('studyflow_active_plan');
+    window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html?signout=1';
+  }
+
   function renderDashboard() {
     try {
     document.getElementById('greeting-time').textContent = getGreeting();
@@ -695,6 +726,11 @@
     var name = user.name || user.email || 'Student';
     document.getElementById('user-name').textContent = name.split(' ')[0];
     document.getElementById('welcome-sub').textContent = 'Your ' + plan.days.length + '-day ' + (plan.subject || 'study') + ' plan is ready.';
+    document.getElementById('user-avatar').textContent = name[0].toUpperCase();
+    // Update user menu
+    document.getElementById('menu-name').textContent = name;
+    document.getElementById('menu-email').textContent = user.email || '';
+    document.getElementById('menu-tier').textContent = (user.tier || 'free').charAt(0).toUpperCase() + (user.tier || 'free').slice(1) + ' plan';
 
     var completed = plan.days.filter(function(d){ return d.completed; }).length;
     var total = plan.days.length;
