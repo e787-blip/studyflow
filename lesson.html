@@ -565,6 +565,11 @@
 
   /* ── INIT ── */
   function init() {
+    // Auth guard
+    if (!localStorage.getItem('studyflow_user')) {
+      window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html';
+      return;
+    }
     var saved = localStorage.getItem('studyflow_plan');
     dayIndex = parseInt(localStorage.getItem('studyflow_current_day') || '0');
     totalMinutes = parseInt(localStorage.getItem('studyflow_minutes') || '30');
