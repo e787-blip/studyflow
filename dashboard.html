@@ -625,6 +625,12 @@
   }
 
   function loadPlan() {
+    // Auth guard
+    if (!localStorage.getItem('studyflow_user')) {
+      window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html';
+      return;
+    }
+
     // Load all plans
     allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
 
