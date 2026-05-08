@@ -1379,13 +1379,20 @@
     counterObserver.observe(counterEl);
   }
 
-  // Teacher nav link — show "For Teachers" or "My Dashboard" based on login state
+  // Smart nav — show correct dashboard based on who is logged in
   (function() {
     var teacher = localStorage.getItem('studyflow_teacher');
+    var student = localStorage.getItem('studyflow_user');
     var navLink = document.getElementById('teacher-nav-link');
+
     if (teacher) {
-      navLink.innerHTML = '<a href="https://studyflow-ten-vert.vercel.app/teacher.html">My Dashboard</a>';
+      // Logged in as teacher
+      navLink.innerHTML = '<a href="https://studyflow-ten-vert.vercel.app/teacher.html" style="font-weight:700;">My Dashboard</a>';
+    } else if (student) {
+      // Logged in as student
+      navLink.innerHTML = '<a href="https://studyflow-ten-vert.vercel.app/dashboard.html" style="font-weight:700;">My Dashboard</a>';
     } else {
+      // Not logged in
       navLink.innerHTML = '<a href="https://studyflow-ten-vert.vercel.app/teacher-login.html">For Teachers</a>';
     }
   })();
