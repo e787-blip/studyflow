@@ -255,6 +255,15 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
+  function smartRedirect() {
+    var plans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+    var oldPlan = localStorage.getItem('studyflow_plan');
+    var hasPlan = plans.length > 0 || oldPlan;
+    window.location.href = hasPlan
+      ? 'https://studyflow-ten-vert.vercel.app/dashboard.html'
+      : 'https://studyflow-ten-vert.vercel.app/app.html';
+  }
+
   // Only redirect if user is already signed in AND they didn't just sign out
   var redirecting = false;
   onAuthStateChanged(auth, function(user) {
@@ -267,7 +276,7 @@
           name: user.displayName || user.email.split('@')[0],
           uid: user.uid
         }));
-        window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
+        smartRedirect();
       }
     }
   });
@@ -307,7 +316,7 @@
           name: cred.user.displayName || email.split('@')[0],
           uid: cred.user.uid
         }));
-        window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
+        smartRedirect();
       })
       .catch(function(err) {
         if (btn) { btn.disabled = false; btn.textContent = 'Sign in →'; }
@@ -348,6 +357,7 @@
             localStorage.setItem('studyflow_class_' + classCode, JSON.stringify(classData));
           }
         }
+        // New users always go to app.html to create first plan
         window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
       })
       .catch(function(err) {
@@ -371,7 +381,7 @@
           uid: cred.user.uid,
           tier: 'free'
         }));
-        window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
+        smartRedirect();
       })
       .catch(function(err) {
         var msg = err.code === 'auth/popup-closed-by-user' ? 'Sign in cancelled.' :
