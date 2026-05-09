@@ -406,142 +406,147 @@
     window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html';
   }
 
+  // Load mammoth.js for DOCX and PDF.js for PDFs
+  (function() {
+    var m = document.createElement('script');
+    m.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+    document.head.appendChild(m);
+    var p = document.createElement('script');
+    p.id = 'pdfjs-script';
+    p.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    document.head.appendChild(p);
+  })();
+
   function handleFile(file) {
     if (!file) return;
     fileContent = '';
     fileReading = true;
-    var statusEl = document.getElementById('file-selected');
-    statusEl.style.display = 'block';
-    statusEl.textContent = 'Reading ' + file.name + '...';
-    statusEl.style.background = '#fff8e0';
-    statusEl.style.color = '#92400e';
-    statusEl.style.borderColor = '#f59e0b';
+    var el = document.getElementById('file-selected');
+    el.style.display = 'block';
+    el.textContent = 'Reading ' + file.name + '...';
+    el.style.background = '#fff8e0';
+    el.style.color = '#92400e';
+    el.style.borderColor = '#f59e0b';
 
     var ext = file.name.split('.').pop().toLowerCase();
 
     if (ext === 'pdf') {
-      // Use PDF.js from unpkg CDN which is more reliable
-      var script = document.getElementById('pdfjs-script');
-      if (!script) {
-        script = document.createElement('script');
-        script.id = 'pdfjs-script';
-        script.src = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js';
-        document.head.appendChild(script);
-      }
-
       var reader = new FileReader();
       reader.onload = function(e) {
-        var tryExtract = function(attempts) {
-          if (attempts <= 0) {
-            // PDF.js failed — extract text directly from raw bytes as fallback
-            extractRawPdfText(e.target.result, file.name);
-            return;
-          }
-          if (!window.pdfjsLib) {
-            setTimeout(function(){ tryExtract(attempts - 1); }, 500);
-            return;
-          }
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-          var loadingTask = window.pdfjsLib.getDocument({ data: new Uint8Array(e.target.result) });
-          loadingTask.promise.then(function(pdf) {
-            var pagePromises = [];
-            for (var i = 1; i <= pdf.numPages; i++) {
-              pagePromises.push(pdf.getPage(i).then(function(page) {
-                return page.getTextContent().then(function(tc) {
-                  return tc.items.map(function(item){ return item.str; }).join(' ');
-                });
-              }));
-            }
-            Promise.all(pagePromises).then(function(pages) {
-              var text = pages.join('\n').replace(/\s+/g, ' ').trim();
-              if (text.length < 50) {
-                // Not enough text — probably a scanned PDF
-                setFileError(file.name, 'This PDF appears to be scanned/image-based. Please paste your notes as text instead.');
-                return;
+        var buf = e.target.result;
+        var tryPDF = function(attempts) {
+          if (attempts <= 0) { extractRawPdfText(buf, file.name); return; }
+          if (!window.pdfjsLib) { setTimeout(function(){ tryPDF(attempts-1); }, 400); return; }
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          window.pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise
+            .then(function(pdf) {
+              var promises = [];
+              for (var i = 1; i <= pdf.numPages; i++) {
+                promises.push(pdf.getPage(i).then(function(page) {
+                  return page.getTextContent().then(function(tc) {
+                    var lines = [];
+                    var lastY = null;
+                    tc.items.forEach(function(item) {
+                      if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) lines.push('\n');
+                      lines.push(item.str);
+                      lastY = item.transform[5];
+                    });
+                    return lines.join(' ');
+                  });
+                }));
               }
+              return Promise.all(promises).then(function(pages) {
+                var text = pages.join('\n').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+                if (text.length < 30) { extractRawPdfText(buf, file.name); return; }
+                fileContent = text;
+                fileReading = false;
+                setFileSuccess(file.name, pdf.numPages + ' page' + (pdf.numPages>1?'s':'') + ' read');
+                if (fileContent.length > 2000) document.getElementById('notes-warning').style.display = 'block';
+              });
+            })
+            .catch(function() { extractRawPdfText(buf, file.name); });
+        };
+        tryPDF(15);
+      };
+      reader.onerror = function() { setFileError(file.name, 'Could not read the file.'); };
+      reader.readAsArrayBuffer(file);
+
+    } else if (ext === 'docx') {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var buf = e.target.result;
+        var tryMammoth = function(attempts) {
+          if (attempts <= 0) { setFileError(file.name, 'Could not read Word file. Please paste your notes as text.'); return; }
+          if (!window.mammoth) { setTimeout(function(){ tryMammoth(attempts-1); }, 400); return; }
+          window.mammoth.extractRawText({ arrayBuffer: buf })
+            .then(function(result) {
+              var text = result.value.replace(/\s+/g, ' ').trim();
+              if (text.length < 30) { setFileError(file.name, 'Word document appears empty. Please paste your notes as text.'); return; }
               fileContent = text;
               fileReading = false;
-              setFileSuccess(file.name, pdf.numPages + ' pages read successfully');
-              if (fileContent.length > 2000) {
-                document.getElementById('notes-warning').style.display = 'block';
-              }
-            });
-          }).catch(function(err) {
-            extractRawPdfText(e.target.result, file.name);
-          });
+              setFileSuccess(file.name, text.length.toLocaleString() + ' chars from Word doc');
+              if (fileContent.length > 2000) document.getElementById('notes-warning').style.display = 'block';
+            })
+            .catch(function() { setFileError(file.name, 'Could not read Word file. Please paste your notes as text instead.'); });
         };
-        tryExtract(10); // Try up to 10 times (5 seconds)
+        tryMammoth(15);
       };
-      reader.onerror = function() { setFileError(file.name, 'Could not read file.'); };
+      reader.onerror = function() { setFileError(file.name, 'Could not read the file.'); };
       reader.readAsArrayBuffer(file);
 
     } else if (ext === 'txt' || ext === 'md') {
       var reader = new FileReader();
       reader.onload = function(e) {
-        fileContent = e.target.result;
-        fileReading = false;
-        setFileSuccess(file.name, fileContent.length.toLocaleString() + ' characters');
-        checkNotesLength({ value: fileContent });
-      };
-      reader.onerror = function(){ setFileError(file.name, 'Could not read file.'); };
-      reader.readAsText(file);
-
-    } else if (ext === 'docx' || ext === 'doc' || ext === 'pptx') {
-      // For Word/PPT — read as text best effort
-      var reader = new FileReader();
-      reader.onload = function(e) {
-        // Extract readable text from binary
-        var text = '';
-        try {
-          var arr = new Uint8Array(e.target.result);
-          var str = '';
-          for (var i = 0; i < arr.length; i++) {
-            if (arr[i] > 31 && arr[i] < 127) str += String.fromCharCode(arr[i]);
-            else if (arr[i] === 10 || arr[i] === 13) str += ' ';
-          }
-          // Extract readable words (4+ chars, mostly letters)
-          var words = str.match(/[A-Za-z]{4,}/g) || [];
-          text = words.join(' ');
-        } catch(e2) {}
-        if (text.length < 100) {
-          setFileError(file.name, 'Could not extract text from this file type. Please paste your notes as text instead.');
-          return;
-        }
+        var text = e.target.result.trim();
+        if (text.length < 10) { setFileError(file.name, 'File appears empty.'); return; }
         fileContent = text;
         fileReading = false;
-        setFileSuccess(file.name, 'File read successfully');
+        setFileSuccess(file.name, text.length.toLocaleString() + ' characters');
+        if (fileContent.length > 2000) document.getElementById('notes-warning').style.display = 'block';
       };
-      reader.readAsArrayBuffer(file);
+      reader.onerror = function() { setFileError(file.name, 'Could not read file.'); };
+      reader.readAsText(file);
+
+    } else if (ext === 'doc') {
+      setFileError(file.name, 'Old .doc format not supported. Save as .docx or paste your notes as text.');
+      fileReading = false;
+    } else if (ext === 'pptx') {
+      setFileError(file.name, 'PowerPoint not supported. Please paste your notes as text instead.');
+      fileReading = false;
     } else {
-      setFileError(file.name, 'Unsupported file type. Please use PDF or paste text directly.');
+      setFileError(file.name, 'Unsupported file type. Please upload PDF, DOCX, or TXT.');
+      fileReading = false;
     }
   }
 
   function extractRawPdfText(arrayBuffer, fileName) {
-    // Fallback: extract raw text strings from PDF binary
     try {
       var arr = new Uint8Array(arrayBuffer);
       var str = '';
       for (var i = 0; i < arr.length; i++) {
         if (arr[i] > 31 && arr[i] < 127) str += String.fromCharCode(arr[i]);
-        else str += ' ';
       }
-      // Extract text between parentheses (PDF text objects)
-      var matches = str.match(/\(([^)]{3,100})\)/g) || [];
-      var text = matches.map(function(m){ return m.slice(1,-1); }).join(' ').replace(/\s+/g,' ').trim();
-      if (text.length > 100) {
+      var matches = str.match(/\(([^\)]{2,200})\)/g) || [];
+      var text = matches
+        .map(function(m){ return m.slice(1,-1).trim(); })
+        .filter(function(s){ return s.length > 2 && /[a-zA-Z]/.test(s); })
+        .join(' ').replace(/\s+/g,' ').trim();
+      if (text.length > 50) {
         fileContent = text;
         fileReading = false;
-        setFileSuccess(fileName, 'PDF text extracted');
+        setFileSuccess(fileName, 'Text extracted (' + text.length.toLocaleString() + ' chars)');
         return;
       }
     } catch(e) {}
-    setFileError(fileName, 'Could not read this PDF. Please paste your notes as text instead.');
+    setFileError(fileName, 'Could not extract text from this PDF. It may be scanned. Please paste your notes as text instead.');
+    fileReading = false;
   }
 
   function setFileSuccess(name, detail) {
+    fileReading = false;
     var el = document.getElementById('file-selected');
-    el.textContent = '✓ ' + name + ' — ' + detail;
+    el.textContent = name + ' — ' + detail;
     el.style.background = '#d1faf0';
     el.style.color = '#1a9e80';
     el.style.borderColor = '#38bfa1';
@@ -551,7 +556,7 @@
     fileReading = false;
     fileContent = '';
     var el = document.getElementById('file-selected');
-    el.textContent = '✕ ' + msg;
+    el.textContent = msg;
     el.style.background = '#fee2e2';
     el.style.color = '#dc2626';
     el.style.borderColor = '#ef4444';
