@@ -407,7 +407,7 @@
     </svg>
   </a>
   <a href="dashboard.html" class="nav-back">← Dashboard</a>
-  <button onclick="toggleDark()" id="dark-toggle" style="background:var(--soft);border:1.5px solid var(--border);border-radius:8px;padding:.35rem .7rem;cursor:pointer;font-size:1rem;transition:all .2s;"">🌙</button>
+  <button onclick="toggleDark()" id="dark-toggle" style="background:var(--soft);border:1.5px solid var(--border);border-radius:8px;padding:.35rem .7rem;cursor:pointer;font-size:1rem;transition:all .2s;"">Dark</button>
 </nav>
 
 <!-- TIME BAR -->
@@ -477,7 +477,7 @@
 <div class="chat-panel" id="chat-panel">
   <div class="chat-header">
     <div style="display:flex;align-items:center;gap:.6rem;">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4a7cf6,#2851c8);display:flex;align-items:center;justify-content:center;font-size:0.9rem;">🧠</div>
+      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4a7cf6,#2851c8);display:flex;align-items:center;justify-content:center;font-size:0.9rem;"></div>
       <div>
         <h4>AI Study Tutor</h4>
         <p style="font-size:0.7rem;color:var(--muted);margin:0;">Ask anything about today's lesson</p>
@@ -489,7 +489,7 @@
     </div>
   </div>
   <div class="chat-messages" id="chat-messages">
-    <div class="chat-msg ai">Hi! I'm your AI tutor for today's session. I know your lesson content and what you've answered so far. Ask me anything — I'll give you a specific, helpful answer. 🎯</div>
+    <div class="chat-msg ai">Hi! I'm your AI tutor for today's session. I know your lesson content and what you've answered so far. Ask me anything — I'll give you a specific, helpful answer. </div>
   </div>
   <div class="chat-input-row">
     <input class="chat-input" id="chat-input" placeholder="Ask a question..." onkeydown="if(event.key==='Enter')sendChat()" />
@@ -774,7 +774,7 @@
 
     if (card.type === 'pretest-intro') {
       html = buildCard('Quick Check', 'Before we start — test yourself!', false,
-        '<p class="content-text" style="text-align:center;">We\'re going to show you 3 questions <strong>before</strong> the lesson. Don\'t worry if you don\'t know the answers — this actually helps you learn better. It\'s backed by science! 🧠</p>',
+        '<p class="content-text" style="text-align:center;">We\'re going to show you 3 questions <strong>before</strong> the lesson. Don\'t worry if you don\'t know the answers — this actually helps you learn better. It\'s backed by science! </p>',
         'Takes 2 minutes', 'Let\'s try →', false);
     }
     else if (card.type === 'pretest-done') {
@@ -783,7 +783,7 @@
         '', 'Start the lesson →', false);
     }
     else if (card.type === 'review-intro') {
-      html = buildCard('📋 Quick Review', 'From yesterday\'s session', false,
+      html = buildCard(' Quick Review', 'From yesterday\'s session', false,
         '<p class="content-text" style="text-align:center;">You missed <strong>' + card.count + ' question' + (card.count > 1 ? 's' : '') + '</strong> last session. Let\'s try them again before today\'s new material — this is spaced repetition in action!</p>',
         'Science-backed review', 'Let\'s review →', false);
     }
@@ -793,18 +793,18 @@
         '', 'Continue →', false);
     }
     else if (card.type === 'interleave-intro') {
-      html = buildCard('🔀 Mixed Review', 'Questions from all your previous days', false,
+      html = buildCard(' Mixed Review', 'Questions from all your previous days', false,
         '<p class="content-text" style="text-align:center;">Today is an <strong>interleaved review day</strong>. Research shows mixing questions from different days is one of the most powerful ways to build lasting memory. You\'ll see ' + card.count + ' questions from earlier sessions.</p>',
         'Science-backed technique', 'Let\'s mix it up →', false);
     }
     else if (card.type === 'elaboration') {
       var q = card.q;
-      html = buildCard('💭 Think Deeper', 'Elaborative Interrogation', false,
+      html = buildCard(' Think Deeper', 'Elaborative Interrogation', false,
         '<p class="content-text" style="margin-bottom:1rem;"><strong>You just answered this question:</strong></p>' +
         '<p class="content-text" style="background:var(--soft);padding:.75rem;border-radius:10px;font-style:italic;margin-bottom:1rem;">"' + q.question + '"</p>' +
         '<p class="content-text"><strong>Now ask yourself: WHY is this true?</strong></p>' +
         '<p class="content-text" style="margin-top:.5rem;color:var(--muted);font-size:0.88rem;">Research shows that asking "why" forces deeper processing and doubles retention. Take 10 seconds and think about the reason before moving on.</p>' +
-        '<div style="margin-top:1rem;padding:.75rem 1rem;background:var(--blue-light);border-radius:10px;font-size:0.88rem;color:var(--blue);">💡 ' + (q.explanation || 'Think about the underlying concept.') + '</div>',
+        '<div style="margin-top:1rem;padding:.75rem 1rem;background:var(--blue-light);border-radius:10px;font-size:0.88rem;color:var(--blue);"> ' + (q.explanation || 'Think about the underlying concept.') + '</div>',
         'Takes 10 seconds', 'Got it →', false);
     }
     else if (card.type === 'welcome') {
@@ -839,7 +839,7 @@
         html = html.replace(/(<div class="card-tag"[^>]*>)[^<]*/,'$1🔁 Try again');
       } else if (card.isReview) {
         html = html.replace('class="card-tag"', 'class="card-tag" style="background:#dce8ff;color:#2851c8;border-color:#4a7cf6;"');
-        html = html.replace(/(<div class="card-tag"[^>]*>)[^<]*/,'$1📋 Review');
+        html = html.replace(/(<div class="card-tag"[^>]*>)[^<]*/,'$1 Review');
       }
     }
     else if (card.type === 'fill') {
@@ -924,7 +924,7 @@
       return '<div class="session-card">' +
         '<div class="card-header"><div class="card-badge">✦ Pro Feature</div><h2>Fill in the Blank</h2></div>' +
         '<div class="card-body" style="text-align:center;padding:2rem 1rem;">' +
-        '<div style="font-size:3rem;margin-bottom:1rem;">⚡</div>' +
+        '<div style="font-size:3rem;margin-bottom:1rem;"></div>' +
         '<h3 style="font-family:var(--serif);font-size:1.3rem;margin-bottom:.5rem;">Unlock Fill in the Blank</h3>' +
         '<p style="color:var(--muted);font-size:0.88rem;margin-bottom:1.5rem;">Fill-in-the-blank is proven to be more effective than MCQ for long-term retention. Upgrade to Pro to unlock it.</p>' +
         '<a href="https://studyflow-ten-vert.vercel.app/pricing.html" style="display:inline-block;background:var(--blue);color:#fff;padding:.85rem 1.8rem;border-radius:12px;font-weight:700;font-size:0.92rem;text-decoration:none;">Upgrade to Pro →</a>' +
@@ -961,7 +961,7 @@
     return '<div class="session-card">' +
       '<div class="card-header"><div class="card-badge">✦ Fill in the Blank</div><h2>Complete the sentence</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
-      '<div class="card-footer"><span class="footer-left">⚡ Pro feature</span>' +
+      '<div class="card-footer"><span class="footer-left"> Pro feature</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
@@ -969,7 +969,7 @@
     var body = '<div class="q-meta"><span class="q-type-label write">Feynman Technique</span><span class="q-difficulty medium">Deep Learning</span></div>' +
       '<div class="q-text">Explain this concept <strong>in your own words</strong>, as if teaching it to a friend who has never heard of it:</div>' +
       '<div style="background:var(--blue-light);border-radius:10px;padding:.75rem 1rem;margin:.5rem 0 .75rem;font-size:0.88rem;color:var(--blue);font-weight:600;">' + q.question + '</div>' +
-      '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:.5rem;">💡 Research shows explaining concepts in your own words doubles retention. Don\'t look at your notes — just write what you know.</div>' +
+      '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:.5rem;"> Research shows explaining concepts in your own words doubles retention. Don\'t look at your notes — just write what you know.</div>' +
       '<textarea class="write-area" id="write-input" placeholder="Write your explanation here. The more specific the better — include examples, causes, effects, dates, names..."></textarea>' +
       '<div style="display:flex;align-items:center;gap:.75rem;margin-top:.65rem;">' +
       '<button class="write-submit" onclick="submitWrite(\'' + esc(q.explanation) + '\',\'' + esc(q.question) + '\')">Get AI feedback →</button>' +
@@ -1046,7 +1046,7 @@
     } else {
       fb.innerHTML = '<div class="feedback-label">✗ Not yet — keep going</div>' +
         '<div class="feedback-text">The correct answer is: <strong>' + correct + '</strong>. ' + (explanation || '') + '</div>' +
-        '<div class="feedback-growth">Fill-in-the-blank is harder than MCQ — that\'s the point. The struggle builds stronger memory. 🧠</div>';
+        '<div class="feedback-growth">Fill-in-the-blank is harder than MCQ — that\'s the point. The struggle builds stronger memory. </div>';
     }
 
     handleResult(isCorrect, explanation, null);
@@ -1119,10 +1119,10 @@
     // Metacognition insight — was their confidence calibrated?
     var metaMsg = '';
     if (currentConfidence) {
-      if (isCorrect && currentConfidence === 'sure') metaMsg = '<div class="meta-insight sure-right">Well calibrated — you knew it and got it! 🎯</div>';
+      if (isCorrect && currentConfidence === 'sure') metaMsg = '<div class="meta-insight sure-right">Well calibrated — you knew it and got it! </div>';
       else if (isCorrect && currentConfidence === 'unsure') metaMsg = '<div class="meta-insight unsure-right">You knew more than you thought! Trust yourself more. 💪</div>';
       else if (!isCorrect && currentConfidence === 'sure') metaMsg = '<div class="meta-insight sure-wrong">You were confident but missed it — pay extra attention to this concept. ⚠️</div>';
-      else if (!isCorrect && currentConfidence === 'unsure') metaMsg = '<div class="meta-insight unsure-wrong">You sensed you weren\'t sure — good self-awareness. Focus on this one. 📌</div>';
+      else if (!isCorrect && currentConfidence === 'unsure') metaMsg = '<div class="meta-insight unsure-wrong">You sensed you weren\'t sure — good self-awareness. Focus on this one. </div>';
       currentConfidence = null;
     }
 
@@ -1131,7 +1131,7 @@
     fb.innerHTML = metaMsg +
       '<div class="feedback-label">' + (isCorrect ? '✓ Correct!' : '✗ Not yet — keep going') + '</div>' +
       '<div class="feedback-text">' + (explanation || (isCorrect ? 'Great work — your brain just built a stronger connection!' : 'Review this concept and you\'ll get it next time.')) + '</div>' +
-      (isCorrect ? '' : '<div class="feedback-growth">Mistakes are how your brain grows. Every wrong answer = stronger memory when you get it right. 🧠</div>');
+      (isCorrect ? '' : '<div class="feedback-growth">Mistakes are how your brain grows. Every wrong answer = stronger memory when you get it right. </div>');
   }
 
   function flashCard(correct) {
@@ -1174,11 +1174,11 @@
         .replace(/SCORE:[^\n]*/i, '')
         .replace(/WHAT YOU NAILED:/gi, '<div style="font-weight:700;color:#38bfa1;margin-top:.75rem;">✓ What you nailed</div>')
         .replace(/KNOWLEDGE GAPS:/gi, '<div style="font-weight:700;color:#ef4444;margin-top:.75rem;">✗ Knowledge gaps</div>')
-        .replace(/ADVICE:/gi, '<div style="font-weight:700;color:#4a7cf6;margin-top:.75rem;">💡 To improve</div>');
+        .replace(/ADVICE:/gi, '<div style="font-weight:700;color:#4a7cf6;margin-top:.75rem;"> To improve</div>');
 
       var fb = document.getElementById('feedback-box');
       fb.className = 'feedback-box info-fb show';
-      fb.innerHTML = '<div class="feedback-label">🧠 Feynman Analysis</div>' +
+      fb.innerHTML = '<div class="feedback-label"> Feynman Analysis</div>' +
         scoreHtml +
         '<div class="feedback-text">' + formatted + '</div>' +
         '<div style="margin-top:1rem;padding:.75rem;background:var(--soft);border-radius:10px;font-size:0.82rem;color:var(--muted);">' +
@@ -1338,7 +1338,7 @@
 
   function clearChat() {
     chatHistory = [];
-    document.getElementById('chat-messages').innerHTML = '<div class="chat-msg ai">Chat cleared! Ask me anything about today\'s lesson. 🎯</div>';
+    document.getElementById('chat-messages').innerHTML = '<div class="chat-msg ai">Chat cleared! Ask me anything about today\'s lesson. </div>';
   }
 
   function sendChat() {
@@ -1454,7 +1454,7 @@
 
     // TIER 2: Sleep tip — neuroscience backed
     var sleepTip = '<div style="background:linear-gradient(135deg,#1a1d2e,#2851c8);border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.5rem;color:#fff;">' +
-      '<div style="font-size:0.88rem;font-weight:700;margin-bottom:.3rem;">🧠 Science tip for tonight</div>' +
+      '<div style="font-size:0.88rem;font-weight:700;margin-bottom:.3rem;"> Science tip for tonight</div>' +
       '<div style="font-size:0.82rem;opacity:.85;line-height:1.6;">Your hippocampus will replay everything you just learned during sleep tonight, transferring it into long-term memory. Don\'t cram more — let your brain do its job.</div>' +
       '</div>';
 
@@ -1462,7 +1462,7 @@
     var studyHistory = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
     var socialProof = '';
     if (studyHistory.length > 0) {
-      socialProof = '<div style="font-size:0.78rem;color:var(--muted);text-align:center;margin-bottom:1rem;">🔥 You\'ve studied ' + studyHistory.length + ' day' + (studyHistory.length>1?'s':'') + ' in a row — your brain is building stronger connections every session.</div>';
+      socialProof = '<div style="font-size:0.78rem;color:var(--muted);text-align:center;margin-bottom:1rem;"> You\'ve studied ' + studyHistory.length + ' day' + (studyHistory.length>1?'s':'') + ' in a row — your brain is building stronger connections every session.</div>';
     }
 
     document.getElementById('results-wrap').innerHTML =
@@ -1518,7 +1518,7 @@
     // TIER 3: Dual coding — render [DIAGRAM: description] tags as visual callout boxes
     content = content.replace(/\[DIAGRAM:\s*([^\]]+)\]/g, function(match, desc) {
       return '</p><div style="margin:.75rem 0;padding:.9rem 1rem;background:linear-gradient(135deg,var(--blue-light),#f0f4ff);border-left:3px solid var(--blue);border-radius:0 10px 10px 0;font-size:0.85rem;color:var(--blue);">' +
-        '<div style="font-weight:700;margin-bottom:.3rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:.06em;">📊 Visual Aid</div>' +
+        '<div style="font-weight:700;margin-bottom:.3rem;font-size:0.75rem;text-transform:uppercase;letter-spacing:.06em;"> Visual Aid</div>' +
         '<div>' + desc.trim() + '</div>' +
         '</div><p>';
     });
@@ -1530,7 +1530,7 @@
   function toggleDark() {
     var isDark = document.body.classList.toggle('dark');
     localStorage.setItem('studyflow_dark', isDark ? '1' : '0');
-    document.getElementById('dark-toggle').textContent = isDark ? '☀️' : '🌙';
+    document.getElementById('dark-toggle').textContent = isDark ? 'Light' : 'Dark';
   }
   if (localStorage.getItem('studyflow_dark') === '1') {
     document.body.classList.add('dark');
