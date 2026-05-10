@@ -121,7 +121,7 @@
     if (accounts[email].password !== password) { showMsg('login-msg','error','Incorrect password.'); return; }
     localStorage.setItem('studyflow_teacher', JSON.stringify(accounts[email]));
     showMsg('login-msg','success','Signing you in...');
-    setTimeout(function(){ window.location.href='teacher.html'; }, 800);
+    setTimeout(function(){ window.location.href='https://studyflow-ten-vert.vercel.app/teacher.html'; }, 800);
   }
 
   function handleSignup() {
@@ -130,25 +130,30 @@
     var school = document.getElementById('signup-school').value.trim();
     var password = document.getElementById('signup-password').value;
     if (!name || !email || !school || !password) { showMsg('signup-msg','error','Please fill in all fields.'); return; }
-    if (password.length < 8) { showMsg('signup-msg','error','Password must be at least 8 characters.'); return; }
+    if (password.length < 6) { showMsg('signup-msg','error','Password must be at least 6 characters.'); return; }
     var accounts = JSON.parse(localStorage.getItem('studyflow_teacher_accounts') || '{}');
     if (accounts[email]) { showMsg('signup-msg','error','Account already exists. Please sign in.'); return; }
     var classCode = 'SF-' + Math.random().toString(36).substring(2,6).toUpperCase();
-    var teacher = { name:name, email:email, school:school, password:password, classCode:classCode };
+    var teacher = { name:name, email:email, school:school, password:password, classCode:classCode, plan:'free' };
     accounts[email] = teacher;
     localStorage.setItem('studyflow_teacher_accounts', JSON.stringify(accounts));
     localStorage.setItem('studyflow_teacher', JSON.stringify(teacher));
-    showMsg('signup-msg','success','Classroom created! Taking you to your dashboard...');
-    setTimeout(function(){ window.location.href='teacher.html'; }, 900);
+    // Initialize empty class
+    localStorage.setItem('studyflow_class_' + classCode, JSON.stringify({ students: [], classCode: classCode }));
+    showMsg('signup-msg','success','Classroom created! Your class code is ' + classCode);
+    setTimeout(function(){ window.location.href='https://studyflow-ten-vert.vercel.app/teacher.html'; }, 1200);
   }
 
   function showMsg(id, type, text) {
     var el = document.getElementById(id);
+    if (!el) return;
     el.className = 'msg-box ' + type;
     el.textContent = text;
   }
 
-  if (localStorage.getItem('studyflow_teacher')) window.location.href = 'teacher.html';
+  if (localStorage.getItem('studyflow_teacher')) {
+    window.location.href = 'https://studyflow-ten-vert.vercel.app/teacher.html';
+  }
 </script>
 </body>
 </html>
