@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
+<link rel="icon" type="image/png" href="/favicon.png"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>StudyFlow — Teacher Dashboard</title>
-<link rel="icon" type="image/png" href="/studyflow/favicon.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
 <style>
@@ -384,16 +384,66 @@
   }
 
   function renderInsights() {
-    // Activity chart — last 7 days
+    var students = classData.students || [];
+    var hasData = students.some(function(s){ return s.avgScore; });
+
+    // Score distribution
+    var scoreDistHtml = '';
+    if (hasData) {
+      var high = students.filter(function(s){ return s.avgScore >= 80; }).length;
+      var mid = students.filter(function(s){ return s.avgScore >= 60 && s.avgScore < 80; }).length;
+      var low = students.filter(function(s){ return s.avgScore && s.avgScore < 60; }).length;
+      var none = students.filter(function(s){ return !s.avgScore; }).length;
+      var total = students.length || 1;
+      [
+        { label: 'Excellent (80%+)', count: high, color: 'var(--green)' },
+        { label: 'Good (60-79%)', count: mid, color: 'var(--blue)' },
+        { label: 'Needs help (<60%)', count: low, color: 'var(--red)' },
+        { label: 'Not started', count: none, color: 'var(--border)' }
+      ].forEach(function(item) {
+        var pct = Math.round((item.count / total) * 100);
+        scoreDistHtml += '<div class="topic-bar"><div class="topic-bar-label"><span>' + item.label + '</span><span>' + item.count + '</span></div>' +
+          '<div class="topic-bar-track"><div class="topic-bar-fill" style="width:' + pct + '%;background:' + item.color + '"></div></div></div>';
+      });
+    } else {
+      scoreDistHtml = '<div class="empty-state"><p>Score data will appear once students complete sessions.</p></div>';
+    }
+    document.getElementById('score-dist').innerHTML = scoreDistHtml;
+
+    // Top performers
+    var topHtml = '';
+    if (students.length > 0) {
+      var sorted = students.slice().sort(function(a,b){ return (b.avgScore||0)-(a.avgScore||0); });
+      topHtml = sorted.slice(0,5).map(function(s,i){
+        return '<div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;border-bottom:1px solid var(--border);">' +
+          '<div style="font-size:0.8rem;font-weight:700;color:var(--muted);width:20px;">' + (i+1) + '</div>' +
+          '<div style="flex:1;font-size:0.88rem;font-weight:600;">' + s.name + '</div>' +
+          '<div style="font-size:0.85rem;font-weight:700;color:var(--blue);">' + (s.avgScore ? s.avgScore + '%' : '—') + '</div>' +
+          '</div>';
+      }).join('');
+    } else {
+      topHtml = '<div class="empty-state"><p>Rankings appear once students start scoring.</p></div>';
+    }
+    document.getElementById('top-performers').innerHTML = topHtml;
+
+    // Activity chart
     var days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-    var html = '';
-    days.forEach(function(d, i) {
-      var h = Math.round(Math.random() * 60 + 10);
-      html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:.3rem;">' +
-        '<div style="width:100%;height:' + h + 'px;background:var(--blue-light);border-radius:4px 4px 0 0;"></div>' +
+    var activityHtml = '';
+    days.forEach(function(d) {
+      var active = students.filter(function(s){
+        if (!s.lastActive) return false;
+        return new Date(s.lastActive).toLocaleDateString('en-US',{weekday:'short'}) === d;
+      }).length;
+      var h = students.length > 0 ? Math.round((active / students.length) * 60) + 10 : 10;
+      activityHtml += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:.3rem;">' +
+        (active > 0 ? '<div style="font-size:0.7rem;font-weight:700;color:var(--blue);">' + active + '</div>' : '<div style="font-size:0.7rem;color:transparent;">0</div>') +
+        '<div style="width:100%;height:' + h + 'px;background:' + (active>0?'var(--blue)':'var(--soft)') + ';border-radius:4px 4px 0 0;opacity:' + (active>0?'1':'0.4') + ';"></div>' +
         '<div style="font-size:0.62rem;color:var(--muted);">' + d + '</div></div>';
     });
-    document.getElementById('activity-chart').innerHTML = html;
+    document.getElementById('activity-chart').innerHTML = activityHtml;
+
+    // Struggle topics
+    document.getElementById('struggle-topics').innerHTML = '<div class="empty-state"><p>Struggle data appears after students complete sessions with missed questions.</p></div>';
   }
 
   var currentSort = 'streak';
