@@ -278,6 +278,30 @@
   .onboard-dot.active { background:var(--blue); }
 </style>
 
+<!-- UPGRADE MODAL -->
+<div id="upgrade-modal" style="display:none;position:fixed;inset:0;background:rgba(26,29,46,.6);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:24px;padding:2rem;max-width:380px;width:90%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.2);animation:fadeUp .4s cubic-bezier(0.16,1,.3,1) both;">
+    <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#4a7cf6,#2851c8);margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    </div>
+    <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:.4rem;" id="upgrade-modal-days">X days until exam</div>
+    <h2 style="font-family:var(--serif);font-size:1.4rem;letter-spacing:-0.02em;margin-bottom:.5rem;">Unlock more days</h2>
+    <p style="color:var(--muted);font-size:0.88rem;line-height:1.6;margin-bottom:1.5rem;" id="upgrade-modal-msg">Upgrade to get more days.</p>
+    <div style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.2rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:var(--blue-light);border-radius:12px;border:1.5px solid var(--blue);">
+        <div style="text-align:left;"><div style="font-weight:700;font-size:0.9rem;color:var(--ink);">Pro Plan</div><div style="font-size:0.75rem;color:var(--muted);">Up to 14-day plans</div></div>
+        <div style="font-weight:800;color:var(--blue);">$7.99<span style="font-size:0.7rem;font-weight:400;">/mo</span></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:#f5f0ff;border-radius:12px;border:1.5px solid #8b5cf6;">
+        <div style="text-align:left;"><div style="font-weight:700;font-size:0.9rem;color:var(--ink);">VIP Plan</div><div style="font-size:0.75rem;color:var(--muted);">Unlimited days + AI chat</div></div>
+        <div style="font-weight:800;color:#8b5cf6;">$14.99<span style="font-size:0.7rem;font-weight:400;">/mo</span></div>
+      </div>
+    </div>
+    <a href="https://studyflow-ten-vert.vercel.app/pricing.html" style="display:block;background:var(--blue);color:#fff;padding:.9rem;border-radius:12px;font-weight:700;font-size:0.95rem;text-decoration:none;margin-bottom:.6rem;box-shadow:0 4px 14px rgba(74,124,246,.3);">Upgrade now →</a>
+    <button onclick="closeUpgradeModal()" style="background:none;border:none;color:var(--muted);font-size:0.85rem;cursor:pointer;font-family:var(--sans);">Continue with 7-day plan</button>
+  </div>
+</div>
+
 <div class="app-container">
   <div class="app-header">
     <div class="app-header-badge">✦ AI-Powered</div>
@@ -380,6 +404,24 @@
   });
 
   // ONBOARDING — show for first time users
+  // Upgrade modal
+  var pendingGenerateArgs = null;
+
+  document.getElementById('upgrade-modal').style.cssText = 'display:none;position:fixed;inset:0;background:rgba(26,29,46,.6);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;';
+
+  function showUpgradeModal(msg, days) {
+    document.getElementById('upgrade-modal-msg').textContent = msg;
+    document.getElementById('upgrade-modal-days').textContent = days;
+    document.getElementById('upgrade-modal').style.display = 'flex';
+  }
+
+  function closeUpgradeModal() {
+    document.getElementById('upgrade-modal').style.display = 'none';
+    var notes = fileContent || document.getElementById('notes-input').value.trim();
+    var deadline = document.getElementById('deadline-input') ? document.getElementById('deadline-input').value : '';
+    startGeneration(notes, 7, deadline);
+  }
+
   function showOnboarding() {
     var seen = localStorage.getItem('studyflow_onboarded');
     if (!seen) {
@@ -638,19 +680,34 @@
     if (!notes.trim()) { alert('Please upload a file or paste your notes!'); goToStep(1); return; }
     var deadline = document.getElementById('deadline-input').value;
     if (!deadline) { alert('Please enter your exam date!'); return; }
-    var subject = 'auto-detect from notes';
-
-    document.querySelectorAll('.card').forEach(function(c) { c.classList.remove('active'); });
-    document.getElementById('loading').classList.add('active');
-    updateDots(3);
 
     var maxDays = userPlan === 'vip' ? 999 : (userPlan === 'pro' ? 14 : 7);
-
     var numDays = 7;
     if (deadline) {
       var daysLeft = Math.ceil((new Date(deadline) - new Date()) / 86400000);
-      numDays = Math.min(Math.min(maxDays, 7), Math.max(1, daysLeft));
+      numDays = Math.min(maxDays, Math.max(1, daysLeft));
+    } else {
+      numDays = Math.min(maxDays, 7);
     }
+
+    // Show upgrade modal if free user has exam more than 7 days away
+    if (userPlan === 'free' && deadline) {
+      var daysLeft2 = Math.ceil((new Date(deadline) - new Date()) / 86400000);
+      if (daysLeft2 > 7) {
+        document.getElementById('upgrade-modal').style.display = 'flex';
+        document.getElementById('upgrade-modal-msg').textContent = 'Your exam is ' + daysLeft2 + ' days away but free plans are capped at 7 days. Upgrade to Pro for 14-day plans or VIP for unlimited.';
+        document.getElementById('upgrade-modal-days').textContent = daysLeft2 + ' days until your exam';
+        return;
+      }
+    }
+
+    startGeneration(notes, numDays, deadline);
+  }
+
+  function startGeneration(notes, numDays, deadline) {
+    document.querySelectorAll('.card').forEach(function(c) { c.classList.remove('active'); });
+    document.getElementById('loading').classList.add('active');
+    updateDots(3);
 
     var allDays = [];
     var notesShort = notes.substring(0, 400);
@@ -758,7 +815,7 @@
             localStorage.removeItem('studyflow_timer_day');
             localStorage.removeItem('studyflow_minutes');
             localStorage.setItem('studyflow_current_day', '0');
-            window.location.href = 'dashboard.html';
+            window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html';
           }
         });
       }
