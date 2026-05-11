@@ -9,27 +9,32 @@ module.exports = async function handler(req, res) {
   if (!messages || !messages.length) return res.status(400).json({ error: 'No messages' });
 
   try {
-    // Build a rich system prompt from context
+    const c = context || {};
+    
     const systemPrompt = [
-      'You are an expert AI study tutor built into StudyFlow.',
-      context.subject ? 'Subject: ' + context.subject + '.' : '',
-      context.lessonTitle ? 'Today\'s lesson: ' + context.lessonTitle + '.' : '',
-      context.lessonContent ? 'Lesson content: ' + context.lessonContent.substring(0, 400) + '.' : '',
-      context.missedQuestions && context.missedQuestions.length ?
-        'Student has struggled with: ' + context.missedQuestions.slice(0,3).join('; ') + '.' : '',
-      context.accuracy !== undefined ?
-        'Current session accuracy: ' + context.accuracy + '%.' : '',
-      context.currentQuestion ?
-        'Current question student is on: ' + context.currentQuestion + '.' : '',
+      'You are an expert AI study tutor built into StudyFlow. You are helping a student during a live study session.',
       '',
-      'YOUR RULES:',
-      '- Answer in 2-4 sentences. Be specific and reference actual lesson content.',
-      '- Never be generic. Always tie your answer to the subject being studied.',
-      '- If the student seems confused, break it down step by step.',
-      '- If they ask something unrelated to studying, gently redirect.',
-      '- Use encouraging, friendly language. You are their personal tutor.',
-      '- For math/science, show the working/formula when relevant.',
-    ].filter(Boolean).join(' ');
+      '=== SESSION CONTEXT ===',
+      c.subject ? `Subject: ${c.subject}` : '',
+      c.lessonTitle ? `Today's lesson: ${c.lessonTitle}` : '',
+      c.lessonContent ? `Lesson content: ${c.lessonContent.substring(0, 500)}` : '',
+      c.currentQuestion ? `Current question student is on: "${c.currentQuestion}"` : '',
+      c.accuracy !== null && c.accuracy !== undefined ? `Session accuracy so far: ${c.accuracy}%` : '',
+      c.missedQuestions && c.missedQuestions.length > 0 ? `Questions student has gotten wrong: ${c.missedQuestions.slice(0,3).join(' | ')}` : '',
+      c.correctCount !== undefined ? `Correct answers: ${c.correctCount}` : '',
+      '',
+      '=== YOUR RULES ===',
+      '1. Be specific — always reference the actual lesson content. Never give generic answers.',
+      '2. Keep responses to 2-4 sentences. Be clear and direct.',
+      '3. If a student is struggling (accuracy < 60%), be extra encouraging and break things down simply.',
+      '4. If they ask about a concept from the notes, explain it using the exact terms from the lesson.',
+      '5. For math/science, show the formula or working when relevant.',
+      '6. If they ask something unrelated to studying, briefly answer but redirect back to the lesson.',
+      '7. Never say "I don\'t know" — always try to help based on the context provided.',
+      '8. Use "you" not "one" — be warm and personal.',
+      '9. If accuracy is high (80%+), give brief praise then answer.',
+      '10. End responses with a quick encouraging note when appropriate.',
+    ].filter(Boolean).join('\n');
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -40,15 +45,15 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 300,
+        max_tokens: 350,
         system: systemPrompt,
-        messages: messages // Full conversation history
+        messages: messages.slice(-10) // Keep last 10 messages for context
       })
     });
 
     const data = await response.json();
     if (!data.content || !data.content[0]) {
-      return res.status(500).json({ error: 'No response', raw: data });
+      return res.status(500).json({ error: 'No response from Claude', raw: data });
     }
     return res.status(200).json({ reply: data.content[0].text });
   } catch (err) {
