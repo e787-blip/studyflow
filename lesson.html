@@ -390,7 +390,7 @@
 </div>
 
 <nav>
-  <a href="dashboard.html" class="logo">
+  <a href="https://studyflow-ten-vert.vercel.app/dashboard.html" class="logo">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="120" height="30">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
       <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
@@ -406,7 +406,7 @@
       </text>
     </svg>
   </a>
-  <a href="dashboard.html" class="nav-back">← Dashboard</a>
+  <a href="https://studyflow-ten-vert.vercel.app/dashboard.html" class="nav-back">← Dashboard</a>
   <button onclick="toggleDark()" id="dark-toggle" style="background:var(--soft);border:1.5px solid var(--border);border-radius:8px;padding:.35rem .7rem;cursor:pointer;font-size:1rem;transition:all .2s;"">Dark</button>
 </nav>
 
@@ -473,27 +473,49 @@
 </div>
 
 <!-- VIP AI CHAT -->
-<button class="chat-fab" id="chat-fab" onclick="toggleChat()">💬</button>
+<button class="chat-fab" id="chat-fab" onclick="toggleChat()" title="AI Study Tutor (VIP)">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="28" height="28">
+    <rect x="5" y="5" width="17" height="22" rx="3" fill="rgba(255,255,255,0.25)"/>
+    <rect x="8" y="5" width="17" height="22" rx="3" fill="rgba(255,255,255,0.4)"/>
+    <rect x="11" y="5" width="17" height="22" rx="3" fill="white"/>
+    <rect x="14" y="11" width="11" height="2" rx="1" fill="#4a7cf6"/>
+    <rect x="14" y="16" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
+    <rect x="14" y="21" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
+    <path d="M30 3 L31.2 7 L35 8.5 L31.2 10 L30 14 L28.8 10 L25 8.5 L28.8 7 Z" fill="white"/>
+  </svg>
+</button>
 <div class="chat-panel" id="chat-panel">
   <div class="chat-header">
-    <div style="display:flex;align-items:center;gap:.6rem;">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4a7cf6,#2851c8);display:flex;align-items:center;justify-content:center;font-size:0.9rem;"></div>
+    <div style="display:flex;align-items:center;gap:.75rem;">
+      <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="22" height="22">
+          <rect x="5" y="5" width="17" height="22" rx="3" fill="rgba(255,255,255,0.3)"/>
+          <rect x="8" y="5" width="17" height="22" rx="3" fill="rgba(255,255,255,0.5)"/>
+          <rect x="11" y="5" width="17" height="22" rx="3" fill="white"/>
+          <rect x="14" y="11" width="11" height="2" rx="1" fill="#4a7cf6"/>
+          <rect x="14" y="16" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
+          <rect x="14" y="21" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
+          <path d="M30 3 L31.2 7 L35 8.5 L31.2 10 L30 14 L28.8 10 L25 8.5 L28.8 7 Z" fill="white"/>
+        </svg>
+      </div>
       <div>
-        <h4>AI Study Tutor</h4>
-        <p style="font-size:0.7rem;color:var(--muted);margin:0;">Ask anything about today's lesson</p>
+        <h4 style="color:#fff;font-size:0.9rem;font-weight:700;margin:0;">AI Study Tutor</h4>
+        <p style="color:rgba(255,255,255,.7);font-size:0.7rem;margin:0;">Ask anything about today's lesson</p>
       </div>
     </div>
-    <div style="display:flex;gap:.5rem;align-items:center;">
-      <button onclick="clearChat()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.75rem;font-family:var(--sans);">Clear</button>
+    <div style="display:flex;gap:.4rem;align-items:center;">
+      <button onclick="clearChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;cursor:pointer;font-size:0.72rem;font-family:var(--sans);font-weight:600;padding:.3rem .6rem;border-radius:6px;transition:background .2s;" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">Clear</button>
       <button class="chat-close" onclick="toggleChat()">×</button>
     </div>
   </div>
   <div class="chat-messages" id="chat-messages">
-    <div class="chat-msg ai">Hi! I'm your AI tutor for today's session. I know your lesson content and what you've answered so far. Ask me anything — I'll give you a specific, helpful answer. </div>
+    <div class="chat-msg ai">Hi! I'm your personal AI tutor for this session. I know your lesson content and can see what you've gotten right or wrong. Ask me anything.</div>
   </div>
   <div class="chat-input-row">
-    <input class="chat-input" id="chat-input" placeholder="Ask a question..." onkeydown="if(event.key==='Enter')sendChat()" />
-    <button class="chat-send" onclick="sendChat()">→</button>
+    <input class="chat-input" id="chat-input" placeholder="Ask about today's lesson..." onkeydown="if(event.key==='Enter')sendChat()" />
+    <button class="chat-send" onclick="sendChat()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
   </div>
 </div>
 
@@ -1356,6 +1378,7 @@
       lessonContent: day.content || '',
       missedQuestions: wrongItems.map(function(w){ return w.q ? w.q.question : ''; }).filter(Boolean),
       accuracy: totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : null,
+      correctCount: correctCount,
       currentQuestion: sessionCards[cardIndex] && sessionCards[cardIndex].q ? sessionCards[cardIndex].q.question : null
     };
 
@@ -1483,6 +1506,30 @@
     plan.days[dayIndex].completed = true;
     plan.days[dayIndex].score = pct;
     localStorage.setItem('studyflow_plan', JSON.stringify(plan));
+
+    // TEACHER DATA SYNC — update student stats in class
+    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    if (user.classCode) {
+      var classKey = 'studyflow_class_' + user.classCode;
+      var classData = JSON.parse(localStorage.getItem(classKey) || '{"students":[]}');
+      var student = classData.students.find(function(s){ return s.email === user.email; });
+      if (student) {
+        // Update streak
+        var history = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
+        student.streak = history.length;
+        // Update avg score
+        var allScores = plan.days.filter(function(d){ return d.score; }).map(function(d){ return d.score; });
+        student.avgScore = allScores.length ? Math.round(allScores.reduce(function(a,b){ return a+b; },0)/allScores.length) : null;
+        // Update questions answered
+        student.questionsAnswered = (student.questionsAnswered || 0) + totalAnswered;
+        // Update time studied
+        student.timeStudied = (student.timeStudied || 0) + Math.round((totalSeconds - secondsLeft));
+        // Update subject and last active
+        student.subject = plan.subject || '';
+        student.lastActive = new Date().toDateString();
+        localStorage.setItem(classKey, JSON.stringify(classData));
+      }
+    }
 
     // TIER 3: Save study time for parent sleep report
     var now = new Date();
