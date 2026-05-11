@@ -419,7 +419,7 @@
     document.getElementById('upgrade-modal').style.display = 'none';
     var notes = fileContent || document.getElementById('notes-input').value.trim();
     var deadline = document.getElementById('deadline-input') ? document.getElementById('deadline-input').value : '';
-    startGeneration(notes, 7, deadline);
+    startGeneration(notes, 7, deadline, 'free');
   }
 
   function showOnboarding() {
@@ -701,10 +701,11 @@
       }
     }
 
-    startGeneration(notes, numDays, deadline);
+    startGeneration(notes, numDays, deadline, userPlan);
   }
 
-  function startGeneration(notes, numDays, deadline) {
+  function startGeneration(notes, numDays, deadline, userPlan) {
+    userPlan = userPlan || (JSON.parse(localStorage.getItem('studyflow_user') || '{}').tier || 'free');
     document.querySelectorAll('.card').forEach(function(c) { c.classList.remove('active'); });
     document.getElementById('loading').classList.add('active');
     updateDots(3);
