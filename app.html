@@ -681,6 +681,30 @@
     var deadline = document.getElementById('deadline-input').value;
     if (!deadline) { alert('Please enter your exam date!'); return; }
 
+    // Check plan count limits
+    var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+    var now = new Date();
+    var thisMonth = now.getFullYear() + '-' + (now.getMonth() + 1);
+    var plansThisMonth = allPlans.filter(function(p) {
+      if (!p.createdAt) return false;
+      var d = new Date(p.createdAt);
+      return d.getFullYear() + '-' + (d.getMonth() + 1) === thisMonth;
+    }).length;
+
+    var planLimits = { free: 1, pro: 5, vip: 999 };
+    var limit = planLimits[userPlan] || 1;
+
+    if (plansThisMonth >= limit) {
+      document.getElementById('upgrade-modal').style.display = 'flex';
+      document.getElementById('upgrade-modal-days').textContent =
+        userPlan === 'free' ? 'Free plan: 1 plan per month' : 'Pro plan: 5 plans per month';
+      document.getElementById('upgrade-modal-msg').textContent =
+        userPlan === 'free'
+          ? 'You\'ve used your 1 free plan this month. Upgrade to Pro for 5 plans/month or VIP for unlimited.'
+          : 'You\'ve used all 5 Pro plans this month. Upgrade to VIP for unlimited plans.';
+      return;
+    }
+
     var maxDays = userPlan === 'vip' ? 999 : (userPlan === 'pro' ? 14 : 7);
     var numDays = 7;
     if (deadline) {
