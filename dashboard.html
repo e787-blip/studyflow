@@ -494,7 +494,7 @@
   <div class="nav-right">
     <a href="https://studyflow-ten-vert.vercel.app/pricing.html" style="font-size:0.82rem;font-weight:700;color:var(--blue);background:var(--blue-light);border:1.5px solid var(--blue);border-radius:8px;padding:.35rem .8rem;text-decoration:none;margin-right:.5rem;">⚡ Upgrade</a>
     <button onclick="shareCurrentPlan()" style="font-size:0.82rem;font-weight:600;color:var(--muted);background:none;border:1.5px solid var(--border);border-radius:8px;padding:.35rem .8rem;cursor:pointer;font-family:var(--sans);margin-right:.5rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">🔗 Share</button>
-    <a href="https://studyflow-ten-vert.vercel.app/app.html" class="btn-new">+ New plan</a>
+    <a href="https://studyflow-ten-vert.vercel.app/app.html" class="btn-new" id="btn-new-plan">+ New plan</a>
     <button class="dark-toggle" onclick="toggleDark()" id="dark-toggle">🌙</button>
     <div class="user-menu-wrap" style="position:relative;">
       <div class="nav-avatar" id="user-avatar" onclick="toggleUserMenu()" style="cursor:pointer;">E</div>
@@ -737,6 +737,28 @@
     document.getElementById('menu-name').textContent = name;
     document.getElementById('menu-email').textContent = user.email || '';
     document.getElementById('menu-tier').textContent = (user.tier || 'free').charAt(0).toUpperCase() + (user.tier || 'free').slice(1) + ' plan';
+
+    // Show plan count for month
+    var planLimits = { free: 1, pro: 5, vip: 999 };
+    var tier = user.tier || 'free';
+    var limit = planLimits[tier] || 1;
+    var now = new Date();
+    var thisMonth = now.getFullYear() + '-' + (now.getMonth() + 1);
+    var plansThisMonth = allPlans.filter(function(p) {
+      if (!p.createdAt) return false;
+      var d = new Date(p.createdAt);
+      return d.getFullYear() + '-' + (d.getMonth() + 1) === thisMonth;
+    }).length;
+    var btnNew = document.getElementById('btn-new-plan');
+    if (btnNew && tier !== 'vip') {
+      var remaining = Math.max(0, limit - plansThisMonth);
+      btnNew.title = remaining + ' plan' + (remaining !== 1 ? 's' : '') + ' remaining this month';
+      if (remaining === 0) {
+        btnNew.style.opacity = '0.5';
+        btnNew.style.pointerEvents = 'none';
+        btnNew.textContent = 'No plans left';
+      }
+    }
 
     var completed = plan.days.filter(function(d){ return d.completed; }).length;
     var total = plan.days.length;
