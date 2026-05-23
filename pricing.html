@@ -66,7 +66,7 @@
 <body>
 
 <nav>
-  <a href="dashboard.html" class="logo">
+  <a href="https://studyflow-ten-vert.vercel.app/dashboard.html" class="logo">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
       <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
@@ -80,7 +80,7 @@
       <text x="48" y="28" font-family="Inter,sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3"><tspan fill="#1a1d2e">Study</tspan><tspan fill="#4a7cf6">Flow</tspan></text>
     </svg>
   </a>
-  <a href="dashboard.html" class="btn-back">← Back to dashboard</a>
+  <a href="https://studyflow-ten-vert.vercel.app/dashboard.html" class="btn-back">← Back to dashboard</a>
 </nav>
 
 <div class="hero">
@@ -192,10 +192,10 @@
   var params = new URLSearchParams(window.location.search);
   var upgraded = params.get('upgraded');
   if (upgraded) {
+    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
     user.tier = upgraded;
     localStorage.setItem('studyflow_user', JSON.stringify(user));
-    alert('Welcome to StudyFlow ' + upgraded.toUpperCase() + '! Your plan has been upgraded.');
-    window.history.replaceState({}, '', window.location.pathname);
+    window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html?upgraded=' + upgraded;
   }
 </script>
 </body>
