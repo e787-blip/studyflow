@@ -342,15 +342,46 @@
       teacher.classCode = code;
       localStorage.setItem('studyflow_teacher', JSON.stringify(teacher));
       classData = { students: [] };
+      // Init class in Firestore
+      fetch('https://studyflow-ten-vert.vercel.app/api/class', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'init', classCode: code })
+      }).catch(function(){});
     }
 
     document.getElementById('class-code').textContent = teacher.classCode;
     document.getElementById('teacher-avatar').textContent = (teacher.name || 'T')[0].toUpperCase();
     document.getElementById('teacher-welcome').textContent = 'Welcome back' + (teacher.name ? ', ' + teacher.name.split(' ')[0] : '') + ' — here\'s how your class is doing today.';
-    renderStats();
-    renderRoster();
-    renderInsights();
-    renderLeaderboard();
+
+    // Load from Firestore for cross-device data, fall back to localStorage
+    fetch('https://studyflow-ten-vert.vercel.app/api/class?classCode=' + teacher.classCode)
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        if (data.students) {
+          classData = data;
+          // Merge with localStorage — take the most recent data per student
+          var localData = JSON.parse(localStorage.getItem('studyflow_class_' + teacher.classCode) || '{"students":[]}');
+          if (localData.students && localData.students.length > 0) {
+            localData.students.forEach(function(ls) {
+              var fs = classData.students.find(function(s){ return s.email === ls.email; });
+              if (!fs) classData.students.push(ls);
+            });
+          }
+          localStorage.setItem('studyflow_class_' + teacher.classCode, JSON.stringify(classData));
+        }
+        renderStats();
+        renderRoster();
+        renderInsights();
+        renderLeaderboard();
+      })
+      .catch(function() {
+        // Firestore unavailable — use localStorage
+        renderStats();
+        renderRoster();
+        renderInsights();
+        renderLeaderboard();
+      });
   }
 
   function renderStats() {
@@ -536,6 +567,13 @@
     if (!date) { alert('Please set an exam date.'); return; }
     var assignment = { topic: topic, date: date, notes: notes, assignedAt: new Date().toISOString(), classCode: teacher.classCode, teacherName: teacher.name };
     localStorage.setItem('studyflow_assignment_' + teacher.classCode, JSON.stringify(assignment));
+
+    // Sync assignment to Firestore
+    fetch('https://studyflow-ten-vert.vercel.app/api/class', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'assign', classCode: teacher.classCode, assignment: assignment })
+    }).catch(function(){});
     // Show success state
     var btn = document.querySelector('.btn-assign');
     btn.textContent = 'Assigned!';
