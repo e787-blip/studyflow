@@ -352,11 +352,18 @@
         var user = { email: cred.user.email, name: name, uid: cred.user.uid, classCode: classCode || null, tier: 'free' };
         localStorage.setItem('studyflow_user', JSON.stringify(user));
         if (classCode) {
+          var studentRecord = { name: name, email: cred.user.email, joinedAt: new Date().toISOString(), streak: 0, avgScore: null, lastActive: null };
           var classData = JSON.parse(localStorage.getItem('studyflow_class_' + classCode) || '{"students":[]}');
-          if (!classData.students.find(function(s){ return s.email === email; })) {
-            classData.students.push({ name: name, email: email, joinedAt: new Date().toISOString(), streak: 0, avgScore: null, lastActive: null });
+          if (!classData.students.find(function(s){ return s.email === cred.user.email; })) {
+            classData.students.push(studentRecord);
             localStorage.setItem('studyflow_class_' + classCode, JSON.stringify(classData));
           }
+          // Sync to Firestore for cross-device
+          fetch('https://studyflow-ten-vert.vercel.app/api/class', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'join', classCode: classCode, studentData: studentRecord })
+          }).catch(function(){});
         }
         // New users always go to app.html to create first plan
         window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
