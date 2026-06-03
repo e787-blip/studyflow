@@ -16,6 +16,15 @@
   }
   html { scroll-behavior: smooth; }
   body { font-family: var(--sans); color: var(--ink); background: var(--soft); min-height: 100vh; }
+  body.dark { background:#0f1220; color:#f1f5f9; }
+  body.dark nav { background:#161b28; border-color:#2a2d3a; }
+  body.dark .card { background:#161b28; border-color:#2a2d3a; }
+  body.dark .option-btn { background:#1e2029; border-color:#2a2d3a; color:#f1f5f9; }
+  body.dark .option-btn:hover { border-color:var(--blue); }
+  body.dark input, body.dark textarea, body.dark select { background:#1e2029; border-color:#2a2d3a; color:#f1f5f9; }
+  body.dark .upload-area { background:#1e2029; border-color:#2a2d3a; }
+  body.dark .step-dot { background:#2a2d3a; color:#6b7280; }
+  body.dark .step-dot.active { background:var(--blue); color:#fff; }
 
   @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -213,7 +222,12 @@
       </text>
     </svg>
   </a>
-  <a href="index.html" class="back">← Back to home</a>
+  <div style="display:flex;align-items:center;gap:.75rem;">
+    <a href="https://studyflow-ten-vert.vercel.app/dashboard.html" style="font-size:0.82rem;color:var(--muted);text-decoration:none;font-weight:500;">Dashboard</a>
+    <button onclick="toggleDark()" id="dark-toggle" title="Toggle dark mode" style="background:var(--soft);border:1.5px solid var(--border);border-radius:8px;padding:.35rem .5rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;width:34px;height:34px;">
+      <svg id="dark-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
 </nav>
 
 <!-- ONBOARDING OVERLAY -->
@@ -420,6 +434,19 @@
     var notes = fileContent || document.getElementById('notes-input').value.trim();
     var deadline = document.getElementById('deadline-input') ? document.getElementById('deadline-input').value : '';
     startGeneration(notes, 7, deadline, 'free');
+  }
+
+  function toggleDark() {
+    var isDark = document.body.classList.toggle('dark');
+    localStorage.setItem('studyflow_dark', isDark ? '1' : '0');
+    document.getElementById('dark-icon').innerHTML = isDark
+      ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
+      : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  }
+  if (localStorage.getItem('studyflow_dark') === '1') {
+    document.body.classList.add('dark');
+    var icon = document.getElementById('dark-icon');
+    if (icon) icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
   }
 
   function showOnboarding() {
@@ -683,10 +710,21 @@
 
     // Check plan count limits
     var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+
+    // Migration — add createdAt to old plans that don't have it
+    var migrated = false;
+    allPlans = allPlans.map(function(p) {
+      if (!p.createdAt) {
+        p.createdAt = new Date(p.id || Date.now()).toISOString();
+        migrated = true;
+      }
+      return p;
+    });
+    if (migrated) localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
+
     var now = new Date();
     var thisMonth = now.getFullYear() + '-' + (now.getMonth() + 1);
     var plansThisMonth = allPlans.filter(function(p) {
-      if (!p.createdAt) return false;
       var d = new Date(p.createdAt);
       return d.getFullYear() + '-' + (d.getMonth() + 1) === thisMonth;
     }).length;
