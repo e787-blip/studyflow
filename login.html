@@ -392,12 +392,18 @@
         smartRedirect();
       })
       .catch(function(err) {
+        console.error('Google auth error:', err.code, err.message);
         var msg = err.code === 'auth/popup-closed-by-user' ? 'Sign in cancelled.' :
-                  err.code === 'auth/popup-blocked' ? 'Popup was blocked. Please allow popups for this site.' :
+                  err.code === 'auth/popup-blocked' ? 'Popup was blocked — please allow popups for this site and try again.' :
+                  err.code === 'auth/unauthorized-domain' ? 'This domain is not authorized. Please contact support.' :
+                  err.code === 'auth/operation-not-allowed' ? 'Google sign in is not enabled. Please contact support.' :
                   'Google sign in failed: ' + err.message;
+        // Show error on whichever tab is visible
         showMsg('login-msg', 'error', msg);
+        showMsg('signup-msg', 'error', msg);
       });
   }
+  window.googleAuth = googleAuth;
   function resetPassword() {
     var email = document.getElementById('login-email').value.trim();
     if (!email || !email.includes('@')) {
