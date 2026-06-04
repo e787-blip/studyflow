@@ -378,25 +378,45 @@
 
   /* ── MOBILE ── */
   @media(max-width:768px) {
-    nav { padding:.75rem 1.2rem; }
-    .btn-new { padding:.4rem .75rem; font-size:0.78rem; }
+    nav { padding:.7rem 1rem; gap:.5rem; }
+    .nav-right { gap:.4rem; }
+    .btn-new { padding:.38rem .7rem; font-size:0.75rem; }
+    .user-menu-wrap { position:static; }
     .app-layout { height:auto; flex-direction:column; }
-    .sidebar { display:none; width:100%; border-right:none; border-bottom:1px solid var(--border); }
+    .sidebar {
+      display:none; width:100%; border-right:none;
+      border-bottom:1px solid var(--border);
+      max-height:70vh; overflow-y:auto;
+    }
     .sidebar.mobile-open { display:flex; flex-direction:column; }
-    .main { padding:1rem 1rem 5rem; overflow:visible; }
+    .main { padding:.85rem .85rem 5.5rem; overflow:visible; }
+    /* Stats */
     .stats-row { grid-template-columns:1fr 1fr; gap:.6rem; }
-    .ring-card { padding:1rem; gap:.8rem; }
-    .stat-card { padding:1rem; }
-    .ring-val { font-size:1.2rem; }
-    .stat-value { font-size:1.5rem; }
-    .today-card { padding:1.5rem 1.2rem; }
-    .today-card h2 { font-size:1.3rem; }
-    .welcome h1 { font-size:1.6rem; }
-    .cal-card { padding:1.1rem; }
-    .modal-box { padding:1.8rem 1.3rem; }
+    .stat-card { padding:.85rem; border-radius:16px; }
+    .stat-value { font-size:1.6rem; }
+    .stat-label { font-size:0.72rem; }
+    /* Ring card */
+    .ring-card { padding:1rem; gap:.75rem; flex-direction:column; }
+    .ring-val { font-size:1.15rem; }
+    /* Welcome */
+    .welcome h1 { font-size:1.4rem; }
+    .welcome-sub { font-size:0.82rem; }
+    /* Today card */
+    .today-card { padding:1.3rem 1.1rem; border-radius:20px; }
+    .today-card h2 { font-size:1.2rem; }
+    /* Calendar */
+    .cal-card { padding:1rem; border-radius:18px; }
+    .cal-day { width:32px; height:32px; font-size:0.72rem; }
+    /* Score history */
+    .score-history-card { padding:1.1rem; border-radius:18px; }
+    .score-bar-wrap { gap:.2rem; }
+    /* Modal */
+    .modal-box { padding:1.5rem 1.2rem; border-radius:20px; margin:1rem; }
+    /* Time options */
     .time-options { grid-template-columns:1fr 1fr; gap:.5rem; }
-
-    /* Mobile bottom nav */
+    /* User menu */
+    #user-menu { right:-60px; min-width:200px; }
+    /* Nav upgrade/share buttons — hide on very small screens */
     .mobile-bottom-nav {
       display:flex; position:fixed; bottom:0; left:0; right:0;
       background:#fff; border-top:1px solid var(--border);
@@ -410,10 +430,7 @@
       transition:all .2s; letter-spacing:.02em; text-transform:uppercase;
     }
     .mobile-nav-btn.active { color:var(--blue); }
-    .mobile-nav-btn span {
-      font-size:1.3rem; line-height:1;
-      transition:transform .2s;
-    }
+    .mobile-nav-btn span { font-size:1.3rem; line-height:1; transition:transform .2s; }
     .mobile-nav-btn.active span { transform:scale(1.15); }
     .mobile-nav-btn.new-btn { color:var(--blue); }
     .mobile-nav-btn.new-btn span {
@@ -427,7 +444,21 @@
   }
   @media(min-width:769px) { .mobile-bottom-nav { display:none !important; } }
 
+  @media(max-width:390px) {
+    .stats-row { grid-template-columns:1fr 1fr; gap:.5rem; }
+    .stat-value { font-size:1.4rem; }
+    .main { padding:.75rem .75rem 5.5rem; }
+  }
+
   body.dark .mobile-bottom-nav { background:#161b28; border-color:#222840; }
+
+  /* ── iPAD (768px - 1024px) ── */
+  @media(min-width:769px) and (max-width:1024px) {
+    .app-container { max-width:620px; padding:2rem 1.5rem 4rem; }
+    .stats-row { grid-template-columns:repeat(2,1fr); }
+    .ring-card { padding:1.3rem; }
+  }
+
 </style>
 </head>
 <body>
