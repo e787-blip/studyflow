@@ -17,6 +17,17 @@ module.exports = async function handler(req, res) {
   const queryClassCode = req.query.classCode;
 
   try {
+    // GET assignment for a class
+    if (req.method === 'GET' && queryClassCode && req.query.type === 'assignment') {
+      const url = `${FIRESTORE_BASE}/assignments/${queryClassCode}`;
+      const r = await fetch(url + '?key=' + process.env.FIREBASE_API_KEY);
+      const data = await r.json();
+      if (data.error) {
+        return res.status(200).json({ assignment: null });
+      }
+      return res.status(200).json({ assignment: parseFirestore(data) });
+    }
+
     // GET class data
     if (req.method === 'GET' && queryClassCode) {
       const url = `${FIRESTORE_BASE}/classes/${queryClassCode}`;
