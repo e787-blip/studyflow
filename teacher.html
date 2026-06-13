@@ -228,7 +228,7 @@
     <button class="tab-btn active" onclick="switchTab('roster',this)">Roster</button>
     <button class="tab-btn" onclick="switchTab('leaderboard',this)">Leaderboard</button>
     <button class="tab-btn" onclick="switchTab('insights',this)">Insights</button>
-    <button class="tab-btn" onclick="switchTab('assign',this)">Assign notes</button>
+    <button class="tab-btn" onclick="switchTab('assign',this)">Assign lesson</button>
   </div>
 
   <!-- LEADERBOARD TAB -->
@@ -304,12 +304,17 @@
 
   <!-- ASSIGN TAB -->
   <div class="tab-content" id="tab-assign">
+    <div id="active-assignment" style="display:none;background:#eef9f4;border:1.5px solid #38bfa1;border-radius:16px;padding:1rem 1.3rem;margin-bottom:1.2rem;">
+      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#1a9e80;margin-bottom:.3rem;">Currently assigned</div>
+      <div style="font-weight:700;font-size:0.95rem;" id="active-assignment-topic"></div>
+      <div style="font-size:0.8rem;color:var(--muted);margin-top:.2rem;" id="active-assignment-meta"></div>
+    </div>
     <div class="assign-card">
-      <h3>Assign <em>notes to your class</em></h3>
-      <p>Upload your lesson notes once and every student in your class gets a personalized study plan built from the same material.</p>
+      <h3>Assign <em>a lesson to your class</em></h3>
+      <p>Paste your lesson notes once and every student in your class sees it on their dashboard — one tap and they get a personalized study plan built from your material.</p>
       <div class="assign-form">
         <div class="form-field">
-          <label class="form-label">Topic / Unit name</label>
+          <label class="form-label">Lesson / Unit name</label>
           <input type="text" class="form-input" id="assign-topic" placeholder="e.g. Cell Division Chapter 7" />
         </div>
         <div class="form-field">
@@ -567,6 +572,7 @@
     if (!date) { alert('Please set an exam date.'); return; }
     var assignment = { topic: topic, date: date, notes: notes, assignedAt: new Date().toISOString(), classCode: teacher.classCode, teacherName: teacher.name };
     localStorage.setItem('studyflow_assignment_' + teacher.classCode, JSON.stringify(assignment));
+    showActiveAssignment(assignment);
 
     // Sync assignment to Firestore
     fetch('https://studyflow-ten-vert.vercel.app/api/class', {
@@ -587,12 +593,36 @@
     }, 2000);
   }
 
+  function showActiveAssignment(a) {
+    if (!a || !a.topic) return;
+    document.getElementById('active-assignment-topic').textContent = a.topic;
+    var meta = [];
+    if (a.date) meta.push('Exam: ' + a.date);
+    if (a.assignedAt) meta.push('Assigned ' + new Date(a.assignedAt).toLocaleDateString());
+    document.getElementById('active-assignment-meta').textContent = meta.join(' · ');
+    document.getElementById('active-assignment').style.display = 'block';
+  }
+
+  function loadActiveAssignment() {
+    // Firestore first, localStorage fallback
+    fetch('https://studyflow-ten-vert.vercel.app/api/class?classCode=' + teacher.classCode + '&type=assignment')
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        if (data.assignment && data.assignment.topic) showActiveAssignment(data.assignment);
+        else showActiveAssignment(JSON.parse(localStorage.getItem('studyflow_assignment_' + teacher.classCode) || 'null'));
+      })
+      .catch(function() {
+        showActiveAssignment(JSON.parse(localStorage.getItem('studyflow_assignment_' + teacher.classCode) || 'null'));
+      });
+  }
+
   function logout() {
     localStorage.removeItem('studyflow_teacher');
     window.location.href = 'https://studyflow-ten-vert.vercel.app/teacher-login.html';
   }
 
   init();
+  loadActiveAssignment();
 </script>
 </body>
 </html>
