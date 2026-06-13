@@ -60,12 +60,27 @@ module.exports = async function handler(req, res) {
       if (action === 'join') {
         // Add student to class
         const url = `${FIRESTORE_BASE}/classes/${classCode}?key=${process.env.FIREBASE_API_KEY}`;
-        // First get existing data
         const getR = await fetch(url);
         const existing = await getR.json();
         let classData = existing.error ? { classCode, students: [] } : parseFirestore(existing);
-        
-        // Remove old entry if exists
+
+        // Check if student already in class
+        const alreadyIn = (classData.students || []).find(s => s.email === studentData.email);
+
+        if (!alreadyIn) {
+          // Enforce 5-student cap for free classroom plan
+          const MAX_STUDENTS = 5;
+          const currentCount = (classData.students || []).length;
+          if (currentCount >= MAX_STUDENTS) {
+            return res.status(200).json({
+              success: false,
+              error: 'class_full',
+              message: 'This class is full (max 5 students on free plan). Ask your teacher to upgrade to a School plan for unlimited students.'
+            });
+          }
+        }
+
+        // Remove old entry if exists then re-add updated
         classData.students = (classData.students || []).filter(s => s.email !== studentData.email);
         classData.students.push(studentData);
 
