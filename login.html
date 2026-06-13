@@ -269,7 +269,7 @@
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, updateProfile, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, updateProfile, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyCY4FI-6L9tsAokNFl6o5bsmCt-JD0H8HI",
@@ -292,22 +292,26 @@
       : 'https://studyflow-ten-vert.vercel.app/app.html';
   }
 
-  // Only redirect if user is already signed in AND they didn't just sign out
-  var redirecting = false;
-  onAuthStateChanged(auth, function(user) {
-    if (user && !redirecting) {
-      var params = new URLSearchParams(window.location.search);
-      if (params.get('signout') !== '1') {
-        redirecting = true;
-        localStorage.setItem('studyflow_user', JSON.stringify({
-          email: user.email,
-          name: user.displayName || user.email.split('@')[0],
-          uid: user.uid
-        }));
-        smartRedirect();
-      }
-    }
-  });
+  // Save user while preserving tier and classCode if it's the same account logging back in
+  function saveUser(fbUser) {
+    var existing = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var sameAccount = existing.email === fbUser.email;
+    localStorage.setItem('studyflow_user', JSON.stringify({
+      email: fbUser.email,
+      name: fbUser.displayName || (existing.name || fbUser.email.split('@')[0]),
+      uid: fbUser.uid,
+      tier: sameAccount ? (existing.tier || 'free') : 'free',
+      classCode: sameAccount ? (existing.classCode || null) : null
+    }));
+  }
+
+  // If the user just signed out, end the Firebase session for real
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('signout') === '1') {
+    signOut(auth).catch(function(){});
+  }
+  // No auto-redirect — the login page always shows the form so users
+  // explicitly sign in to their account (or switch accounts).
 
   function showMsg(id, type, text) {
     var el = document.getElementById(id);
@@ -339,11 +343,7 @@
     showMsg('login-msg', 'success', 'Signing you in...');
     signInWithEmailAndPassword(auth, email, password)
       .then(function(cred) {
-        localStorage.setItem('studyflow_user', JSON.stringify({
-          email: cred.user.email,
-          name: cred.user.displayName || email.split('@')[0],
-          uid: cred.user.uid
-        }));
+        saveUser(cred.user);
         smartRedirect();
       })
       .catch(function(err) {
@@ -410,12 +410,7 @@
     var provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider)
       .then(function(cred) {
-        localStorage.setItem('studyflow_user', JSON.stringify({
-          email: cred.user.email,
-          name: cred.user.displayName,
-          uid: cred.user.uid,
-          tier: 'free'
-        }));
+        saveUser(cred.user);
         smartRedirect();
       })
       .catch(function(err) {
