@@ -545,12 +545,21 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'join', classCode: code, studentData: studentRecord })
     })
-    .then(function(){ 
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (data.error === 'class_full') {
+        // Revert the local save
+        user.classCode = null;
+        localStorage.setItem('studyflow_user', JSON.stringify(user));
+        showMsg('This class is full (max 5 students). Ask your teacher to upgrade their plan.', false);
+        return;
+      }
       showMsg('Joined class ' + code + '! Your teacher can now see your progress.', true);
       document.getElementById('join-class-open').style.display = 'none';
+      document.getElementById('join-class-closed').innerHTML =
+        '<div style="font-size:0.85rem;color:#1a9e80;font-weight:600;">In class ' + code + ' — your teacher can see your progress.</div>';
     })
     .catch(function(){
-      // localStorage already saved — still counts
       showMsg('Joined class ' + code + '!', true);
       document.getElementById('join-class-open').style.display = 'none';
     });
