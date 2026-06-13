@@ -565,6 +565,15 @@
         <p id="welcome-sub">Here's your study plan — let's get it done!</p>
       </div>
 
+      <!-- TEACHER ASSIGNMENT BANNER -->
+      <div id="assignment-banner" style="display:none;background:linear-gradient(135deg,#1a1d2e,#2b3354);border-radius:20px;padding:1.3rem 1.4rem;margin-bottom:1.5rem;position:relative;overflow:hidden;animation:milestoneIn .5s cubic-bezier(0.16,1,.3,1) both;">
+        <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:rgba(74,124,246,.15);"></div>
+        <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7eb4ff;margin-bottom:.4rem;">New from your teacher</div>
+        <h3 id="assignment-topic" style="color:#fff;font-family:var(--serif);font-size:1.25rem;letter-spacing:-0.02em;margin-bottom:.25rem;position:relative;z-index:1;"></h3>
+        <p id="assignment-meta" style="color:rgba(255,255,255,.65);font-size:0.82rem;margin-bottom:1rem;position:relative;z-index:1;"></p>
+        <button onclick="startAssignment()" style="background:#4a7cf6;color:#fff;border:none;padding:.7rem 1.3rem;border-radius:12px;font-family:var(--sans);font-weight:700;font-size:0.88rem;cursor:pointer;box-shadow:0 4px 14px rgba(74,124,246,.4);position:relative;z-index:1;">Start studying →</button>
+      </div>
+
       <div class="stats-row">
         <div class="ring-card">
           <svg width="72" height="72" viewBox="0 0 80 80">
@@ -1259,6 +1268,56 @@
     setTimeout(function(){ toast.classList.remove('show'); }, 2500);
   }
 
+  // ── TEACHER ASSIGNMENT CHECK ──
+  function checkAssignment() {
+    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    if (!user.classCode) return;
+
+    var showBanner = function(a) {
+      if (!a || !a.topic || !a.notes) return;
+      // Don't show if student already started this assignment
+      var done = localStorage.getItem('studyflow_assignment_started_' + user.classCode);
+      if (done === a.assignedAt) return;
+      document.getElementById('assignment-topic').textContent = a.topic;
+      var meta = [];
+      if (a.teacherName) meta.push('From ' + a.teacherName);
+      if (a.date) {
+        var days = Math.ceil((new Date(a.date) - new Date()) / 86400000);
+        meta.push(days > 0 ? 'Exam in ' + days + ' day' + (days !== 1 ? 's' : '') : 'Exam date: ' + a.date);
+      }
+      document.getElementById('assignment-meta').textContent = meta.join(' · ');
+      document.getElementById('assignment-banner').style.display = 'block';
+      window._pendingAssignment = a;
+    };
+
+    // Firestore first (cross-device), localStorage fallback
+    fetch('https://studyflow-ten-vert.vercel.app/api/class?classCode=' + user.classCode + '&type=assignment')
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        if (data.assignment && data.assignment.topic) {
+          localStorage.setItem('studyflow_assignment_' + user.classCode, JSON.stringify(data.assignment));
+          showBanner(data.assignment);
+        } else {
+          showBanner(JSON.parse(localStorage.getItem('studyflow_assignment_' + user.classCode) || 'null'));
+        }
+      })
+      .catch(function() {
+        showBanner(JSON.parse(localStorage.getItem('studyflow_assignment_' + user.classCode) || 'null'));
+      });
+  }
+
+  function startAssignment() {
+    var a = window._pendingAssignment;
+    if (!a) return;
+    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    // Mark started so banner doesn't reappear for this assignment
+    localStorage.setItem('studyflow_assignment_started_' + user.classCode, a.assignedAt);
+    // Hand off to app.html
+    localStorage.setItem('studyflow_pending_assignment', JSON.stringify(a));
+    window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html?from=assignment';
+  }
+
+  checkAssignment();
   loadPlan();
 </script>
 
