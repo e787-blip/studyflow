@@ -446,7 +446,32 @@
   window.addEventListener('load', function() {
     var loader = document.getElementById('page-loader');
     if (loader) loader.style.display = 'none';
+    loadAssignment();
   });
+
+  // ── TEACHER ASSIGNMENT PREFILL ──
+  function loadAssignment() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('from') !== 'assignment') return;
+    var a = JSON.parse(localStorage.getItem('studyflow_pending_assignment') || 'null');
+    if (!a || !a.notes) return;
+
+    // Prefill notes and exam date
+    var notesEl = document.getElementById('notes-input');
+    notesEl.value = a.notes;
+    checkNotesLength(notesEl);
+    if (a.date) document.getElementById('deadline-input').value = a.date;
+
+    // Show banner so student knows this came from their teacher
+    var banner = document.createElement('div');
+    banner.style.cssText = 'background:#eef4ff;border:1.5px solid #4a7cf6;border-radius:14px;padding:.8rem 1.1rem;margin-bottom:1rem;font-size:0.85rem;color:#2851c8;font-weight:600;display:flex;align-items:center;gap:.6rem;';
+    banner.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg><span>Lesson assigned by ' + (a.teacherName || 'your teacher') + ': <strong>' + a.topic + '</strong>. Notes and exam date are filled in — just pick your goal and generate.</span>';
+    notesEl.parentElement.insertBefore(banner, notesEl);
+
+    // Clean up so a refresh doesn't re-trigger
+    localStorage.removeItem('studyflow_pending_assignment');
+    window.history.replaceState({}, '', window.location.pathname);
+  }
 
   // ONBOARDING — show for first time users
   // Upgrade modal
