@@ -813,7 +813,31 @@
   .how-step-new h3 { font-family:var(--serif); font-size:1.35rem; letter-spacing:-0.02em; margin-bottom:.5rem; }
   .how-step-new p { color:var(--muted); font-size:0.92rem; line-height:1.7; }
 
-  /* ── BENEFITS — NEW ── */
+  /* ── EVIDENCE TICKER ── */
+  .evidence-track-wrap {
+    position:relative; overflow:hidden; margin:0 -5%;
+    mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  }
+  .evidence-track {
+    display:flex; gap:1rem; width:max-content;
+    animation: ticker 35s linear infinite;
+  }
+  .evidence-track:hover { animation-play-state:paused; }
+  @keyframes ticker {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .evidence-pill {
+    display:inline-flex; align-items:center; gap:.6rem; flex-shrink:0;
+    background:#fff; border:1.5px solid var(--border);
+    border-radius:999px; padding:.55rem 1.1rem;
+    font-size:0.82rem; font-weight:600; color:var(--ink);
+    white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.04);
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .evidence-pill:hover { border-color:var(--blue); box-shadow:0 4px 16px rgba(74,124,246,.12); }
+  body.dark .evidence-pill { background:#1e2235; border-color:#2a2d3a; color:#e8eeff; }
   .benefits-new {
     display:grid; grid-template-columns:repeat(2,1fr);
     gap:1.5rem; max-width:900px; margin:0;
@@ -1179,12 +1203,12 @@
 
 <!-- HOW IT WORKS -->
 <section id="how" style="padding:7rem 5%;background:#fff;">
-  <div style="margin-bottom:3rem;">
-    <div class="section-label reveal-pop">Simple process</div>
-    <h2 class="section-title reveal">From notes to <em>exam-ready</em> in 60 seconds</h2>
+  <div style="text-align:center;margin-bottom:3rem;">
+    <div class="section-label reveal-pop" style="display:block;text-align:center;">Simple process</div>
+    <h2 class="section-title reveal" style="text-align:center;max-width:600px;margin:0 auto;">From notes to <em>exam-ready</em> in 60 seconds</h2>
   </div>
 
-  <div class="how-steps-new">
+  <div class="how-steps-new" style="margin:0 auto;">
     <div class="how-step-new reveal-left">
       <div class="how-step-icon">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1289,50 +1313,113 @@
 </section>
 
 <!-- BENEFITS -->
-<section id="benefits" style="padding:7rem 5%;">
-  <div style="margin-bottom:3rem;">
-    <div class="section-label reveal-pop">Why it works</div>
-    <h2 class="section-title reveal">Stop cramming. <em>Start retaining.</em></h2>
+<section id="benefits" style="padding:7rem 5%;overflow:hidden;">
+  <div style="text-align:center;margin-bottom:4rem;">
+    <div class="section-label reveal-pop" style="display:block;text-align:center;">Why it works</div>
+    <h2 class="section-title reveal" style="text-align:center;max-width:640px;margin:0 auto;">Stop cramming.<br><em>Start retaining.</em></h2>
+    <p style="color:var(--muted);font-size:0.95rem;max-width:480px;margin:.8rem auto 0;line-height:1.7;">Built on 6 decades of cognitive science research. These aren't gimmicks — they're the techniques top students have used for decades, now automated.</p>
   </div>
 
-  <div class="benefits-new reveal-stagger reveal">
+  <!-- SCROLL TICKER — marquee of evidence points -->
+  <div class="evidence-track-wrap">
+    <div class="evidence-track">
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Spaced repetition improves retention by 200%
+      </div>
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Pre-test effect boosts learning by 50% — Kornell et al.
+      </div>
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Desirable difficulty: harder practice = stronger memory
+      </div>
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
+        Active recall outperforms re-reading by 4x — Roediger
+      </div>
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        Feynman technique reveals gaps passive reading hides
+      </div>
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        SM-2 algorithm: the gold standard since 1987
+      </div>
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Sleep consolidation locks in memories — study right before bed
+      </div>
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        Interleaving practice beats blocked practice — Taylor & Rohrer
+      </div>
+      <!-- Duplicate for seamless loop -->
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Spaced repetition improves retention by 200%
+      </div>
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Pre-test effect boosts learning by 50% — Kornell et al.
+      </div>
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Desirable difficulty: harder practice = stronger memory
+      </div>
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
+        Active recall outperforms re-reading by 4x — Roediger
+      </div>
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        Feynman technique reveals gaps passive reading hides
+      </div>
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        SM-2 algorithm: the gold standard since 1987
+      </div>
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Sleep consolidation locks in memories — study right before bed
+      </div>
+      <div class="evidence-pill">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        Interleaving practice beats blocked practice — Taylor & Rohrer
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 benefit cards below ticker -->
+  <div class="benefits-new reveal-stagger reveal" style="margin-top:4rem;">
     <div class="benefit-new">
       <div class="benefit-new-icon" style="background:#eef4ff;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/>
-          <polyline points="12 6 12 12 16 14"/>
-        </svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       </div>
       <h3>Study less, retain more</h3>
-      <p>Spaced repetition means you review things right when you're about to forget them — not randomly. Same knowledge, a fraction of the time.</p>
+      <p>Spaced repetition means you review things right when you're about to forget them. Same knowledge, a fraction of the time.</p>
     </div>
     <div class="benefit-new">
       <div class="benefit-new-icon" style="background:#f0fdf4;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-        </svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       </div>
       <h3>Know exactly what to study</h3>
-      <p>No more re-reading everything hoping something sticks. StudyFlow tells you exactly what to focus on and in what order every session.</p>
+      <p>No more re-reading everything hoping something sticks. StudyFlow tells you exactly what to focus on every session.</p>
     </div>
     <div class="benefit-new">
       <div class="benefit-new-icon" style="background:#fdf4ff;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-        </svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
       </div>
       <h3>Difficulty that adapts</h3>
-      <p>Day 1 is recall. Day 4 is application. By exam day you're answering harder questions than you'll see on the test — so the real thing feels easy.</p>
+      <p>Day 1 is recall. Day 4 is application. By exam day you're answering harder questions than the test — so the real thing feels easy.</p>
     </div>
     <div class="benefit-new">
       <div class="benefit-new-icon" style="background:#fff8ed;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <polyline points="22 4 12 14.01 9 11.01"/>
-        </svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
       </div>
       <h3>See your gaps before the exam</h3>
-      <p>The Feynman grader finds exactly what you don't understand — not after the test, but during your prep, when you can still fix it.</p>
+      <p>The Feynman grader finds exactly what you don't understand — during prep, when you can still fix it.</p>
     </div>
   </div>
 </section>
@@ -1668,7 +1755,7 @@
   <h2 class="section-title" style="text-align:left;">Free to start. <em>Pay when you love it.</em></h2>
   <p class="section-sub reveal">No credit card needed. Get your first study plan in under a minute — completely free.</p>
 
-  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:1.5rem; margin-top:3.5rem; max-width:1000px;">
+  <div style="display:grid; grid-template-columns: repeat(3,1fr); gap:1.5rem; margin-top:3.5rem; max-width:960px; margin-left:auto; margin-right:auto;">
 
     <!-- Free Plan -->
     <div class="pricing-free" style="background:var(--soft); border:1.5px solid var(--border); border-radius:24px; padding:2.2rem 2rem;">
