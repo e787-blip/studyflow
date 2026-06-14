@@ -572,7 +572,7 @@
     background-size: 32px 32px;
     pointer-events: none;
   }
-  #cta h2 { text-align:left;
+  #cta h2 { text-align:center;
     font-family: var(--serif);
     font-size: clamp(2.2rem, 5vw, 4rem);
     letter-spacing: -.03em; line-height: 1.1;
@@ -580,7 +580,7 @@
     margin-bottom: 1rem;
   }
   #cta h2 em { font-style: italic; color: #c5d9ff; }
-  #cta p { text-align:left; color: rgba(255,255,255,.75); font-size: 1.05rem; font-weight: 300; margin-bottom: 2.5rem; position: relative; z-index: 1; }
+  #cta p { text-align:center; color: rgba(255,255,255,.75); font-size: 1.05rem; font-weight: 300; margin-bottom: 2.5rem; position: relative; z-index: 1; }
   .btn-white {
     background: #fff; color: var(--blue);
     padding: 1rem 2.4rem; border-radius: 12px;
@@ -812,6 +812,57 @@
   }
   .how-step-new h3 { font-family:var(--serif); font-size:1.35rem; letter-spacing:-0.02em; margin-bottom:.5rem; }
   .how-step-new p { color:var(--muted); font-size:0.92rem; line-height:1.7; }
+
+  /* ── WHY IT WORKS STICKY SCROLL ── */
+  .why-showcase { position:relative; height:480vh; }
+  .why-sticky {
+    position:sticky; top:0; height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding:0 5%;
+  }
+  .why-spacer { height:480vh; margin-top:-100vh; pointer-events:none; }
+  .why-slide {
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    gap:5rem; padding:0 7%;
+    opacity:0; transition:opacity .35s cubic-bezier(0.16,1,.3,1);
+    pointer-events:none;
+  }
+  .why-slide.active { opacity:1; pointer-events:auto; }
+  .why-stat { flex-shrink:0; text-align:center; min-width:200px; }
+  .why-num {
+    font-family:var(--serif); font-size:clamp(5rem,10vw,8rem);
+    font-weight:700; line-height:1; letter-spacing:-0.04em;
+  }
+  .why-num span { font-size:0.5em; }
+  .why-stat-label { font-size:1rem; font-weight:700; color:var(--ink); margin-top:.4rem; }
+  .why-stat-sub { font-size:0.72rem; color:var(--muted); margin-top:.25rem; font-style:italic; }
+  .why-card {
+    background:#fff; border-radius:24px; padding:2.5rem; max-width:460px; flex:1;
+    box-shadow:0 20px 60px rgba(0,0,0,.1); border:1.5px solid var(--border);
+  }
+  .why-card-icon {
+    width:52px; height:52px; border-radius:14px;
+    display:flex; align-items:center; justify-content:center; margin-bottom:1.2rem;
+  }
+  .why-card-title { font-family:var(--serif); font-size:1.5rem; letter-spacing:-0.02em; color:var(--ink); margin-bottom:.7rem; }
+  .why-card-desc { color:var(--muted); font-size:0.9rem; line-height:1.7; margin-bottom:1.1rem; }
+  .why-card-proof { font-size:0.78rem; font-weight:600; color:var(--muted); border-top:1px solid var(--border); padding-top:.8rem; font-style:italic; }
+  .why-dots { position:fixed; right:2rem; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:.5rem; z-index:10; }
+  .why-dot { width:6px; height:6px; border-radius:50%; background:var(--border); cursor:pointer; transition:all .3s cubic-bezier(0.16,1,.3,1); }
+  .why-dot.active { height:24px; border-radius:3px; background:var(--blue); }
+  body.dark .why-card { background:#1e2235; border-color:#2a2d3a; }
+  body.dark .why-card-title { color:#e8eeff; }
+  body.dark .why-stat-label { color:#e8eeff; }
+  @media(max-width:768px) {
+    .why-showcase { height:auto; }
+    .why-sticky { position:relative; height:auto; flex-direction:column; }
+    .why-spacer { display:none; }
+    .why-slide { position:relative; opacity:1; flex-direction:column; gap:2rem; padding:2rem 0; margin-bottom:2rem; pointer-events:auto; }
+    .why-dots { display:none; }
+    .why-num { font-size:4rem; }
+    .why-card { max-width:100%; }
+  }
 
   /* ── EVIDENCE TICKER ── */
   .evidence-track-wrap {
@@ -1135,7 +1186,7 @@
     section { padding:4rem 1.2rem; }
     /* Bottom CTA */
     #cta { padding:4rem 1.2rem; }
-    #cta h2 { text-align:left; font-size:clamp(1.6rem,5vw,2rem); }
+    #cta h2 { text-align:center; font-size:clamp(1.6rem,5vw,2rem); }
     footer { padding:2rem 1.2rem; }
   }
 
@@ -1314,113 +1365,124 @@
 
 <!-- BENEFITS -->
 <section id="benefits" style="padding:7rem 5%;overflow:hidden;">
-  <div style="text-align:center;margin-bottom:4rem;">
+  <div style="text-align:center;margin-bottom:3rem;">
     <div class="section-label reveal-pop" style="display:block;text-align:center;">Why it works</div>
     <h2 class="section-title reveal" style="text-align:center;max-width:640px;margin:0 auto;">Stop cramming.<br><em>Start retaining.</em></h2>
-    <p style="color:var(--muted);font-size:0.95rem;max-width:480px;margin:.8rem auto 0;line-height:1.7;">Built on 6 decades of cognitive science research. These aren't gimmicks — they're the techniques top students have used for decades, now automated.</p>
+    <p style="color:var(--muted);font-size:0.95rem;max-width:480px;margin:.8rem auto 0;line-height:1.7;">Built on 6 decades of cognitive science. These aren't gimmicks — they're the techniques top students have used for decades, now automated.</p>
   </div>
 
-  <!-- SCROLL TICKER — marquee of evidence points -->
-  <div class="evidence-track-wrap">
-    <div class="evidence-track">
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Spaced repetition improves retention by 200%
-      </div>
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Pre-test effect boosts learning by 50% — Kornell et al.
-      </div>
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        Desirable difficulty: harder practice = stronger memory
-      </div>
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
-        Active recall outperforms re-reading by 4x — Roediger
-      </div>
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        Feynman technique reveals gaps passive reading hides
-      </div>
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-        SM-2 algorithm: the gold standard since 1987
-      </div>
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Sleep consolidation locks in memories — study right before bed
-      </div>
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-        Interleaving practice beats blocked practice — Taylor & Rohrer
-      </div>
-      <!-- Duplicate for seamless loop -->
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Spaced repetition improves retention by 200%
-      </div>
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Pre-test effect boosts learning by 50% — Kornell et al.
-      </div>
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        Desirable difficulty: harder practice = stronger memory
-      </div>
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
-        Active recall outperforms re-reading by 4x — Roediger
-      </div>
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        Feynman technique reveals gaps passive reading hides
-      </div>
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-        SM-2 algorithm: the gold standard since 1987
-      </div>
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        Sleep consolidation locks in memories — study right before bed
-      </div>
-      <div class="evidence-pill">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-        Interleaving practice beats blocked practice — Taylor & Rohrer
-      </div>
-    </div>
-  </div>
+  <!-- STICKY SCROLL CARD SEQUENCE — different visual from features -->
+  <div class="why-showcase" id="why-showcase">
+    <div class="why-sticky" id="why-sticky">
 
-  <!-- 4 benefit cards below ticker -->
-  <div class="benefits-new reveal-stagger reveal" style="margin-top:4rem;">
-    <div class="benefit-new">
-      <div class="benefit-new-icon" style="background:#eef4ff;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <!-- Big stat number on the left, card on right -->
+      <div class="why-slide active" data-index="0">
+        <div class="why-stat">
+          <div class="why-num" style="color:#4a7cf6;">200<span>%</span></div>
+          <div class="why-stat-label">better retention</div>
+          <div class="why-stat-sub">Cepeda et al., 2006</div>
+        </div>
+        <div class="why-card" style="border-top:4px solid #4a7cf6;">
+          <div class="why-card-icon" style="background:#eef4ff;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <h3 class="why-card-title">Spaced Repetition</h3>
+          <p class="why-card-desc">Review things right when you're about to forget them — not randomly. The SM-2 algorithm (used since 1987) calculates exactly when each concept needs reviewing.</p>
+          <div class="why-card-proof">Used by medical students worldwide to pass board exams</div>
+        </div>
       </div>
-      <h3>Study less, retain more</h3>
-      <p>Spaced repetition means you review things right when you're about to forget them. Same knowledge, a fraction of the time.</p>
-    </div>
-    <div class="benefit-new">
-      <div class="benefit-new-icon" style="background:#f0fdf4;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+
+      <div class="why-slide" data-index="1">
+        <div class="why-stat">
+          <div class="why-num" style="color:#38bfa1;">50<span>%</span></div>
+          <div class="why-stat-label">more absorbed</div>
+          <div class="why-stat-sub">Kornell et al., 2009</div>
+        </div>
+        <div class="why-card" style="border-top:4px solid #38bfa1;">
+          <div class="why-card-icon" style="background:#f0fdf4;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </div>
+          <h3 class="why-card-title">Pre-Test Effect</h3>
+          <p class="why-card-desc">Being tested on material before you fully know it primes your brain to absorb information faster. StudyFlow shows you questions before each lesson — not after.</p>
+          <div class="why-card-proof">Primes the brain for deeper encoding of new information</div>
+        </div>
       </div>
-      <h3>Know exactly what to study</h3>
-      <p>No more re-reading everything hoping something sticks. StudyFlow tells you exactly what to focus on every session.</p>
-    </div>
-    <div class="benefit-new">
-      <div class="benefit-new-icon" style="background:#fdf4ff;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+
+      <div class="why-slide" data-index="2">
+        <div class="why-stat">
+          <div class="why-num" style="color:#8b5cf6;">4<span>x</span></div>
+          <div class="why-stat-label">better recall</div>
+          <div class="why-stat-sub">Roediger & Karpicke</div>
+        </div>
+        <div class="why-card" style="border-top:4px solid #8b5cf6;">
+          <div class="why-card-icon" style="background:#fdf4ff;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <h3 class="why-card-title">Active Recall</h3>
+          <p class="why-card-desc">Trying to retrieve information from memory is 4x more effective than re-reading it. Every StudyFlow session forces retrieval — not passive review.</p>
+          <div class="why-card-proof">The most evidence-backed study technique in cognitive science</div>
+        </div>
       </div>
-      <h3>Difficulty that adapts</h3>
-      <p>Day 1 is recall. Day 4 is application. By exam day you're answering harder questions than the test — so the real thing feels easy.</p>
-    </div>
-    <div class="benefit-new">
-      <div class="benefit-new-icon" style="background:#fff8ed;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+
+      <div class="why-slide" data-index="3">
+        <div class="why-stat">
+          <div class="why-num" style="color:#f59e0b;">85<span>%</span></div>
+          <div class="why-stat-label">gap detection</div>
+          <div class="why-stat-sub">Feynman Technique</div>
+        </div>
+        <div class="why-card" style="border-top:4px solid #f59e0b;">
+          <div class="why-card-icon" style="background:#fff8ed;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </div>
+          <h3 class="why-card-title">Feynman Technique</h3>
+          <p class="why-card-desc">Explain a concept in simple language. If you can't, you don't know it. StudyFlow's AI grades your explanation and tells you exactly where your understanding breaks down.</p>
+          <div class="why-card-proof">Nobel Prize physicist Richard Feynman's personal learning method</div>
+        </div>
       </div>
-      <h3>See your gaps before the exam</h3>
-      <p>The Feynman grader finds exactly what you don't understand — during prep, when you can still fix it.</p>
+
+      <div class="why-slide" data-index="4">
+        <div class="why-stat">
+          <div class="why-num" style="color:#ef4444;">40<span>%</span></div>
+          <div class="why-stat-label">harder questions</div>
+          <div class="why-stat-sub">Taylor & Rohrer, 2010</div>
+        </div>
+        <div class="why-card" style="border-top:4px solid #ef4444;">
+          <div class="why-card-icon" style="background:#fef2f2;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          </div>
+          <h3 class="why-card-title">Desirable Difficulty</h3>
+          <p class="why-card-desc">Questions that feel slightly too hard create stronger memories than easy ones. StudyFlow ramps difficulty as your exam approaches — so by exam day, the real thing feels easy.</p>
+          <div class="why-card-proof">Struggling a little is what makes learning stick long-term</div>
+        </div>
+      </div>
+
+      <div class="why-slide" data-index="5">
+        <div class="why-stat">
+          <div class="why-num" style="color:#0ea5e9;">30<span>%</span></div>
+          <div class="why-stat-label">better overnight</div>
+          <div class="why-stat-sub">Walker, 2017</div>
+        </div>
+        <div class="why-card" style="border-top:4px solid #0ea5e9;">
+          <div class="why-card-icon" style="background:#f0f9ff;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </div>
+          <h3 class="why-card-title">Sleep Consolidation</h3>
+          <p class="why-card-desc">Memory consolidation happens during sleep. Studying right before bed locks in what you learned. StudyFlow reminds you to review your hardest topics at the end of each session.</p>
+          <div class="why-card-proof">Why cramming the night before works once but fades fast</div>
+        </div>
+      </div>
+
+      <!-- Progress indicator -->
+      <div class="why-dots" id="why-dots">
+        <div class="why-dot active" data-index="0"></div>
+        <div class="why-dot" data-index="1"></div>
+        <div class="why-dot" data-index="2"></div>
+        <div class="why-dot" data-index="3"></div>
+        <div class="why-dot" data-index="4"></div>
+        <div class="why-dot" data-index="5"></div>
+      </div>
     </div>
+    <div class="why-spacer"></div>
   </div>
 </section>
 
@@ -1988,7 +2050,7 @@
 
 <!-- BOTTOM CTA -->
 <section id="cta">
-  <div style="display:inline-flex; align-items:center; gap:.5rem; background:rgba(255,255,255,0.2); color:#fff; font-size:0.78rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; padding:.4rem 1rem; border-radius:999px; border:1.5px solid rgba(255,255,255,0.4); margin: 0 auto 1.5rem;">✦ Free to start — no credit card</div>
+  <div style="display:flex;justify-content:center;margin-bottom:1.5rem;"><div style="display:inline-flex; align-items:center; gap:.5rem; background:rgba(255,255,255,0.2); color:#fff; font-size:0.78rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; padding:.4rem 1rem; border-radius:999px; border:1.5px solid rgba(255,255,255,0.4);">✦ Free to start — no credit card</div></div>
   <h2>Your next exam is <em>already closer</em> than you think.</h2>
   <p>Build your personalized study plan in under a minute. Free forever — upgrade only if you want more.</p>
 
@@ -1996,7 +2058,6 @@
     <a href="https://studyflow-ten-vert.vercel.app/login.html" style="background:#fff; color:#4a7cf6; padding:.95rem 2rem; border-radius:14px; font-weight:700; font-size:1rem; text-decoration:none; box-shadow:0 4px 20px rgba(0,0,0,.15);">Build my study plan →</a>
     <a href="#pricing" style="background:rgba(255,255,255,.15); color:#fff; padding:.95rem 2rem; border-radius:14px; font-weight:600; font-size:1rem; text-decoration:none; border:1.5px solid rgba(255,255,255,.3);">See plans</a>
   </div>
-  <p style="color:rgba(255,255,255,.5); font-size:0.78rem; margin-top:1rem;">Trusted by students at schools across Hawaii</p>
   <div style="display:flex; gap:2.5rem; justify-content:center; margin-top:2rem;">
     <div style="text-align:center;">
       <strong id="counter" style="display:block; font-size:1.6rem; font-weight:700; color:#fff;">47</strong>
@@ -2099,6 +2160,46 @@
 
       var idx = Math.min(Math.floor(progress * TOTAL), TOTAL - 1);
       setFeature(idx);
+    }, { passive: true });
+  })();
+
+  // ── WHY IT WORKS SCROLL SHOWCASE ──
+  (function() {
+    var showcase = document.getElementById('why-showcase');
+    var slides = document.querySelectorAll('.why-slide');
+    var dots = document.querySelectorAll('.why-dot');
+    var TOTAL = slides.length;
+    var currentIdx = -1;
+
+    function setSlide(idx) {
+      if (idx === currentIdx) return;
+      if (currentIdx >= 0) slides[currentIdx].classList.remove('active');
+      currentIdx = idx;
+      slides[idx].classList.add('active');
+      dots.forEach(function(d, i) { d.classList.toggle('active', i === idx); });
+    }
+
+    dots.forEach(function(dot) {
+      dot.addEventListener('click', function() {
+        var idx = parseInt(dot.dataset.index);
+        var top = showcase.getBoundingClientRect().top + window.pageYOffset;
+        var targetScroll = top + (idx / TOTAL) * (showcase.offsetHeight - window.innerHeight) + 10;
+        window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+      });
+    });
+
+    var obs = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) { if (e.isIntersecting && currentIdx === -1) setSlide(0); });
+    }, { threshold: 0.1 });
+    if (showcase) obs.observe(showcase);
+
+    window.addEventListener('scroll', function() {
+      if (!showcase) return;
+      var rect = showcase.getBoundingClientRect();
+      var total = showcase.offsetHeight - window.innerHeight;
+      if (total <= 0) return;
+      var progress = Math.max(0, Math.min(1, -rect.top / total));
+      setSlide(Math.min(Math.floor(progress * TOTAL), TOTAL - 1));
     }, { passive: true });
   })();
 
