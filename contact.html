@@ -159,7 +159,7 @@
 
 <nav>
   <a href="https://studyflow-ten-vert.vercel.app" class="logo">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="150" height="37">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
       <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
       <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
@@ -297,6 +297,13 @@
     document.querySelectorAll('.topic-btn').forEach(function(b) { b.classList.remove('selected'); });
     btn.classList.add('selected');
     selectedTopic = btn.textContent;
+  }
+
+  function toggleFaq(btn) {
+    var item = btn.closest('.faq-item');
+    var isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(function(el) { el.classList.remove('open'); });
+    if (!isOpen) item.classList.add('open');
   }
 
   function submitForm() {
