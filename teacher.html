@@ -189,8 +189,8 @@
 <div class="container">
 
   <div class="page-header">
-    <h1><em>Your classroom</em></h1>
-    <p id="teacher-welcome">Welcome back — here's how your class is doing today.</p>
+    <h1>Good <span id="greeting-time">day</span>, <em id="teacher-name-heading">Teacher</em>.</h1>
+    <p id="teacher-welcome">Here's how your class is doing today.</p>
   </div>
 
   <!-- CLASS CODE -->
@@ -364,7 +364,14 @@
 
     document.getElementById('class-code').textContent = teacher.classCode;
     document.getElementById('teacher-avatar').textContent = (teacher.name || 'T')[0].toUpperCase();
-    document.getElementById('teacher-welcome').textContent = 'Welcome back' + (teacher.name ? ', ' + teacher.name.split(' ')[0] : '') + ' — here\'s how your class is doing today.';
+    // Set greeting time
+    var h = new Date().getHours();
+    var greet = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+    document.getElementById('greeting-time').textContent = greet;
+    // Set teacher name in heading
+    var firstName = teacher.name ? teacher.name.split(' ')[0] : 'Teacher';
+    document.getElementById('teacher-name-heading').textContent = firstName;
+    document.getElementById('teacher-welcome').textContent = 'Here\'s how your class is doing today, ' + (teacher.name || 'Teacher') + '.';
 
     // Load from Firestore for cross-device data, fall back to localStorage
     fetch('https://studyflow-ten-vert.vercel.app/api/class?classCode=' + teacher.classCode)
@@ -498,13 +505,7 @@
 
   var currentSort = 'streak';
 
-  var demoStudents = [
-    { name:'Alex Chen', email:'alex@school.edu', streak:12, avgScore:94, questionsAnswered:187, timeStudied:20400, lastActive: new Date().toDateString() },
-    { name:'Maya Patel', email:'maya@school.edu', streak:8, avgScore:88, questionsAnswered:154, timeStudied:16800, lastActive: new Date().toDateString() },
-    { name:'Jordan Lee', email:'jordan@school.edu', streak:5, avgScore:76, questionsAnswered:112, timeStudied:12600, lastActive: new Date(Date.now()-86400000).toDateString() },
-    { name:'Sam Rivera', email:'sam@school.edu', streak:3, avgScore:82, questionsAnswered:98, timeStudied:10500, lastActive: new Date(Date.now()-86400000).toDateString() },
-    { name:'Casey Kim', email:'casey@school.edu', streak:1, avgScore:65, questionsAnswered:67, timeStudied:7200, lastActive: new Date(Date.now()-172800000).toDateString() },
-  ];
+  // No demo students — show real data or empty state
 
   function sortLeaderboard(by, btn) {
     currentSort = by;
@@ -514,7 +515,7 @@
   }
 
   function renderLeaderboard() {
-    var students = classData.students && classData.students.length > 0 ? classData.students : demoStudents;
+    var students = classData.students && classData.students.length > 0 ? classData.students : [];
     var sorted = students.slice().sort(function(a, b) {
       if (currentSort === 'streak') return (b.streak||0) - (a.streak||0);
       if (currentSort === 'accuracy') return (b.avgScore||0) - (a.avgScore||0);
@@ -540,11 +541,11 @@
           '<div class="lb-stat"><div class="lb-stat-val">' + (s.avgScore ? s.avgScore+'%' : '—') + '</div><div class="lb-stat-label">Accuracy</div></div>' +
           '<div class="lb-stat"><div class="lb-stat-val">' + (s.questionsAnswered||0) + '</div><div class="lb-stat-label">Questions</div></div>' +
           '<div class="lb-stat"><div class="lb-stat-val">' + (s.timeStudied ? Math.round(s.timeStudied/60)+'m' : '—') + '</div><div class="lb-stat-label">Time</div></div>' +
-          (s.streak >= 7 ? '<span class="lb-badge streak">On fire</span>' : '') +
+          (s.streak >= 7 ? '<span class="lb-badge streak"><svg width="11" height="11" viewBox="0 0 24 24" fill="#d97706" stroke="none" style="display:inline-block;vertical-align:-1px;margin-right:2px"><path d="M12 2C12 2 8 7 8 11c0 2.21 1.79 4 4 4s4-1.79 4-4c0-1.5-.8-2.8-2-3.5.5 1 .5 2 0 2.5C13.5 9 12 8 12 7c0 0-1 1.5-1 2.5 0 .55.45 1 1 1s1-.45 1-1V8c1.5 1 2.5 2.5 2.5 4.5C15.5 15 13.93 16.5 12 16.5S8.5 15 8.5 12.5C8.5 8.5 12 2 12 2Z"/></svg>On fire</span>' : '') +
         '</div>' +
         '</div>';
     });
-    document.getElementById('leaderboard-list').innerHTML = html || '<div class="empty-state"><p>No students yet.</p></div>';
+    document.getElementById('leaderboard-list').innerHTML = html || '<div class="empty-state"><div style="font-size:2rem;margin-bottom:.75rem;opacity:.4"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><h4>No students yet</h4><p>Share your class code <strong>' + teacher.classCode + '</strong> and students will appear here when they join.</p></div>';
   }
 
   function switchTab(tab, btn) {
