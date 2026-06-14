@@ -23,14 +23,14 @@
     --sans: 'DM Sans', sans-serif;
   }
 
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; overflow-x: hidden; max-width: 100vw; }
 
   body {
     font-family: var(--sans);
     color: var(--ink);
     background: var(--white);
     line-height: 1.6;
-    overflow-x: hidden;
+    overflow-x: hidden; max-width: 100vw; width: 100%;
   }
 
   /* ── NAV ── */
@@ -126,6 +126,32 @@
     display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
     animation: fadeUp .7s .3s ease both;
   }
+
+  /* ── PRICING CARDS GRID ── */
+  .pricing-cards-grid {
+    display:grid; grid-template-columns:repeat(3,1fr);
+    gap:1.5rem; max-width:960px;
+    margin-left:auto; margin-right:auto;
+  }
+  @media(max-width:768px) {
+    .pricing-cards-grid { grid-template-columns:1fr; max-width:100%; }
+    .scroll-showcase { height:auto !important; }
+    .sticky-panel { position:relative !important; height:auto !important; grid-template-columns:1fr !important; padding:1.5rem 1rem 3rem !important; }
+    .scroll-spacer { display:none !important; }
+    .sticky-text { height:auto !important; }
+    .feature-slide { position:relative !important; opacity:1 !important; transform:none !important; margin-bottom:2.5rem !important; pointer-events:auto !important; }
+    .feature-slide.exit { opacity:1 !important; transform:none !important; }
+    .sticky-visual { display:none !important; }
+    .showcase-dots { display:none !important; }
+    .why-showcase { height:auto !important; }
+    .why-sticky { position:relative !important; height:auto !important; padding:0 !important; }
+    .why-spacer { display:none !important; }
+    .why-slide { position:relative !important; opacity:1 !important; flex-direction:column !important; gap:1.5rem !important; padding:2rem 0 !important; margin-bottom:1rem !important; pointer-events:auto !important; }
+    .why-dots { display:none !important; }
+    .why-num { font-size:4rem !important; }
+    .why-card { max-width:100% !important; }
+  }
+
   .btn-primary {
     background: var(--blue); color: #fff !important;
     padding: .9rem 2.2rem; border-radius: 12px;
@@ -326,20 +352,27 @@
   .scroll-spacer { height: 420vh; margin-top: -100vh; pointer-events: none; }
 
   /* Left text panel */
-  .sticky-text { position: relative; height: 420px; }
+  .sticky-text { position: relative; height: 420px; perspective: 1000px; }
   .feature-slide {
     position: absolute; top: 0; left: 0; right: 0;
-    opacity: 0; transform: translateY(24px);
-    transition: opacity .35s cubic-bezier(0.16,1,.3,1),
-                transform .35s cubic-bezier(0.16,1,.3,1);
+    opacity: 0;
+    transform: perspective(900px) rotateX(22deg) translateY(36px);
+    transition: opacity .45s cubic-bezier(0.16,1,.3,1),
+                transform .45s cubic-bezier(0.16,1,.3,1);
     pointer-events: none;
+    transform-origin: center bottom;
+    backface-visibility: hidden;
   }
   .feature-slide.active {
-    opacity: 1; transform: translateY(0); pointer-events: auto;
+    opacity: 1;
+    transform: perspective(900px) rotateX(0deg) translateY(0);
+    pointer-events: auto;
   }
   .feature-slide.exit {
-    opacity: 0; transform: translateY(-24px);
-    transition: opacity .25s ease, transform .25s ease;
+    opacity: 0;
+    transform: perspective(900px) rotateX(-18deg) translateY(-28px);
+    transition: opacity .28s ease, transform .28s ease;
+    transform-origin: center top;
   }
   .feature-tag {
     font-size: 0.68rem; font-weight: 800; letter-spacing: .12em;
@@ -367,18 +400,24 @@
   }
 
   /* Right visual panel */
-  .sticky-visual { position: relative; height: 380px; border-radius:20px; }
+  .sticky-visual { position: relative; height: 380px; border-radius:20px; perspective:800px; }
   .visual-card {
     position: absolute; top: 0; left: 0; right: 0;
     background: #fff; border-radius: 20px;
     box-shadow: 0 24px 64px rgba(0,0,0,.12);
     overflow: hidden;
-    opacity: 0; transform: scale(0.97) translateY(12px);
-    transition: opacity .35s cubic-bezier(0.16,1,.3,1),
-                transform .35s cubic-bezier(0.16,1,.3,1);
+    opacity: 0;
+    transform: perspective(700px) rotateX(18deg) scale(0.96);
+    transition: opacity .45s cubic-bezier(0.16,1,.3,1),
+                transform .45s cubic-bezier(0.16,1,.3,1);
     height: 380px;
+    transform-origin: center bottom;
+    backface-visibility: hidden;
   }
-  .visual-card.active { opacity: 1; transform: none; }
+  .visual-card.active {
+    opacity: 1;
+    transform: perspective(700px) rotateX(0deg) scale(1);
+  }
 
   /* Mock UI inside cards */
   .mock-header {
@@ -1817,7 +1856,7 @@
   <h2 class="section-title" style="text-align:left;">Free to start. <em>Pay when you love it.</em></h2>
   <p class="section-sub reveal">No credit card needed. Get your first study plan in under a minute — completely free.</p>
 
-  <div style="display:grid; grid-template-columns: repeat(3,1fr); gap:1.5rem; margin-top:3.5rem; max-width:960px; margin-left:auto; margin-right:auto;">
+  <div class="pricing-cards-grid" style="margin-top:3.5rem;">
 
     <!-- Free Plan -->
     <div class="pricing-free" style="background:var(--soft); border:1.5px solid var(--border); border-radius:24px; padding:2.2rem 2rem;">
@@ -2316,14 +2355,12 @@
     var navLink = document.getElementById('teacher-nav-link');
 
     if (teacher) {
-      // Logged in as teacher
       navLink.innerHTML = '<a href="https://studyflow-ten-vert.vercel.app/teacher.html" style="font-weight:700;">My Dashboard</a>';
     } else if (student) {
-      // Logged in as student
       navLink.innerHTML = '<a href="https://studyflow-ten-vert.vercel.app/dashboard.html" style="font-weight:700;">My Dashboard</a>';
     } else {
-      // Not logged in
-      navLink.innerHTML = '<a href="https://studyflow-ten-vert.vercel.app/teacher-login.html">For Teachers</a>';
+      // Not logged in — show My Dashboard but redirect to login
+      navLink.innerHTML = '<a href="https://studyflow-ten-vert.vercel.app/login.html">My Dashboard</a>';
     }
   })();
 
