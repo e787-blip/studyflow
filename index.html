@@ -311,38 +311,38 @@
   /* ── STICKY SCROLL SHOWCASE ── */
   .scroll-showcase {
     position: relative;
-    height: 600vh; /* 5 features × 120vh each */
+    height: 350vh; /* 5 features — quick transitions */
   }
   .sticky-panel {
     position: sticky;
     top: 0;
     height: 100vh;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1.1fr;
     align-items: center;
-    max-width: 1200px;
+    max-width: 1100px;
     margin: 0 auto;
-    padding: 0 5%;
-    gap: 5%;
+    padding: 0 6% 0 7%;
+    gap: 6%;
     overflow: hidden;
   }
-  .scroll-spacer { height: 600vh; margin-top: -100vh; pointer-events: none; }
+  .scroll-spacer { height: 350vh; margin-top: -100vh; pointer-events: none; }
 
   /* Left text panel */
-  .sticky-text { position: relative; height: 400px; }
+  .sticky-text { position: relative; height: 360px; display:flex; align-items:center; }
   .feature-slide {
-    position: absolute; top: 0; left: 0; right: 0;
+    position: absolute; top: 50%; left: 0; right: 0; transform: translateY(-50%) translateY(32px);
     opacity: 0; transform: translateY(32px);
-    transition: opacity .6s cubic-bezier(0.16,1,.3,1),
-                transform .6s cubic-bezier(0.16,1,.3,1);
+    transition: opacity .35s cubic-bezier(0.16,1,.3,1),
+                transform .35s cubic-bezier(0.16,1,.3,1);
     pointer-events: none;
   }
   .feature-slide.active {
-    opacity: 1; transform: none; pointer-events: auto;
+    opacity: 1; transform: translateY(-50%); pointer-events: auto;
   }
   .feature-slide.exit {
-    opacity: 0; transform: translateY(-32px);
-    transition: opacity .4s ease, transform .4s ease;
+    opacity: 0; transform: translateY(calc(-50% - 32px));
+    transition: opacity .25s ease, transform .25s ease;
   }
   .feature-tag {
     font-size: 0.68rem; font-weight: 800; letter-spacing: .12em;
@@ -370,15 +370,15 @@
   }
 
   /* Right visual panel */
-  .sticky-visual { position: relative; height: 420px; }
+  .sticky-visual { position: relative; height: 380px; border-radius:20px; }
   .visual-card {
     position: absolute; top: 0; left: 0; right: 0;
     background: #fff; border-radius: 20px;
     box-shadow: 0 24px 64px rgba(0,0,0,.12);
     overflow: hidden;
-    opacity: 0; transform: scale(0.95) translateY(20px);
-    transition: opacity .6s cubic-bezier(0.16,1,.3,1),
-                transform .6s cubic-bezier(0.16,1,.3,1);
+    opacity: 0; transform: scale(0.97) translateY(12px);
+    transition: opacity .35s cubic-bezier(0.16,1,.3,1),
+                transform .35s cubic-bezier(0.16,1,.3,1);
     height: 380px;
   }
   .visual-card.active { opacity: 1; transform: none; }
@@ -787,7 +787,65 @@
   /* Parallax hero elements */
   .parallax { will-change: transform; }
 
-  /* Button hover effects */
+  /* ── HOW IT WORKS — NEW ── */
+  .how-steps-new {
+    display:flex; flex-direction:column; gap:0;
+    max-width:680px; margin:0 auto;
+  }
+  .how-step-new {
+    display:grid; grid-template-columns:56px 32px 1fr;
+    gap:0 1.5rem; align-items:flex-start;
+    padding-bottom:2.5rem;
+  }
+  .how-step-icon {
+    width:56px; height:56px; border-radius:16px;
+    background:linear-gradient(135deg,#4a7cf6,#2851c8);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; box-shadow:0 8px 24px rgba(74,124,246,.3);
+  }
+  .how-step-connector {
+    width:2px; background:linear-gradient(to bottom,var(--blue),var(--border));
+    margin:8px auto 0; height:calc(100% + 2.5rem - 56px);
+    min-height:40px;
+  }
+  .how-step-body { padding-top:.4rem; }
+  .how-step-num {
+    font-size:0.62rem; font-weight:800; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--blue); margin-bottom:.4rem;
+  }
+  .how-step-new h3 { font-family:var(--serif); font-size:1.35rem; letter-spacing:-0.02em; margin-bottom:.5rem; }
+  .how-step-new p { color:var(--muted); font-size:0.92rem; line-height:1.7; }
+
+  /* ── BENEFITS — NEW ── */
+  .benefits-new {
+    display:grid; grid-template-columns:repeat(2,1fr);
+    gap:1.5rem; max-width:900px; margin:0 auto;
+  }
+  .benefit-new {
+    background:#fff; border:1.5px solid var(--border);
+    border-radius:20px; padding:1.8rem;
+    transition:transform .3s cubic-bezier(0.16,1,.3,1), box-shadow .3s;
+  }
+  .benefit-new:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,.08); }
+  .benefit-new-icon {
+    width:48px; height:48px; border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom:1rem;
+  }
+  .benefit-new h3 { font-family:var(--serif); font-size:1.1rem; letter-spacing:-0.01em; margin-bottom:.5rem; }
+  .benefit-new p { color:var(--muted); font-size:0.88rem; line-height:1.65; }
+
+  /* Dark mode for new sections */
+  body.dark .benefit-new { background:#161b28; border-color:#2a2d3a; }
+  body.dark .how-step-new h3 { color:#e8eeff; }
+  body.dark .benefit-new h3 { color:#e8eeff; }
+  body.dark .benefit-new-icon { opacity:.9; }
+
+  @media(max-width:768px) {
+    .how-step-new { grid-template-columns:44px 24px 1fr; gap:0 1rem; }
+    .how-step-icon { width:44px; height:44px; border-radius:12px; }
+    .benefits-new { grid-template-columns:1fr; }
+  }
   .btn-primary {
     transition: background .2s, transform .3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .3s ease !important;
   }
@@ -1123,28 +1181,58 @@
 </section>
 
 <!-- HOW IT WORKS -->
-<section id="how" data-scroll="true">
-  <div class="section-label">Simple process</div>
-  <h2 class="section-title">From notes to <em>exam-ready</em> in minutes</h2>
-  <p class="section-sub reveal">No complicated setup. No guessing what to study. Paste your notes and go.</p>
-  <div class="steps reveal-stagger reveal">
-    <div class="step">
-      <div class="step-icon">📤</div>
-      <div class="step-num">1</div>
-      <h3>Paste your notes</h3>
-      <p>Drop in a PDF, paste text, or type your notes. StudyFlow reads and understands the material instantly — any subject, any level.</p>
+<section id="how" style="padding:7rem 5%;background:#fff;">
+  <div style="text-align:center;margin-bottom:4rem;">
+    <div class="section-label reveal-pop">Simple process</div>
+    <h2 class="section-title">From notes to <em>exam-ready</em><br>in 60 seconds</h2>
+  </div>
+
+  <div class="how-steps-new">
+    <div class="how-step-new reveal-left">
+      <div class="how-step-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+      </div>
+      <div class="how-step-connector"></div>
+      <div class="how-step-body">
+        <div class="how-step-num">01</div>
+        <h3>Paste your notes</h3>
+        <p>Drop in a PDF, paste text, or upload a Word doc. StudyFlow reads and understands any subject — biology, history, chemistry, literature.</p>
+      </div>
     </div>
-    <div class="step">
-      <div class="step-icon">💬</div>
-      <div class="step-num">2</div>
-      <h3>Set your goal</h3>
-      <p>Tell us your exam date, your target grade, and how confident you feel. Takes 30 seconds — then the AI handles everything.</p>
+
+    <div class="how-step-new reveal">
+      <div class="how-step-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+      <div class="how-step-connector"></div>
+      <div class="how-step-body">
+        <div class="how-step-num">02</div>
+        <h3>Set your exam date</h3>
+        <p>Tell us when your exam is and your target grade. The AI calculates how many days you need and builds sessions around your schedule.</p>
+      </div>
     </div>
-    <div class="step">
-      <div class="step-icon">🗓️</div>
-      <div class="step-num">3</div>
-      <h3>Study. Score higher.</h3>
-      <p>Get a personalized multi-day plan with AI questions, difficulty ramping, and a score tracker — so you walk into every exam prepared.</p>
+
+    <div class="how-step-new reveal-right">
+      <div class="how-step-icon" style="background:linear-gradient(135deg,#38bfa1,#059669);">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 11.08 22 12 12 22 2 12 2 3 7 3"/>
+          <polyline points="22 3 12 13"/>
+          <line x1="2" y1="3" x2="12" y2="13"/>
+        </svg>
+      </div>
+      <div class="how-step-body">
+        <div class="how-step-num">03</div>
+        <h3>Study. Score higher.</h3>
+        <p>Get your personalized multi-day plan instantly. Daily sessions with AI questions, difficulty ramping, and real-time score tracking.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -1157,7 +1245,7 @@
       <h2 class="section-title">Here's what your <em>plan looks like</em></h2>
       <p class="section-sub reveal">StudyFlow breaks your lesson into smart, timed sessions — organized by importance and your deadline.</p>
       <div class="plan-tags" style="margin-top:1.5rem">
-        <span class="tag">📘 Biology Ch. 7</span>
+        <span class="tag">Biology Ch. 7</span>
         <span class="tag green">Exam in 4 days</span>
         <span class="tag orange">Medium difficulty</span>
       </div>
@@ -1206,30 +1294,50 @@
 </section>
 
 <!-- BENEFITS -->
-<section id="benefits">
-  <div class="section-label">Why it works</div>
-  <h2 class="section-title">Stop cramming. <em>Start retaining.</em></h2>
-  <p class="section-sub reveal">StudyFlow is built on the same science used by top students worldwide — spaced repetition, active recall, and adaptive difficulty.</p>
-  <div class="benefits-grid reveal-stagger reveal">
-    <div class="benefit">
-      <div class="benefit-icon">🎯</div>
-      <h3>No more confusion</h3>
-      <p>Know exactly what to study and in what order — no more rereading everything hoping something sticks.</p>
+<section id="benefits" style="padding:7rem 5%;">
+  <div style="text-align:center;margin-bottom:4rem;">
+    <div class="section-label reveal-pop">Why it works</div>
+    <h2 class="section-title">Stop cramming.<br><em>Start retaining.</em></h2>
+  </div>
+
+  <div class="benefits-new reveal-stagger reveal">
+    <div class="benefit-new">
+      <div class="benefit-new-icon" style="background:#eef4ff;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+      <h3>Study less, retain more</h3>
+      <p>Spaced repetition means you review things right when you're about to forget them — not randomly. Same knowledge, a fraction of the time.</p>
     </div>
-    <div class="benefit">
-      <div class="benefit-icon">🧩</div>
-      <h3>Manageable sessions</h3>
-      <p>Long lessons get broken into bite-sized study blocks that fit your schedule and energy.</p>
+    <div class="benefit-new">
+      <div class="benefit-new-icon" style="background:#f0fdf4;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      </div>
+      <h3>Know exactly what to study</h3>
+      <p>No more re-reading everything hoping something sticks. StudyFlow tells you exactly what to focus on and in what order every session.</p>
     </div>
-    <div class="benefit">
-      <div class="benefit-icon">⏱️</div>
-      <h3>Saves prep time</h3>
-      <p>Instead of spending an hour figuring out what to study, your plan is ready in seconds.</p>
+    <div class="benefit-new">
+      <div class="benefit-new-icon" style="background:#fdf4ff;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+      </div>
+      <h3>Difficulty that adapts</h3>
+      <p>Day 1 is recall. Day 4 is application. By exam day you're answering harder questions than you'll see on the test — so the real thing feels easy.</p>
     </div>
-    <div class="benefit">
-      <div class="benefit-icon">😌</div>
-      <h3>Less stress</h3>
-      <p>A clear plan = a calm mind. Stop dreading exams and start feeling ready for them.</p>
+    <div class="benefit-new">
+      <div class="benefit-new-icon" style="background:#fff8ed;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+      </div>
+      <h3>See your gaps before the exam</h3>
+      <p>The Feynman grader finds exactly what you don't understand — not after the test, but during your prep, when you can still fix it.</p>
     </div>
   </div>
 </section>
@@ -1566,7 +1674,7 @@
 
     <!-- VIP Plan -->
     <div style="background:linear-gradient(135deg, #1a1d2e 0%, #2d1f4e 100%); border:1.5px solid #4a2d8a; border-radius:24px; padding:2.2rem 2rem; position:relative; box-shadow: 0 20px 50px rgba(139,92,246,.25);">
-      <div style="position:absolute; top:-14px; left:50%; transform:translateX(-50%); background:linear-gradient(90deg, #c77dff, #8b5cf6); color:#fff; font-size:0.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:.3rem .9rem; border-radius:999px; white-space:nowrap;">👑 VIP</div>
+      <div style="position:absolute; top:-14px; left:50%; transform:translateX(-50%); background:linear-gradient(90deg, #c77dff, #8b5cf6); color:#fff; font-size:0.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:.3rem .9rem; border-radius:999px; white-space:nowrap;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:4px"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> VIP</div>
       <div style="font-size:0.78rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:rgba(199,125,255,.8); margin-bottom:1rem;">VIP</div>
       <div style="font-size:3rem; font-weight:700; color:#fff; line-height:1; margin-bottom:.3rem;">$14.99</div>
       <div style="font-size:0.88rem; color:rgba(255,255,255,.5); margin-bottom:1.8rem;">per month</div>
@@ -1746,7 +1854,7 @@
     <a href="https://studyflow-ten-vert.vercel.app/login.html" style="background:#fff; color:#4a7cf6; padding:.95rem 2rem; border-radius:14px; font-weight:700; font-size:1rem; text-decoration:none; box-shadow:0 4px 20px rgba(0,0,0,.15);">Build my study plan →</a>
     <a href="#pricing" style="background:rgba(255,255,255,.15); color:#fff; padding:.95rem 2rem; border-radius:14px; font-weight:600; font-size:1rem; text-decoration:none; border:1.5px solid rgba(255,255,255,.3);">See plans</a>
   </div>
-  <p style="color:rgba(255,255,255,.5); font-size:0.78rem; margin-top:1rem;">Trusted by students at schools across Hawaii 🌺</p>
+  <p style="color:rgba(255,255,255,.5); font-size:0.78rem; margin-top:1rem;">Trusted by students at schools across Hawaii</p>
   <div style="display:flex; gap:2.5rem; justify-content:center; margin-top:2rem;">
     <div style="text-align:center;">
       <strong id="counter" style="display:block; font-size:1.6rem; font-weight:700; color:#fff;">47</strong>
@@ -1757,7 +1865,7 @@
       <span style="font-size:0.8rem; color:rgba(255,255,255,.55);">free forever</span>
     </div>
     <div style="text-align:center;">
-      <strong style="display:block; font-size:1.6rem; font-weight:700; color:#fff;">🔒</strong>
+      <strong style="display:block; font-size:1.6rem; font-weight:700; color:#fff;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-2px;margin-right:4px"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></strong>
       <span style="font-size:0.8rem; color:rgba(255,255,255,.55);">no spam ever</span>
     </div>
   </div>
