@@ -79,9 +79,9 @@
   .hero {
     min-height: 100vh;
     display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    text-align: center;
-    padding: 7rem 5% 5rem;
+    align-items: flex-start; justify-content: center;
+    text-align: left;
+    padding: 7rem 7% 5rem;
     background: linear-gradient(175deg, #e8f0ff 0%, #f4f7ff 45%, #ffffff 100%);
     position: relative;
     overflow: hidden;
@@ -118,12 +118,12 @@
     font-size: clamp(1rem, 2vw, 1.2rem);
     color: var(--muted);
     max-width: 480px;
-    margin: 1.4rem auto 2.4rem;
+    margin: 1.4rem 0 2.4rem;
     font-weight: 300;
     animation: fadeUp .7s .2s ease both;
   }
   .hero-btns {
-    display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
+    display: flex; gap: 1rem; justify-content: flex-start; flex-wrap: wrap;
     animation: fadeUp .7s .3s ease both;
   }
   .btn-primary {
@@ -195,7 +195,7 @@
   .section-title em { font-style: italic; color: var(--blue); }
   .section-sub {
     color: var(--muted); font-size: 1rem; font-weight: 300;
-    max-width: 440px; margin-top: .75rem;
+    max-width: 540px; margin-top: .75rem; text-align:left;
   }
 
   /* ── HOW IT WORKS ── */
@@ -551,7 +551,7 @@
   .waitlist-stats {
     display: flex; gap: 2.5rem; justify-content: center;
   }
-  .stat { text-align: center; }
+  .stat { text-align: left; }
   .stat strong {
     display: block; font-size: 1.6rem; font-weight: 700; color: #fff;
   }
@@ -572,7 +572,7 @@
     background-size: 32px 32px;
     pointer-events: none;
   }
-  #cta h2 {
+  #cta h2 { text-align:left;
     font-family: var(--serif);
     font-size: clamp(2.2rem, 5vw, 4rem);
     letter-spacing: -.03em; line-height: 1.1;
@@ -580,7 +580,7 @@
     margin-bottom: 1rem;
   }
   #cta h2 em { font-style: italic; color: #c5d9ff; }
-  #cta p { color: rgba(255,255,255,.75); font-size: 1.05rem; font-weight: 300; margin-bottom: 2.5rem; position: relative; z-index: 1; }
+  #cta p { text-align:left; color: rgba(255,255,255,.75); font-size: 1.05rem; font-weight: 300; margin-bottom: 2.5rem; position: relative; z-index: 1; }
   .btn-white {
     background: #fff; color: var(--blue);
     padding: 1rem 2.4rem; border-radius: 12px;
@@ -787,7 +787,7 @@
   /* ── HOW IT WORKS — NEW ── */
   .how-steps-new {
     display:flex; flex-direction:column; gap:0;
-    max-width:680px; margin:0 auto;
+    max-width:680px; margin:0;
   }
   .how-step-new {
     display:flex; gap:1.5rem; align-items:flex-start;
@@ -816,7 +816,7 @@
   /* ── BENEFITS — NEW ── */
   .benefits-new {
     display:grid; grid-template-columns:repeat(2,1fr);
-    gap:1.5rem; max-width:900px; margin:0 auto;
+    gap:1.5rem; max-width:900px; margin:0;
   }
   .benefit-new {
     background:#fff; border:1.5px solid var(--border);
@@ -1111,7 +1111,7 @@
     section { padding:4rem 1.2rem; }
     /* Bottom CTA */
     #cta { padding:4rem 1.2rem; }
-    #cta h2 { font-size:clamp(1.6rem,5vw,2rem); }
+    #cta h2 { text-align:left; font-size:clamp(1.6rem,5vw,2rem); }
     footer { padding:2rem 1.2rem; }
   }
 
@@ -1179,9 +1179,9 @@
 
 <!-- HOW IT WORKS -->
 <section id="how" style="padding:7rem 5%;background:#fff;">
-  <div style="text-align:center;margin-bottom:4rem;">
+  <div style="margin-bottom:3rem;">
     <div class="section-label reveal-pop">Simple process</div>
-    <h2 class="section-title" style="text-align:center;">From notes to <em>exam-ready</em> in 60 seconds</h2>
+    <h2 class="section-title reveal">From notes to <em>exam-ready</em> in 60 seconds</h2>
   </div>
 
   <div class="how-steps-new">
@@ -1290,9 +1290,9 @@
 
 <!-- BENEFITS -->
 <section id="benefits" style="padding:7rem 5%;">
-  <div style="text-align:center;margin-bottom:4rem;">
+  <div style="margin-bottom:3rem;">
     <div class="section-label reveal-pop">Why it works</div>
-    <h2 class="section-title">Stop cramming.<br><em>Start retaining.</em></h2>
+    <h2 class="section-title reveal">Stop cramming. <em>Start retaining.</em></h2>
   </div>
 
   <div class="benefits-new reveal-stagger reveal">
@@ -1340,7 +1340,7 @@
 <!-- TESTIMONIALS -->
 <section id="testimonials" style="background:var(--soft); padding:6rem 5%;">
   <div class="section-label">Real results</div>
-  <h2 class="section-title">Students are <em>scoring higher</em></h2>
+  <h2 class="section-title" style="text-align:left;">Students are <em>scoring higher</em></h2>
   <p class="section-sub reveal">Real feedback from students who used StudyFlow before their exams.</p>
 
   <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1.5rem; margin-top:3.5rem;" class="reveal-stagger reveal">
@@ -1410,9 +1410,9 @@
 
 <!-- FEATURES -->
 <section id="features" style="background:var(--soft);padding:6rem 0 0;">
-  <div style="text-align:center;padding:0 5% 2rem;">
+  <div style="padding:0 5% 2rem;">
     <div class="section-label reveal-pop">Everything you need</div>
-    <h2 style="font-family:var(--serif);font-size:clamp(2rem,4vw,3rem);letter-spacing:-0.03em;text-align:center;color:var(--ink);line-height:1.2;">Your unfair <em style="font-style:italic;color:var(--blue);">advantage</em> before every exam</h2>
+    <h2 style="font-family:var(--serif);font-size:clamp(2rem,4vw,3rem);letter-spacing:-0.03em;color:var(--ink);line-height:1.2;">Your unfair <em style="font-style:italic;color:var(--blue);">advantage</em> before every exam</h2>
   </div>
 
   <!-- STICKY SCROLL SHOWCASE -->
@@ -1665,7 +1665,7 @@
 <!-- PRICING -->
 <section id="pricing" style="background: var(--white); padding: 6rem 5%;">
   <div class="section-label">Simple pricing</div>
-  <h2 class="section-title">Free to start. <em>Pay when you love it.</em></h2>
+  <h2 class="section-title" style="text-align:left;">Free to start. <em>Pay when you love it.</em></h2>
   <p class="section-sub reveal">No credit card needed. Get your first study plan in under a minute — completely free.</p>
 
   <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:1.5rem; margin-top:3.5rem; max-width:1000px;">
@@ -1762,7 +1762,7 @@
 <!-- EDUCATION PRICING -->
 <section style="background:var(--soft); padding:6rem 5%;">
   <div class="section-label">For schools</div>
-  <h2 class="section-title">StudyFlow for <em>classrooms</em></h2>
+  <h2 class="section-title" style="text-align:left;">StudyFlow for <em>classrooms</em></h2>
   <p class="section-sub reveal">Give every student in your class the most powerful AI study tool — and track their progress in real time.</p>
 
   <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1.5rem; max-width:900px; margin:3rem auto 0;">
@@ -1859,7 +1859,7 @@
   <h2 class="section-title">Everything you need to <em>know</em></h2>
   <p class="section-sub reveal">Everything you need to know about StudyFlow.</p>
 
-  <div class="faq-list reveal" style="margin-top:3rem; max-width:680px;">
+  <div class="faq-list reveal" style="margin-top:3rem; max-width:680px; margin-left:0;">
 
     <div class="faq-item reveal" style="transition-delay:0.00s">
       <button class="faq-q" onclick="toggleFaq(this)">
