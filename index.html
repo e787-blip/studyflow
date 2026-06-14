@@ -2139,105 +2139,72 @@
 </footer>
 
 <script>
-  // ── STICKY SCROLL SHOWCASE ──
+  // ── SCROLL SHOWCASES ──
   (function() {
-    var showcase = document.getElementById('scroll-showcase');
-    var slides = document.querySelectorAll('.feature-slide');
-    var visuals = document.querySelectorAll('.visual-card');
-    var dots = document.querySelectorAll('.showcase-dot');
-    var TOTAL = slides.length; // auto-counts all 6
-    var currentIdx = -1;
+    // Wait for full layout to settle before measuring
+    window.addEventListener('load', function() {
 
-    function setFeature(idx) {
-      if (idx === currentIdx) return;
-      // Exit old
-      if (currentIdx >= 0) {
-        slides[currentIdx].classList.remove('active');
-        slides[currentIdx].classList.add('exit');
-        visuals[currentIdx].classList.remove('active');
-        setTimeout(function(){ if(slides[currentIdx]) slides[currentIdx].classList.remove('exit'); }, 400);
+      // ── FEATURES SHOWCASE ──
+      var feat = document.getElementById('scroll-showcase');
+      var featSlides = feat ? feat.querySelectorAll('.feature-slide') : [];
+      var featVisuals = feat ? feat.querySelectorAll('.visual-card') : [];
+      var featDots = feat ? feat.querySelectorAll('.showcase-dot') : [];
+      var featIdx = 0;
+
+      function showFeat(i) {
+        featSlides.forEach(function(s, j) {
+          s.classList.toggle('active', j === i);
+          s.classList.remove('exit');
+        });
+        featVisuals.forEach(function(v, j) {
+          v.classList.toggle('active', j === i);
+        });
+        featDots.forEach(function(d, j) {
+          d.classList.toggle('active', j === i);
+        });
+        featIdx = i;
       }
-      // Enter new
-      currentIdx = idx;
-      slides[idx].classList.add('active');
-      visuals[idx].classList.add('active');
-      dots.forEach(function(d, i) {
-        d.classList.toggle('active', i === idx);
-      });
-    }
+      if (featSlides.length) showFeat(0);
 
-    // Dot click navigation
-    dots.forEach(function(dot) {
-      dot.addEventListener('click', function() {
-        var idx = parseInt(dot.dataset.index);
-        var sectionTop = showcase.getBoundingClientRect().top + window.pageYOffset;
-        var targetScroll = sectionTop + (idx / TOTAL) * (showcase.offsetHeight - window.innerHeight) + 10;
-        window.scrollTo({ top: targetScroll, behavior: 'smooth' });
-      });
+      // ── WHY SHOWCASE ──
+      var why = document.getElementById('why-showcase');
+      var whySlides = why ? why.querySelectorAll('.why-slide') : [];
+      var whyDots = why ? why.querySelectorAll('.why-dot') : [];
+      var whyIdx = 0;
+
+      function showWhy(i) {
+        whySlides.forEach(function(s, j) { s.classList.toggle('active', j === i); });
+        whyDots.forEach(function(d, j) { d.classList.toggle('active', j === i); });
+        whyIdx = i;
+      }
+      if (whySlides.length) showWhy(0);
+
+      // ── SINGLE SCROLL HANDLER ──
+      function onScroll() {
+        // Features
+        if (feat && featSlides.length > 1) {
+          var r = feat.getBoundingClientRect();
+          var h = feat.offsetHeight - window.innerHeight;
+          if (h > 0 && r.top <= 0 && r.bottom >= window.innerHeight) {
+            var p = Math.max(0, Math.min(0.9999, -r.top / h));
+            var idx = Math.min(Math.floor(p * featSlides.length), featSlides.length - 1);
+            if (idx !== featIdx) showFeat(idx);
+          }
+        }
+        // Why
+        if (why && whySlides.length > 1) {
+          var r2 = why.getBoundingClientRect();
+          var h2 = why.offsetHeight - window.innerHeight;
+          if (h2 > 0 && r2.top <= 0 && r2.bottom >= window.innerHeight) {
+            var p2 = Math.max(0, Math.min(0.9999, -r2.top / h2));
+            var idx2 = Math.min(Math.floor(p2 * whySlides.length), whySlides.length - 1);
+            if (idx2 !== whyIdx) showWhy(idx2);
+          }
+        }
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
     });
-
-    // Show first feature immediately when section enters view
-    var showcaseObserver = new IntersectionObserver(function(entries) {
-      entries.forEach(function(e) {
-        if (e.isIntersecting && currentIdx === -1) setFeature(0);
-      });
-    }, { threshold: 0.1 });
-    if (showcase) showcaseObserver.observe(showcase);
-
-    // Scroll handler — maps scroll position to feature index
-    window.addEventListener('scroll', function() {
-      if (!showcase) return;
-      var rect = showcase.getBoundingClientRect();
-      var totalHeight = showcase.offsetHeight - window.innerHeight;
-      if (totalHeight <= 0) return;
-
-      // How far through the showcase section are we (0 to 1)
-      var progress = -rect.top / totalHeight;
-      progress = Math.max(0, Math.min(1, progress));
-
-      var idx = Math.min(Math.floor(progress * TOTAL), TOTAL - 1);
-      setFeature(idx);
-    }, { passive: true });
-  })();
-
-  // ── WHY IT WORKS SCROLL SHOWCASE ──
-  (function() {
-    var showcase = document.getElementById('why-showcase');
-    var slides = document.querySelectorAll('.why-slide');
-    var dots = document.querySelectorAll('.why-dot');
-    var TOTAL = slides.length;
-    var currentIdx = -1;
-
-    function setSlide(idx) {
-      if (idx === currentIdx) return;
-      if (currentIdx >= 0) slides[currentIdx].classList.remove('active');
-      currentIdx = idx;
-      slides[idx].classList.add('active');
-      dots.forEach(function(d, i) { d.classList.toggle('active', i === idx); });
-    }
-
-    dots.forEach(function(dot) {
-      dot.addEventListener('click', function() {
-        var idx = parseInt(dot.dataset.index);
-        var top = showcase.getBoundingClientRect().top + window.pageYOffset;
-        var targetScroll = top + (idx / TOTAL) * (showcase.offsetHeight - window.innerHeight) + 10;
-        window.scrollTo({ top: targetScroll, behavior: 'smooth' });
-      });
-    });
-
-    var obs = new IntersectionObserver(function(entries) {
-      entries.forEach(function(e) { if (e.isIntersecting && currentIdx === -1) setSlide(0); });
-    }, { threshold: 0.1 });
-    if (showcase) obs.observe(showcase);
-
-    window.addEventListener('scroll', function() {
-      if (!showcase) return;
-      var rect = showcase.getBoundingClientRect();
-      var total = showcase.offsetHeight - window.innerHeight;
-      if (total <= 0) return;
-      var progress = Math.max(0, Math.min(1, -rect.top / total));
-      setSlide(Math.min(Math.floor(progress * TOTAL), TOTAL - 1));
-    }, { passive: true });
   })();
 
   // ── EXISTING SCROLL REVEAL ──
