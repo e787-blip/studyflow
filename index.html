@@ -527,29 +527,87 @@
     border: none;
   }
 
-  /* Scroll reveal - enhanced */
+  /* ── SCROLL ANIMATION SYSTEM ── */
+
+  /* Base reveal */
   .reveal {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(40px);
+    transition: opacity .9s cubic-bezier(0.16, 1, 0.3, 1),
+                transform .9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  /* Reveal from left */
+  .reveal-left {
+    opacity: 0;
+    transform: translateX(-48px);
+    transition: opacity .9s cubic-bezier(0.16, 1, 0.3, 1),
+                transform .9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-left.visible { opacity: 1; transform: none; }
+
+  /* Reveal from right */
+  .reveal-right {
+    opacity: 0;
+    transform: translateX(48px);
+    transition: opacity .9s cubic-bezier(0.16, 1, 0.3, 1),
+                transform .9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-right.visible { opacity: 1; transform: none; }
+
+  /* Scale reveal — for cards */
+  .reveal-scale {
+    opacity: 0;
+    transform: scale(0.92) translateY(24px);
     transition: opacity .8s cubic-bezier(0.16, 1, 0.3, 1),
                 transform .8s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .reveal.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  .reveal-scale.visible { opacity: 1; transform: none; }
 
-  /* Staggered children reveal */
+  /* Staggered children */
   .reveal-stagger > * {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(28px) scale(0.97);
     transition: opacity .7s cubic-bezier(0.16, 1, 0.3, 1),
                 transform .7s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .reveal-stagger.visible > *:nth-child(1) { opacity: 1; transform: none; transition-delay: 0s; }
-  .reveal-stagger.visible > *:nth-child(2) { opacity: 1; transform: none; transition-delay: .12s; }
-  .reveal-stagger.visible > *:nth-child(3) { opacity: 1; transform: none; transition-delay: .24s; }
-  .reveal-stagger.visible > *:nth-child(4) { opacity: 1; transform: none; transition-delay: .36s; }
+  .reveal-stagger.visible > *:nth-child(1) { opacity:1; transform:none; transition-delay:0s; }
+  .reveal-stagger.visible > *:nth-child(2) { opacity:1; transform:none; transition-delay:.1s; }
+  .reveal-stagger.visible > *:nth-child(3) { opacity:1; transform:none; transition-delay:.2s; }
+  .reveal-stagger.visible > *:nth-child(4) { opacity:1; transform:none; transition-delay:.3s; }
+  .reveal-stagger.visible > *:nth-child(5) { opacity:1; transform:none; transition-delay:.4s; }
+  .reveal-stagger.visible > *:nth-child(6) { opacity:1; transform:none; transition-delay:.5s; }
+
+  /* Word-by-word title animation */
+  .reveal-words .word {
+    display: inline-block;
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity .6s cubic-bezier(0.16, 1, 0.3, 1),
+                transform .6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-words.visible .word { opacity: 1; transform: none; }
+
+  /* Section label pop */
+  .reveal-pop {
+    opacity: 0;
+    transform: scale(0.8) translateY(12px);
+    transition: opacity .5s cubic-bezier(0.34, 1.56, 0.64, 1),
+                transform .5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .reveal-pop.visible { opacity: 1; transform: none; }
+
+  /* Line draw — for dividers */
+  .reveal-line {
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-line.visible { transform: scaleX(1); }
+
+  /* Parallax hero elements */
+  .parallax { will-change: transform; }
 
   /* Button hover effects */
   .btn-primary {
@@ -887,10 +945,10 @@
 </section>
 
 <!-- HOW IT WORKS -->
-<section id="how">
+<section id="how" data-scroll="true">
   <div class="section-label">Simple process</div>
   <h2 class="section-title">From notes to <em>exam-ready</em> in minutes</h2>
-  <p class="section-sub">No complicated setup. No guessing what to study. Paste your notes and go.</p>
+  <p class="section-sub reveal">No complicated setup. No guessing what to study. Paste your notes and go.</p>
   <div class="steps reveal-stagger reveal">
     <div class="step">
       <div class="step-icon">📤</div>
@@ -919,7 +977,7 @@
   <div class="plan-wrapper reveal">
     <div>
       <h2 class="section-title">Here's what your <em>plan looks like</em></h2>
-      <p class="section-sub">StudyFlow breaks your lesson into smart, timed sessions — organized by importance and your deadline.</p>
+      <p class="section-sub reveal">StudyFlow breaks your lesson into smart, timed sessions — organized by importance and your deadline.</p>
       <div class="plan-tags" style="margin-top:1.5rem">
         <span class="tag">📘 Biology Ch. 7</span>
         <span class="tag green">Exam in 4 days</span>
@@ -973,7 +1031,7 @@
 <section id="benefits">
   <div class="section-label">Why it works</div>
   <h2 class="section-title">Stop cramming. <em>Start retaining.</em></h2>
-  <p class="section-sub">StudyFlow is built on the same science used by top students worldwide — spaced repetition, active recall, and adaptive difficulty.</p>
+  <p class="section-sub reveal">StudyFlow is built on the same science used by top students worldwide — spaced repetition, active recall, and adaptive difficulty.</p>
   <div class="benefits-grid reveal-stagger reveal">
     <div class="benefit">
       <div class="benefit-icon">🎯</div>
@@ -1002,7 +1060,7 @@
 <section id="testimonials" style="background:var(--soft); padding:6rem 5%;">
   <div class="section-label">Real results</div>
   <h2 class="section-title">Students are <em>scoring higher</em></h2>
-  <p class="section-sub">Real feedback from students who used StudyFlow before their exams.</p>
+  <p class="section-sub reveal">Real feedback from students who used StudyFlow before their exams.</p>
 
   <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:1.5rem; margin-top:3.5rem;" class="reveal-stagger reveal">
 
@@ -1073,7 +1131,7 @@
 <section id="features">
   <div class="section-label">Everything you need</div>
   <h2 class="section-title">Your unfair <em>advantage</em> before every exam</h2>
-  <p class="section-sub">Every feature is designed around one goal — getting you a better grade in less time.</p>
+  <p class="section-sub reveal">Every feature is designed around one goal — getting you a better grade in less time.</p>
   <div class="features-grid reveal-stagger reveal">
     <div class="feature">
       <div class="feature-icon">🤖</div>
@@ -1102,7 +1160,7 @@
 <section id="pricing" style="background: var(--white); padding: 6rem 5%;">
   <div class="section-label">Simple pricing</div>
   <h2 class="section-title">Free to start. <em>Pay when you love it.</em></h2>
-  <p class="section-sub">No credit card needed. Get your first study plan in under a minute — completely free.</p>
+  <p class="section-sub reveal">No credit card needed. Get your first study plan in under a minute — completely free.</p>
 
   <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:1.5rem; margin-top:3.5rem; max-width:1000px;">
 
@@ -1199,7 +1257,7 @@
 <section style="background:var(--soft); padding:6rem 5%;">
   <div class="section-label">For schools</div>
   <h2 class="section-title">StudyFlow for <em>classrooms</em></h2>
-  <p class="section-sub">Give every student in your class the most powerful AI study tool — and track their progress in real time.</p>
+  <p class="section-sub reveal">Give every student in your class the most powerful AI study tool — and track their progress in real time.</p>
 
   <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1.5rem; max-width:900px; margin:3rem auto 0;">
 
@@ -1293,39 +1351,39 @@
 <section id="faq" style="background:var(--soft); padding:6rem 5%;">
   <div class="section-label">Got questions?</div>
   <h2 class="section-title">Everything you need to <em>know</em></h2>
-  <p class="section-sub">Everything you need to know about StudyFlow.</p>
+  <p class="section-sub reveal">Everything you need to know about StudyFlow.</p>
 
   <div class="faq-list reveal" style="margin-top:3rem; max-width:680px;">
 
-    <div class="faq-item">
+    <div class="faq-item reveal" style="transition-delay:0.00s">
       <button class="faq-q" onclick="toggleFaq(this)">
         What file types can I upload? <span class="faq-icon">+</span>
       </button>
       <div class="faq-a">You can upload PDFs, PowerPoint slides, Word docs, and plain text notes. Basically anything you'd study from.</div>
     </div>
 
-    <div class="faq-item">
+    <div class="faq-item reveal" style="transition-delay:0.08s">
       <button class="faq-q" onclick="toggleFaq(this)">
         How does the AI create my study plan? <span class="faq-icon">+</span>
       </button>
       <div class="faq-a">StudyFlow reads your lesson, understands the key topics, and breaks them into focused study sessions based on your deadline and difficulty level. No two plans are the same.</div>
     </div>
 
-    <div class="faq-item">
+    <div class="faq-item reveal" style="transition-delay:0.16s">
       <button class="faq-q" onclick="toggleFaq(this)">
         Is StudyFlow really free? <span class="faq-icon">+</span>
       </button>
       <div class="faq-a">Yes! The free plan gives you 1 study plan per month with no credit card needed. Upgrade to Pro for $7.99/month to unlock unlimited plans, flashcards, and practice questions.</div>
     </div>
 
-    <div class="faq-item">
+    <div class="faq-item reveal" style="transition-delay:0.24s">
       <button class="faq-q" onclick="toggleFaq(this)">
         What subjects does it work for? <span class="faq-icon">+</span>
       </button>
       <div class="faq-a">Any subject! Biology, history, math, languages — if you can upload notes for it, StudyFlow can build a plan for it.</div>
     </div>
 
-    <div class="faq-item">
+    <div class="faq-item reveal" style="transition-delay:0.32s">
       <button class="faq-q" onclick="toggleFaq(this)">
         When will StudyFlow fully launch? <span class="faq-icon">+</span>
       </button>
@@ -1390,35 +1448,86 @@
 </footer>
 
 <script>
-  // Scroll reveal with stagger support
-  const reveals = document.querySelectorAll('.reveal');
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(e => {
+  // ── APPLE-STYLE SCROLL ANIMATION SYSTEM ──
+
+  // 1. Split section titles into words for word-by-word animation
+  document.querySelectorAll('.section-title').forEach(function(el) {
+    if (el.closest('.hero')) return; // Skip hero title
+    el.classList.add('reveal-words');
+    var html = el.innerHTML;
+    // Preserve <em> tags
+    var parts = html.split(/(<em>[^<]*<\/em>|<[^>]+>)/g).filter(Boolean);
+    var result = parts.map(function(part) {
+      if (part.startsWith('<')) return part;
+      return part.split(' ').filter(Boolean).map(function(w) {
+        return '<span class="word">' + w + '</span>';
+      }).join(' ');
+    }).join(' ');
+    el.innerHTML = result;
+  });
+
+  // 2. Add word stagger delays
+  document.querySelectorAll('.reveal-words .word').forEach(function(word, i) {
+    word.style.transitionDelay = (i * 0.07) + 's';
+  });
+
+  // 3. Add reveal-scale to feature cards if not already set
+  document.querySelectorAll('.feature-card').forEach(function(card) {
+    if (!card.classList.contains('reveal-scale') && !card.classList.contains('reveal')) {
+      card.classList.add('reveal-scale');
+    }
+  });
+
+  // 4. Add reveal-pop to section labels
+  document.querySelectorAll('.section-label').forEach(function(el) {
+    el.classList.add('reveal-pop');
+  });
+
+  // 5. Alternate left/right for how-it-works steps
+  document.querySelectorAll('.how-step').forEach(function(step, i) {
+    step.classList.add(i % 2 === 0 ? 'reveal-left' : 'reveal-right');
+  });
+
+  // 6. Master IntersectionObserver — handles all reveal types
+  var allReveal = document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale, .reveal-stagger, .reveal-words, .reveal-pop, .reveal-line');
+  var revealObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
       if (e.isIntersecting) {
         e.target.classList.add('visible');
-        observer.unobserve(e.target);
+        revealObserver.unobserve(e.target);
       }
     });
-  }, { threshold: 0.1 });
-  reveals.forEach(el => observer.observe(el));
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+  allReveal.forEach(function(el) { revealObserver.observe(el); });
 
-  // Smooth number counter animation
+  // 7. Parallax on hero badge and sub elements
+  window.addEventListener('scroll', function() {
+    var scrollY = window.pageYOffset;
+    var badge = document.querySelector('.badge');
+    var heroSub = document.querySelector('.hero-sub');
+    var heroBtns = document.querySelector('.hero-btns');
+    if (badge) badge.style.transform = 'translateY(' + (scrollY * -0.08) + 'px)';
+    if (heroSub) heroSub.style.transform = 'translateY(' + (scrollY * 0.04) + 'px)';
+    if (heroBtns) heroBtns.style.transform = 'translateY(' + (scrollY * 0.06) + 'px)';
+  }, { passive: true });
+
+  // 8. Smooth number counter animation
   function animateCounter(el, target, duration) {
-    let start = 0;
-    const step = target / (duration / 16);
-    const timer = setInterval(() => {
+    var start = 0;
+    var step = target / (duration / 16);
+    var timer = setInterval(function() {
       start += step;
       if (start >= target) { start = target; clearInterval(timer); }
       el.textContent = Math.floor(start);
     }, 16);
   }
 
-  const counterEl = document.getElementById('counter');
+  var counterEl = document.getElementById('counter');
   if (counterEl) {
-    const counterObserver = new IntersectionObserver(entries => {
-      entries.forEach(e => {
+    var counterObserver = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
         if (e.isIntersecting) {
-          animateCounter(counterEl, 47, 1500);
+          animateCounter(counterEl, parseInt(counterEl.dataset.target || '100'), 1200);
           counterObserver.unobserve(e.target);
         }
       });
@@ -1426,6 +1535,25 @@
     counterObserver.observe(counterEl);
   }
 
+  // 9. Pricing card hover — subtle lift with shadow
+  document.querySelectorAll('.plan-card').forEach(function(card) {
+    card.addEventListener('mouseenter', function() {
+      if (!card.classList.contains('popular')) {
+        card.style.transform = 'translateY(-6px)';
+        card.style.boxShadow = '0 16px 48px rgba(0,0,0,.1)';
+        card.style.transition = 'all .3s cubic-bezier(0.16,1,.3,1)';
+      }
+    });
+    card.addEventListener('mouseleave', function() {
+      card.style.transform = '';
+      card.style.boxShadow = '';
+    });
+  });
+
+  // 10. FAQ accordion animate height
+  document.querySelectorAll('.faq-item').forEach(function(item) {
+    item.style.transition = 'all .3s cubic-bezier(0.16,1,.3,1)';
+  });
   // Smart nav — show correct dashboard based on who is logged in
   (function() {
     var teacher = localStorage.getItem('studyflow_teacher');
