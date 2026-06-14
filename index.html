@@ -307,6 +307,184 @@
 
   /* ── FEATURES ── */
   #features { background: var(--soft); }
+
+  /* ── STICKY SCROLL SHOWCASE ── */
+  .scroll-showcase {
+    position: relative;
+    height: 600vh; /* 5 features × 120vh each */
+  }
+  .sticky-panel {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 5%;
+    gap: 5%;
+    overflow: hidden;
+  }
+  .scroll-spacer { height: 600vh; margin-top: -100vh; pointer-events: none; }
+
+  /* Left text panel */
+  .sticky-text { position: relative; height: 400px; }
+  .feature-slide {
+    position: absolute; top: 0; left: 0; right: 0;
+    opacity: 0; transform: translateY(32px);
+    transition: opacity .6s cubic-bezier(0.16,1,.3,1),
+                transform .6s cubic-bezier(0.16,1,.3,1);
+    pointer-events: none;
+  }
+  .feature-slide.active {
+    opacity: 1; transform: none; pointer-events: auto;
+  }
+  .feature-slide.exit {
+    opacity: 0; transform: translateY(-32px);
+    transition: opacity .4s ease, transform .4s ease;
+  }
+  .feature-tag {
+    font-size: 0.68rem; font-weight: 800; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--blue);
+    margin-bottom: .8rem;
+  }
+  .feature-slide-title {
+    font-family: var(--serif); font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+    letter-spacing: -0.03em; line-height: 1.15;
+    color: var(--ink); margin-bottom: 1rem;
+  }
+  .feature-slide-title em { font-style: italic; color: var(--blue); }
+  .feature-slide-desc {
+    font-size: 0.95rem; color: var(--muted); line-height: 1.75;
+    margin-bottom: 1.4rem; max-width: 420px;
+  }
+  .feature-slide-bullets { display: flex; flex-direction: column; gap: .5rem; }
+  .bullet {
+    display: flex; align-items: center; gap: .6rem;
+    font-size: 0.85rem; color: var(--ink); font-weight: 500;
+  }
+  .bullet-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--blue); flex-shrink: 0;
+  }
+
+  /* Right visual panel */
+  .sticky-visual { position: relative; height: 420px; }
+  .visual-card {
+    position: absolute; top: 0; left: 0; right: 0;
+    background: #fff; border-radius: 20px;
+    box-shadow: 0 24px 64px rgba(0,0,0,.12);
+    overflow: hidden;
+    opacity: 0; transform: scale(0.95) translateY(20px);
+    transition: opacity .6s cubic-bezier(0.16,1,.3,1),
+                transform .6s cubic-bezier(0.16,1,.3,1);
+    height: 380px;
+  }
+  .visual-card.active { opacity: 1; transform: none; }
+
+  /* Mock UI inside cards */
+  .mock-header {
+    background: var(--soft); border-bottom: 1px solid var(--border);
+    padding: .6rem 1rem; display: flex; align-items: center; gap: .75rem;
+  }
+  .mock-dots { display:flex; gap:.3rem; }
+  .mock-dots span { width:10px; height:10px; border-radius:50%; background:var(--border); }
+  .mock-dots span:nth-child(1) { background:#ff5f57; }
+  .mock-dots span:nth-child(2) { background:#febc2e; }
+  .mock-dots span:nth-child(3) { background:#28c840; }
+  .mock-title { font-size:0.75rem; font-weight:600; color:var(--muted); }
+  .mock-body {
+    padding: .85rem 1rem; display:flex; align-items:center;
+    gap:1rem; height: calc(100% - 36px - 8px);
+  }
+  .mock-notes-preview { flex:1; }
+  .mock-line { height:8px; border-radius:4px; background:var(--border); margin-bottom:.6rem; }
+  .mock-line.w80 { width:80%; }
+  .mock-line.w60 { width:60%; }
+  .mock-line.w90 { width:90%; }
+  .mock-line.w50 { width:50%; }
+  .mock-line.w75 { width:75%; }
+  .mock-arrow { font-size:1.4rem; color:var(--blue); font-weight:700; }
+  .mock-plan { flex:1; }
+  .mock-day {
+    padding:.5rem .75rem; border-radius:10px;
+    font-size:0.75rem; font-weight:600; color:var(--muted);
+    margin-bottom:.4rem; background:var(--soft);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .active-day { background:var(--blue-light); color:var(--blue); }
+  .mock-day-badge { font-size:0.6rem; background:var(--blue); color:#fff; padding:.15rem .45rem; border-radius:99px; }
+  .mock-bar { height:4px; background:var(--border); }
+  .mock-bar-fill { height:100%; background:linear-gradient(90deg,var(--blue),#8b5cf6); border-radius:2px; width:0; }
+  @keyframes barFill { to { width:100%; } }
+
+  /* Question card mock */
+  .mock-question-card {
+    background:var(--soft); border-radius:14px; padding:.85rem 1rem;
+  }
+  .mock-q-label { font-size:0.62rem; font-weight:700; color:var(--blue); text-transform:uppercase; letter-spacing:.05em; margin-bottom:.35rem; }
+  .mock-q-text { font-size:0.82rem; font-weight:600; color:var(--ink); line-height:1.4; margin-bottom:.65rem; }
+  .mock-options { display:flex; flex-direction:column; gap:.35rem; }
+  .mock-option { font-size:0.72rem; padding:.4rem .65rem; border-radius:8px; background:#fff; border:1.5px solid var(--border); color:var(--muted); }
+  .mock-option.correct { background:#d1faf0; border-color:var(--green); color:#065f46; font-weight:700; }
+  .mock-sm2-bar { background:var(--soft); border-radius:12px; padding:.75rem 1rem; text-align:center; }
+
+  /* Difficulty ramp mock */
+  .diff-track { height:8px; background:var(--border); border-radius:4px; overflow:hidden; }
+  .diff-fill { height:100%; width:0; background:linear-gradient(90deg,var(--green),#f59e0b,#ef4444); border-radius:4px; }
+  @keyframes diffFill { to { width:75%; } }
+
+  /* Feynman mock */
+  .mock-write-box { background:#fff; border:1.5px solid var(--border); border-radius:10px; padding:.65rem .85rem; margin-top:.5rem; }
+  .mock-typed-text { font-size:0.72rem; color:var(--ink); line-height:1.5; }
+  .mock-score-card { background:var(--soft); border-radius:12px; padding:.75rem 1rem; display:flex; align-items:center; gap:.85rem; }
+  .score-ring { position:relative; flex-shrink:0; }
+  .score-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.9rem; color:var(--green); }
+
+  /* Chat bubbles mock */
+  .chat-bubble { font-size:0.75rem; line-height:1.5; padding:.55rem .8rem; border-radius:14px; max-width:85%; }
+  .ai-bubble { background:var(--soft); color:var(--ink); align-self:flex-start; border-radius:4px 14px 14px 14px; }
+  .user-bubble { background:var(--blue); color:#fff; margin-left:auto; border-radius:14px 4px 14px 14px; }
+  .mock-body.chat { flex-direction:column; overflow:hidden; }
+
+  /* Progress dots */
+  .showcase-dots {
+    position:absolute; bottom:2rem; left:50%; transform:translateX(-50%);
+    display:flex; gap:.5rem;
+  }
+  .showcase-dot {
+    width:6px; height:6px; border-radius:50%; background:var(--border);
+    transition:all .4s cubic-bezier(0.16,1,.3,1); cursor:pointer;
+  }
+  .showcase-dot.active { width:24px; border-radius:3px; background:var(--blue); }
+
+  /* Dark mode for showcase */
+  body.dark .visual-card { background:#1e2235; box-shadow:0 24px 64px rgba(0,0,0,.4); }
+  body.dark .mock-header { background:#161b28; border-color:#2a2d3a; }
+  body.dark .mock-day { background:#161b28; }
+  body.dark .mock-question-card { background:#161b28; }
+  body.dark .mock-option { background:#0f1220; border-color:#2a2d3a; }
+  body.dark .mock-sm2-bar, body.dark .mock-diff-bar, body.dark .mock-score-card { background:#161b28; }
+  body.dark .mock-write-box { background:#0f1220; border-color:#2a2d3a; }
+  body.dark .ai-bubble { background:#1e2235; }
+  body.dark .feature-slide-title { color:#e8eeff; }
+  body.dark .bullet { color:#e8eeff; }
+
+  /* Mobile — fall back to stacked cards (no sticky) */
+  @media(max-width:768px) {
+    .scroll-showcase { height:auto; }
+    .sticky-panel {
+      position:relative; height:auto; grid-template-columns:1fr;
+      padding:1.5rem 1.2rem 3rem;
+    }
+    .scroll-spacer { display:none; }
+    .sticky-text { height:auto; }
+    .feature-slide { position:relative; opacity:1; transform:none; margin-bottom:3rem; pointer-events:auto; }
+    .feature-slide.exit { opacity:1; transform:none; }
+    .sticky-visual { display:none; }
+    .showcase-dots { display:none; }
+  }
   .features-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1.2rem; margin-top: 3.5rem;
@@ -1128,31 +1306,196 @@
 </section>
 
 <!-- FEATURES -->
-<section id="features">
-  <div class="section-label">Everything you need</div>
-  <h2 class="section-title">Your unfair <em>advantage</em> before every exam</h2>
-  <p class="section-sub reveal">Every feature is designed around one goal — getting you a better grade in less time.</p>
-  <div class="features-grid reveal-stagger reveal">
-    <div class="feature">
-      <div class="feature-icon">🤖</div>
-      <h3>AI Study Plans</h3>
-      <p>Personalized session breakdowns built around your lesson, difficulty level, and deadline.</p>
+<section id="features" style="background:var(--soft);padding:6rem 0 0;">
+  <div style="text-align:center;padding:0 5% 4rem;">
+    <div class="section-label reveal-pop">Everything you need</div>
+    <h2 class="section-title">Your unfair <em>advantage</em><br>before every exam</h2>
+  </div>
+
+  <!-- STICKY SCROLL SHOWCASE -->
+  <div class="scroll-showcase" id="scroll-showcase">
+
+    <!-- STICKY PANEL — stays in view as you scroll -->
+    <div class="sticky-panel" id="sticky-panel">
+
+      <!-- Left: Feature text -->
+      <div class="sticky-text" id="sticky-text">
+        <div class="feature-slide active" data-index="0">
+          <div class="feature-tag">01</div>
+          <h3 class="feature-slide-title">AI generates your<br><em>exact study plan</em></h3>
+          <p class="feature-slide-desc">Paste your notes, set your exam date. StudyFlow reads your content and builds a multi-day plan with daily sessions, timed to your deadline — in under 60 seconds.</p>
+          <div class="feature-slide-bullets">
+            <div class="bullet"><div class="bullet-dot"></div>Auto-detects subject from your notes</div>
+            <div class="bullet"><div class="bullet-dot"></div>Adjusts difficulty to your goal</div>
+            <div class="bullet"><div class="bullet-dot"></div>Works for any subject</div>
+          </div>
+        </div>
+        <div class="feature-slide" data-index="1">
+          <div class="feature-tag">02</div>
+          <h3 class="feature-slide-title">Spaced repetition<br><em>built right in</em></h3>
+          <p class="feature-slide-desc">Questions you get wrong automatically come back. StudyFlow uses the SM-2 algorithm — the same science behind Anki — but fully automated so you never have to manage it yourself.</p>
+          <div class="feature-slide-bullets">
+            <div class="bullet"><div class="bullet-dot"></div>SM-2 algorithm runs automatically</div>
+            <div class="bullet"><div class="bullet-dot"></div>Wrong answers resurface at the right time</div>
+            <div class="bullet"><div class="bullet-dot"></div>200% better retention than re-reading</div>
+          </div>
+        </div>
+        <div class="feature-slide" data-index="2">
+          <div class="feature-tag">03</div>
+          <h3 class="feature-slide-title">Difficulty ramps<br><em>as exams approach</em></h3>
+          <p class="feature-slide-desc">Easy recall questions on day one. Harder application questions by day three. The pre-test effect primes your brain before each lesson — you absorb more because you've already tried to recall it.</p>
+          <div class="feature-slide-bullets">
+            <div class="bullet"><div class="bullet-dot"></div>Pre-test effect activates recall</div>
+            <div class="bullet"><div class="bullet-dot"></div>Desirable difficulty — harder as exam nears</div>
+            <div class="bullet"><div class="bullet-dot"></div>Confidence tracking per question</div>
+          </div>
+        </div>
+        <div class="feature-slide" data-index="3">
+          <div class="feature-tag">04</div>
+          <h3 class="feature-slide-title">Feynman technique<br><em>graded by AI</em></h3>
+          <p class="feature-slide-desc">Explain a concept in your own words. StudyFlow's AI reads your explanation and scores it — telling you exactly what you understood and what you missed. The fastest way to find gaps.</p>
+          <div class="feature-slide-bullets">
+            <div class="bullet"><div class="bullet-dot"></div>Write explanations in plain language</div>
+            <div class="bullet"><div class="bullet-dot"></div>AI scores accuracy out of 10</div>
+            <div class="bullet"><div class="bullet-dot"></div>Pinpoints exactly what you missed</div>
+          </div>
+        </div>
+        <div class="feature-slide" data-index="4">
+          <div class="feature-tag">05</div>
+          <h3 class="feature-slide-title">VIP AI tutor<br><em>knows your lesson</em></h3>
+          <p class="feature-slide-desc">Ask anything about today's content. The AI tutor has read your notes, knows what questions you got wrong, and gives specific answers — not generic ones. Like having a personal tutor on demand.</p>
+          <div class="feature-slide-bullets">
+            <div class="bullet"><div class="bullet-dot"></div>Reads your actual lesson notes</div>
+            <div class="bullet"><div class="bullet-dot"></div>Knows your session accuracy</div>
+            <div class="bullet"><div class="bullet-dot"></div>VIP exclusive feature</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Visual mockup -->
+      <div class="sticky-visual" id="sticky-visual">
+        <div class="visual-card" id="visual-card-0" style="opacity:1;transform:none;">
+          <div class="mock-header">
+            <div class="mock-dots"><span></span><span></span><span></span></div>
+            <div class="mock-title">Generating your plan...</div>
+          </div>
+          <div class="mock-body">
+            <div class="mock-notes-preview">
+              <div class="mock-line w80"></div>
+              <div class="mock-line w60"></div>
+              <div class="mock-line w90"></div>
+              <div class="mock-line w50"></div>
+              <div class="mock-line w75"></div>
+            </div>
+            <div class="mock-arrow">→</div>
+            <div class="mock-plan">
+              <div class="mock-day active-day">Day 1 · Foundations<div class="mock-day-badge">Today</div></div>
+              <div class="mock-day">Day 2 · Key Concepts</div>
+              <div class="mock-day">Day 3 · Application</div>
+              <div class="mock-day">Day 4 · Practice Exam</div>
+            </div>
+          </div>
+          <div class="mock-bar"><div class="mock-bar-fill" style="width:0%;animation:barFill 2s 0.5s ease forwards;"></div></div>
+        </div>
+
+        <div class="visual-card" id="visual-card-1">
+          <div class="mock-header">
+            <div class="mock-dots"><span></span><span></span><span></span></div>
+            <div class="mock-title">Spaced Review</div>
+          </div>
+          <div class="mock-body" style="flex-direction:column;gap:.75rem;">
+            <div class="mock-question-card">
+              <div class="mock-q-label">Question 3 of 8</div>
+              <div class="mock-q-text">What triggers the start of mitosis?</div>
+              <div class="mock-options">
+                <div class="mock-option correct">A. DNA replication completion</div>
+                <div class="mock-option">B. Cell growth signal</div>
+                <div class="mock-option">C. Protein synthesis</div>
+              </div>
+            </div>
+            <div class="mock-sm2-bar">
+              <div style="font-size:0.65rem;color:var(--muted);font-weight:600;margin-bottom:.3rem;">Next review in</div>
+              <div style="font-size:1.1rem;font-weight:800;color:var(--blue);">3 days</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="visual-card" id="visual-card-2">
+          <div class="mock-header">
+            <div class="mock-dots"><span></span><span></span><span></span></div>
+            <div class="mock-title">Day 4 — Difficulty: Hard</div>
+          </div>
+          <div class="mock-body" style="flex-direction:column;gap:.6rem;">
+            <div class="mock-diff-bar">
+              <div style="font-size:0.62rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem;">Difficulty ramp</div>
+              <div class="diff-track">
+                <div class="diff-fill" style="animation:diffFill 1.5s 0.3s ease forwards;"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:.3rem;font-size:0.6rem;color:var(--muted);">
+                <span>Day 1</span><span>Day 4</span><span>Exam</span>
+              </div>
+            </div>
+            <div class="mock-question-card" style="margin-top:.5rem;">
+              <div class="mock-q-label" style="color:#ef4444;">Hard · Pre-test</div>
+              <div class="mock-q-text">Explain why crossing over increases genetic variation during meiosis I.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="visual-card" id="visual-card-3">
+          <div class="mock-header">
+            <div class="mock-dots"><span></span><span></span><span></span></div>
+            <div class="mock-title">Feynman Check</div>
+          </div>
+          <div class="mock-body" style="flex-direction:column;gap:.75rem;">
+            <div class="mock-feynman">
+              <div class="mock-q-label">Explain in your own words:</div>
+              <div class="mock-q-text" style="font-size:0.82rem;">How does DNA replication ensure accuracy?</div>
+              <div class="mock-write-box">
+                <div class="mock-typed-text">DNA uses a template strand and base pairing rules. Polymerase adds nucleotides and proofreads...</div>
+              </div>
+            </div>
+            <div class="mock-score-card">
+              <div class="score-ring">
+                <svg viewBox="0 0 36 36" width="48" height="48">
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="var(--soft)" stroke-width="3"/>
+                  <circle cx="18" cy="18" r="14" fill="none" stroke="var(--green)" stroke-width="3" stroke-dasharray="72 88" stroke-dashoffset="22" stroke-linecap="round" transform="rotate(-90 18 18)"/>
+                </svg>
+                <div class="score-num">8</div>
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:0.82rem;">Great explanation!</div>
+                <div style="font-size:0.72rem;color:var(--muted);">Missed: proofreading mechanism</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="visual-card" id="visual-card-4">
+          <div class="mock-header" style="background:linear-gradient(135deg,#4a7cf6,#2851c8);">
+            <div class="mock-dots"><span style="background:rgba(255,255,255,.3)"></span><span style="background:rgba(255,255,255,.3)"></span><span style="background:rgba(255,255,255,.3)"></span></div>
+            <div class="mock-title" style="color:rgba(255,255,255,.8);">AI Tutor · VIP</div>
+          </div>
+          <div class="mock-body" style="flex-direction:column;gap:.6rem;padding:.85rem 1rem;">
+            <div class="chat-bubble ai-bubble">Hey! I know you struggled with meiosis II. Want me to break it down differently?</div>
+            <div class="chat-bubble user-bubble">Yes — explain why chromatids separate in meiosis II</div>
+            <div class="chat-bubble ai-bubble">Great question. In meiosis II, the centromere splits — separating sister chromatids. Unlike meiosis I which separates homologs, meiosis II is essentially mitosis...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress dots -->
+      <div class="showcase-dots" id="showcase-dots">
+        <div class="showcase-dot active" data-index="0"></div>
+        <div class="showcase-dot" data-index="1"></div>
+        <div class="showcase-dot" data-index="2"></div>
+        <div class="showcase-dot" data-index="3"></div>
+        <div class="showcase-dot" data-index="4"></div>
+      </div>
     </div>
-    <div class="feature">
-      <div class="feature-icon">🃏</div>
-      <h3>Auto Flashcards</h3>
-      <p>Key terms and concepts turned into flashcards automatically — no manual typing needed.</p>
-    </div>
-    <div class="feature">
-      <div class="feature-icon">❓</div>
-      <h3>Practice Questions</h3>
-      <p>AI-generated questions based on your actual lesson to test your understanding.</p>
-    </div>
-    <div class="feature">
-      <div class="feature-icon">📅</div>
-      <h3>Structured Sessions</h3>
-      <p>Each session has a clear topic, time estimate, and goal — so you stay focused and on track.</p>
-    </div>
+
+    <!-- Scroll spacer — one screen per feature -->
+    <div class="scroll-spacer"></div>
   </div>
 </section>
 
@@ -1448,7 +1791,68 @@
 </footer>
 
 <script>
-  // ── APPLE-STYLE SCROLL ANIMATION SYSTEM ──
+  // ── STICKY SCROLL SHOWCASE ──
+  (function() {
+    var showcase = document.getElementById('scroll-showcase');
+    var slides = document.querySelectorAll('.feature-slide');
+    var visuals = document.querySelectorAll('.visual-card');
+    var dots = document.querySelectorAll('.showcase-dot');
+    var TOTAL = slides.length;
+    var currentIdx = -1;
+
+    function setFeature(idx) {
+      if (idx === currentIdx) return;
+      // Exit old
+      if (currentIdx >= 0) {
+        slides[currentIdx].classList.remove('active');
+        slides[currentIdx].classList.add('exit');
+        visuals[currentIdx].classList.remove('active');
+        setTimeout(function(){ if(slides[currentIdx]) slides[currentIdx].classList.remove('exit'); }, 400);
+      }
+      // Enter new
+      currentIdx = idx;
+      slides[idx].classList.add('active');
+      visuals[idx].classList.add('active');
+      dots.forEach(function(d, i) {
+        d.classList.toggle('active', i === idx);
+      });
+    }
+
+    // Dot click navigation
+    dots.forEach(function(dot) {
+      dot.addEventListener('click', function() {
+        var idx = parseInt(dot.dataset.index);
+        var sectionTop = showcase.getBoundingClientRect().top + window.pageYOffset;
+        var targetScroll = sectionTop + (idx / TOTAL) * (showcase.offsetHeight - window.innerHeight) + 10;
+        window.scrollTo({ top: targetScroll, behavior: 'smooth' });
+      });
+    });
+
+    // Show first feature immediately when section enters view
+    var showcaseObserver = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting && currentIdx === -1) setFeature(0);
+      });
+    }, { threshold: 0.1 });
+    if (showcase) showcaseObserver.observe(showcase);
+
+    // Scroll handler — maps scroll position to feature index
+    window.addEventListener('scroll', function() {
+      if (!showcase) return;
+      var rect = showcase.getBoundingClientRect();
+      var totalHeight = showcase.offsetHeight - window.innerHeight;
+      if (totalHeight <= 0) return;
+
+      // How far through the showcase section are we (0 to 1)
+      var progress = -rect.top / totalHeight;
+      progress = Math.max(0, Math.min(1, progress));
+
+      var idx = Math.min(Math.floor(progress * TOTAL), TOTAL - 1);
+      setFeature(idx);
+    }, { passive: true });
+  })();
+
+  // ── EXISTING SCROLL REVEAL ──
 
   // 1. Split section titles into words for word-by-word animation
   document.querySelectorAll('.section-title').forEach(function(el) {
