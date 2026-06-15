@@ -60,43 +60,50 @@ module.exports = async function handler(req, res) {
       }
 
       if (action === 'join') {
-        // Add student to class
         const url = `${FIRESTORE_BASE}/classes/${classCode}?key=${process.env.FIREBASE_API_KEY}`;
+        console.log('[JOIN] classCode:', classCode);
+        console.log('[JOIN] studentData:', JSON.stringify(studentData));
+        console.log('[JOIN] GET url:', url);
+
         const getR = await fetch(url);
         const existing = await getR.json();
-        let classData = existing.error ? { classCode, students: [] } : parseFirestore(existing);
+        console.log('[JOIN] GET status:', getR.status);
+        console.log('[JOIN] existing:', JSON.stringify(existing).substring(0, 200));
 
-        // Ensure students is always an array (handles JSON.parse from Firestore)
+        let classData = existing.error ? { classCode, students: [] } : parseFirestore(existing);
+        console.log('[JOIN] parsed classData:', JSON.stringify(classData).substring(0, 200));
+
         if (!Array.isArray(classData.students)) {
           try { classData.students = JSON.parse(classData.students || '[]'); } catch { classData.students = []; }
         }
+        console.log('[JOIN] students count before:', classData.students.length);
 
-        // Check if student already in class
         const alreadyIn = classData.students.find(s => s.email === studentData.email);
-
         if (!alreadyIn) {
           const MAX_STUDENTS = 5;
           if (classData.students.length >= MAX_STUDENTS) {
-            return res.status(200).json({
-              success: false,
-              error: 'class_full',
-              message: 'This class is full (max 5 students on free plan).'
-            });
+            return res.status(200).json({ success: false, error: 'class_full', message: 'This class is full (max 5 students).' });
           }
         }
 
-        // Remove old entry then re-add updated
         classData.students = classData.students.filter(s => s.email !== studentData.email);
         classData.students.push(studentData);
+        console.log('[JOIN] students count after:', classData.students.length);
+
+        const patchBody = toFirestore({ classCode: classData.classCode || classCode, students: JSON.stringify(classData.students), createdAt: classData.createdAt || new Date().toISOString() });
+        console.log('[JOIN] PATCH body:', JSON.stringify(patchBody).substring(0, 200));
 
         const patchR = await fetch(url, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(toFirestore({ ...classData, students: JSON.stringify(classData.students) }))
+          body: JSON.stringify(patchBody)
         });
         const result = await patchR.json();
+        console.log('[JOIN] PATCH status:', patchR.status);
+        console.log('[JOIN] PATCH result:', JSON.stringify(result).substring(0, 200));
+
         if (result.error) return res.status(500).json({ error: result.error.message });
-        return res.status(200).json({ success: true });
+        return res.status(200).json({ success: true, studentCount: classData.students.length });
       }
 
       if (action === 'sync') {
