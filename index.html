@@ -1142,7 +1142,7 @@
 </style>
 </head>
 <body>
-<div style="overflow-x:hidden; max-width:100vw;">
+<!-- overflow wrapper removed -->
 
 <!-- NAV -->
 <nav>
@@ -1954,7 +1954,11 @@
     window.scrollTo({ top: top + (i / WHY_N) * scrollable + 1, behavior: 'smooth' });
   }
 
-  window.addEventListener('scroll', function() {
+  // Initialize — show slide 0 on both
+  featShow(0);
+  whyShow(0);
+
+  function onScroll() {
     var fo = document.getElementById('fo');
     if (fo) {
       var r = fo.getBoundingClientRect();
@@ -1973,7 +1977,9 @@
         if (idx2 !== whyCur) whyShow(idx2);
       }
     }
-  }, { passive: true });
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
 
     // ── EXISTING SCROLL REVEAL ──
 
@@ -2142,6 +2148,6 @@
     if (counter) counter.textContent = parseInt(counter.textContent) + 1;
   }
 </script>
-</div>
+
 </body>
 </html>
