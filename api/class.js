@@ -37,20 +37,22 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ students: [], classCode: queryClassCode });
       }
       if (data.error) return res.status(500).json({ error: data.error.message });
-      // Parse Firestore format
       const classData = parseFirestore(data);
+      // Ensure students is always a real array
+      if (!Array.isArray(classData.students)) {
+        try { classData.students = JSON.parse(classData.students || '[]'); } catch { classData.students = []; }
+      }
       return res.status(200).json(classData);
     }
 
     // POST — create or update class
     if (req.method === 'POST') {
       if (action === 'init') {
-        // Create class document
         const url = `${FIRESTORE_BASE}/classes/${classCode}?key=${process.env.FIREBASE_API_KEY}`;
         const r = await fetch(url, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(toFirestore({ classCode, students: [], createdAt: new Date().toISOString() }))
+          body: JSON.stringify(toFirestore({ classCode, students: '[]', createdAt: new Date().toISOString() }))
         });
         const data = await r.json();
         if (data.error) return res.status(500).json({ error: data.error.message });
@@ -64,30 +66,33 @@ module.exports = async function handler(req, res) {
         const existing = await getR.json();
         let classData = existing.error ? { classCode, students: [] } : parseFirestore(existing);
 
+        // Ensure students is always an array (handles JSON.parse from Firestore)
+        if (!Array.isArray(classData.students)) {
+          try { classData.students = JSON.parse(classData.students || '[]'); } catch { classData.students = []; }
+        }
+
         // Check if student already in class
-        const alreadyIn = (classData.students || []).find(s => s.email === studentData.email);
+        const alreadyIn = classData.students.find(s => s.email === studentData.email);
 
         if (!alreadyIn) {
-          // Enforce 5-student cap for free classroom plan
           const MAX_STUDENTS = 5;
-          const currentCount = (classData.students || []).length;
-          if (currentCount >= MAX_STUDENTS) {
+          if (classData.students.length >= MAX_STUDENTS) {
             return res.status(200).json({
               success: false,
               error: 'class_full',
-              message: 'This class is full (max 5 students on free plan). Ask your teacher to upgrade to a School plan for unlimited students.'
+              message: 'This class is full (max 5 students on free plan).'
             });
           }
         }
 
-        // Remove old entry if exists then re-add updated
-        classData.students = (classData.students || []).filter(s => s.email !== studentData.email);
+        // Remove old entry then re-add updated
+        classData.students = classData.students.filter(s => s.email !== studentData.email);
         classData.students.push(studentData);
 
         const patchR = await fetch(url, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(toFirestore(classData))
+          body: JSON.stringify(toFirestore({ ...classData, students: JSON.stringify(classData.students) }))
         });
         const result = await patchR.json();
         if (result.error) return res.status(500).json({ error: result.error.message });
@@ -100,19 +105,22 @@ module.exports = async function handler(req, res) {
         const getR = await fetch(url);
         const existing = await getR.json();
         let classData = existing.error ? { classCode, students: [] } : parseFirestore(existing);
-        
-        const idx = (classData.students || []).findIndex(s => s.email === studentEmail);
+
+        if (!Array.isArray(classData.students)) {
+          try { classData.students = JSON.parse(classData.students || '[]'); } catch { classData.students = []; }
+        }
+
+        const idx = classData.students.findIndex(s => s.email === studentEmail);
         if (idx >= 0) {
           classData.students[idx] = Object.assign(classData.students[idx], studentData);
         } else {
-          classData.students = classData.students || [];
           classData.students.push(Object.assign({ email: studentEmail }, studentData));
         }
 
         const patchR = await fetch(url, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(toFirestore(classData))
+          body: JSON.stringify(toFirestore({ ...classData, students: JSON.stringify(classData.students) }))
         });
         const result = await patchR.json();
         if (result.error) return res.status(500).json({ error: result.error.message });
