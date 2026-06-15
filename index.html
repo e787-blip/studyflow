@@ -331,49 +331,6 @@
   /* ── FEATURES ── */
   #features { background: var(--soft); }
 
-  /* ── STICKY SCROLL SHOWCASE ── */
-  .scroll-showcase {
-    position: relative;
-    height: 420vh; /* 6 features — quick transitions */
-  }
-  .sticky-panel {
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    display: grid;
-    grid-template-columns: 1fr 1.1fr;
-    align-items: center;
-    max-width: 1160px;
-    margin: 0 auto;
-    padding: 0 5%;
-    gap: 5%;
-    overflow: hidden;
-  }
-  /* .scroll-spacer removed — showcase height provides scroll space */
-
-  /* Left text panel */
-  .sticky-text { position: relative; height: 420px; perspective: 1000px; }
-  .feature-slide {
-    position: absolute; top: 0; left: 0; right: 0;
-    opacity: 0;
-    transform: perspective(900px) rotateX(22deg) translateY(36px);
-    transition: opacity .45s cubic-bezier(0.16,1,.3,1),
-                transform .45s cubic-bezier(0.16,1,.3,1);
-    pointer-events: none;
-    transform-origin: center bottom;
-    backface-visibility: hidden;
-  }
-  .feature-slide.active {
-    opacity: 1;
-    transform: perspective(900px) rotateX(0deg) translateY(0);
-    pointer-events: auto;
-  }
-  .feature-slide.exit {
-    opacity: 0;
-    transform: perspective(900px) rotateX(-18deg) translateY(-28px);
-    transition: opacity .28s ease, transform .28s ease;
-    transform-origin: center top;
-  }
   .feature-tag {
     font-size: 0.68rem; font-weight: 800; letter-spacing: .12em;
     text-transform: uppercase; color: var(--blue);
@@ -851,57 +808,6 @@
   }
   .how-step-new h3 { font-family:var(--serif); font-size:1.35rem; letter-spacing:-0.02em; margin-bottom:.5rem; }
   .how-step-new p { color:var(--muted); font-size:0.92rem; line-height:1.7; }
-
-  /* ── WHY IT WORKS STICKY SCROLL ── */
-  .why-showcase { position:relative; height:480vh; }
-  .why-sticky {
-    position:sticky; top:0; height:100vh;
-    display:flex; align-items:center; justify-content:center;
-    padding:0 5%; overflow:hidden;
-  }
-  /* .why-spacer removed — showcase height provides scroll space */
-  .why-slide {
-    position:absolute; inset:0;
-    display:flex; align-items:center; justify-content:center;
-    gap:5rem; padding:0 7%;
-    opacity:0; transition:opacity .35s cubic-bezier(0.16,1,.3,1);
-    pointer-events:none;
-  }
-  .why-slide.active { opacity:1; pointer-events:auto; }
-  .why-stat { flex-shrink:0; text-align:center; min-width:200px; }
-  .why-num {
-    font-family:var(--serif); font-size:clamp(5rem,10vw,8rem);
-    font-weight:700; line-height:1; letter-spacing:-0.04em;
-  }
-  .why-num span { font-size:0.5em; }
-  .why-stat-label { font-size:1rem; font-weight:700; color:var(--ink); margin-top:.4rem; }
-  .why-stat-sub { font-size:0.72rem; color:var(--muted); margin-top:.25rem; font-style:italic; }
-  .why-card {
-    background:#fff; border-radius:24px; padding:2.5rem; max-width:460px; flex:1;
-    box-shadow:0 20px 60px rgba(0,0,0,.1); border:1.5px solid var(--border);
-  }
-  .why-card-icon {
-    width:52px; height:52px; border-radius:14px;
-    display:flex; align-items:center; justify-content:center; margin-bottom:1.2rem;
-  }
-  .why-card-title { font-family:var(--serif); font-size:1.5rem; letter-spacing:-0.02em; color:var(--ink); margin-bottom:.7rem; }
-  .why-card-desc { color:var(--muted); font-size:0.9rem; line-height:1.7; margin-bottom:1.1rem; }
-  .why-card-proof { font-size:0.78rem; font-weight:600; color:var(--muted); border-top:1px solid var(--border); padding-top:.8rem; font-style:italic; }
-  .why-dots { position:absolute; right:2rem; top:50%; transform:translateY(-50%); display:flex; flex-direction:column; gap:.5rem; z-index:10; }
-  .why-dot { width:6px; height:6px; border-radius:50%; background:var(--border); cursor:pointer; transition:all .3s cubic-bezier(0.16,1,.3,1); }
-  .why-dot.active { height:24px; border-radius:3px; background:var(--blue); }
-  body.dark .why-card { background:#1e2235; border-color:#2a2d3a; }
-  body.dark .why-card-title { color:#e8eeff; }
-  body.dark .why-stat-label { color:#e8eeff; }
-  @media(max-width:768px) {
-    .why-showcase { height:auto; }
-    .why-sticky { position:relative; height:auto; flex-direction:column; }
-    .why-spacer { display:none; }
-    .why-slide { position:relative; opacity:1; flex-direction:column; gap:2rem; padding:2rem 0; margin-bottom:2rem; pointer-events:auto; }
-    .why-dots { display:none; }
-    .why-num { font-size:4rem; }
-    .why-card { max-width:100%; }
-  }
 
   /* ── EVIDENCE TICKER ── */
   .evidence-track-wrap {
@@ -1403,7 +1309,7 @@
 </section>
 
 <!-- BENEFITS -->
-<section id="benefits" style="padding:5rem 0; overflow:hidden;">
+<section id="benefits" style="padding:5rem 0;">
   <div style="text-align:center;padding:0 5% 3rem;">
     <div class="section-label" style="display:block;text-align:center;">Why it works</div>
     <h2 style="font-family:var(--serif);font-size:clamp(2rem,4vw,2.8rem);letter-spacing:-0.03em;text-align:center;margin:.5rem auto 0;max-width:600px;">Stop cramming.<br><em style="color:var(--blue);">Start retaining.</em></h2>
