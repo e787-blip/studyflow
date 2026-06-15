@@ -358,7 +358,7 @@
   <div class="app-header">
     <div class="app-header-badge">✦ AI-Powered</div>
     <h1><span class="white">Get your </span><em>study plan</em></h1>
-    <p>Paste your notes · Answer 3 questions · Get your personalized plan</p>
+    <p>Upload anything · Paste text · Get your personalized plan</p>
   </div>
 
   <div class="steps-indicator">
@@ -372,17 +372,46 @@
   <!-- STEP 1 -->
   <div class="card active" id="step-1">
     <div class="card-icon" style="font-size:1.2rem; color:var(--blue); font-weight:700;">01</div>
-    <h2>Paste your <em>notes</em></h2>
-    <p class="card-sub">Upload a file or paste your lesson text — the more detail, the better your plan.</p>
+    <h2>Add your <em>notes</em></h2>
+    <p class="card-sub">Upload anything — photo of notes, PDF, Word doc, video of a lecture, or just paste text.</p>
 
-    <label class="field-label">Upload a file</label>
-    <div id="upload-zone" style="border:2px dashed rgba(74,124,246,.3); border-radius:16px; padding:2rem 1.5rem; text-align:center; background:var(--blue-light); cursor:pointer; transition:all .3s; position:relative; margin-bottom:1rem;">
-      <input type="file" id="file-input" accept=".pdf,.txt,.doc,.docx,.pptx,.md" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />
-      <div style="font-size:1.5rem; margin-bottom:.5rem;">↑</div>
-      <strong style="display:block; font-size:0.98rem; color:var(--ink); margin-bottom:.25rem;">Drop your file here</strong>
-      <span style="font-size:0.82rem; color:var(--muted);">PDF, Word, PowerPoint, or text files</span>
+    <!-- UPLOAD ZONE -->
+    <div id="upload-zone" onclick="document.getElementById('file-input').click()" style="border:2px dashed rgba(74,124,246,.3);border-radius:16px;padding:1.8rem 1.2rem;text-align:center;background:var(--blue-light);cursor:pointer;transition:all .3s;margin-bottom:1rem;">
+      <input type="file" id="file-input" multiple accept=".pdf,.txt,.doc,.docx,.pptx,.md,.png,.jpg,.jpeg,.webp,.gif,.heic,.heif,.mp4,.mov,.m4v,.mp3,.m4a,.wav" style="display:none;" onchange="handleFiles(this.files)" />
+      <!-- Upload icon -->
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(74,124,246,.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto .75rem;display:block;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <strong style="display:block;font-size:0.95rem;color:var(--ink);margin-bottom:.3rem;">Drop files here or tap to browse</strong>
+      <span style="font-size:0.78rem;color:var(--muted);">Photos · PDF · Word · PowerPoint · Video · Audio · Text</span>
     </div>
-    <div class="file-selected" id="file-selected" style="display:none; margin-bottom:1rem; padding:.75rem 1rem; background:#d1faf0; border-radius:12px; font-size:0.88rem; color:#1a9e80; font-weight:500; border:1px solid #38bfa1;"></div>
+
+    <!-- FILE TYPE QUICK BUTTONS -->
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <button onclick="triggerUpload('image/*')" style="display:flex;align-items:center;gap:.4rem;background:var(--soft);border:1.5px solid var(--border);border-radius:99px;padding:.4rem .9rem;font-family:var(--sans);font-size:0.78rem;font-weight:600;color:var(--ink);cursor:pointer;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Photo
+      </button>
+      <button onclick="triggerUpload('video/*,audio/*')" style="display:flex;align-items:center;gap:.4rem;background:var(--soft);border:1.5px solid var(--border);border-radius:99px;padding:.4rem .9rem;font-family:var(--sans);font-size:0.78rem;font-weight:600;color:var(--ink);cursor:pointer;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        Video / Audio
+      </button>
+      <button onclick="triggerUpload('.pdf')" style="display:flex;align-items:center;gap:.4rem;background:var(--soft);border:1.5px solid var(--border);border-radius:99px;padding:.4rem .9rem;font-family:var(--sans);font-size:0.78rem;font-weight:600;color:var(--ink);cursor:pointer;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        PDF
+      </button>
+      <button onclick="triggerUpload('.doc,.docx,.pptx')" style="display:flex;align-items:center;gap:.4rem;background:var(--soft);border:1.5px solid var(--border);border-radius:99px;padding:.4rem .9rem;font-family:var(--sans);font-size:0.78rem;font-weight:600;color:var(--ink);cursor:pointer;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Word / Slides
+      </button>
+    </div>
+
+    <!-- PROCESSING STATUS -->
+    <div id="extract-status" style="display:none;padding:.9rem 1rem;background:var(--blue-light);border-radius:12px;margin-bottom:1rem;font-size:0.85rem;color:var(--blue);font-weight:600;display:none;align-items:center;gap:.6rem;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite;flex-shrink:0;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+      <span id="extract-status-text">Reading your file...</span>
+    </div>
+
+    <!-- UPLOADED FILES LIST -->
+    <div id="files-list" style="display:none;margin-bottom:1rem;"></div>
 
     <div class="divider">or paste text</div>
 
@@ -612,175 +641,274 @@
     window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html';
   }
 
-  // Load mammoth.js for DOCX and PDF.js for PDFs
+  // ── FILE HANDLING — supports photos, video, audio, PDF, DOCX, TXT ──
+
+  // Load mammoth.js for DOCX
   (function() {
     var m = document.createElement('script');
     m.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
     document.head.appendChild(m);
     var p = document.createElement('script');
-    p.id = 'pdfjs-script';
     p.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
     document.head.appendChild(p);
   })();
 
-  function handleFile(file) {
-    if (!file) return;
-    fileContent = '';
-    fileReading = true;
-    var el = document.getElementById('file-selected');
-    el.style.display = 'block';
-    el.textContent = 'Reading ' + file.name + '...';
-    el.style.background = '#fff8e0';
-    el.style.color = '#92400e';
-    el.style.borderColor = '#f59e0b';
+  var extractedTexts = []; // accumulate text from multiple files
 
+  function triggerUpload(accept) {
+    var inp = document.getElementById('file-input');
+    inp.accept = accept;
+    inp.click();
+  }
+
+  function showStatus(msg) {
+    var el = document.getElementById('extract-status');
+    var txt = document.getElementById('extract-status-text');
+    el.style.display = 'flex';
+    txt.textContent = msg;
+  }
+
+  function hideStatus() {
+    document.getElementById('extract-status').style.display = 'none';
+  }
+
+  function addFileToList(name, status, ok) {
+    var list = document.getElementById('files-list');
+    list.style.display = 'block';
+    var item = document.createElement('div');
+    item.style.cssText = 'display:flex;align-items:center;gap:.6rem;padding:.6rem .85rem;border-radius:10px;margin-bottom:.4rem;font-size:0.82rem;font-weight:600;' +
+      (ok ? 'background:#d1faf0;color:#1a9e80;border:1px solid #38bfa1;' : 'background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;');
+    item.innerHTML = (ok ?
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' :
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>') +
+      '<span>' + name + ' — ' + status + '</span>';
+    list.appendChild(item);
+  }
+
+  function appendToNotes(text) {
+    var ta = document.getElementById('notes-input');
+    var existing = ta.value.trim();
+    ta.value = existing ? existing + '\n\n' + text : text;
+    fileContent = ta.value;
+    checkNotesLength(ta);
+  }
+
+  // ── IMAGE → Claude Vision ──
+  function handleImage(file) {
+    showStatus('Reading ' + file.name + ' with AI vision...');
     var ext = file.name.split('.').pop().toLowerCase();
+    var mediaTypeMap = { jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp', gif:'image/gif', heic:'image/jpeg', heif:'image/jpeg' };
+    var mediaType = mediaTypeMap[ext] || 'image/jpeg';
 
-    if (ext === 'pdf') {
-      var reader = new FileReader();
-      reader.onload = function(e) {
-        var buf = e.target.result;
-        var tryPDF = function(attempts) {
-          if (attempts <= 0) { extractRawPdfText(buf, file.name); return; }
-          if (!window.pdfjsLib) { setTimeout(function(){ tryPDF(attempts-1); }, 400); return; }
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-          window.pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise
-            .then(function(pdf) {
-              var promises = [];
-              for (var i = 1; i <= pdf.numPages; i++) {
-                promises.push(pdf.getPage(i).then(function(page) {
-                  return page.getTextContent().then(function(tc) {
-                    var lines = [];
-                    var lastY = null;
-                    tc.items.forEach(function(item) {
-                      if (lastY !== null && Math.abs(item.transform[5] - lastY) > 5) lines.push('\n');
-                      lines.push(item.str);
-                      lastY = item.transform[5];
-                    });
-                    return lines.join(' ');
-                  });
-                }));
-              }
-              return Promise.all(promises).then(function(pages) {
-                var text = pages.join('\n').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
-                if (text.length < 30) { extractRawPdfText(buf, file.name); return; }
-                fileContent = text;
-                fileReading = false;
-                setFileSuccess(file.name, pdf.numPages + ' page' + (pdf.numPages>1?'s':'') + ' read');
-                if (fileContent.length > 2000) document.getElementById('notes-warning').style.display = 'block';
-              });
-            })
-            .catch(function() { extractRawPdfText(buf, file.name); });
-        };
-        tryPDF(15);
-      };
-      reader.onerror = function() { setFileError(file.name, 'Could not read the file.'); };
-      reader.readAsArrayBuffer(file);
-
-    } else if (ext === 'docx') {
-      var reader = new FileReader();
-      reader.onload = function(e) {
-        var buf = e.target.result;
-        var tryMammoth = function(attempts) {
-          if (attempts <= 0) { setFileError(file.name, 'Could not read Word file. Please paste your notes as text.'); return; }
-          if (!window.mammoth) { setTimeout(function(){ tryMammoth(attempts-1); }, 400); return; }
-          window.mammoth.extractRawText({ arrayBuffer: buf })
-            .then(function(result) {
-              var text = result.value.replace(/\s+/g, ' ').trim();
-              if (text.length < 30) { setFileError(file.name, 'Word document appears empty. Please paste your notes as text.'); return; }
-              fileContent = text;
-              fileReading = false;
-              setFileSuccess(file.name, text.length.toLocaleString() + ' chars from Word doc');
-              if (fileContent.length > 2000) document.getElementById('notes-warning').style.display = 'block';
-            })
-            .catch(function() { setFileError(file.name, 'Could not read Word file. Please paste your notes as text instead.'); });
-        };
-        tryMammoth(15);
-      };
-      reader.onerror = function() { setFileError(file.name, 'Could not read the file.'); };
-      reader.readAsArrayBuffer(file);
-
-    } else if (ext === 'txt' || ext === 'md') {
-      var reader = new FileReader();
-      reader.onload = function(e) {
-        var text = e.target.result.trim();
-        if (text.length < 10) { setFileError(file.name, 'File appears empty.'); return; }
-        fileContent = text;
-        fileReading = false;
-        setFileSuccess(file.name, text.length.toLocaleString() + ' characters');
-        if (fileContent.length > 2000) document.getElementById('notes-warning').style.display = 'block';
-      };
-      reader.onerror = function() { setFileError(file.name, 'Could not read file.'); };
-      reader.readAsText(file);
-
-    } else if (ext === 'doc') {
-      setFileError(file.name, 'Old .doc format not supported. Save as .docx or paste your notes as text.');
-      fileReading = false;
-    } else if (ext === 'pptx') {
-      setFileError(file.name, 'PowerPoint not supported. Please paste your notes as text instead.');
-      fileReading = false;
-    } else {
-      setFileError(file.name, 'Unsupported file type. Please upload PDF, DOCX, or TXT.');
-      fileReading = false;
-    }
-  }
-
-  function extractRawPdfText(arrayBuffer, fileName) {
-    try {
-      var arr = new Uint8Array(arrayBuffer);
-      var str = '';
-      for (var i = 0; i < arr.length; i++) {
-        if (arr[i] > 31 && arr[i] < 127) str += String.fromCharCode(arr[i]);
-      }
-      var matches = str.match(/\(([^\)]{2,200})\)/g) || [];
-      var text = matches
-        .map(function(m){ return m.slice(1,-1).trim(); })
-        .filter(function(s){ return s.length > 2 && /[a-zA-Z]/.test(s); })
-        .join(' ').replace(/\s+/g,' ').trim();
-      if (text.length > 50) {
-        fileContent = text;
-        fileReading = false;
-        setFileSuccess(fileName, 'Text extracted (' + text.length.toLocaleString() + ' chars)');
-        return;
-      }
-    } catch(e) {}
-    setFileError(fileName, 'Could not extract text from this PDF. It may be scanned. Please paste your notes as text instead.');
-    fileReading = false;
-  }
-
-  function setFileSuccess(name, detail) {
-    fileReading = false;
-    var el = document.getElementById('file-selected');
-    el.textContent = name + ' — ' + detail;
-    el.style.background = '#d1faf0';
-    el.style.color = '#1a9e80';
-    el.style.borderColor = '#38bfa1';
-  }
-
-  function setFileError(name, msg) {
-    fileReading = false;
-    fileContent = '';
-    var el = document.getElementById('file-selected');
-    el.textContent = msg;
-    el.style.background = '#fee2e2';
-    el.style.color = '#dc2626';
-    el.style.borderColor = '#ef4444';
-  }
-
-  // File upload — wrapped in DOMContentLoaded to prevent crash
-  document.addEventListener('DOMContentLoaded', function() {
-    var fileInput = document.getElementById('file-input');
-    var uploadZone = document.getElementById('upload-zone');
-    if (fileInput) fileInput.addEventListener('change', function() { handleFile(fileInput.files[0]); });
-    if (uploadZone) {
-      uploadZone.addEventListener('dragover', function(e) { e.preventDefault(); uploadZone.style.borderColor = 'var(--blue)'; uploadZone.style.background = '#d0e4ff'; });
-      uploadZone.addEventListener('dragleave', function() { uploadZone.style.borderColor = 'rgba(74,124,246,.3)'; uploadZone.style.background = 'var(--blue-light)'; });
-      uploadZone.addEventListener('drop', function(e) {
-        e.preventDefault(); uploadZone.style.borderColor = 'rgba(74,124,246,.3)'; uploadZone.style.background = 'var(--blue-light)';
-        handleFile(e.dataTransfer.files[0]);
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var base64 = e.target.result.split(',')[1];
+      fetch('https://studyflow-ten-vert.vercel.app/api/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageData: base64, mediaType: mediaType, filename: file.name })
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        hideStatus();
+        if (data.error) { addFileToList(file.name, 'Could not read image', false); return; }
+        appendToNotes(data.text);
+        addFileToList(file.name, 'Photo read by AI', true);
+      })
+      .catch(function() {
+        hideStatus();
+        addFileToList(file.name, 'Failed — paste notes manually', false);
       });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── VIDEO/AUDIO → Web Speech API transcription ──
+  function handleVideoAudio(file) {
+    showStatus('Transcribing ' + file.name + '... this may take a minute');
+    var url = URL.createObjectURL(file);
+    var audio = new Audio(url);
+    audio.load();
+
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      hideStatus();
+      addFileToList(file.name, 'Speech recognition not supported in this browser — try Chrome', false);
+      URL.revokeObjectURL(url);
+      return;
     }
+
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    var recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    var transcript = '';
+
+    recognition.onresult = function(e) {
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) transcript += e.results[i][0].transcript + ' ';
+      }
+    };
+
+    recognition.onend = function() {
+      hideStatus();
+      URL.revokeObjectURL(url);
+      if (transcript.trim().length > 20) {
+        appendToNotes(transcript.trim());
+        addFileToList(file.name, 'Lecture transcribed', true);
+      } else {
+        addFileToList(file.name, 'No speech detected — try a video with clear audio', false);
+      }
+    };
+
+    recognition.onerror = function() {
+      hideStatus();
+      URL.revokeObjectURL(url);
+      addFileToList(file.name, 'Transcription failed — paste notes manually', false);
+    };
+
+    // Play audio silently and recognize
+    audio.oncanplay = function() {
+      recognition.start();
+      audio.play();
+    };
+    audio.onended = function() { recognition.stop(); };
+    audio.volume = 0.01; // near silent
+    audio.playbackRate = 1.5; // faster = quicker transcription
+  }
+
+  // ── PDF ──
+  function handlePDF(file) {
+    showStatus('Reading ' + file.name + '...');
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var buf = e.target.result;
+      var tryPDF = function(attempts) {
+        if (attempts <= 0) { extractRawPdfText(buf, file.name); return; }
+        if (!window.pdfjsLib) { setTimeout(function(){ tryPDF(attempts-1); }, 400); return; }
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        window.pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise
+          .then(function(pdf) {
+            var pages = [];
+            for (var i = 1; i <= pdf.numPages; i++) pages.push(i);
+            return Promise.all(pages.map(function(n) {
+              return pdf.getPage(n).then(function(page) {
+                return page.getTextContent().then(function(tc) {
+                  return tc.items.map(function(item){ return item.str; }).join(' ');
+                });
+              });
+            }));
+          })
+          .then(function(pageTexts) {
+            var text = pageTexts.join('\n').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim();
+            if (text.length < 30) { extractRawPdfText(buf, file.name); return; }
+            hideStatus();
+            appendToNotes(text);
+            addFileToList(file.name, 'PDF read', true);
+          })
+          .catch(function() { extractRawPdfText(buf, file.name); });
+      };
+      tryPDF(15);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function extractRawPdfText(buf, name) {
+    var arr = new Uint8Array(buf);
+    var str = '';
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] > 31 && arr[i] < 127) str += String.fromCharCode(arr[i]);
+    }
+    var matches = str.match(/\(([^\)]{2,200})\)/g) || [];
+    var text = matches.map(function(m){ return m.slice(1,-1).trim(); })
+      .filter(function(s){ return s.length > 2 && /[a-zA-Z]/.test(s); })
+      .join(' ').replace(/\s+/g,' ').trim();
+    hideStatus();
+    if (text.length > 50) {
+      appendToNotes(text);
+      addFileToList(name, 'PDF text extracted', true);
+    } else {
+      addFileToList(name, 'Scanned PDF — try taking a photo of the pages instead', false);
+    }
+  }
+
+  // ── DOCX ──
+  function handleDOCX(file) {
+    showStatus('Reading ' + file.name + '...');
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var tryMammoth = function(attempts) {
+        if (attempts <= 0) { hideStatus(); addFileToList(file.name, 'Could not read — paste notes manually', false); return; }
+        if (!window.mammoth) { setTimeout(function(){ tryMammoth(attempts-1); }, 400); return; }
+        window.mammoth.extractRawText({ arrayBuffer: e.target.result })
+          .then(function(result) {
+            hideStatus();
+            var text = result.value.replace(/\s+/g,' ').trim();
+            appendToNotes(text);
+            addFileToList(file.name, 'Word doc read', true);
+          })
+          .catch(function() { hideStatus(); addFileToList(file.name, 'Could not read Word file', false); });
+      };
+      tryMammoth(15);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // ── TXT / MD ──
+  function handleText(file) {
+    showStatus('Reading ' + file.name + '...');
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      hideStatus();
+      var text = e.target.result.trim();
+      appendToNotes(text);
+      addFileToList(file.name, 'Text file read', true);
+    };
+    reader.readAsText(file);
+  }
+
+  // ── MAIN DISPATCHER ──
+  function handleFiles(files) {
+    if (!files || !files.length) return;
+    for (var i = 0; i < files.length; i++) {
+      var file = files[i];
+      var ext = file.name.split('.').pop().toLowerCase();
+      var imageExts = ['jpg','jpeg','png','webp','gif','heic','heif'];
+      var videoExts = ['mp4','mov','m4v','avi','mkv','mp3','m4a','wav','ogg'];
+      var docExts   = ['pdf'];
+      var docxExts  = ['docx'];
+      var textExts  = ['txt','md','doc'];
+
+      if (imageExts.includes(ext))  { handleImage(file); }
+      else if (videoExts.includes(ext)) { handleVideoAudio(file); }
+      else if (docExts.includes(ext))   { handlePDF(file); }
+      else if (docxExts.includes(ext))  { handleDOCX(file); }
+      else if (textExts.includes(ext))  { handleText(file); }
+      else { addFileToList(file.name, 'File type not supported — paste text instead', false); }
+    }
+    // Reset input so same file can be re-selected
+    document.getElementById('file-input').value = '';
+  }
+
+  // Drag and drop on upload zone
+  document.addEventListener('DOMContentLoaded', function() {
+    var zone = document.getElementById('upload-zone');
+    if (!zone) return;
+    zone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      zone.style.borderColor = 'var(--blue)';
+      zone.style.background = '#d0e4ff';
+    });
+    zone.addEventListener('dragleave', function() {
+      zone.style.borderColor = 'rgba(74,124,246,.3)';
+      zone.style.background = 'var(--blue-light)';
+    });
+    zone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      zone.style.borderColor = 'rgba(74,124,246,.3)';
+      zone.style.background = 'var(--blue-light)';
+      handleFiles(e.dataTransfer.files);
+    });
   });
 
   function checkNotesLength(textarea) {
