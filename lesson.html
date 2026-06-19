@@ -180,10 +180,70 @@
   /* QUESTION META */
   .q-meta { display:flex; align-items:center; gap:.5rem; margin-bottom:.85rem; flex-wrap:wrap; }
   .q-type-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.18rem .55rem; border-radius:999px; }
-  .q-type-label.mcq { background:var(--blue-light); color:var(--blue); }
-  .q-type-label.tf { background:#fff0e0; color:#c06b1a; }
-  .q-type-label.write { background:#f0fdf9; color:#1a9e80; }
-  .q-type-label.fill { background:#f3f0ff; color:#7c3aed; }
+  /* INTERACTIVE COORDINATE GRAPH */
+  .graph-wrap { background:var(--soft); border-radius:16px; padding:1.2rem; margin-bottom:1rem; }
+  .graph-svg { width:100%; height:auto; display:block; touch-action:none; user-select:none; }
+  .graph-controls { display:flex; flex-direction:column; align-items:center; gap:.5rem; margin-top:1rem; }
+  .graph-value { font-family:var(--serif); font-size:1.4rem; font-weight:700; color:#7c3aed; }
+  .graph-slider-track { position:relative; width:100%; height:36px; display:flex; align-items:center; }
+  .graph-slider-rail { position:absolute; left:0; right:0; height:4px; background:var(--border); border-radius:2px; }
+  .graph-slider-dot {
+    position:absolute; width:14px; height:14px; border-radius:50%; background:var(--border);
+    transform:translateX(-50%); cursor:pointer; transition:background .15s;
+  }
+  .graph-slider-handle {
+    position:absolute; width:30px; height:30px; border-radius:50%; background:#7c3aed;
+    border:3px solid #fff; box-shadow:0 2px 8px rgba(124,58,237,.4);
+    transform:translate(-50%,-50%); top:50%; cursor:grab; transition:left .1s ease-out;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .graph-slider-handle:active { cursor:grabbing; }
+  .graph-slider-handle svg { pointer-events:none; }
+
+  /* SEQUENCE / DRAG-TO-SORT */
+  .seq-wrap { display:flex; flex-direction:column; gap:.6rem; }
+  .seq-item {
+    display:flex; align-items:center; gap:.7rem; padding:.8rem 1rem;
+    background:var(--soft); border:1.5px solid var(--border); border-radius:12px;
+    cursor:grab; transition:all .2s; touch-action:none;
+  }
+  .seq-item.dragging { opacity:.4; }
+  .seq-item.placeholder { background:var(--blue-light); border:1.5px dashed var(--blue); }
+  .seq-num {
+    width:26px; height:26px; border-radius:50%; background:#fff; border:1.5px solid var(--border);
+    display:flex; align-items:center; justify-content:center; font-size:0.78rem; font-weight:700;
+    color:var(--muted); flex-shrink:0;
+  }
+  .seq-item.correct .seq-num { background:var(--green); border-color:var(--green); color:#fff; }
+  .seq-item.wrong .seq-num { background:var(--red); border-color:var(--red); color:#fff; }
+  .seq-item.correct { border-color:var(--green); background:#d1faf0; }
+  .seq-item.wrong { border-color:var(--red); background:#fee2e2; }
+  .seq-drag-handle { color:var(--muted); flex-shrink:0; }
+  .seq-text { font-size:0.88rem; font-weight:500; color:var(--ink); flex:1; }
+
+  /* MATCHING PAIRS */
+  .match-wrap { display:grid; grid-template-columns:1fr 1fr; gap:.6rem 1rem; }
+  .match-col { display:flex; flex-direction:column; gap:.5rem; }
+  .match-item {
+    padding:.7rem .85rem; border-radius:10px; border:1.5px solid var(--border);
+    background:var(--soft); font-size:0.82rem; font-weight:600; color:var(--ink);
+    cursor:pointer; text-align:left; transition:all .2s; min-height:42px;
+    display:flex; align-items:center;
+  }
+  .match-item:hover:not(.matched) { border-color:var(--blue); background:var(--blue-light); }
+  .match-item.selected { border-color:var(--blue); background:var(--blue); color:#fff; }
+  .match-item.matched { border-color:var(--green); background:#d1faf0; color:#1a9e80; opacity:.7; cursor:default; }
+  .match-item.wrong-flash { border-color:var(--red); background:#fee2e2; animation:shakeX .4s; }
+  @keyframes shakeX { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-5px)} 75%{transform:translateX(5px)} }
+
+  /* HYBRID: try-then-reveal */
+  .hybrid-try-box { display:flex; flex-direction:column; gap:.6rem; margin-bottom:.8rem; }
+  .hybrid-attempt-label { font-size:0.78rem; color:var(--muted); font-weight:600; }
+  .hybrid-reveal-divider { display:flex; align-items:center; gap:.6rem; margin:1rem 0; color:var(--muted); font-size:0.75rem; font-weight:600; }
+  .hybrid-reveal-divider::before, .hybrid-reveal-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* CONFIDENCE BUTTONS - update existing if present */
+  .conf-btn.sure svg, .conf-btn.unsure svg, .conf-btn.guess svg { display:inline-block; vertical-align:-2px; margin-right:3px; }
   .q-difficulty { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.18rem .55rem; border-radius:999px; }
   .q-difficulty.easy { background:#d1faf0; color:#1a9e80; }
   .q-difficulty.medium { background:#fff0e0; color:#c06b1a; }
@@ -370,6 +430,11 @@
   body.dark .q-option:hover:not(:disabled) { background:rgba(74,124,246,.15); border-color:var(--blue); color:var(--blue); }
   body.dark .tf-btn { background:#1e2336; border-color:#222840; color:#e8eeff; }
   body.dark .tf-btn:hover:not(:disabled) { background:rgba(74,124,246,.15); border-color:var(--blue); color:var(--blue); }
+  body.dark .graph-wrap { background:#1e2336; }
+  body.dark .seq-item { background:#1e2336; border-color:#222840; color:#e8eeff; }
+  body.dark .seq-num { background:#0f1220; border-color:#222840; }
+  body.dark .match-item { background:#1e2336; border-color:#222840; color:#e8eeff; }
+  body.dark .match-item:hover:not(.matched) { background:rgba(74,124,246,.15); border-color:var(--blue); }
   body.dark .write-area { background:#1e2336; border-color:#222840; color:#e8eeff; }
   body.dark .fill-input { background:#1e2336; border-color:#222840; color:#e8eeff; }
   body.dark .hint-box { background:#2a2000; border-color:#f59e0b; color:#fcd34d; }
@@ -761,6 +826,86 @@
         sessionCards.push({ type: 'elaboration', q: q });
       }
     });
+
+    // ── NEW INTERACTIVE TYPES — woven into the session ──
+    var subjectText = ((plan.subject || '') + ' ' + (day.title || '')).toLowerCase();
+    var isMath = /math|algebra|geometry|calculus|trig|equation|graph/.test(subjectText);
+
+    // Interactive graph — math subjects only, inserted after first few questions
+    if (isMath && userPlan !== 'free') {
+      var graphQ = buildGraphQuestion(day);
+      if (graphQ) {
+        var insertAt = Math.min(4, sessionCards.length);
+        sessionCards.splice(insertAt, 0, { type: 'graph', q: graphQ });
+      }
+    }
+
+    // Sequence ordering — built from key terms if 3+ exist (works for any subject)
+    if (day.keyTerms && day.keyTerms.length >= 3 && (userPlan === 'pro' || userPlan === 'vip')) {
+      var seqQ = buildSequenceQuestion(day);
+      if (seqQ) {
+        var insertAt2 = Math.min(7, sessionCards.length);
+        sessionCards.splice(insertAt2, 0, { type: 'sequence', q: seqQ });
+      }
+    }
+
+    // Matching pairs — built from key terms, VIP exclusive
+    if (day.keyTerms && day.keyTerms.length >= 4 && userPlan === 'vip') {
+      var matchQ = buildMatchQuestion(day);
+      if (matchQ) {
+        var insertAt3 = Math.min(10, sessionCards.length);
+        sessionCards.splice(insertAt3, 0, { type: 'match', q: matchQ });
+      }
+    }
+  }
+
+  // Build a graph question from day content (works generically for linear function topics)
+  function buildGraphQuestion(day) {
+    var intercepts = [-3,-2,-1,0,1,2,3];
+    var target = intercepts[Math.floor(Math.random() * intercepts.length)];
+    var slope = [1,-1,2,-2][Math.floor(Math.random()*4)];
+    return {
+      question: 'Set the y-intercept so the line passes through (0, ' + target + ')',
+      slope: slope,
+      targetIntercept: target,
+      min: -5, max: 5,
+      hint: 'The y-intercept is where the line crosses the vertical y-axis — that\'s when x = 0.',
+      explanation: 'The y-intercept is the point where x = 0. Drag until the line crosses the y-axis at y = ' + target + '.',
+      difficulty: 'Medium'
+    };
+  }
+
+  // Build a sequence question from key terms (generic — works if terms imply an order)
+  function buildSequenceQuestion(day) {
+    if (!day.keyTerms || day.keyTerms.length < 3) return null;
+    var items = day.keyTerms.slice(0, 4).map(function(t) {
+      return typeof t === 'string' ? t : (t.term || t.name || JSON.stringify(t));
+    });
+    return {
+      question: 'Put these ' + (day.title || 'concepts') + ' terms in the order they appear in your notes:',
+      items: items,
+      hint: 'Think about the order these were introduced in your lesson.',
+      explanation: 'This is the order these concepts build on each other.',
+      difficulty: 'Medium'
+    };
+  }
+
+  // Build a matching question from key terms (term ↔ definition pairs)
+  function buildMatchQuestion(day) {
+    if (!day.keyTerms || day.keyTerms.length < 4) return null;
+    var pairs = day.keyTerms.slice(0, 4).map(function(t) {
+      if (typeof t === 'object' && t.term && t.definition) {
+        return { term: t.term, def: t.definition };
+      }
+      return null;
+    }).filter(Boolean);
+    if (pairs.length < 4) return null;
+    return {
+      question: 'Match each term to its definition:',
+      pairs: pairs,
+      explanation: 'These are the key vocabulary terms from today\'s lesson.',
+      difficulty: 'Medium'
+    };
   }
 
   var recentlyShown = [];
@@ -937,6 +1082,15 @@
     else if (card.type === 'write') {
       html = renderWrite(card.q);
     }
+    else if (card.type === 'graph') {
+      html = renderGraph(card.q);
+    }
+    else if (card.type === 'sequence') {
+      html = renderSequence(card.q);
+    }
+    else if (card.type === 'match') {
+      html = renderMatch(card.q);
+    }
     else { endSession(); return; }
 
     sc.innerHTML = html;
@@ -1054,7 +1208,336 @@
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
-  function renderWrite(q) {
+  // ── INTERACTIVE COORDINATE GRAPH (math) ──
+  function renderGraph(q) {
+    // q: { question, slope, targetIntercept, min, max, hint, explanation, difficulty }
+    var min = q.min != null ? q.min : -5;
+    var max = q.max != null ? q.max : 5;
+    var target = q.targetIntercept != null ? q.targetIntercept : 0;
+    var slope = q.slope != null ? q.slope : 1;
+    window._graphState = { current: 0, target: target, slope: slope, min: min, max: max, explanation: q.explanation, hint: q.hint };
+
+    var size = 280, pad = 30;
+    var range = max - min;
+    var scale = (size - pad * 2) / range;
+    function toSvgX(x) { return pad + (x - min) * scale; }
+    function toSvgY(y) { return size - pad - (y - min) * scale; }
+
+    // Grid lines
+    var grid = '';
+    for (var i = min; i <= max; i++) {
+      grid += '<line x1="' + toSvgX(i) + '" y1="' + pad + '" x2="' + toSvgX(i) + '" y2="' + (size-pad) + '" stroke="var(--border)" stroke-width="1"/>';
+      grid += '<line x1="' + pad + '" y1="' + toSvgY(i) + '" x2="' + (size-pad) + '" y2="' + toSvgY(i) + '" stroke="var(--border)" stroke-width="1"/>';
+    }
+    // Axes
+    grid += '<line x1="' + pad + '" y1="' + toSvgY(0) + '" x2="' + (size-pad) + '" y2="' + toSvgY(0) + '" stroke="var(--muted)" stroke-width="1.5"/>';
+    grid += '<line x1="' + toSvgX(0) + '" y1="' + pad + '" x2="' + toSvgX(0) + '" y2="' + (size-pad) + '" stroke="var(--muted)" stroke-width="1.5"/>';
+
+    var body = '<div class="q-meta"><span class="q-type-label graph">Interactive Graph</span>' +
+      '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
+      '<div class="q-text">' + q.question + '</div>' +
+      '<div class="graph-wrap">' +
+      '<svg class="graph-svg" viewBox="0 0 ' + size + ' ' + size + '" id="graph-svg">' + grid +
+      '<line id="graph-line" x1="0" y1="0" x2="0" y2="0" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>' +
+      '<circle id="graph-dot" cx="' + toSvgX(0) + '" cy="' + toSvgY(0) + '" r="6" fill="#7c3aed" stroke="#fff" stroke-width="2"/>' +
+      '</svg>' +
+      '<div class="graph-controls">' +
+      '<div class="graph-value">y-intercept = (0, <span id="graph-val">0</span>)</div>' +
+      '<div class="graph-slider-track" id="graph-slider-track">' +
+      '<div class="graph-slider-rail"></div>' +
+      '<div class="graph-slider-handle" id="graph-handle" style="left:50%;"><svg width="12" height="12" viewBox="0 0 24 24" fill="white"><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/></svg></div>' +
+      '</div></div></div>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + (q.hint || 'Drag the handle until the line passes through the target point.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>' +
+      '<button class="fill-submit" id="graph-check-btn" onclick="checkGraph()" style="margin-top:.8rem;">Check →</button>';
+
+    setTimeout(function() { initGraphDrag(min, max, toSvgX, toSvgY, slope); }, 50);
+
+    var streak = currentStreak > 1 ? '! ' + currentStreak + ' streak' : correctCount + ' / ' + totalAnswered;
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Interactive Graph</div><h2>' + (day.title||'Practice') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function initGraphDrag(min, max, toSvgX, toSvgY, slope) {
+    var track = document.getElementById('graph-slider-track');
+    var handle = document.getElementById('graph-handle');
+    if (!track || !handle) return;
+    var dragging = false;
+
+    function setValue(val) {
+      val = Math.max(min, Math.min(max, Math.round(val)));
+      window._graphState.current = val;
+      var pct = ((val - min) / (max - min)) * 100;
+      handle.style.left = pct + '%';
+      document.getElementById('graph-val').textContent = val;
+      // Update line: y = slope*x + val
+      var x1 = min, y1 = slope * x1 + val;
+      var x2 = max, y2 = slope * x2 + val;
+      // Clamp to visible range
+      document.getElementById('graph-line').setAttribute('x1', toSvgX(x1));
+      document.getElementById('graph-line').setAttribute('y1', toSvgY(Math.max(min,Math.min(max,y1))));
+      document.getElementById('graph-line').setAttribute('x2', toSvgX(x2));
+      document.getElementById('graph-line').setAttribute('y2', toSvgY(Math.max(min,Math.min(max,y2))));
+      document.getElementById('graph-dot').setAttribute('cx', toSvgX(0));
+      document.getElementById('graph-dot').setAttribute('cy', toSvgY(val));
+    }
+
+    function posToValue(clientX) {
+      var rect = track.getBoundingClientRect();
+      var pct = (clientX - rect.left) / rect.width;
+      pct = Math.max(0, Math.min(1, pct));
+      return min + pct * (max - min);
+    }
+
+    function start(e) { dragging = true; move(e); }
+    function move(e) {
+      if (!dragging) return;
+      var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      setValue(posToValue(clientX));
+      e.preventDefault();
+    }
+    function end() { dragging = false; }
+
+    handle.addEventListener('mousedown', start);
+    handle.addEventListener('touchstart', start, { passive: false });
+    track.addEventListener('mousedown', function(e){ setValue(posToValue(e.clientX)); start(e); });
+    window.addEventListener('mousemove', move);
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('mouseup', end);
+    window.addEventListener('touchend', end);
+
+    setValue(0);
+  }
+
+  function checkGraph() {
+    var gs = window._graphState;
+    var isCorrect = gs.current === gs.target;
+    totalAnswered++;
+    document.getElementById('graph-check-btn').disabled = true;
+    document.getElementById('graph-handle').style.pointerEvents = 'none';
+    var fb = document.getElementById('feedback-box');
+    fb.style.display = 'block';
+    if (isCorrect) {
+      correctCount++; currentStreak++;
+      fb.className = 'feedback-box correct';
+      fb.innerHTML = '<strong>Correct!</strong> ' + (gs.explanation || 'The y-intercept is the point where the line crosses the y-axis.');
+      spawnConfetti();
+    } else {
+      currentStreak = 0;
+      fb.className = 'feedback-box wrong';
+      fb.innerHTML = '<strong>Not quite.</strong> The correct y-intercept was ' + gs.target + '. ' + (gs.explanation || '');
+    }
+    document.getElementById('btn-next').disabled = false;
+    recordAnswer(isCorrect);
+  }
+
+  // ── SEQUENCE / DRAG-TO-SORT ──
+  function renderSequence(q) {
+    // q: { question, items: [...correct order], hint, explanation, difficulty }
+    var shuffled = q.items.slice().sort(function(){ return Math.random() - 0.5; });
+    window._seqState = { correctOrder: q.items.slice(), current: shuffled, explanation: q.explanation };
+
+    var itemsHtml = shuffled.map(function(item, i) {
+      return '<div class="seq-item" draggable="true" data-text="' + esc(item) + '" id="seq-item-' + i + '">' +
+        '<span class="seq-num">' + (i+1) + '</span>' +
+        '<svg class="seq-drag-handle" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>' +
+        '<span class="seq-text">' + item + '</span></div>';
+    }).join('');
+
+    var body = '<div class="q-meta"><span class="q-type-label sequence">Put in Order</span>' +
+      '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
+      '<div class="q-text">' + q.question + '</div>' +
+      '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:.7rem;">Drag to reorder, then check your answer</div>' +
+      '<div class="seq-wrap" id="seq-wrap">' + itemsHtml + '</div>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + (q.hint || 'Think about what logically happens first.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>' +
+      '<button class="fill-submit" id="seq-check-btn" onclick="checkSequence()" style="margin-top:.8rem;">Check order →</button>';
+
+    setTimeout(initSeqDrag, 50);
+
+    var streak = currentStreak > 1 ? '! ' + currentStreak + ' streak' : correctCount + ' / ' + totalAnswered;
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Put in Order</div><h2>' + (day.title||'Practice') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function initSeqDrag() {
+    var wrap = document.getElementById('seq-wrap');
+    if (!wrap) return;
+    var dragEl = null;
+
+    wrap.querySelectorAll('.seq-item').forEach(function(item) {
+      item.addEventListener('dragstart', function(e) {
+        dragEl = item;
+        setTimeout(function(){ item.classList.add('dragging'); }, 0);
+      });
+      item.addEventListener('dragend', function() {
+        item.classList.remove('dragging');
+        renumberSeq();
+      });
+      item.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        var after = getDragAfterElement(wrap, e.clientY);
+        if (after == null) wrap.appendChild(dragEl);
+        else wrap.insertBefore(dragEl, after);
+      });
+      // Touch support — simple long-press reorder via touchmove
+      var touchY = 0;
+      item.addEventListener('touchstart', function(e) {
+        dragEl = item;
+        touchY = e.touches[0].clientY;
+        item.classList.add('dragging');
+      }, { passive: true });
+      item.addEventListener('touchmove', function(e) {
+        var after = getDragAfterElement(wrap, e.touches[0].clientY);
+        if (after == null) wrap.appendChild(dragEl);
+        else wrap.insertBefore(dragEl, after);
+      }, { passive: true });
+      item.addEventListener('touchend', function() {
+        item.classList.remove('dragging');
+        renumberSeq();
+      });
+    });
+  }
+
+  function getDragAfterElement(container, y) {
+    var els = Array.prototype.slice.call(container.querySelectorAll('.seq-item:not(.dragging)'));
+    return els.reduce(function(closest, child) {
+      var box = child.getBoundingClientRect();
+      var offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
+      return closest;
+    }, { offset: -Infinity }).element;
+  }
+
+  function renumberSeq() {
+    var items = document.querySelectorAll('#seq-wrap .seq-item');
+    items.forEach(function(item, i) { item.querySelector('.seq-num').textContent = i + 1; });
+  }
+
+  function checkSequence() {
+    var items = document.querySelectorAll('#seq-wrap .seq-item');
+    var currentOrder = Array.prototype.map.call(items, function(i){ return i.dataset.text; });
+    var correctOrder = window._seqState.correctOrder;
+    var isCorrect = JSON.stringify(currentOrder) === JSON.stringify(correctOrder);
+    totalAnswered++;
+    document.getElementById('seq-check-btn').disabled = true;
+
+    items.forEach(function(item, i) {
+      item.setAttribute('draggable', 'false');
+      item.classList.add(item.dataset.text === correctOrder[i] ? 'correct' : 'wrong');
+    });
+
+    var fb = document.getElementById('feedback-box');
+    fb.style.display = 'block';
+    if (isCorrect) {
+      correctCount++; currentStreak++;
+      fb.className = 'feedback-box correct';
+      fb.innerHTML = '<strong>Perfect order!</strong> ' + (window._seqState.explanation || '');
+      spawnConfetti();
+    } else {
+      currentStreak = 0;
+      fb.className = 'feedback-box wrong';
+      fb.innerHTML = '<strong>Not quite right.</strong> ' + (window._seqState.explanation || 'Check the correct order shown above.');
+    }
+    document.getElementById('btn-next').disabled = false;
+    recordAnswer(isCorrect);
+  }
+
+  // ── MATCHING PAIRS ──
+  function renderMatch(q) {
+    // q: { question, pairs: [{term, def}], hint, explanation, difficulty }
+    var terms = q.pairs.map(function(p,i){ return { text: p.term, idx: i }; });
+    var defs = q.pairs.map(function(p,i){ return { text: p.def, idx: i }; }).sort(function(){ return Math.random()-0.5; });
+    window._matchState = { matched: 0, total: q.pairs.length, selected: null, explanation: q.explanation, correctCount: 0 };
+
+    var leftHtml = terms.map(function(t){ return '<div class="match-item" data-idx="' + t.idx + '" data-side="term" onclick="selectMatch(this)">' + t.text + '</div>'; }).join('');
+    var rightHtml = defs.map(function(d){ return '<div class="match-item" data-idx="' + d.idx + '" data-side="def" onclick="selectMatch(this)">' + d.text + '</div>'; }).join('');
+
+    var body = '<div class="q-meta"><span class="q-type-label match">Matching</span>' +
+      '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
+      '<div class="q-text">' + q.question + '</div>' +
+      '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:.7rem;">Tap a term, then tap its match</div>' +
+      '<div class="match-wrap"><div class="match-col">' + leftHtml + '</div><div class="match-col">' + rightHtml + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    var streak = currentStreak > 1 ? '! ' + currentStreak + ' streak' : correctCount + ' / ' + totalAnswered;
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Matching</div><h2>' + (day.title||'Practice') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function selectMatch(el) {
+    if (el.classList.contains('matched')) return;
+    var ms = window._matchState;
+    var side = el.dataset.side;
+
+    if (!ms.selected) {
+      document.querySelectorAll('.match-item.selected').forEach(function(e){ e.classList.remove('selected'); });
+      el.classList.add('selected');
+      ms.selected = el;
+      return;
+    }
+    if (ms.selected === el) { el.classList.remove('selected'); ms.selected = null; return; }
+    if (ms.selected.dataset.side === side) {
+      // same side — switch selection
+      ms.selected.classList.remove('selected');
+      el.classList.add('selected');
+      ms.selected = el;
+      return;
+    }
+
+    // Different sides selected — check match
+    var isMatch = ms.selected.dataset.idx === el.dataset.idx;
+    if (isMatch) {
+      ms.selected.classList.remove('selected');
+      ms.selected.classList.add('matched');
+      el.classList.add('matched');
+      ms.matched++;
+      ms.correctCount++;
+      ms.selected = null;
+      if (ms.matched === ms.total) {
+        totalAnswered++;
+        correctCount++;
+        currentStreak++;
+        var fb = document.getElementById('feedback-box');
+        fb.style.display = 'block';
+        fb.className = 'feedback-box correct';
+        fb.innerHTML = '<strong>All matched!</strong> ' + (ms.explanation || 'Great work connecting these concepts.');
+        document.getElementById('btn-next').disabled = false;
+        spawnConfetti();
+        recordAnswer(true);
+      }
+    } else {
+      el.classList.add('wrong-flash');
+      ms.selected.classList.add('wrong-flash');
+      var selEl = ms.selected;
+      setTimeout(function() {
+        el.classList.remove('wrong-flash', 'selected');
+        selEl.classList.remove('wrong-flash', 'selected');
+      }, 450);
+      ms.selected = null;
+    }
+  }
+
+  // Helper: record answer into study history (used by all new types)
+  function recordAnswer(isCorrect) {
+    try {
+      var history = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
+      // Lightweight tracking — full session save happens in endSession
+    } catch(e) {}
+  }
+
+
     var body = '<div class="q-meta"><span class="q-type-label write">Feynman Technique</span><span class="q-difficulty medium">Deep Learning</span></div>' +
       '<div class="q-text">Explain this concept <strong>in your own words</strong>, as if teaching it to a friend who has never heard of it:</div>' +
       '<div style="background:var(--blue-light);border-radius:10px;padding:.75rem 1rem;margin:.5rem 0 .75rem;font-size:0.88rem;color:var(--blue);font-weight:600;">' + q.question + '</div>' +
