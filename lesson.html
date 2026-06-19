@@ -728,7 +728,7 @@
     dayIndex = parseInt(localStorage.getItem('studyflow_current_day') || '0');
     totalMinutes = parseInt(localStorage.getItem('studyflow_minutes') || '30');
     var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
-    userPlan = user.plan || 'free';
+    userPlan = user.tier || 'free';
 
     if (!saved) { window.location.href = 'dashboard.html'; return; }
     plan = JSON.parse(saved);
@@ -1537,7 +1537,7 @@
     } catch(e) {}
   }
 
-
+  function renderWrite(q) {
     var body = '<div class="q-meta"><span class="q-type-label write">Feynman Technique</span><span class="q-difficulty medium">Deep Learning</span></div>' +
       '<div class="q-text">Explain this concept <strong>in your own words</strong>, as if teaching it to a friend who has never heard of it:</div>' +
       '<div style="background:var(--blue-light);border-radius:10px;padding:.75rem 1rem;margin:.5rem 0 .75rem;font-size:0.88rem;color:var(--blue);font-weight:600;">' + q.question + '</div>' +
