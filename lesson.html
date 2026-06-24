@@ -805,34 +805,30 @@
     var regularQuestions = questions.filter(function(q){ return q.type !== 'fill'; });
     var shuffled = regularQuestions.slice().sort(function(){ return Math.random() - 0.5; });
 
-    // Main questions — add elaborative interrogation every 5 questions
-    // Pro/VIP: inject AI-generated fill questions + generated ones every 3rd
+    // Main questions — interleave fill + interactive types on ALL plans
     shuffled.forEach(function(q, i) {
       sessionCards.push({ type: 'question', q: q, qi: i });
 
-      // FILL IN BLANK — Pro and VIP only
-      if (userPlan === 'pro' || userPlan === 'vip') {
-        // Use AI-generated fill question if available, otherwise convert MCQ
-        if ((i + 1) % 3 === 0) {
-          var fillQ = fillQuestions.length > 0
-            ? fillQuestions[Math.floor(i / 3) % fillQuestions.length]
-            : (i < shuffled.length - 1 ? shuffled[i + 1] : null);
-          if (fillQ) sessionCards.push({ type: 'fill', q: fillQ });
-        }
+      // Fill in blank — every 3rd question, ALL plans
+      if ((i + 1) % 3 === 0) {
+        var fillQ = fillQuestions.length > 0
+          ? fillQuestions[Math.floor(i / 3) % fillQuestions.length]
+          : (i < shuffled.length - 1 ? shuffled[i + 1] : null);
+        if (fillQ) sessionCards.push({ type: 'fill', q: fillQ });
       }
 
-      // ELABORATION — every 5 questions
+      // Feynman write — every 5 questions, ALL plans
       if ((i + 1) % 5 === 0 && i < shuffled.length - 1) {
-        sessionCards.push({ type: 'elaboration', q: q });
+        sessionCards.push({ type: 'write', q: q });
       }
     });
 
-    // ── NEW INTERACTIVE TYPES — woven into the session ──
+    // ── INTERACTIVE TYPES — all plans, woven into session ──
     var subjectText = ((plan.subject || '') + ' ' + (day.title || '')).toLowerCase();
-    var isMath = /math|algebra|geometry|calculus|trig|equation|graph/.test(subjectText);
+    var isMath = /math|algebra|geometry|calculus|trig|equation|graph|slope|linear/.test(subjectText);
 
-    // Interactive graph — math subjects only, inserted after first few questions
-    if (isMath && userPlan !== 'free') {
+    // Graph — math subjects only
+    if (isMath) {
       var graphQ = buildGraphQuestion(day);
       if (graphQ) {
         var insertAt = Math.min(4, sessionCards.length);
@@ -840,8 +836,8 @@
       }
     }
 
-    // Sequence ordering — built from key terms if 3+ exist (works for any subject)
-    if (day.keyTerms && day.keyTerms.length >= 3 && (userPlan === 'pro' || userPlan === 'vip')) {
+    // Sequence — from keyTerms if 3+ exist (any subject, any plan)
+    if (day.keyTerms && day.keyTerms.length >= 3) {
       var seqQ = buildSequenceQuestion(day);
       if (seqQ) {
         var insertAt2 = Math.min(7, sessionCards.length);
@@ -849,8 +845,8 @@
       }
     }
 
-    // Matching pairs — built from key terms, VIP exclusive
-    if (day.keyTerms && day.keyTerms.length >= 4 && userPlan === 'vip') {
+    // Matching — from keyTerms with definitions if 4+ exist (any plan)
+    if (day.keyTerms && day.keyTerms.length >= 4) {
       var matchQ = buildMatchQuestion(day);
       if (matchQ) {
         var insertAt3 = Math.min(10, sessionCards.length);
@@ -1162,20 +1158,7 @@
   }
 
   function renderFill(q) {
-    // If not pro/vip show upgrade prompt
-    if (userPlan !== 'pro' && userPlan !== 'vip') {
-      return '<div class="session-card">' +
-        '<div class="card-header"><div class="card-badge">✦ Pro Feature</div><h2>Fill in the Blank</h2></div>' +
-        '<div class="card-body" style="text-align:center;padding:2rem 1rem;">' +
-        '<div style="font-size:3rem;margin-bottom:1rem;"></div>' +
-        '<h3 style="font-family:var(--serif);font-size:1.3rem;margin-bottom:.5rem;">Unlock Fill in the Blank</h3>' +
-        '<p style="color:var(--muted);font-size:0.88rem;margin-bottom:1.5rem;">Fill-in-the-blank is proven to be more effective than MCQ for long-term retention. Upgrade to Pro to unlock it.</p>' +
-        '<a href="https://studyflow-ten-vert.vercel.app/pricing.html" style="display:inline-block;background:var(--blue);color:#fff;padding:.85rem 1.8rem;border-radius:12px;font-weight:700;font-size:0.92rem;text-decoration:none;">Upgrade to Pro →</a>' +
-        '</div>' +
-        '<div class="card-footer"><span class="footer-left"></span>' +
-        '<button class="btn-next" id="btn-next" onclick="showNextCard()">Skip →</button></div></div>';
-    }
-
+    // Available on ALL plans
     // Get correct answer — AI-generated fill uses 'answer' field, converted MCQ uses options
     var answer = q.answer || (q.options ? q.options[q.correctIndex] : '') || '';
     var questionText = q.question || '';
@@ -1204,7 +1187,7 @@
     return '<div class="session-card">' +
       '<div class="card-header"><div class="card-badge">✦ Fill in the Blank</div><h2>Complete the sentence</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
-      '<div class="card-footer"><span class="footer-left"> Pro feature</span>' +
+      '<div class="card-footer"><span class="footer-left"></span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
