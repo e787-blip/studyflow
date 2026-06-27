@@ -824,10 +824,15 @@
     });
 
     // ── INTERACTIVE TYPES — all plans, woven into session ──
-    var subjectText = ((plan.subject || '') + ' ' + (day.title || '')).toLowerCase();
-    var isMath = /math|algebra|geometry|calculus|trig|equation|graph|slope|linear/.test(subjectText);
+    var subjectType = plan.subjectType || 'general';
+    var subjectText = ((plan.subject || '') + ' ' + (day.title || '') + ' ' + subjectType).toLowerCase();
+    var isMath     = subjectType === 'math'     || /math|algebra|geometry|calculus|trig|equation|graph|slope|linear/.test(subjectText);
+    var isScience  = subjectType === 'science'  || /biology|chemistry|physics|science|cell|atom|molecule|reaction|genetics/.test(subjectText);
+    var isHistory  = subjectType === 'history'  || /history|war|revolution|empire|century|ancient|medieval|political/.test(subjectText);
+    var isEnglish  = subjectType === 'english'  || /literature|english|novel|poem|author|character|theme|metaphor|grammar/.test(subjectText);
+    var isLanguage = subjectType === 'language' || /spanish|french|german|japanese|chinese|language|verb|conjugate|translate/.test(subjectText);
 
-    // Graph — math subjects only
+    // Graph — math only
     if (isMath) {
       var graphQ = buildGraphQuestion(day);
       if (graphQ) {
@@ -836,18 +841,18 @@
       }
     }
 
-    // Sequence — from keyTerms if 3+ exist (any subject, any plan)
-    if (day.keyTerms && day.keyTerms.length >= 3) {
-      var seqQ = buildSequenceQuestion(day);
+    // Sequence — science (processes), history (timelines), any subject with 3+ keyTerms
+    if (day.keyTerms && day.keyTerms.length >= 3 && (isScience || isHistory || day.keyTerms.length >= 4)) {
+      var seqQ = buildSequenceQuestion(day, subjectType);
       if (seqQ) {
         var insertAt2 = Math.min(7, sessionCards.length);
         sessionCards.splice(insertAt2, 0, { type: 'sequence', q: seqQ });
       }
     }
 
-    // Matching — from keyTerms with definitions if 4+ exist (any plan)
+    // Matching — vocabulary-heavy subjects: english, language, science, history
     if (day.keyTerms && day.keyTerms.length >= 4) {
-      var matchQ = buildMatchQuestion(day);
+      var matchQ = buildMatchQuestion(day, subjectType);
       if (matchQ) {
         var insertAt3 = Math.min(10, sessionCards.length);
         sessionCards.splice(insertAt3, 0, { type: 'match', q: matchQ });
@@ -871,23 +876,32 @@
     };
   }
 
-  // Build a sequence question from key terms (generic — works if terms imply an order)
-  function buildSequenceQuestion(day) {
+  function buildSequenceQuestion(day, subjectType) {
     if (!day.keyTerms || day.keyTerms.length < 3) return null;
     var items = day.keyTerms.slice(0, 4).map(function(t) {
-      return typeof t === 'string' ? t : (t.term || t.name || JSON.stringify(t));
-    });
+      return typeof t === 'string' ? t : (t.term || t.name || '');
+    }).filter(function(t){ return t.length > 0; });
+    if (items.length < 3) return null;
+
+    var questionText = {
+      science:  'Put these steps or concepts in the correct order they occur:',
+      history:  'Arrange these events or concepts in chronological / logical order:',
+      math:     'Put these steps in the correct order to solve the problem:',
+      english:  'Order these literary elements from most to least general:',
+      language: 'Arrange these language concepts from basic to advanced:',
+      general:  'Put these concepts in the order they appear in your notes:'
+    }[subjectType] || 'Put these concepts in the correct order:';
+
     return {
-      question: 'Put these ' + (day.title || 'concepts') + ' terms in the order they appear in your notes:',
+      question: questionText,
       items: items,
-      hint: 'Think about the order these were introduced in your lesson.',
-      explanation: 'This is the order these concepts build on each other.',
+      hint: 'Think about what logically or chronologically comes first.',
+      explanation: 'This is the correct order these concepts build on each other.',
       difficulty: 'Medium'
     };
   }
 
-  // Build a matching question from key terms (term ↔ definition pairs)
-  function buildMatchQuestion(day) {
+  function buildMatchQuestion(day, subjectType) {
     if (!day.keyTerms || day.keyTerms.length < 4) return null;
     var pairs = day.keyTerms.slice(0, 4).map(function(t) {
       if (typeof t === 'object' && t.term && t.definition) {
@@ -896,8 +910,18 @@
       return null;
     }).filter(Boolean);
     if (pairs.length < 4) return null;
+
+    var questionText = {
+      science:  'Match each scientific term to its definition:',
+      history:  'Match each historical term or event to its meaning:',
+      math:     'Match each math term to its correct definition:',
+      english:  'Match each literary term to its definition:',
+      language: 'Match each word to its correct translation or meaning:',
+      general:  'Match each term to its definition:'
+    }[subjectType] || 'Match each term to its definition:';
+
     return {
-      question: 'Match each term to its definition:',
+      question: questionText,
       pairs: pairs,
       explanation: 'These are the key vocabulary terms from today\'s lesson.',
       difficulty: 'Medium'
@@ -1520,11 +1544,23 @@
     } catch(e) {}
   }
 
+  function getFeynmanTip(subjectType) {
+    var tips = {
+      math:     'Walk through the steps like you\'re solving it live. Include the formula and why it works.',
+      science:  'Describe the process step by step. Include cause and effect. Use specific names and terms.',
+      history:  'Explain the who, what, when, and most importantly WHY it happened and what changed.',
+      english:  'Identify the literary technique or theme and give a specific example from the text.',
+      language: 'Give the meaning, use it in a sentence, and explain any grammar rules that apply.',
+      general:  'Write it simply. Don\'t look at your notes — just explain what you know.'
+    };
+    return tips[subjectType] || tips.general;
+  }
+
   function renderWrite(q) {
     var body = '<div class="q-meta"><span class="q-type-label write">Feynman Technique</span><span class="q-difficulty medium">Deep Learning</span></div>' +
-      '<div class="q-text">Explain this concept <strong>in your own words</strong>, as if teaching it to a friend who has never heard of it:</div>' +
+      '<div class="q-text">Explain this concept <strong>in your own words</strong>, as if teaching it to a friend:</div>' +
       '<div style="background:var(--blue-light);border-radius:10px;padding:.75rem 1rem;margin:.5rem 0 .75rem;font-size:0.88rem;color:var(--blue);font-weight:600;">' + q.question + '</div>' +
-      '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:.5rem;"> Research shows explaining concepts in your own words doubles retention. Don\'t look at your notes — just write what you know.</div>' +
+      '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:.5rem;">' + getFeynmanTip(plan.subjectType) + '</div>' +
       '<textarea class="write-area" id="write-input" placeholder="Write your explanation here. The more specific the better — include examples, causes, effects, dates, names..."></textarea>' +
       '<div style="display:flex;align-items:center;gap:.75rem;margin-top:.65rem;">' +
       '<button class="write-submit" onclick="submitWrite(\'' + esc(q.explanation) + '\',\'' + esc(q.question) + '\')">Get AI feedback →</button>' +
