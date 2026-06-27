@@ -1,181 +1,219 @@
-// Firestore REST API endpoint for cross-device class data sync
+'use strict';
 const FIREBASE_PROJECT = 'studyflow-e59ef';
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents`;
+const MAX_STUDENTS = 5;
+const FETCH_TIMEOUT_MS = 8000;
 
-async function getFirestoreToken() {
-  // Use Firebase service account or API key for server-side access
-  return process.env.FIREBASE_API_KEY || '';
+// Validated class code pattern: SF-XXXX (letters/digits only — prevents path traversal)
+const CLASS_CODE_RE = /^SF-[A-Z0-9]{4}$/;
+
+function fetchWithTimeout(url, opts = {}) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
+function safeError(err, generic = 'Internal server error') {
+  console.error('[class.js]', err);         // full detail server-side only
+  return generic;                            // generic message to client
 }
 
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+  res.setHeader('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || 'https://studyflow-ten-vert.vercel.app');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { action, classCode, studentEmail, studentData, assignment } = req.body || {};
+  const API_KEY = process.env.FIREBASE_API_KEY;
+  if (!API_KEY) return res.status(500).json({ error: 'Server misconfiguration' });
+
   const queryClassCode = req.query.classCode;
 
   try {
-    // GET assignment for a class
+    // ── GET assignment ──────────────────────────────────────────────────────
     if (req.method === 'GET' && queryClassCode && req.query.type === 'assignment') {
-      const url = `${FIRESTORE_BASE}/assignments/${queryClassCode}`;
-      const r = await fetch(url + '?key=' + process.env.FIREBASE_API_KEY);
+      if (!CLASS_CODE_RE.test(queryClassCode))
+        return res.status(400).json({ error: 'Invalid class code format' });
+
+      const r = await fetchWithTimeout(
+        `${FIRESTORE_BASE}/assignments/${queryClassCode}?key=${API_KEY}`
+      );
       const data = await r.json();
-      if (data.error) {
-        return res.status(200).json({ assignment: null });
-      }
+      if (data.error) return res.status(200).json({ assignment: null });
       return res.status(200).json({ assignment: parseFirestore(data) });
     }
 
-    // GET class data
+    // ── GET class data ──────────────────────────────────────────────────────
     if (req.method === 'GET' && queryClassCode) {
-      const url = `${FIRESTORE_BASE}/classes/${queryClassCode}`;
-      const r = await fetch(url + '?key=' + process.env.FIREBASE_API_KEY);
+      if (!CLASS_CODE_RE.test(queryClassCode))
+        return res.status(400).json({ error: 'Invalid class code format' });
+
+      const r = await fetchWithTimeout(
+        `${FIRESTORE_BASE}/classes/${queryClassCode}?key=${API_KEY}`
+      );
       const data = await r.json();
-      if (data.error && data.error.code === 404) {
+      if (data.error?.code === 404)
         return res.status(200).json({ students: [], classCode: queryClassCode });
-      }
-      if (data.error) return res.status(500).json({ error: data.error.message });
+      if (data.error)
+        return res.status(500).json({ error: safeError(data.error.message) });
+
       const classData = parseFirestore(data);
-      // Ensure students is always a real array
-      if (!Array.isArray(classData.students)) {
-        try { classData.students = JSON.parse(classData.students || '[]'); } catch { classData.students = []; }
-      }
+      classData.students = parseStudents(classData.students);
       return res.status(200).json(classData);
     }
 
-    // POST — create or update class
-    if (req.method === 'POST') {
-      if (action === 'init') {
-        const url = `${FIRESTORE_BASE}/classes/${classCode}?key=${process.env.FIREBASE_API_KEY}`;
-        const r = await fetch(url, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(toFirestore({ classCode, students: '[]', createdAt: new Date().toISOString() }))
-        });
-        const data = await r.json();
-        if (data.error) return res.status(500).json({ error: data.error.message });
-        return res.status(200).json({ success: true });
-      }
+    // ── POST actions ────────────────────────────────────────────────────────
+    if (req.method !== 'POST')
+      return res.status(405).json({ error: 'Method not allowed' });
 
-      if (action === 'join') {
-        const url = `${FIRESTORE_BASE}/classes/${classCode}?key=${process.env.FIREBASE_API_KEY}`;
-        console.log('[JOIN] classCode:', classCode);
-        console.log('[JOIN] studentData:', JSON.stringify(studentData));
-        console.log('[JOIN] GET url:', url);
+    const { action, classCode, studentEmail, studentData, assignment } = req.body || {};
 
-        const getR = await fetch(url);
-        const existing = await getR.json();
-        console.log('[JOIN] GET status:', getR.status);
-        console.log('[JOIN] existing:', JSON.stringify(existing).substring(0, 200));
+    if (!classCode || !CLASS_CODE_RE.test(classCode))
+      return res.status(400).json({ error: 'Invalid class code format' });
 
-        let classData = existing.error ? { classCode, students: [] } : parseFirestore(existing);
-        console.log('[JOIN] parsed classData:', JSON.stringify(classData).substring(0, 200));
+    const docUrl = `${FIRESTORE_BASE}/classes/${classCode}?key=${API_KEY}`;
 
-        if (!Array.isArray(classData.students)) {
-          try { classData.students = JSON.parse(classData.students || '[]'); } catch { classData.students = []; }
-        }
-        console.log('[JOIN] students count before:', classData.students.length);
-
-        const alreadyIn = classData.students.find(s => s.email === studentData.email);
-        if (!alreadyIn) {
-          const MAX_STUDENTS = 5;
-          if (classData.students.length >= MAX_STUDENTS) {
-            return res.status(200).json({ success: false, error: 'class_full', message: 'This class is full (max 5 students).' });
-          }
-        }
-
-        classData.students = classData.students.filter(s => s.email !== studentData.email);
-        classData.students.push(studentData);
-        console.log('[JOIN] students count after:', classData.students.length);
-
-        const patchBody = toFirestore({ classCode: classData.classCode || classCode, students: JSON.stringify(classData.students), createdAt: classData.createdAt || new Date().toISOString() });
-        console.log('[JOIN] PATCH body:', JSON.stringify(patchBody).substring(0, 200));
-
-        const patchR = await fetch(url, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(patchBody)
-        });
-        const result = await patchR.json();
-        console.log('[JOIN] PATCH status:', patchR.status);
-        console.log('[JOIN] PATCH result:', JSON.stringify(result).substring(0, 200));
-
-        if (result.error) return res.status(500).json({ error: result.error.message });
-        return res.status(200).json({ success: true, studentCount: classData.students.length });
-      }
-
-      if (action === 'sync') {
-        // Update student stats
-        const url = `${FIRESTORE_BASE}/classes/${classCode}?key=${process.env.FIREBASE_API_KEY}`;
-        const getR = await fetch(url);
-        const existing = await getR.json();
-        let classData = existing.error ? { classCode, students: [] } : parseFirestore(existing);
-
-        if (!Array.isArray(classData.students)) {
-          try { classData.students = JSON.parse(classData.students || '[]'); } catch { classData.students = []; }
-        }
-
-        const idx = classData.students.findIndex(s => s.email === studentEmail);
-        if (idx >= 0) {
-          classData.students[idx] = Object.assign(classData.students[idx], studentData);
-        } else {
-          classData.students.push(Object.assign({ email: studentEmail }, studentData));
-        }
-
-        const patchR = await fetch(url, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(toFirestore({ ...classData, students: JSON.stringify(classData.students) }))
-        });
-        const result = await patchR.json();
-        if (result.error) return res.status(500).json({ error: result.error.message });
-        return res.status(200).json({ success: true });
-      }
-
-      if (action === 'assign') {
-        // Save assignment
-        const url = `${FIRESTORE_BASE}/assignments/${classCode}?key=${process.env.FIREBASE_API_KEY}`;
-        const r = await fetch(url, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(toFirestore(assignment))
-        });
-        const data = await r.json();
-        if (data.error) return res.status(500).json({ error: data.error.message });
-        return res.status(200).json({ success: true });
-      }
+    // ── init ────────────────────────────────────────────────────────────────
+    if (action === 'init') {
+      const r = await fetchWithTimeout(docUrl, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(toFirestore({
+          classCode,
+          students: '[]',
+          createdAt: new Date().toISOString()
+        }))
+      });
+      const data = await r.json();
+      if (data.error) return res.status(500).json({ error: safeError(data.error) });
+      return res.status(200).json({ success: true });
     }
 
-    return res.status(400).json({ error: 'Invalid action' });
+    // ── join ────────────────────────────────────────────────────────────────
+    if (action === 'join') {
+      if (!studentData?.email)
+        return res.status(400).json({ error: 'Missing student email' });
+
+      // GET with API key (critical fix)
+      const getR = await fetchWithTimeout(`${FIRESTORE_BASE}/classes/${classCode}?key=${API_KEY}`);
+      const existing = await getR.json();
+
+      let classData = existing.error
+        ? { classCode, students: [] }
+        : parseFirestore(existing);
+      classData.students = parseStudents(classData.students);
+
+      const alreadyIn = classData.students.find(s => s.email === studentData.email);
+      if (!alreadyIn && classData.students.length >= MAX_STUDENTS) {
+        return res.status(200).json({
+          success: false,
+          error: 'class_full',
+          message: `This class is full (max ${MAX_STUDENTS} students).`
+        });
+      }
+
+      // Upsert student
+      const idx = classData.students.findIndex(s => s.email === studentData.email);
+      if (idx >= 0) classData.students[idx] = { ...classData.students[idx], ...studentData };
+      else classData.students.push(studentData);
+
+      const patchR = await fetchWithTimeout(`${FIRESTORE_BASE}/classes/${classCode}?key=${API_KEY}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(toFirestore({
+          classCode: classData.classCode || classCode,
+          students: JSON.stringify(classData.students),
+          createdAt: classData.createdAt || new Date().toISOString()
+        }))
+      });
+      const result = await patchR.json();
+      if (result.error) return res.status(500).json({ error: safeError(result.error) });
+      return res.status(200).json({ success: true, studentCount: classData.students.length });
+    }
+
+    // ── sync ────────────────────────────────────────────────────────────────
+    if (action === 'sync') {
+      if (!studentEmail)
+        return res.status(400).json({ error: 'Missing student email' });
+
+      // GET with API key (critical fix)
+      const getR = await fetchWithTimeout(`${FIRESTORE_BASE}/classes/${classCode}?key=${API_KEY}`);
+      const existing = await getR.json();
+
+      let classData = existing.error ? { classCode, students: [] } : parseFirestore(existing);
+      classData.students = parseStudents(classData.students);
+
+      const idx = classData.students.findIndex(s => s.email === studentEmail);
+      if (idx >= 0) classData.students[idx] = { ...classData.students[idx], ...studentData };
+      else classData.students.push({ email: studentEmail, ...studentData });
+
+      const patchR = await fetchWithTimeout(`${FIRESTORE_BASE}/classes/${classCode}?key=${API_KEY}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(toFirestore({
+          ...classData,
+          students: JSON.stringify(classData.students)
+        }))
+      });
+      const result = await patchR.json();
+      if (result.error) return res.status(500).json({ error: safeError(result.error) });
+      return res.status(200).json({ success: true });
+    }
+
+    // ── assign ──────────────────────────────────────────────────────────────
+    if (action === 'assign') {
+      if (!assignment || typeof assignment !== 'object')
+        return res.status(400).json({ error: 'Missing assignment payload' });
+
+      const url = `${FIRESTORE_BASE}/assignments/${classCode}?key=${API_KEY}`;
+      const r = await fetchWithTimeout(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(toFirestore(assignment))
+      });
+      const data = await r.json();
+      if (data.error) return res.status(500).json({ error: safeError(data.error) });
+      return res.status(200).json({ success: true });
+    }
+
+    return res.status(400).json({ error: 'Unknown action' });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    if (err.name === 'AbortError')
+      return res.status(504).json({ error: 'Upstream timeout' });
+    return res.status(500).json({ error: safeError(err) });
   }
 };
 
-// Convert JS object to Firestore format
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function parseStudents(raw) {
+  if (Array.isArray(raw)) return raw;
+  try { return JSON.parse(raw || '[]'); } catch { return []; }
+}
+
 function toFirestore(obj) {
   const fields = {};
   for (const [key, val] of Object.entries(obj)) {
-    if (typeof val === 'string') fields[key] = { stringValue: val };
-    else if (typeof val === 'number') fields[key] = { integerValue: val };
+    if (typeof val === 'string')       fields[key] = { stringValue: val };
+    else if (typeof val === 'number')  fields[key] = { integerValue: val };
     else if (typeof val === 'boolean') fields[key] = { booleanValue: val };
-    else if (Array.isArray(val)) fields[key] = { stringValue: JSON.stringify(val) };
     else if (val === null || val === undefined) fields[key] = { nullValue: null };
     else fields[key] = { stringValue: JSON.stringify(val) };
   }
   return { fields };
 }
 
-// Parse Firestore format to JS object
 function parseFirestore(doc) {
-  if (!doc.fields) return {};
+  if (!doc?.fields) return {};
   const obj = {};
   for (const [key, val] of Object.entries(doc.fields)) {
     if (val.stringValue !== undefined) {
-      try { obj[key] = JSON.parse(val.stringValue); }
-      catch { obj[key] = val.stringValue; }
+      // Only attempt JSON parse for known array fields
+      if (key === 'students') {
+        try { obj[key] = JSON.parse(val.stringValue); } catch { obj[key] = []; }
+      } else {
+        obj[key] = val.stringValue;
+      }
     } else if (val.integerValue !== undefined) obj[key] = parseInt(val.integerValue);
     else if (val.booleanValue !== undefined) obj[key] = val.booleanValue;
     else obj[key] = null;
