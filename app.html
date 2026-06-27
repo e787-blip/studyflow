@@ -1040,7 +1040,7 @@
     var allDays = [];
     var notesShort = notes.substring(0, 400);
 
-    function generateDay(dayNum, totalDays, callback) {
+    function generateDay(dayNum, totalDays, subjectType, strategy, callback) {
       var isFirst = dayNum === 1;
       var isLast = dayNum === totalDays;
       var difficulty = isFirst ? 'Easy' : (isLast ? 'Hard' : 'Medium');
@@ -1049,7 +1049,8 @@
       var isPro = (userPlan === 'pro' || userPlan === 'vip');
       var fillSection = isPro ? ',{"type":"fill","question":"The _______ is responsible for [key concept from notes].","answer":"exact answer word or phrase","hint":"specific fact from notes","explanation":"why this is correct","difficulty":"' + difficulty + '"},{"type":"fill","question":"In [year/context], _______ [did/caused/resulted in something].","answer":"exact answer","hint":"specific fact","explanation":"why correct","difficulty":"' + difficulty + '"}' : '';
 
-      var prompt = 'Create a study day as JSON. Notes: ' + notesShort + '\n\nDay ' + dayNum + ' of ' + totalDays + '. Goal: ' + selectedGoal + '. ' + (isFirst ? 'Easy questions.' : isLast ? 'Hard questions. isFinal=true.' : 'Medium questions.') + '\n\nCRITICAL: Output ONLY compact JSON, no whitespace, no line breaks. Keep ALL string values under 120 characters. Use real content from notes. Always include 4 keyTerms with real terms and definitions from the notes.\n\n{"title":"short title","briefing":"short briefing under 120 chars","content":"lesson content under 120 chars","keyTerms":[{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"}],"duration":30,"isFinal":' + isLast + ',"completed":false,"questions":[{"type":"mcq","question":"Q?","options":["A","B","C","D"],"correctIndex":0,"hint":"fact","explanation":"why","difficulty":"' + difficulty + '"},{"type":"mcq","question":"Q?","options":["A","B","C","D"],"correctIndex":1,"hint":"fact","explanation":"why","difficulty":"' + difficulty + '"},{"type":"mcq","question":"Q?","options":["A","B","C","D"],"correctIndex":2,"hint":"fact","explanation":"why","difficulty":"' + difficulty + '"},{"type":"truefalse","question":"Statement.","correct":"True","hint":"fact","explanation":"why","difficulty":"' + difficulty + '"},{"type":"truefalse","question":"Statement.","correct":"False","hint":"fact","explanation":"why","difficulty":"' + difficulty + '"},{"type":"fill","question":"The _______ is [key concept].","answer":"exact answer","hint":"specific fact","explanation":"why correct","difficulty":"' + difficulty + '"}]}';
+      var prompt = 'Create a study day as JSON for a ' + (strategy.label || 'General') + ' lesson.\nNotes: ' + notesShort + '\n\nDay ' + dayNum + ' of ' + totalDays + '. Goal: ' + selectedGoal + '. ' + (isFirst ? 'Easy questions.' : isLast ? 'Hard questions. isFinal=true.' : 'Medium questions.') + '\n\nSubject strategy: ' + (strategy.questionEmphasis || '') + '\n\nCRITICAL: Output ONLY compact JSON, no whitespace, no line breaks. Keep ALL string values under 120 characters. Use REAL content from the notes — not generic examples.\n\n{"title":"short title","briefing":"short briefing under 120 chars","content":"lesson content under 120 chars","keyTerms":[{"term":"real term from notes","definition":"real definition from notes"},{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"}],"duration":30,"isFinal":' + isLast + ',"completed":false,"questions":[{"type":"mcq","question":"specific Q from notes?","options":["A","B","C","D"],"correctIndex":0,"hint":"specific fact","explanation":"why correct","difficulty":"' + difficulty + '"},{"type":"mcq","question":"specific Q from notes?","options":["A","B","C","D"],"correctIndex":1,"hint":"specific fact","explanation":"why correct","difficulty":"' + difficulty + '"},{"type":"mcq","question":"specific Q from notes?","options":["A","B","C","D"],"correctIndex":2,"hint":"specific fact","explanation":"why correct","difficulty":"' + difficulty + '"},{"type":"truefalse","question":"Specific statement from notes.","correct":"True","hint":"specific fact","explanation":"why","difficulty":"' + difficulty + '"},{"type":"truefalse","question":"Specific statement from notes.","correct":"False","hint":"specific fact","explanation":"why","difficulty":"' + difficulty + '"},{"type":"fill","question":"' + (strategy.fillTemplate || 'The _______ is [key concept].') + '","answer":"exact answer","hint":"specific fact","explanation":"why correct","difficulty":"' + difficulty + '"}]}';
+
       fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1098,8 +1099,68 @@
       goToStep(2);
     }, 90000);
 
+    // ── SUBJECT CLASSIFICATION ──
+    function classifySubject(subjectName, notes) {
+      var text = (subjectName + ' ' + notes.substring(0, 300)).toLowerCase();
+      if (/math|algebra|calculus|geometry|trigonometry|equation|derivative|integral|polynomial|fraction|statistics|probability|theorem|proof|slope|linear|quadratic/.test(text)) return 'math';
+      if (/biology|chemistry|physics|science|cell|mitosis|meiosis|atom|molecule|element|compound|reaction|force|energy|evolution|genetics|ecosystem|periodic|DNA|RNA/.test(text)) return 'science';
+      if (/history|war|revolution|empire|civilization|century|ancient|medieval|political|president|government|democracy|colonialism|treaty|battle|historian/.test(text)) return 'history';
+      if (/literature|english|novel|poem|poetry|author|character|theme|metaphor|grammar|essay|writing|shakespeare|vocabulary|language|syntax|literary|fiction/.test(text)) return 'english';
+      if (/spanish|french|german|japanese|chinese|korean|arabic|latin|language|verb|noun|conjugate|vocabulary|translate|pronunciation/.test(text)) return 'language';
+      return 'general';
+    }
+
+    // ── PER-SUBJECT QUESTION STRATEGY ──
+    function getSubjectStrategy(subjectType) {
+      var strategies = {
+        math: {
+          label: 'Math',
+          questionEmphasis: 'Focus on problem-solving steps, formulas, and application. Include questions that require showing work or explaining the process. Avoid pure memorization — emphasize WHY formulas work.',
+          fillTemplate: 'To solve [problem type], first _______ then apply the formula.',
+          feynmanPrompt: 'Explain this concept as if teaching it to a classmate who has never seen it. Include an example.',
+          questionTypes: 'mcq,truefalse,fill,graph'
+        },
+        science: {
+          label: 'Science',
+          questionEmphasis: 'Focus on processes, cause-and-effect, and vocabulary. Include questions about sequences (like cell cycle steps) and relationships between concepts. Test understanding of mechanisms not just names.',
+          fillTemplate: 'During [process], the _______ is responsible for [function].',
+          feynmanPrompt: 'Explain this biological/chemical/physical process step by step in simple language.',
+          questionTypes: 'mcq,truefalse,fill,sequence,match'
+        },
+        history: {
+          label: 'History',
+          questionEmphasis: 'Focus on causes, effects, dates, and significance. Include chronological ordering questions. Ask WHY events happened, not just WHAT happened. Test understanding of historical patterns.',
+          fillTemplate: 'The _______ was caused by [event/factor] and led to [consequence].',
+          feynmanPrompt: 'Explain why this historical event happened and what its main consequences were.',
+          questionTypes: 'mcq,truefalse,fill,sequence'
+        },
+        english: {
+          label: 'English/Literature',
+          questionEmphasis: 'Focus on vocabulary in context, themes, literary devices, and author intent. Include quote completion and definition questions. Test analytical thinking about texts.',
+          fillTemplate: 'The literary device used in "[quote]" is _______ because it [effect].',
+          feynmanPrompt: 'Explain the theme or literary technique in your own words and give an example from the text.',
+          questionTypes: 'mcq,truefalse,fill,match'
+        },
+        language: {
+          label: 'Language',
+          questionEmphasis: 'Focus on vocabulary, grammar rules, and conjugation patterns. Include translation-style fill-in-blank. Test both recognition and production of language.',
+          fillTemplate: 'The word "_______ " means [definition] in this context.',
+          feynmanPrompt: 'Explain this grammar rule or vocabulary concept and give 2 example sentences.',
+          questionTypes: 'mcq,truefalse,fill,match'
+        },
+        general: {
+          label: 'General',
+          questionEmphasis: 'Focus on key concepts, definitions, and relationships between ideas. Test both recall and understanding.',
+          fillTemplate: 'The key concept of _______ means [definition].',
+          feynmanPrompt: 'Explain this concept in your own words as clearly as possible.',
+          questionTypes: 'mcq,truefalse,fill'
+        }
+      };
+      return strategies[subjectType] || strategies.general;
+    }
+
     // Detect subject first then generate all days sequentially
-    var subjectPrompt = 'In 3 words max, what subject is this? Reply with ONLY the subject name.\nNotes: ' + notesShort;
+    var subjectPrompt = 'In 3 words max, what subject is this? Reply with ONLY the subject name, nothing else.\nNotes: ' + notesShort;
     fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1108,11 +1169,13 @@
     .then(function(res) { return res.json(); })
     .then(function(data) {
       var subject = (data.result || data.plan || 'General').trim().split('\n')[0].substring(0, 30);
+      var subjectType = classifySubject(subject, notes);
+      var strategy = getSubjectStrategy(subjectType);
 
       // Generate days sequentially
       function generateNext(dayNum) {
-        document.getElementById('loading').querySelector('p').textContent = 'Generating day ' + dayNum + ' of ' + numDays + '...';
-        generateDay(dayNum, numDays, function(err, day) {
+        document.getElementById('loading').querySelector('p').textContent = 'Building your ' + strategy.label + ' plan — day ' + dayNum + ' of ' + numDays + '...';
+        generateDay(dayNum, numDays, subjectType, strategy, function(err, day) {
           if (err) {
             clearTimeout(timeoutId);
             alert('Error on day ' + dayNum + ': ' + err.message);
@@ -1130,7 +1193,7 @@
               subject: subject,
               goal: selectedGoal,
               deadline: deadline || '',
-              subjectType: 'general',
+              subjectType: subjectType,
               days: allDays
             };
             var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
