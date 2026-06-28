@@ -134,12 +134,15 @@
 
   .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .6rem; }
   .option-btn {
-    padding: .75rem 1rem; border-radius: 14px; border: 1.5px solid var(--border);
+    width: 100%; padding: .7rem .9rem; border-radius: 14px; border: 1.5px solid var(--border);
     background: var(--soft); font-family: var(--sans); font-size: 0.88rem; font-weight: 500;
-    color: var(--ink); cursor: pointer; transition: all .25s cubic-bezier(0.16,1,.3,1); text-align: center;
+    color: var(--ink); cursor: pointer; transition: all .2s cubic-bezier(0.16,1,.3,1); text-align: left;
   }
-  .option-btn:hover { border-color: var(--blue); background: var(--blue-light); color: var(--blue); transform: translateY(-2px); }
-  .option-btn.selected { border-color: var(--blue); background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(74,124,246,.35); transform: translateY(-2px); }
+  .option-btn:hover { border-color: var(--blue); background: var(--blue-light); transform: translateY(-1px); }
+  .option-btn.selected { border-color: var(--blue); background: var(--blue-light); box-shadow: 0 0 0 3px rgba(74,124,246,.15); transform: translateY(-1px); }
+  .option-btn.selected > div > div:first-child { background: var(--blue) !important; }
+  .option-btn.selected > div > div:first-child svg { stroke: #fff !important; }
+  .option-btn.selected > div > div:first-child { color: #fff !important; }
 
   .btn-next {
     width: 100%; padding: 1.1rem; background: var(--blue); color: #fff;
@@ -272,7 +275,16 @@
 <div id="onboarding-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,29,46,.85);backdrop-filter:blur(8px);z-index:9998;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:28px;padding:2.5rem 2rem;max-width:420px;width:90%;animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both;text-align:center;position:relative;">
     <div id="onboard-step-1">
-      <div style="font-size:3rem;margin-bottom:1rem;">📚</div>
+      <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin:0 auto 1rem;display:block;">
+  <rect width="52" height="52" rx="14" fill="#eef4ff"/>
+  <path d="M15 14h10c2.2 0 4 1.8 4 4v16c0-2.2-1.8-4-4-4H15V14z" fill="#4a7cf6" opacity=".2"/>
+  <path d="M37 14H27c-2.2 0-4 1.8-4 4v16c0-2.2 1.8-4 4-4h10V14z" fill="#4a7cf6" opacity=".35"/>
+  <path d="M15 14h10c2.2 0 4 1.8 4 4v16c0-2.2-1.8-4-4-4H15V14z" stroke="#4a7cf6" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
+  <path d="M37 14H27c-2.2 0-4 1.8-4 4v16c0-2.2 1.8-4 4-4h10V14z" stroke="#4a7cf6" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
+  <path d="M23 34v4M29 34v4" stroke="#4a7cf6" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M18 20h7M18 24h7M18 28h5" stroke="#4a7cf6" stroke-width="1.2" stroke-linecap="round" opacity=".6"/>
+  <path d="M27 20h7M27 24h7M27 28h5" stroke="#4a7cf6" stroke-width="1.2" stroke-linecap="round" opacity=".6"/>
+</svg>
       <h2 style="font-family:var(--serif);font-size:1.6rem;letter-spacing:-0.02em;margin-bottom:.5rem;">Welcome to <em style="color:var(--blue);">StudyFlow</em></h2>
       <p style="color:var(--muted);font-size:0.9rem;line-height:1.6;margin-bottom:1.5rem;">The AI study tool built on real cognitive science. Here's how it works in 3 steps.</p>
       <div style="display:flex;flex-direction:column;gap:.75rem;text-align:left;margin-bottom:1.8rem;">
@@ -293,20 +305,31 @@
     </div>
 
     <div id="onboard-step-2" style="display:none;">
-      <div style="font-size:3rem;margin-bottom:1rem;">🧠</div>
+      <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin:0 auto 1rem;display:block;">
+  <rect width="52" height="52" rx="14" fill="#eef4ff"/>
+  <path d="M26 16c-5.5 0-9 3.5-9 8 0 2.5 1 4.5 2.5 6L26 36l6.5-6c1.5-1.5 2.5-3.5 2.5-6 0-4.5-3.5-8-9-8z" fill="#4a7cf6" opacity=".15" stroke="#4a7cf6" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M22 22c0-2.2 1.8-4 4-4M26 22v6" stroke="#4a7cf6" stroke-width="1.5" stroke-linecap="round" opacity=".7"/>
+  <circle cx="26" cy="30" r="1.5" fill="#4a7cf6" opacity=".8"/>
+</svg>
       <h2 style="font-family:var(--serif);font-size:1.5rem;letter-spacing:-0.02em;margin-bottom:.5rem;">Built on real <em style="color:var(--blue);">science</em></h2>
       <p style="color:var(--muted);font-size:0.88rem;line-height:1.7;margin-bottom:1.5rem;">StudyFlow uses the same techniques that top students and memory champions use:</p>
       <div style="display:flex;flex-direction:column;gap:.6rem;text-align:left;margin-bottom:1.8rem;">
-        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>🔁 Spaced repetition</strong> — missed questions come back automatically</div>
-        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>📈 Difficulty ramping</strong> — starts easy, gets harder toward exam day</div>
-        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>💭 Active recall</strong> — answering questions beats re-reading by 84%</div>
-        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>🌙 Sleep science</strong> — your brain consolidates learning while you sleep</div>
+        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>Spaced repetition</strong> — missed questions come back automatically</div>
+        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>Difficulty ramping</strong> — starts easy, gets harder toward exam day</div>
+        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>Active recall</strong> — answering questions beats re-reading by 84%</div>
+        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>Sleep science</strong> — your brain consolidates learning while you sleep</div>
       </div>
       <button onclick="nextOnboard(3)" style="width:100%;padding:.95rem;background:var(--blue);color:#fff;border:none;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(74,124,246,.3);">Got it →</button>
     </div>
 
     <div id="onboard-step-3" style="display:none;">
-      <div style="font-size:3rem;margin-bottom:1rem;">🎯</div>
+      <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin:0 auto 1rem;display:block;">
+  <rect width="52" height="52" rx="14" fill="#eef4ff"/>
+  <circle cx="26" cy="26" r="14" stroke="#4a7cf6" stroke-width="1.5" opacity=".25"/>
+  <circle cx="26" cy="26" r="9" stroke="#4a7cf6" stroke-width="1.5" opacity=".5"/>
+  <circle cx="26" cy="26" r="4" fill="#4a7cf6"/>
+  <path d="M26 12v4M26 36v4M12 26h4M36 26h4" stroke="#4a7cf6" stroke-width="1.5" stroke-linecap="round" opacity=".4"/>
+</svg>
       <h2 style="font-family:var(--serif);font-size:1.5rem;letter-spacing:-0.02em;margin-bottom:.5rem;">One tip before you <em style="color:var(--blue);">start</em></h2>
       <p style="color:var(--muted);font-size:0.88rem;line-height:1.7;margin-bottom:1.5rem;">The more detailed your notes, the better your plan. Don't just paste the chapter title — paste the actual content, definitions, dates, formulas.</p>
       <div style="background:var(--blue-light);border-radius:14px;padding:1rem;text-align:left;margin-bottom:1.5rem;">
@@ -441,31 +464,121 @@
   <!-- STEP 2 -->
   <div class="card" id="step-2">
     <div class="card-icon" style="font-size:1.2rem; color:var(--blue); font-weight:700;">02</div>
-    <h2>Quick <em>questions</em></h2>
-    <p class="card-sub">Just 3 things — helps us build the perfect plan for exactly where you're at.</p>
+    <h2>Two quick <em>questions</em></h2>
+    <p class="card-sub">Helps us build the right plan for exactly where you're at right now.</p>
+
+    <!-- GOAL -->
     <div class="field">
-      <span class="field-label">What's your goal?</span>
-      <div class="options-grid">
-        <button class="option-btn" onclick="selectOption(this,'goal')">Pass the exam</button>
-        <button class="option-btn" onclick="selectOption(this,'goal')">Get an A</button>
-        <button class="option-btn" onclick="selectOption(this,'goal')">Deep understanding</button>
-        <button class="option-btn" onclick="selectOption(this,'goal')">Quick review</button>
+      <span class="field-label">What's your main goal?</span>
+      <div style="display:flex;flex-direction:column;gap:.5rem;">
+
+        <button class="option-btn goal-btn" onclick="selectOption(this,'goal')" data-value="Score 90%+ on the exam">
+          <div style="display:flex;align-items:center;gap:.75rem;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#eef4ff;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div style="text-align:left;">
+              <div style="font-weight:700;font-size:0.9rem;">Score 90%+</div>
+              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Shoot for the top — detailed plan, harder questions</div>
+            </div>
+          </div>
+        </button>
+
+        <button class="option-btn goal-btn" onclick="selectOption(this,'goal')" data-value="Pass the exam">
+          <div style="display:flex;align-items:center;gap:.75rem;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#f0fdf9;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div style="text-align:left;">
+              <div style="font-weight:700;font-size:0.9rem;">Pass confidently</div>
+              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Cover everything that matters, no gaps</div>
+            </div>
+          </div>
+        </button>
+
+        <button class="option-btn goal-btn" onclick="selectOption(this,'goal')" data-value="Deeply understand the material">
+          <div style="display:flex;align-items:center;gap:.75rem;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#fdf4ff;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            </div>
+            <div style="text-align:left;">
+              <div style="font-weight:700;font-size:0.9rem;">Actually understand it</div>
+              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Go deep — Feynman technique, concept mastery</div>
+            </div>
+          </div>
+        </button>
+
+        <button class="option-btn goal-btn" onclick="selectOption(this,'goal')" data-value="Quick review before the exam">
+          <div style="display:flex;align-items:center;gap:.75rem;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#fff8ed;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div style="text-align:left;">
+              <div style="font-weight:700;font-size:0.9rem;">Cram fast</div>
+              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Exam soon — hit the key points fast</div>
+            </div>
+          </div>
+        </button>
+
       </div>
     </div>
-    <div class="field">
-      <span class="field-label">How hard does this feel?</span>
-      <div class="options-grid">
-        <button class="option-btn" onclick="selectOption(this,'difficulty')">Easy</button>
-        <button class="option-btn" onclick="selectOption(this,'difficulty')">Medium</button>
-        <button class="option-btn" onclick="selectOption(this,'difficulty')">Hard</button>
-        <button class="option-btn" onclick="selectOption(this,'difficulty')">Very hard</button>
+
+    <!-- PRIOR KNOWLEDGE (replaces "difficulty") -->
+    <div class="field" style="margin-top:1.1rem;">
+      <span class="field-label">How well do you know this material right now?</span>
+      <div style="display:flex;flex-direction:column;gap:.5rem;">
+
+        <button class="option-btn diff-btn" onclick="selectOption(this,'difficulty')" data-value="Easy">
+          <div style="display:flex;align-items:center;gap:.75rem;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#d1faf0;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.78rem;color:#1a9e80;">A</div>
+            <div style="text-align:left;">
+              <div style="font-weight:700;font-size:0.9rem;">I know it pretty well</div>
+              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Familiar with most concepts — just need to sharpen up</div>
+            </div>
+          </div>
+        </button>
+
+        <button class="option-btn diff-btn" onclick="selectOption(this,'difficulty')" data-value="Medium">
+          <div style="display:flex;align-items:center;gap:.75rem;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#fff8ed;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.78rem;color:#d97706;">B</div>
+            <div style="text-align:left;">
+              <div style="font-weight:700;font-size:0.9rem;">I know some of it</div>
+              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Patchy understanding — solid on some things, gaps on others</div>
+            </div>
+          </div>
+        </button>
+
+        <button class="option-btn diff-btn" onclick="selectOption(this,'difficulty')" data-value="Hard">
+          <div style="display:flex;align-items:center;gap:.75rem;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#fee2e2;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.78rem;color:#dc2626;">C</div>
+            <div style="text-align:left;">
+              <div style="font-weight:700;font-size:0.9rem;">Barely started</div>
+              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Most of this is new — start from the basics</div>
+            </div>
+          </div>
+        </button>
+
+        <button class="option-btn diff-btn" onclick="selectOption(this,'difficulty')" data-value="Very hard">
+          <div style="display:flex;align-items:center;gap:.75rem;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#f3f4f6;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.78rem;color:#6b7280;">?</div>
+            <div style="text-align:left;">
+              <div style="font-weight:700;font-size:0.9rem;">Haven't looked at it yet</div>
+              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Starting from zero — build the full foundation</div>
+            </div>
+          </div>
+        </button>
+
       </div>
     </div>
-    <div class="field">
-      <span class="field-label">Exam date</span>
+
+    <!-- EXAM DATE -->
+    <div class="field" style="margin-top:1.1rem;">
+      <span class="field-label">When is your exam?</span>
       <input type="date" class="text-input" id="deadline-input" required />
+      <div style="font-size:0.75rem;color:var(--muted);margin-top:.4rem;">We use this to spread your sessions and ramp difficulty toward exam day.</div>
     </div>
-    <button class="btn-next" onclick="generatePlan()">✦ Generate my study plan</button>
+
+    <button class="btn-next" onclick="generatePlan()" style="margin-top:1.4rem;">✦ Build my study plan</button>
     <button class="btn-back" onclick="goToStep(1)">← Back</button>
   </div>
 
@@ -482,7 +595,7 @@
     </div>
     <div class="result-body" id="result-body"></div>
     <div class="result-actions">
-      <button class="btn-copy" onclick="copyPlan()">📋 Copy plan</button>
+      <button class="btn-copy" onclick="copyPlan()">Copy plan</button>
       <button class="btn-new" onclick="startOver()">New plan →</button>
     </div>
   </div>
@@ -928,8 +1041,10 @@
   function selectOption(btn, group) {
     document.querySelectorAll('[onclick*="' + group + '"]').forEach(function(b) { b.classList.remove('selected'); });
     btn.classList.add('selected');
-    if (group === 'goal') selectedGoal = btn.textContent;
-    if (group === 'difficulty') selectedDifficulty = btn.textContent;
+    // Read data-value if present (new card-style buttons), else fall back to textContent
+    var val = btn.dataset.value || btn.textContent.trim().split('\n')[0].trim();
+    if (group === 'goal') selectedGoal = val;
+    if (group === 'difficulty') selectedDifficulty = val;
   }
 
   function goToStep2() {
@@ -1284,7 +1399,7 @@
     navigator.clipboard.writeText(generatedPlan).then(function() {
       var btn = document.querySelector('.btn-copy');
       btn.textContent = '✓ Copied!';
-      setTimeout(function() { btn.textContent = '📋 Copy plan'; }, 2000);
+      setTimeout(function() { btn.textContent = 'Copy plan'; }, 2000);
     });
   }
 
