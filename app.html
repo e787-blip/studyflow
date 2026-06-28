@@ -1049,7 +1049,69 @@
       var isPro = (userPlan === 'pro' || userPlan === 'vip');
       var fillSection = isPro ? ',{"type":"fill","question":"The _______ is responsible for [key concept from notes].","answer":"exact answer word or phrase","hint":"specific fact from notes","explanation":"why this is correct","difficulty":"' + difficulty + '"},{"type":"fill","question":"In [year/context], _______ [did/caused/resulted in something].","answer":"exact answer","hint":"specific fact","explanation":"why correct","difficulty":"' + difficulty + '"}' : '';
 
-      var prompt = 'Create a study day as JSON for a ' + (strategy.label || 'General') + ' lesson.\nNotes: ' + notesShort + '\n\nDay ' + dayNum + ' of ' + totalDays + '. Goal: ' + selectedGoal + '. ' + (isFirst ? 'Easy questions.' : isLast ? 'Hard questions. isFinal=true.' : 'Medium questions.') + '\n\nSubject strategy: ' + (strategy.questionEmphasis || '') + '\n\nCRITICAL: Output ONLY compact JSON, no whitespace, no line breaks. Keep ALL string values under 120 characters. Use REAL content from the notes — not generic examples.\n\n{"title":"short title","briefing":"short briefing under 120 chars","content":"lesson content under 120 chars","keyTerms":[{"term":"real term from notes","definition":"real definition from notes"},{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"}],"duration":30,"isFinal":' + isLast + ',"completed":false,"questions":[{"type":"mcq","question":"specific Q from notes?","options":["A","B","C","D"],"correctIndex":0,"hint":"specific fact","explanation":"why correct","difficulty":"' + difficulty + '"},{"type":"mcq","question":"specific Q from notes?","options":["A","B","C","D"],"correctIndex":1,"hint":"specific fact","explanation":"why correct","difficulty":"' + difficulty + '"},{"type":"mcq","question":"specific Q from notes?","options":["A","B","C","D"],"correctIndex":2,"hint":"specific fact","explanation":"why correct","difficulty":"' + difficulty + '"},{"type":"truefalse","question":"Specific statement from notes.","correct":"True","hint":"specific fact","explanation":"why","difficulty":"' + difficulty + '"},{"type":"truefalse","question":"Specific statement from notes.","correct":"False","hint":"specific fact","explanation":"why","difficulty":"' + difficulty + '"},{"type":"fill","question":"' + (strategy.fillTemplate || 'The _______ is [key concept].') + '","answer":"exact answer","hint":"specific fact","explanation":"why correct","difficulty":"' + difficulty + '"}]}';
+      // Build subject-specific question instructions (kept OUTSIDE the JSON schema)
+      var questionInstructions = '';
+      var questionSchema = '';
+
+      if (subjectType === 'math') {
+        questionInstructions = '\n\nQUESTION REQUIREMENTS — generate ALL of these:\n' +
+          '- 3 MCQ questions about concepts, theorems, or definitions from the notes\n' +
+          '- 2 True/False questions about math facts from the notes\n' +
+          '- 3 fill questions: each must have a REAL equation or formula from the notes with the answer blanked out. Example format: "Solve: 2x + 5 = 13, x = _______" with answer "4". Use real numbers from the notes.\n' +
+          'ALL answers must be specific — never say "numerical answer" or "exact formula". Use the real answer.\n';
+        questionSchema = '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"Statement.","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"Statement.","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"Solve: [equation] = _______","answer":"[number]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"The formula for [concept] is _______","answer":"[formula]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"If [var] = [value], then [expression] = _______","answer":"[result]","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+      } else if (subjectType === 'science') {
+        questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
+          '- 3 MCQ questions about processes, structures, or mechanisms from the notes\n' +
+          '- 2 True/False statements about scientific facts\n' +
+          '- 2 fill questions: blank out a key term or result in a sentence from the notes\n' +
+          'ALL answers must be specific words or phrases from the notes.\n';
+        questionSchema = '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"Statement.","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"Statement.","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"During [process], _______ is produced.","answer":"[specific term]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"The function of [structure] is to _______.","answer":"[specific function]","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+      } else {
+        questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
+          '- 3 MCQ questions about key facts from the notes\n' +
+          '- 2 True/False statements\n' +
+          '- 1 fill question: blank out an important word or date in a sentence from the notes\n' +
+          'ALL answers must be specific content from the notes.\n';
+        questionSchema = '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"Statement.","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"Statement.","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[sentence from notes with key word blanked] _______","answer":"[exact word]","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+      }
+
+      var prompt = 'You are generating a study day JSON for a ' + (strategy.label || 'General') + ' student.\n\n' +
+        'STUDENT NOTES:\n' + notesShort + '\n\n' +
+        'Day ' + dayNum + ' of ' + totalDays + '. Difficulty: ' + difficulty + '. Goal: ' + selectedGoal + '.\n' +
+        (isLast ? 'This is the FINAL day — use hardest questions.\n' : '') +
+        questionInstructions +
+        '\nRULES:\n' +
+        '1. Output ONLY valid compact JSON — no spaces, no line breaks, no markdown\n' +
+        '2. Every string under 120 characters\n' +
+        '3. Replace ALL [bracketed] placeholders in the schema with REAL content from the notes\n' +
+        '4. Every question must be answerable using the notes above\n' +
+        '5. Fill question answers must be the EXACT correct answer, not a description of one\n\n' +
+        'OUTPUT THIS EXACT JSON STRUCTURE with real content:\n' +
+        '{"title":"' + (isFirst ? 'Introduction to' : isLast ? 'Final Review:' : 'Day ' + dayNum + ':') + ' [topic]",' +
+        '"briefing":"[1 sentence about what student will learn today]",' +
+        '"content":"[2-3 sentences of lesson content from notes]",' +
+        '"keyTerms":[{"term":"[real term]","definition":"[real definition]"},{"term":"[real term]","definition":"[real definition]"},{"term":"[real term]","definition":"[real definition]"},{"term":"[real term]","definition":"[real definition]"}],' +
+        '"duration":30,"isFinal":' + isLast + ',"completed":false,' +
+        '"questions":[' + questionSchema + ']}';
 
       fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
         method: 'POST',
