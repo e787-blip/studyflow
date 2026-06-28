@@ -134,21 +134,87 @@
   }
   @media(max-width:768px) {
     .pricing-cards-grid { grid-template-columns:1fr; max-width:100%; }
-    .scroll-showcase { height:auto !important; }
-    .sticky-panel { position:relative !important; height:auto !important; grid-template-columns:1fr !important; padding:1.5rem 1rem 3rem !important; }
-    .scroll-spacer { display:none !important; }
-    .sticky-text { height:auto !important; }
-    .feature-slide { position:relative !important; opacity:1 !important; transform:none !important; margin-bottom:2.5rem !important; pointer-events:auto !important; }
-    .feature-slide.exit { opacity:1 !important; transform:none !important; }
-    .sticky-visual { display:none !important; }
-    .showcase-dots { display:none !important; }
-    .why-showcase { height:auto !important; }
-    .why-sticky { position:relative !important; height:auto !important; padding:0 !important; }
-    .why-spacer { display:none !important; }
-    .why-slide { position:relative !important; opacity:1 !important; flex-direction:column !important; gap:1.5rem !important; padding:2rem 0 !important; margin-bottom:1rem !important; pointer-events:auto !important; }
-    .why-dots { display:none !important; }
-    .why-num { font-size:4rem !important; }
-    .why-card { max-width:100% !important; }
+
+    /* ── STICKY SCROLL — mobile: disable sticky, stack features as cards ── */
+
+    /* Kill the 600vh blank space — collapse to natural height */
+    #fo, #wo { height:auto !important; }
+
+    /* Unstick the panel — just a normal flex column */
+    #fs, #ws {
+      position:relative !important;
+      height:auto !important;
+      display:block !important;
+      padding:0 1.2rem 2rem !important;
+    }
+
+    /* Stack the two-column grid into single column */
+    #fs > div, #ws > div {
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0 !important;
+      padding:0 !important;
+    }
+
+    /* Left text column — auto height, no absolute positioning */
+    #fs > div > div:first-child,
+    #ws > div > div:first-child {
+      position:relative !important;
+      height:auto !important;
+    }
+
+    /* Show ALL feature slides stacked — override opacity/absolute */
+    #ft0,#ft1,#ft2,#ft3,#ft4,#ft5 {
+      position:relative !important;
+      opacity:1 !important;
+      top:auto !important; left:auto !important; right:auto !important;
+      transition:none !important;
+      padding:1.5rem 1.2rem !important;
+      margin-bottom:.75rem !important;
+      background:#fff !important;
+      border-radius:16px !important;
+      border:1px solid #e5e9f2 !important;
+      box-shadow:0 2px 12px rgba(0,0,0,.06) !important;
+    }
+
+    /* Show ALL why slides stacked */
+    #wn0,#wn1,#wn2,#wn3,#wn4,#wn5 {
+      position:relative !important;
+      opacity:1 !important;
+      top:auto !important; left:auto !important; right:auto !important;
+      transition:none !important;
+      inset:auto !important;
+      transform:none !important;
+      display:flex !important;
+      flex-direction:row !important;
+      align-items:center !important;
+      gap:1rem !important;
+      padding:1.2rem !important;
+      margin-bottom:.75rem !important;
+      background:#fff !important;
+      border-radius:16px !important;
+      border:1px solid #e5e9f2 !important;
+    }
+
+    /* Why stat numbers — smaller on mobile */
+    #wn0 > div:first-child,#wn1 > div:first-child,
+    #wn2 > div:first-child,#wn3 > div:first-child,
+    #wn4 > div:first-child,#wn5 > div:first-child {
+      font-size:3.5rem !important;
+      line-height:1 !important;
+      flex-shrink:0 !important;
+      width:110px !important;
+      text-align:center !important;
+    }
+
+    /* Hide right visual cards on mobile — too complex */
+    #fv0,#fv1,#fv2,#fv3,#fv4,#fv5 { display:none !important; }
+
+    /* Hide why right cards on mobile — big numbers + text is enough */
+    #wc0,#wc1,#wc2,#wc3,#wc4,#wc5 { display:none !important; }
+
+    /* Hide the progress dots */
+    #feat-dots, #why-dots { display:none !important; }
   }
 
   .btn-primary {
@@ -1954,11 +2020,16 @@
     window.scrollTo({ top: top + (i / WHY_N) * scrollable + 1, behavior: 'smooth' });
   }
 
-  // Initialize — show slide 0 on both
-  featShow(0);
-  whyShow(0);
+  // Initialize — show slide 0 on both (desktop only — mobile uses CSS stacking)
+  if (window.innerWidth > 768) {
+    featShow(0);
+    whyShow(0);
+  }
 
   function onScroll() {
+    // On mobile, slides are all visible as stacked cards — skip scroll logic
+    if (window.innerWidth <= 768) return;
+
     var fo = document.getElementById('fo');
     if (fo) {
       var r = fo.getBoundingClientRect();
