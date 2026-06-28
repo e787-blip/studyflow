@@ -1007,6 +1007,9 @@
     if (!sessionActive) return;
     currentAnswered = false;
 
+    // Clean up graph drag listeners from previous card
+    if (window._graphCleanup) window._graphCleanup();
+
     // 10-minute recap
     var elapsed = totalSeconds - secondsLeft;
     if (elapsed > 0 && elapsed - lastRecapTime >= 600 && lastRecapTime < elapsed) {
@@ -1182,42 +1185,56 @@
   }
 
   function renderFill(q) {
-    var answer = q.answer || (q.options ? q.options[q.correctIndex] : '') || '';
+    // Robustly get the answer regardless of question type
+    var answer = '';
+    if (q.answer && typeof q.answer === 'string' && q.answer.length > 0) {
+      answer = q.answer;
+    } else if (q.options && q.correctIndex !== undefined && q.options[q.correctIndex]) {
+      answer = q.options[q.correctIndex];
+    } else if (q.correct) {
+      answer = q.correct; // truefalse fallback
+    }
+
     var explanation = q.explanation || '';
     var questionText = q.question || '';
 
     // Normalize blank marker — accept _______, ____, or [blank]
-    questionText = questionText.replace(/_{3,}|\[blank\]/gi, '<span style="display:inline-block;min-width:80px;border-bottom:2.5px solid var(--blue);margin:0 .3rem;"></span>');
+    questionText = questionText.replace(/_{3,}|\[blank\]/gi,
+      '<span style="display:inline-block;min-width:80px;border-bottom:2.5px solid var(--blue);margin:0 .3rem;vertical-align:bottom;"></span>');
 
-    // If no blank in question, create one smartly
+    // If no blank in question, create one
     if (!questionText.includes('border-bottom')) {
       if (answer && q.question && q.question.toLowerCase().includes(answer.toLowerCase())) {
-        questionText = q.question.replace(new RegExp(answer, 'i'), '<span style="display:inline-block;min-width:80px;border-bottom:2.5px solid var(--blue);margin:0 .3rem;"></span>');
+        questionText = q.question.replace(new RegExp(answer.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'i'),
+          '<span style="display:inline-block;min-width:80px;border-bottom:2.5px solid var(--blue);margin:0 .3rem;vertical-align:bottom;"></span>');
       } else {
-        questionText = (q.question || '').replace(/\?$/, '') + ' = <span style="display:inline-block;min-width:80px;border-bottom:2.5px solid var(--blue);margin:0 .3rem;"></span>';
+        questionText = (q.question || '').replace(/\?$/, '') +
+          ' = <span style="display:inline-block;min-width:80px;border-bottom:2.5px solid var(--blue);margin:0 .3rem;vertical-align:bottom;"></span>';
       }
     }
 
-    var body = '<div class="q-meta"><span class="q-type-label fill">Fill in the Blank</span>' +
+    var body =
+      '<div class="q-meta"><span class="q-type-label fill">Fill in the Blank</span>' +
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
-      '<div class="q-text" style="line-height:2;">' + questionText + '</div>' +
+      '<div class="q-text" style="line-height:2.2;">' + questionText + '</div>' +
       '<div style="font-size:0.75rem;color:var(--muted);margin:.6rem 0 .75rem;">Type the missing word, number, or formula</div>' +
       '<div class="fill-wrap">' +
-      '<input class="fill-input" id="fill-input" placeholder="Your answer..." autocomplete="off" autocorrect="off" autocapitalize="off" />' +
+      '<input class="fill-input" id="fill-input" type="text" placeholder="Your answer..." autocomplete="off" autocorrect="off" autocapitalize="off" autocomplete="off" />' +
       '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
       '</div>' +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Think carefully about the key concepts.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
-    // Store answer and explanation safely as data on the button — avoids onclick string escaping issues
-    var card = '<div class="session-card">' +
+    var card =
+      '<div class="session-card">' +
       '<div class="card-header"><div class="card-badge">✦ Fill in the Blank</div><h2>Complete the answer</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left"></span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button>' +
+      '</div></div>';
 
-    // Use timeout to set data attrs after DOM renders
+    // Use 60ms timeout — longer than graph's 50ms to avoid race condition
     setTimeout(function() {
       var btn = document.getElementById('fill-btn');
       var inp = document.getElementById('fill-input');
@@ -1229,9 +1246,10 @@
         inp.addEventListener('keydown', function(e) {
           if (e.key === 'Enter') answerFillBtn();
         });
-        inp.focus();
+        // Only focus if still on this card (element exists)
+        if (document.getElementById('fill-input')) inp.focus();
       }
-    }, 30);
+    }, 60);
 
     return card;
   }
@@ -1300,31 +1318,38 @@
     var track = document.getElementById('graph-slider-track');
     var handle = document.getElementById('graph-handle');
     if (!track || !handle) return;
+
+    // Clean up previous drag listeners if any
+    if (window._graphCleanup) window._graphCleanup();
+
     var dragging = false;
 
     function setValue(val) {
       val = Math.max(min, Math.min(max, Math.round(val)));
-      window._graphState.current = val;
+      if (window._graphState) window._graphState.current = val;
       var pct = ((val - min) / (max - min)) * 100;
       handle.style.left = pct + '%';
-      document.getElementById('graph-val').textContent = val;
-      // Update line: y = slope*x + val
+      var valEl = document.getElementById('graph-val');
+      if (valEl) valEl.textContent = val;
       var x1 = min, y1 = slope * x1 + val;
       var x2 = max, y2 = slope * x2 + val;
-      // Clamp to visible range
-      document.getElementById('graph-line').setAttribute('x1', toSvgX(x1));
-      document.getElementById('graph-line').setAttribute('y1', toSvgY(Math.max(min,Math.min(max,y1))));
-      document.getElementById('graph-line').setAttribute('x2', toSvgX(x2));
-      document.getElementById('graph-line').setAttribute('y2', toSvgY(Math.max(min,Math.min(max,y2))));
-      document.getElementById('graph-dot').setAttribute('cx', toSvgX(0));
-      document.getElementById('graph-dot').setAttribute('cy', toSvgY(val));
+      var lineEl = document.getElementById('graph-line');
+      var dotEl  = document.getElementById('graph-dot');
+      if (lineEl) {
+        lineEl.setAttribute('x1', toSvgX(x1));
+        lineEl.setAttribute('y1', toSvgY(Math.max(min, Math.min(max, y1))));
+        lineEl.setAttribute('x2', toSvgX(x2));
+        lineEl.setAttribute('y2', toSvgY(Math.max(min, Math.min(max, y2))));
+      }
+      if (dotEl) {
+        dotEl.setAttribute('cx', toSvgX(0));
+        dotEl.setAttribute('cy', toSvgY(val));
+      }
     }
 
     function posToValue(clientX) {
       var rect = track.getBoundingClientRect();
-      var pct = (clientX - rect.left) / rect.width;
-      pct = Math.max(0, Math.min(1, pct));
-      return min + pct * (max - min);
+      return min + Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * (max - min);
     }
 
     function start(e) { dragging = true; move(e); }
@@ -1338,35 +1363,55 @@
 
     handle.addEventListener('mousedown', start);
     handle.addEventListener('touchstart', start, { passive: false });
-    track.addEventListener('mousedown', function(e){ setValue(posToValue(e.clientX)); start(e); });
-    window.addEventListener('mousemove', move);
-    window.addEventListener('touchmove', move, { passive: false });
-    window.addEventListener('mouseup', end);
-    window.addEventListener('touchend', end);
+    track.addEventListener('mousedown', function(e) { setValue(posToValue(e.clientX)); start(e); });
+
+    var onMove = function(e) { move(e); };
+    var onEnd  = function()  { end(); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchend', onEnd);
+
+    // Store cleanup function so next card can remove these
+    window._graphCleanup = function() {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('touchend', onEnd);
+      window._graphCleanup = null;
+    };
 
     setValue(0);
   }
 
   function checkGraph() {
+    if (currentAnswered) return;
     var gs = window._graphState;
+    if (!gs) return;
     var isCorrect = gs.current === gs.target;
+    currentAnswered = true;
     totalAnswered++;
-    document.getElementById('graph-check-btn').disabled = true;
-    document.getElementById('graph-handle').style.pointerEvents = 'none';
+    var checkBtn = document.getElementById('graph-check-btn');
+    var handle = document.getElementById('graph-handle');
+    if (checkBtn) checkBtn.disabled = true;
+    if (handle) handle.style.pointerEvents = 'none';
     var fb = document.getElementById('feedback-box');
+    if (!fb) return;
     fb.style.display = 'block';
     if (isCorrect) {
       correctCount++; currentStreak++;
-      fb.className = 'feedback-box correct';
-      fb.innerHTML = '<strong>Correct!</strong> ' + (gs.explanation || 'The y-intercept is the point where the line crosses the y-axis.');
+      fb.className = 'feedback-box show correct-fb';
+      fb.innerHTML = '<div class="feedback-label">✓ Correct!</div><div class="feedback-text">' + (gs.explanation || 'The y-intercept is where the line crosses the y-axis.') + '</div>';
       spawnConfetti();
+      flashCard(true);
     } else {
       currentStreak = 0;
-      fb.className = 'feedback-box wrong';
-      fb.innerHTML = '<strong>Not quite.</strong> The correct y-intercept was ' + gs.target + '. ' + (gs.explanation || '');
+      fb.className = 'feedback-box show wrong-fb';
+      fb.innerHTML = '<div class="feedback-label">✗ Not quite</div><div class="feedback-text">The correct y-intercept was <strong>' + gs.target + '</strong>. ' + (gs.explanation || '') + '</div>';
+      flashCard(false);
     }
     document.getElementById('btn-next').disabled = false;
-    recordAnswer(isCorrect);
+    updateStreak();
   }
 
   // ── SEQUENCE / DRAG-TO-SORT ──
