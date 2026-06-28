@@ -1047,7 +1047,7 @@
     }
     else if (card.type === 'review-done') {
       html = buildCard('Review complete!', 'Now for today\'s new content', false,
-        '<p class="content-text" style="text-align:center;">Great — reviewing yesterday\'s missed questions reinforces your memory right before it fades. Now let\'s build on top of that! 🚀</p>',
+        '<p class="content-text" style="text-align:center;">Great — reviewing yesterday\'s missed questions reinforces your memory right before it fades. Now let\'s build on top of that!.</p>',
         '', 'Continue →', false);
     }
     else if (card.type === 'interleave-intro') {
@@ -1094,10 +1094,10 @@
       // Add badge for spaced repeat and review questions
       if (card.isSpacedRepeat) {
         html = html.replace('class="card-tag"', 'class="card-tag" style="background:#fff8e0;color:#d97706;border-color:#f59e0b;"');
-        html = html.replace(/(<div class="card-tag"[^>]*>)[^<]*/,'$1🔁 Try again');
+        html = html.replace(/(<div class="card-tag"[^>]*>)[^<]*/,'$1<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.95"/></svg> Try again');
       } else if (card.isReview) {
         html = html.replace('class="card-tag"', 'class="card-tag" style="background:#dce8ff;color:#2851c8;border-color:#4a7cf6;"');
-        html = html.replace(/(<div class="card-tag"[^>]*>)[^<]*/,'$1 Review');
+        html = html.replace(/(<div class="card-tag"[^>]*>)[^<]*/,'$1<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> Review');
       }
     }
     else if (card.type === 'fill') {
@@ -1157,9 +1157,13 @@
 
     // TIER 2: Confidence tap — shown before answer buttons, hides after answered
     var confidenceTap = '<div class="confidence-row" id="confidence-row">' +
-      '<span class="confidence-label">How confident are you?</span>' +
-      '<button class="conf-btn sure" onclick="setConfidence(\'sure\')">Sure 👍</button>' +
-      '<button class="conf-btn unsure" onclick="setConfidence(\'unsure\')">Not sure 🤔</button>' +
+      '<span class="confidence-label">How confident?</span>' +
+      '<button class="conf-btn sure" onclick="setConfidence(\'sure\')">' +
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+      ' Sure</button>' +
+      '<button class="conf-btn unsure" onclick="setConfidence(\'unsure\')">' +
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
+      ' Not sure</button>' +
       '</div>';
 
     var body = '<div class="q-meta"><span class="q-type-label ' + typeClass + '">' + typeLabel + '</span>' +
@@ -1887,7 +1891,7 @@
     var metaMsg = '';
     if (currentConfidence) {
       if (isCorrect && currentConfidence === 'sure') metaMsg = '<div class="meta-insight sure-right">Well calibrated — you knew it and got it! </div>';
-      else if (isCorrect && currentConfidence === 'unsure') metaMsg = '<div class="meta-insight unsure-right">You knew more than you thought! Trust yourself more. 💪</div>';
+      else if (isCorrect && currentConfidence === 'unsure') metaMsg = '<div class="meta-insight unsure-right"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg>You knew more than you thought! Trust yourself more.</div>';
       else if (!isCorrect && currentConfidence === 'sure') metaMsg = '<div class="meta-insight sure-wrong">You were confident but missed it — pay extra attention to this concept. ⚠️</div>';
       else if (!isCorrect && currentConfidence === 'unsure') metaMsg = '<div class="meta-insight unsure-wrong">You sensed you weren\'t sure — good self-awareness. Focus on this one. </div>';
       currentConfidence = null;
@@ -2024,17 +2028,17 @@
     var pct = (totalSeconds - secondsLeft) / totalSeconds;
     if (pct >= 0.5 && !showedHalfMilestone) {
       showedHalfMilestone = true;
-      showMilestone('*', 'Halfway there!', 'You\'re killing it — keep that momentum going!');
+      showMilestone('<svg width="28" height="28" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>', 'Halfway there!', 'You\'re killing it — keep that momentum going!');
     } else if (correctCount === 5 && !showedQuarterMilestone) {
       showedQuarterMilestone = true;
-      showMilestone('!', '5 correct in a row!', 'You\'re on fire — keep grinding!');
+      showMilestone('<svg width="28" height="28" viewBox="0 0 24 24" fill="#ef4444" stroke="none"><path d="M12 2C9 7 7 10 7 14a5 5 0 0 0 10 0c0-4-3-7-5-12zm-1 15a1 1 0 0 1-1-1c0-1.5 1-2.5 1-4 1 1.5 2 2.5 2 4a1 1 0 0 1-2 0z"/></svg>', '5 correct in a row!', 'You\'re on fire — keep grinding!');
     } else if (currentStreak === 10) {
-      showMilestone('!', '10 streak!', 'Absolutely crushing it right now!');
+      showMilestone('<svg width="28" height="28" viewBox="0 0 24 24" fill="#8b5cf6" stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', '10 streak!', 'Absolutely crushing it right now!');
     }
   }
 
   function showMilestone(icon, title, msg) {
-    document.getElementById('milestone-icon').textContent = icon;
+    document.getElementById('milestone-icon').innerHTML = icon;
     document.getElementById('milestone-title').textContent = title;
     document.getElementById('milestone-msg').textContent = msg;
     document.getElementById('milestone-banner').classList.add('show');
