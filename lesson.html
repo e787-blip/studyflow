@@ -32,6 +32,7 @@
   .typing-dot:nth-child(2) { animation-delay:.2s; }
   .typing-dot:nth-child(3) { animation-delay:.4s; }
   @keyframes spin { to{transform:rotate(360deg)} }
+  @keyframes scoreReveal { from{transform:scale(0.4);opacity:0} to{transform:scale(1);opacity:1} }
   @keyframes shake { 0%,100%{transform:translateX(0)} 15%{transform:translateX(-8px)} 30%{transform:translateX(8px)} 45%{transform:translateX(-6px)} 60%{transform:translateX(6px)} 75%{transform:translateX(-3px)} 90%{transform:translateX(3px)} }
   @keyframes pop { 0%{transform:scale(1)} 30%{transform:scale(1.06)} 60%{transform:scale(0.97)} 100%{transform:scale(1)} }
   @keyframes correctBounce { 0%{transform:scale(1)} 25%{transform:scale(1.12)} 50%{transform:scale(0.95)} 75%{transform:scale(1.04)} 100%{transform:scale(1)} }
@@ -2182,8 +2183,21 @@
 
     var pct = totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : 100;
     var topClass = pct >= 80 ? 'great' : (pct >= 60 ? 'good' : 'retry');
-    var msg = pct >= 80 ? 'Excellent session — you crushed it!' : (pct >= 60 ? 'Solid work — keep building on this!' : 'Keep grinding — consistency is key!');
+    var msg = pct >= 80 ? 'Excellent work! You crushed it.' : (pct >= 60 ? 'Solid session — keep building.' : 'Keep grinding — consistency is everything.');
     var timeStudied = Math.max(1, Math.round((totalSeconds - secondsLeft) / 60));
+
+    // Calculate streak for end screen
+    var studyHistory = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
+    var today = new Date().toDateString();
+    if (!studyHistory.includes(today)) studyHistory.push(today);
+    localStorage.setItem('studyflow_study_history', JSON.stringify(studyHistory));
+    studyHistory.sort(function(a,b){ return new Date(b) - new Date(a); });
+    var streak = 0;
+    for (var si = 0; si < studyHistory.length; si++) {
+      var diff = Math.round((new Date(studyHistory[0]) - new Date(studyHistory[si])) / 86400000);
+      if (diff === si) streak++;
+      else break;
+    }
 
     // Categorize wrong answers by difficulty
     var wrongByDiff = { Easy:[], Medium:[], Hard:[] };
@@ -2196,17 +2210,17 @@
     if (wrongItems.length === 0 && totalAnswered > 0) {
       wrongHtml = '<div style="background:#d1faf0;border:1.5px solid #38bfa1;border-radius:14px;padding:1.2rem;text-align:center;color:#1a9e80;font-weight:600;font-size:1rem;margin-bottom:1.5rem;">Perfect session — every answer correct!</div>';
     } else if (wrongItems.length > 0) {
-      wrongHtml = '<div class="wrong-reviews"><h3>Review — What to Study More</h3>';
+      wrongHtml = '<div class="wrong-reviews"><h3>What to study more</h3>';
       if (wrongByDiff.Hard.length > 0) {
-        wrongHtml += '<div style="font-size:0.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#dc2626;margin:.8rem 0 .4rem;">Hard questions missed (' + wrongByDiff.Hard.length + ')</div>';
+        wrongHtml += '<div style="font-size:0.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#dc2626;margin:.8rem 0 .4rem;">Hard — missed ' + wrongByDiff.Hard.length + '</div>';
         wrongByDiff.Hard.slice(0,3).forEach(function(item){ wrongHtml += buildWrongItem(item); });
       }
       if (wrongByDiff.Medium.length > 0) {
-        wrongHtml += '<div style="font-size:0.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#c06b1a;margin:.8rem 0 .4rem;">Medium questions missed (' + wrongByDiff.Medium.length + ')</div>';
+        wrongHtml += '<div style="font-size:0.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#c06b1a;margin:.8rem 0 .4rem;">Medium — missed ' + wrongByDiff.Medium.length + '</div>';
         wrongByDiff.Medium.slice(0,3).forEach(function(item){ wrongHtml += buildWrongItem(item); });
       }
       if (wrongByDiff.Easy.length > 0) {
-        wrongHtml += '<div style="font-size:0.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:.8rem 0 .4rem;">Easy questions missed (' + wrongByDiff.Easy.length + ')</div>';
+        wrongHtml += '<div style="font-size:0.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:.8rem 0 .4rem;">Easy — missed ' + wrongByDiff.Easy.length + '</div>';
         wrongByDiff.Easy.slice(0,2).forEach(function(item){ wrongHtml += buildWrongItem(item); });
       }
       wrongHtml += '</div>';
@@ -2214,36 +2228,45 @@
 
     var adviceHtml = '';
     if (pct < 60) {
-      adviceHtml = '<div style="background:#fff8e0;border:1.5px solid #f59e0b;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.5rem;font-size:0.88rem;color:#92400e;line-height:1.6;"><strong>Study tip:</strong> Your accuracy is below 60%. Try re-reading today\'s lesson before your next session and focus on understanding why correct answers are right.</div>';
+      adviceHtml = '<div style="background:#fff8e0;border:1.5px solid #f59e0b;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.2rem;font-size:0.88rem;color:#92400e;line-height:1.6;"><strong>Study tip:</strong> Re-read today\'s lesson before your next session. Focus on understanding the why behind each answer, not just memorizing the answer itself.</div>';
     } else if (pct >= 80 && wrongItems.length > 0) {
-      adviceHtml = '<div style="background:#d1faf0;border:1.5px solid #38bfa1;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.5rem;font-size:0.88rem;color:#065f46;line-height:1.6;"><strong>Almost perfect!</strong> Review the ' + wrongItems.length + ' question' + (wrongItems.length>1?'s':'') + ' you missed below and you\'ll be fully ready.</div>';
+      adviceHtml = '<div style="background:#d1faf0;border:1.5px solid #38bfa1;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.2rem;font-size:0.88rem;color:#065f46;line-height:1.6;"><strong>Almost perfect!</strong> Review the ' + wrongItems.length + ' missed question' + (wrongItems.length>1?'s':'') + ' below — then you\'ll be fully ready.</div>';
     }
 
-    // TIER 2: Sleep tip — neuroscience backed
-    var sleepTip = '<div style="background:linear-gradient(135deg,#1a1d2e,#2851c8);border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.5rem;color:#fff;">' +
-      '<div style="font-size:0.88rem;font-weight:700;margin-bottom:.3rem;"> Science tip for tonight</div>' +
-      '<div style="font-size:0.82rem;opacity:.85;line-height:1.6;">Your hippocampus will replay everything you just learned during sleep tonight, transferring it into long-term memory. Don\'t cram more — let your brain do its job.</div>' +
+    // Sleep tip
+    var sleepTip = '<div style="background:linear-gradient(135deg,#1a1d2e,#2851c8);border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.2rem;color:#fff;">' +
+      '<div style="font-size:0.82rem;font-weight:700;margin-bottom:.25rem;">Science tip for tonight</div>' +
+      '<div style="font-size:0.78rem;opacity:.85;line-height:1.6;">Your brain will replay everything you just learned during deep sleep — converting it into long-term memory. Don\'t cram more tonight. Let your brain do its job.</div>' +
       '</div>';
 
-    // TIER 2: Social proof nudge
-    var studyHistory = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
-    var socialProof = '';
-    if (studyHistory.length > 0) {
-      socialProof = '<div style="font-size:0.78rem;color:var(--muted);text-align:center;margin-bottom:1rem;"> You\'ve studied ' + studyHistory.length + ' day' + (studyHistory.length>1?'s':'') + ' in a row — your brain is building stronger connections every session.</div>';
-    }
+    // Streak display
+    var streakHtml = streak >= 2
+      ? '<div style="display:flex;align-items:center;justify-content:center;gap:.5rem;margin:.75rem 0;font-size:0.9rem;font-weight:700;color:#f59e0b;">' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><path d="M12 2C9 7 7 10 7 14a5 5 0 0 0 10 0c0-4-3-7-5-12zm-1 15a1 1 0 0 1-1-1c0-1.5 1-2.5 1-4 1 1.5 2 2.5 2 4a1 1 0 0 1-2 0z"/></svg>' +
+        streak + ' day streak — keep it up!</div>'
+      : '';
+
+    // Share results button
+    var shareSubject = plan ? plan.subject || 'my subject' : 'my subject';
+    var shareText = 'I just scored ' + pct + '% studying ' + shareSubject + ' on StudyFlow! Building my streak one day at a time. Try it free: studyflow-ten-vert.vercel.app';
+    var shareHtml = '<button onclick="shareSession(\'' + pct + '\',\'' + esc(shareSubject) + '\')" style="width:100%;padding:.85rem;background:var(--soft);border:1.5px solid var(--border);border-radius:14px;font-family:var(--sans);font-size:0.9rem;font-weight:600;color:var(--ink);cursor:pointer;margin-bottom:.75rem;display:flex;align-items:center;justify-content:center;gap:.6rem;transition:all .2s;" onmouseover="this.style.borderColor=\'var(--blue)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>' +
+      'Share my score</button>';
 
     document.getElementById('results-wrap').innerHTML =
       '<div class="results-top ' + topClass + '">' +
-        '<div class="results-score">' + correctCount + '/' + totalAnswered + '</div>' +
+        '<div class="results-score" style="animation:scoreReveal .6s cubic-bezier(0.16,1,.3,1) both;">' + pct + '%</div>' +
         '<div class="results-msg">' + msg + '</div>' +
+        streakHtml +
       '</div>' +
       '<div class="results-stats">' +
+        '<div class="r-stat"><div class="r-stat-val">' + correctCount + '/' + totalAnswered + '</div><div class="r-stat-label">Correct</div></div>' +
         '<div class="r-stat"><div class="r-stat-val">' + timeStudied + 'm</div><div class="r-stat-label">Studied</div></div>' +
-        '<div class="r-stat"><div class="r-stat-val">' + totalAnswered + '</div><div class="r-stat-label">Questions</div></div>' +
-        '<div class="r-stat"><div class="r-stat-val">' + pct + '%</div><div class="r-stat-label">Accuracy</div></div>' +
-      '</div>' + socialProof + sleepTip + adviceHtml + wrongHtml +
+        '<div class="r-stat"><div class="r-stat-val">' + streak + (streak >= 3 ? ' ' : '') + '</div><div class="r-stat-label">Day streak</div></div>' +
+      '</div>' +
+      sleepTip + adviceHtml + wrongHtml + shareHtml +
       '<button class="btn-dashboard" onclick="goToDashboard()">' +
-      (day.isFinal || dayIndex >= plan.days.length - 1 ? 'Back to dashboard →' : 'Continue to Day ' + (dayIndex + 2) + ' →') +
+      (day.isFinal || dayIndex >= plan.days.length - 1 ? 'Back to dashboard →' : 'Next session: Day ' + (dayIndex + 2) + ' →') +
       '</button>';
 
     document.getElementById('results-wrap').classList.add('show');
@@ -2305,6 +2328,18 @@
       localStorage.setItem('studyflow_current_day', dayIndex + 1);
     }
     window.location.href = 'dashboard.html';
+  }
+
+  function shareSession(pct, subject) {
+    var text = 'Just scored ' + pct + '% studying ' + subject + ' with StudyFlow! Building my streak one day at a time. Try it free \u2192 studyflow-ten-vert.vercel.app';
+    if (navigator.share) {
+      navigator.share({ title: 'StudyFlow — ' + pct + '% accuracy', text: text });
+    } else {
+      navigator.clipboard.writeText(text).then(function() {
+        var btn = document.querySelector('[onclick*="shareSession"]');
+        if (btn) { btn.textContent = 'Copied to clipboard!'; setTimeout(function(){ btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share my score'; }, 2000); }
+      });
+    }
   }
 
   function esc(str) {
