@@ -1155,6 +1155,27 @@
     var allDays = [];
     var notesShort = notes.substring(0, 400);
 
+    // Validate and clean generated day — strip placeholder answers that Claude didn't fill in
+    function sanitizeDayQuestions(day) {
+      if (!day || !Array.isArray(day.questions)) return day;
+      var PLACEHOLDER_RE = /^\[.*\]$|^real |^exact |^specific |^numerical answer|^your answer|^formula here/i;
+      day.questions = day.questions.filter(function(q) {
+        // Keep MCQ and TF always — they don't have a free-text answer field
+        if (q.type === 'mcq' || q.type === 'truefalse') return true;
+        // For fill/bigequation/wordproblem — reject if answer is missing or is still a placeholder
+        if (q.type === 'fill' || q.type === 'bigequation' || q.type === 'wordproblem') {
+          var ans = (q.answer || '').trim();
+          if (!ans || PLACEHOLDER_RE.test(ans)) return false; // drop it
+        }
+        return true;
+      });
+      // Ensure at least 3 questions survive
+      if (day.questions.length < 3) {
+        console.warn('[sanitize] Only', day.questions.length, 'valid questions — Claude may not have replaced placeholders');
+      }
+      return day;
+    }
+
     function generateDay(dayNum, totalDays, subjectType, strategy, callback) {
       var isFirst = dayNum === 1;
       var isLast = dayNum === totalDays;
@@ -1179,11 +1200,11 @@
         questionSchema = '{"type":"mcq","question":"[real conceptual Q from notes]","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"mcq","question":"[real conceptual Q from notes]","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"[common misconception about this topic]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"bigequation","question":"Solve for x","equation":"[real equation from notes e.g. 3x - 7 = 14]","answer":"[exact number]","hint":"[step 1]","explanation":"[step by step solution]","difficulty":"' + difficulty + '"},' +
-          '{"type":"bigequation","question":"Solve or simplify","equation":"[another real equation from notes]","answer":"[exact answer]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"wordproblem","question":"Word Problem","scenario":"[real world story using math from notes, e.g. A car travels at 60mph for 2.5 hours. How far does it go?]","answer":"[number with unit]","hint":"[what to find]","explanation":"[solution steps]","difficulty":"' + difficulty + '"},' +
-          '{"type":"wordproblem","question":"Word Problem","scenario":"[another real world story using these math concepts]","answer":"[number]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[formula or definition with _______ for the key blank]","answer":"[exact term or value]","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+          '{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"bigequation","question":"Solve or simplify","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"wordproblem","question":"Word Problem","scenario":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"wordproblem","question":"Word Problem","scenario":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[formula or definition with _______ for the key blank]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'science') {
         questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
@@ -1196,9 +1217,9 @@
           '{"type":"mcq","question":"[structure or function Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"[tricky science statement from notes]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"[common misconception]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[sentence from notes with key term blanked as _______]","answer":"[exact term]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[another sentence with result blanked as _______]","answer":"[exact result]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"write","question":"Explain [key process from notes] in your own words as if teaching a classmate.","modelAnswer":"[ideal answer]","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+          '{"type":"fill","question":"[sentence from notes with key term blanked as _______]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[another sentence with result blanked as _______]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"write","question":"Explain [key process from notes] in your own words as if teaching a classmate.","modelAnswer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'history') {
         questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
@@ -1211,9 +1232,9 @@
           '{"type":"mcq","question":"[significance or impact Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"[true historical statement]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"[false historical statement]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[sentence with date or person blanked as _______]","answer":"[exact date or name]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[another sentence with key term blanked]","answer":"[exact term]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"write","question":"Why did [key event from notes] happen? What were its most important consequences?","modelAnswer":"[ideal answer]","hint":"Think: causes first, then consequences","explanation":"","difficulty":"' + difficulty + '"}';
+          '{"type":"fill","question":"[sentence with date or person blanked as _______]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[another sentence with key term blanked]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"write","question":"Why did [key event from notes] happen? What were its most important consequences?","modelAnswer":"","hint":"Think: causes first, then consequences","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'english') {
         questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
@@ -1226,9 +1247,9 @@
           '{"type":"mcq","question":"[author intent or meaning Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"[statement about literary analysis]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"[common misreading or error]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[sentence with literary term blanked as _______]","answer":"[exact term]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[another sentence with key concept blanked]","answer":"[exact concept]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"write","question":"Identify the literary device used and explain what effect it creates for the reader.","modelAnswer":"[ideal analysis]","hint":"Name the device first, then explain its effect","explanation":"","difficulty":"' + difficulty + '"}';
+          '{"type":"fill","question":"[sentence with literary term blanked as _______]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[another sentence with key concept blanked]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"write","question":"Identify the literary device used and explain what effect it creates for the reader.","modelAnswer":"","hint":"Name the device first, then explain its effect","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'language') {
         questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
@@ -1240,9 +1261,9 @@
           '{"type":"mcq","question":"[translation Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"[grammar rule statement]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"[common usage error]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[English sentence with target language word blanked as _______]","answer":"[exact target language word]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[another translation blank]","answer":"[exact word]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[conjugation: subject + verb stem + _______ (ending)]","answer":"[exact ending]","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+          '{"type":"fill","question":"[English sentence with target language word blanked as _______]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[another translation blank]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[conjugation: subject + verb stem + _______ (ending)]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else {
         questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
@@ -1255,9 +1276,9 @@
           '{"type":"mcq","question":"[application Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"[true statement]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"[false statement]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[sentence with key term blanked as _______]","answer":"[exact term]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[another sentence with term blanked]","answer":"[exact answer]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"write","question":"Explain [key concept from notes] in your own words.","modelAnswer":"[ideal answer]","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+          '{"type":"fill","question":"[sentence with key term blanked as _______]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[another sentence with term blanked]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"write","question":"Explain [key concept from notes] in your own words.","modelAnswer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
       }
 
       var prompt = 'You are generating a study day JSON for a ' + (strategy.label || 'General') + ' student.\n\n' +
@@ -1271,11 +1292,11 @@
         '3. Replace ALL [bracketed] placeholders in the schema with REAL content from the notes\n' +
         '4. Every question must be answerable using the notes above\n' +
         '5. Fill question answers must be the EXACT correct answer, not a description of one\n\n' +
-        'OUTPUT THIS EXACT JSON STRUCTURE with real content:\n' +
-        '{"title":"' + (isFirst ? 'Introduction to' : isLast ? 'Final Review:' : 'Day ' + dayNum + ':') + ' [topic]",' +
-        '"briefing":"[1 sentence about what student will learn today]",' +
-        '"content":"[2-3 sentences of lesson content from notes]",' +
-        '"keyTerms":[{"term":"[real term]","definition":"[real definition]"},{"term":"[real term]","definition":"[real definition]"},{"term":"[real term]","definition":"[real definition]"},{"term":"[real term]","definition":"[real definition]"}],' +
+        'OUTPUT THIS EXACT JSON STRUCTURE — replace every field with REAL content from the notes above:\n' +
+        '{"title":"short title for this day",' +
+        '"briefing":"one sentence: what the student will learn today",' +
+        '"content":"2-3 sentences of lesson content summarizing key ideas",' +
+        '"keyTerms":[{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"}],' +
         '"duration":30,"isFinal":' + isLast + ',"completed":false,' +
         '"questions":[' + questionSchema + ']}';
 
@@ -1317,7 +1338,7 @@
             throw new Error('JSON parse failed for day ' + dayNum + ': ' + e.message);
           }
         }
-        callback(null, day);
+        callback(null, sanitizeDayQuestions(day));
       })
       .catch(function(err) { callback(err); });
     }
