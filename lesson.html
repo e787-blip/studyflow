@@ -1912,46 +1912,51 @@
     var input = document.getElementById('fill-input');
     if (!input) return;
     var val = input.value.trim();
+    if (!val) return; // don't submit empty
+
     var isCorrect = false;
 
-    // Normalize both for comparison
-    function normalize(s) {
-      return s.toLowerCase()
+    // Normalize: lowercase, collapse whitespace, keep math chars
+    function norm(s) {
+      return (s || '').toLowerCase()
         .replace(/\s+/g, ' ')
-        .replace(/[×*]/g, 'x')   // math multiplication
-        .replace(/÷/g, '/')       // math division
-        .replace(/[^a-z0-9.+\-*/=^() ]/g, '') // keep math chars
+        .replace(/[×·]/g, '*')
+        .replace(/÷/g, '/')
+        .replace(/['']/g, "'")
         .trim();
     }
 
-    var valN = normalize(val);
-    var corN = normalize(correct);
+    var valN = norm(val);
+    var corN = norm(correct);
 
-    if (!valN) return; // don't submit empty
-
-    // Exact match (after normalization)
+    // 1. Exact match after normalization
     if (valN === corN) {
       isCorrect = true;
     }
-    // Numeric match — "13" vs "13.0" vs "= 13"
-    else {
+
+    // 2. Numeric match — handles "4", "4.0", "= 4", "x=4", "4 mph", etc.
+    if (!isCorrect) {
       var valNum = parseFloat(val.replace(/[^0-9.\-]/g, ''));
       var corNum = parseFloat(correct.replace(/[^0-9.\-]/g, ''));
-      if (!isNaN(valNum) && !isNaN(corNum) && valNum === corNum) {
+      if (!isNaN(valNum) && !isNaN(corNum) && Math.abs(valNum - corNum) < 0.001) {
         isCorrect = true;
       }
-      // Partial text match — student typed enough of a longer answer
-      else if (corN.length > 3 && corN.includes(valN) && valN.length >= Math.ceil(corN.length * 0.6)) {
+    }
+
+    // 3. Contains match — answer contains what student typed (for multi-word answers)
+    if (!isCorrect && corN.length > 4 && valN.length >= 2) {
+      if (corN.includes(valN) && valN.length >= Math.ceil(corN.length * 0.5)) {
         isCorrect = true;
       }
-      // All key words present
-      else {
-        var valWords = valN.split(' ').filter(function(w){ return w.length > 2; });
-        var corWords = corN.split(' ').filter(function(w){ return w.length > 2; });
-        if (valWords.length > 0 && corWords.length > 0) {
-          var matchCount = valWords.filter(function(w){ return corWords.includes(w); }).length;
-          isCorrect = matchCount === corWords.length && matchCount > 0;
-        }
+    }
+
+    // 4. All significant words match
+    if (!isCorrect) {
+      var valWords = valN.split(' ').filter(function(w){ return w.length > 1; });
+      var corWords = corN.split(' ').filter(function(w){ return w.length > 1; });
+      if (valWords.length > 0 && corWords.length > 0 && valWords.length >= corWords.length) {
+        var allMatch = corWords.every(function(w){ return valWords.includes(w); });
+        if (allMatch) isCorrect = true;
       }
     }
 
@@ -1961,22 +1966,27 @@
     var submitBtn = document.getElementById('fill-btn');
     if (submitBtn) submitBtn.disabled = true;
     input.style.borderColor = isCorrect ? 'var(--green)' : 'var(--red)';
-    input.style.background = isCorrect ? '#d1faf0' : '#fee2e2';
+    input.style.background  = isCorrect ? '#d1faf0'      : '#fee2e2';
 
     var fb = document.getElementById('feedback-box');
     fb.className = 'feedback-box show ' + (isCorrect ? 'correct-fb' : 'wrong-fb');
 
     if (isCorrect) {
       fb.innerHTML = '<div class="feedback-label">✓ Correct!</div>' +
-        '<div class="feedback-text">' + (explanation || 'Great work!') + '</div>';
+        '<div class="feedback-text">' + (explanation || 'Well done!') + '</div>';
+      spawnConfetti();
+      flashCard(true);
     } else {
       fb.innerHTML = '<div class="feedback-label">✗ Not quite</div>' +
-        '<div class="feedback-text">Answer: <strong>' + correct + '</strong><br>' + (explanation || '') + '</div>' +
-        '<div class="feedback-growth">Struggling is normal — it builds stronger memory than getting it right the first time.</div>';
+        '<div class="feedback-text">Answer: <strong>' + correct + '</strong>' +
+        (explanation ? '<br>' + explanation : '') + '</div>' +
+        '<div class="feedback-growth">Missing it is normal — it means your brain is building a stronger memory of this answer.</div>';
+      flashCard(false);
     }
 
     handleResult(isCorrect, explanation, null);
     document.getElementById('btn-next').disabled = false;
+    updateStreak();
   }
 
   function handleResult(isCorrect, explanation, wrongEl) {
