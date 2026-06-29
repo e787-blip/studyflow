@@ -834,10 +834,10 @@
   });
 
   function signOut() {
+    // Only clear credentials — preserve plans so they survive logout/login
     localStorage.removeItem('studyflow_user');
-    localStorage.removeItem('studyflow_plan');
-    localStorage.removeItem('studyflow_plans');
-    localStorage.removeItem('studyflow_active_plan');
+    localStorage.removeItem('studyflow_seconds_left');
+    localStorage.removeItem('studyflow_timer_day');
     window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html?signout=1';
   }
 
