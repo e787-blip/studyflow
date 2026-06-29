@@ -1197,29 +1197,35 @@
           '- 2 wordproblem: a real-world scenario using math from the notes. The scenario field is the story. Answer is a number.\n' +
           '- 1 fill: formula or definition with a key term blanked\n' +
           'ALL answers must be specific values — NEVER say "numerical answer" or placeholder text.\n';
-        questionSchema = '{"type":"mcq","question":"[real conceptual Q from notes]","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"[real conceptual Q from notes]","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"[common misconception about this topic]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"bigequation","question":"Solve or simplify","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"wordproblem","question":"Word Problem","scenario":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"wordproblem","question":"Word Problem","scenario":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[formula or definition with _______ for the key blank]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'science') {
-        questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
-          '- 3 MCQ: process, structure, mechanism, or cause-and-effect questions\n' +
-          '- 2 True/False: common misconceptions or tricky facts\n' +
-          '- 2 fill: blank out a KEY TERM or result in a sentence from the notes\n' +
-          '- 1 write: explain a process in own words\n';
-        questionSchema = '{"type":"mcq","question":"[process or mechanism Q]","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"[cause and effect Q]","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"[structure or function Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"[tricky science statement from notes]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"[common misconception]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[sentence from notes with key term blanked as _______]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[another sentence with result blanked as _______]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"write","question":"Explain [key process from notes] in your own words as if teaching a classmate.","modelAnswer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+        questionInstructions = '\n\nSCIENCE QUESTION REQUIREMENTS (research-backed — scenario-based + cause-effect highest retention):\n' +
+          'Generate these 8 questions using ONLY real content from the student notes:\n' +
+          '1. MCQ — Cause and effect: "When [real event from notes] occurs, what happens to [real thing]?" 4 plausible options.\n' +
+          '2. MCQ — Predict the outcome: "A scientist increases [variable from notes]. What is the most likely result?" 4 options.\n' +
+          '3. MCQ — Structure and function: "What is the specific role of [real structure/molecule from notes] in [real process]?" 4 options.\n' +
+          '4. True/False — Scenario-framed (NOT a plain statement): Start with "A researcher observes [real situation from notes]..." then make a True/False claim.\n' +
+          '5. True/False — Common misconception about this topic: students often get this wrong. Frame as scenario if possible.\n' +
+          '6. Fill — Process completion: "During [real process from notes], [real molecule/structure] _______ to produce [result]." Answer is the exact missing verb or term.\n' +
+          '7. Fill — Definition completion: "[Real term from notes] is defined as _______ ." Answer is the exact missing definition fragment.\n' +
+          '8. Write (Feynman): "Explain step by step how [real process from notes] works. Include what triggers it, what happens at each stage, and what the end result is."\n' +
+          'CRITICAL RULES: Every question uses REAL terms from the notes. Options for MCQ must be plausible — no obviously wrong answers. Fill answers are exact terms/phrases from notes.\n';
+        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"write","question":"","modelAnswer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'history') {
         questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
@@ -1227,13 +1233,13 @@
           '- 2 True/False: historical facts (one true, one false)\n' +
           '- 2 fill: blank out a DATE, PERSON, or PLACE\n' +
           '- 1 write: causes and consequences question\n';
-        questionSchema = '{"type":"mcq","question":"[cause or consequence Q]","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"[who or what Q]","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"[significance or impact Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"[true historical statement]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"[false historical statement]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[sentence with date or person blanked as _______]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[another sentence with key term blanked]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"write","question":"Why did [key event from notes] happen? What were its most important consequences?","modelAnswer":"","hint":"Think: causes first, then consequences","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'english') {
@@ -1242,13 +1248,13 @@
           '- 2 True/False: literary analysis or grammar\n' +
           '- 2 fill: blank out a LITERARY TERM, AUTHOR, or KEY CONCEPT\n' +
           '- 1 write: identify literary device and explain its effect\n';
-        questionSchema = '{"type":"mcq","question":"[theme or literary device Q]","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"[character motivation Q]","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"[author intent or meaning Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"[statement about literary analysis]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"[common misreading or error]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[sentence with literary term blanked as _______]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[another sentence with key concept blanked]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"write","question":"Identify the literary device used and explain what effect it creates for the reader.","modelAnswer":"","hint":"Name the device first, then explain its effect","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'language') {
@@ -1256,14 +1262,14 @@
           '- 3 MCQ: vocabulary meaning, grammar rule, or conjugation\n' +
           '- 2 True/False: grammar rules or vocabulary usage\n' +
           '- 3 fill: translation or conjugation — blank the TARGET LANGUAGE word\n';
-        questionSchema = '{"type":"mcq","question":"[vocabulary or grammar Q]","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"[conjugation or usage Q]","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"[translation Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"[grammar rule statement]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"[common usage error]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[English sentence with target language word blanked as _______]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[another translation blank]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[conjugation: subject + verb stem + _______ (ending)]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else {
         questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
@@ -1271,13 +1277,13 @@
           '- 2 True/False statements\n' +
           '- 2 fill with key terms blanked\n' +
           '- 1 write explanation\n';
-        questionSchema = '{"type":"mcq","question":"[fact Q]","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"[concept Q]","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"[application Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"[true statement]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"[false statement]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[sentence with key term blanked as _______]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[another sentence with term blanked]","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"write","question":"Explain [key concept from notes] in your own words.","modelAnswer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
       }
 
