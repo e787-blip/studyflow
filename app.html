@@ -1169,44 +1169,95 @@
       var questionSchema = '';
 
       if (subjectType === 'math') {
-        questionInstructions = '\n\nQUESTION REQUIREMENTS — generate ALL of these:\n' +
-          '- 3 MCQ questions about concepts, theorems, or definitions from the notes\n' +
-          '- 2 True/False questions about math facts from the notes\n' +
-          '- 3 fill questions: each must have a REAL equation or formula from the notes with the answer blanked out. Example format: "Solve: 2x + 5 = 13, x = _______" with answer "4". Use real numbers from the notes.\n' +
-          'ALL answers must be specific — never say "numerical answer" or "exact formula". Use the real answer.\n';
-        questionSchema = '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"Statement.","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"Statement.","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"Solve: [equation] = _______","answer":"[number]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"The formula for [concept] is _______","answer":"[formula]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"If [var] = [value], then [expression] = _______","answer":"[result]","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+        questionInstructions = '\n\nQUESTION REQUIREMENTS — replace ALL [bracketed] placeholders with REAL content from notes:\n' +
+          '- 2 MCQ: conceptual questions about definitions, properties, or theorems\n' +
+          '- 1 True/False: a common student misconception about this topic\n' +
+          '- 2 bigequation: a REAL equation from the notes the student must solve. The equation field shows the equation large. NEVER use placeholder text — use REAL numbers.\n' +
+          '- 2 wordproblem: a real-world scenario using math from the notes. The scenario field is the story. Answer is a number.\n' +
+          '- 1 fill: formula or definition with a key term blanked\n' +
+          'ALL answers must be specific values — NEVER say "numerical answer" or placeholder text.\n';
+        questionSchema = '{"type":"mcq","question":"[real conceptual Q from notes]","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"[real conceptual Q from notes]","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"[common misconception about this topic]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"bigequation","question":"Solve for x","equation":"[real equation from notes e.g. 3x - 7 = 14]","answer":"[exact number]","hint":"[step 1]","explanation":"[step by step solution]","difficulty":"' + difficulty + '"},' +
+          '{"type":"bigequation","question":"Solve or simplify","equation":"[another real equation from notes]","answer":"[exact answer]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"wordproblem","question":"Word Problem","scenario":"[real world story using math from notes, e.g. A car travels at 60mph for 2.5 hours. How far does it go?]","answer":"[number with unit]","hint":"[what to find]","explanation":"[solution steps]","difficulty":"' + difficulty + '"},' +
+          '{"type":"wordproblem","question":"Word Problem","scenario":"[another real world story using these math concepts]","answer":"[number]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[formula or definition with _______ for the key blank]","answer":"[exact term or value]","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+
       } else if (subjectType === 'science') {
         questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
-          '- 3 MCQ questions about processes, structures, or mechanisms from the notes\n' +
-          '- 2 True/False statements about scientific facts\n' +
-          '- 2 fill questions: blank out a key term or result in a sentence from the notes\n' +
-          'ALL answers must be specific words or phrases from the notes.\n';
-        questionSchema = '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"Statement.","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"Statement.","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"During [process], _______ is produced.","answer":"[specific term]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"The function of [structure] is to _______.","answer":"[specific function]","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+          '- 3 MCQ: process, structure, mechanism, or cause-and-effect questions\n' +
+          '- 2 True/False: common misconceptions or tricky facts\n' +
+          '- 2 fill: blank out a KEY TERM or result in a sentence from the notes\n' +
+          '- 1 write: explain a process in own words\n';
+        questionSchema = '{"type":"mcq","question":"[process or mechanism Q]","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"[cause and effect Q]","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"[structure or function Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"[tricky science statement from notes]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"[common misconception]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[sentence from notes with key term blanked as _______]","answer":"[exact term]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[another sentence with result blanked as _______]","answer":"[exact result]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"write","question":"Explain [key process from notes] in your own words as if teaching a classmate.","modelAnswer":"[ideal answer]","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+
+      } else if (subjectType === 'history') {
+        questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
+          '- 3 MCQ: causes, effects, dates, people, or significance\n' +
+          '- 2 True/False: historical facts (one true, one false)\n' +
+          '- 2 fill: blank out a DATE, PERSON, or PLACE\n' +
+          '- 1 write: causes and consequences question\n';
+        questionSchema = '{"type":"mcq","question":"[cause or consequence Q]","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"[who or what Q]","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"[significance or impact Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"[true historical statement]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"[false historical statement]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[sentence with date or person blanked as _______]","answer":"[exact date or name]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[another sentence with key term blanked]","answer":"[exact term]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"write","question":"Why did [key event from notes] happen? What were its most important consequences?","modelAnswer":"[ideal answer]","hint":"Think: causes first, then consequences","explanation":"","difficulty":"' + difficulty + '"}';
+
+      } else if (subjectType === 'english') {
+        questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
+          '- 3 MCQ: themes, literary devices, character motivation, or author intent\n' +
+          '- 2 True/False: literary analysis or grammar\n' +
+          '- 2 fill: blank out a LITERARY TERM, AUTHOR, or KEY CONCEPT\n' +
+          '- 1 write: identify literary device and explain its effect\n';
+        questionSchema = '{"type":"mcq","question":"[theme or literary device Q]","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"[character motivation Q]","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"[author intent or meaning Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"[statement about literary analysis]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"[common misreading or error]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[sentence with literary term blanked as _______]","answer":"[exact term]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[another sentence with key concept blanked]","answer":"[exact concept]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"write","question":"Identify the literary device used and explain what effect it creates for the reader.","modelAnswer":"[ideal analysis]","hint":"Name the device first, then explain its effect","explanation":"","difficulty":"' + difficulty + '"}';
+
+      } else if (subjectType === 'language') {
+        questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
+          '- 3 MCQ: vocabulary meaning, grammar rule, or conjugation\n' +
+          '- 2 True/False: grammar rules or vocabulary usage\n' +
+          '- 3 fill: translation or conjugation — blank the TARGET LANGUAGE word\n';
+        questionSchema = '{"type":"mcq","question":"[vocabulary or grammar Q]","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"[conjugation or usage Q]","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"[translation Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"[grammar rule statement]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"[common usage error]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[English sentence with target language word blanked as _______]","answer":"[exact target language word]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[another translation blank]","answer":"[exact word]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[conjugation: subject + verb stem + _______ (ending)]","answer":"[exact ending]","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+
       } else {
         questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
-          '- 3 MCQ questions about key facts from the notes\n' +
+          '- 3 MCQ about key facts from the notes\n' +
           '- 2 True/False statements\n' +
-          '- 1 fill question: blank out an important word or date in a sentence from the notes\n' +
-          'ALL answers must be specific content from the notes.\n';
-        questionSchema = '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"?","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"Statement.","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"Statement.","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"[sentence from notes with key word blanked] _______","answer":"[exact word]","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+          '- 2 fill with key terms blanked\n' +
+          '- 1 write explanation\n';
+        questionSchema = '{"type":"mcq","question":"[fact Q]","options":["A","B","C","D"],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"[concept Q]","options":["A","B","C","D"],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"[application Q]","options":["A","B","C","D"],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"[true statement]","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"truefalse","question":"[false statement]","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[sentence with key term blanked as _______]","answer":"[exact term]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"fill","question":"[another sentence with term blanked]","answer":"[exact answer]","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"write","question":"Explain [key concept from notes] in your own words.","modelAnswer":"[ideal answer]","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
       }
 
       var prompt = 'You are generating a study day JSON for a ' + (strategy.label || 'General') + ' student.\n\n' +
