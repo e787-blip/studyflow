@@ -107,7 +107,7 @@
     box-shadow:0 8px 24px rgba(74,124,246,.25);
   }
   .milestone-banner.show { display:flex; }
-  .milestone-icon { font-size:1.8rem; }
+  .milestone-icon { font-size:1.8rem; display:flex; align-items:center; justify-content:center; }
   .milestone-text h4 { font-size:0.95rem; font-weight:700; margin-bottom:.15rem; }
   .milestone-text p { font-size:0.8rem; color:rgba(255,255,255,.8); }
   .milestone-close { margin-left:auto; background:rgba(255,255,255,.2); border:none; color:#fff; width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center; }
@@ -549,8 +549,8 @@
     <div class="time-bar-fill" id="time-bar" style="width:100%"></div>
   </div>
   <div class="session-stats">
-    <span class="stat-pill correct" id="correct-pill">0 ✓</span>
-    <span class="stat-pill total" id="total-pill">0 done</span>
+    
+    <span class="stat-pill total" id="score-pill">0/0</span>
     <span class="streak-pill" id="streak-pill">
       <svg class="streak-flame" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -570,7 +570,7 @@
 <div class="container">
   <!-- MILESTONE BANNER -->
   <div class="milestone-banner" id="milestone-banner">
-    <span class="milestone-icon" id="milestone-icon">*</span>
+    <span class="milestone-icon" id="milestone-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mlg" x1="50%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#ff9500"/><stop offset="100%" stop-color="#ff3b00"/></linearGradient></defs><path d="M12 2C10 6 8 9 8 13a4 4 0 0 0 8 0c0-3-2.5-5.5-4-11z" fill="url(#mlg)"/><path d="M12 15c0-1.2-.8-2-.8-3.2.8 1.2 1.6 2 1.6 3.2a.8.8 0 0 1-1.6 0z" fill="#ffcc00" opacity=".9"/></svg></span>
     <div class="milestone-text">
       <h4 id="milestone-title">Halfway there!</h4>
       <p id="milestone-msg">Keep it up — you're doing great!</p>
@@ -1203,7 +1203,7 @@
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Think about the key concepts from today\'s lesson.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
-    var streak = currentStreak > 1 ? '! ' + currentStreak + ' streak' : correctCount + ' ✓ / ' + totalAnswered;
+    var streak = correctCount + '/' + totalAnswered;
     return '<div class="session-card">' +
       '<div class="card-header' + (isReview ? ' struggling-header' : '') + '"><div class="card-badge">✦ ' + badge + '</div><h2>' + title + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
@@ -1234,16 +1234,16 @@
 
     // Normalize blank marker — accept _______, ____, or [blank]
     questionText = questionText.replace(/_{3,}|\[blank\]/gi,
-      '<span style="display:inline-block;min-width:80px;border-bottom:2.5px solid var(--blue);margin:0 .3rem;vertical-align:bottom;"></span>');
+      '<span style="display:inline-block;min-width:72px;height:1.1em;border-bottom:2px solid var(--blue);margin:0 2px;vertical-align:-.15em;"></span>');
 
     // If no blank in question, create one
     if (!questionText.includes('border-bottom')) {
       if (answer && q.question && q.question.toLowerCase().includes(answer.toLowerCase())) {
         questionText = q.question.replace(new RegExp(answer.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'i'),
-          '<span style="display:inline-block;min-width:80px;border-bottom:2.5px solid var(--blue);margin:0 .3rem;vertical-align:bottom;"></span>');
+          '<span style="display:inline-block;min-width:72px;height:1.1em;border-bottom:2px solid var(--blue);margin:0 2px;vertical-align:-.15em;"></span>');
       } else {
         questionText = (q.question || '').replace(/\?$/, '') +
-          ' = <span style="display:inline-block;min-width:80px;border-bottom:2.5px solid var(--blue);margin:0 .3rem;vertical-align:bottom;"></span>';
+          ' = <span style="display:inline-block;min-width:72px;height:1.1em;border-bottom:2px solid var(--blue);margin:0 2px;vertical-align:-.15em;"></span>';
       }
     }
 
@@ -1361,7 +1361,7 @@
     window._graphState.toSvgY = toSvgY;
     setTimeout(function() { initGraphDrag(min, max, toSvgX, toSvgY, slope); }, 50);
 
-    var streak = currentStreak > 1 ? '! ' + currentStreak + ' streak' : correctCount + ' / ' + totalAnswered;
+    var streak = correctCount + '/' + totalAnswered;
     return '<div class="session-card">' +
       '<div class="card-header"><div class="card-badge">✦ Interactive Graph</div><h2>' + (day.title||'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
@@ -1628,7 +1628,7 @@
 
     setTimeout(initSeqDrag, 50);
 
-    var streak = currentStreak > 1 ? '! ' + currentStreak + ' streak' : correctCount + ' / ' + totalAnswered;
+    var streak = correctCount + '/' + totalAnswered;
     return '<div class="session-card">' +
       '<div class="card-header"><div class="card-badge">✦ Put in Order</div><h2>' + (day.title||'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
@@ -1736,7 +1736,7 @@
       '<div class="match-wrap"><div class="match-col">' + leftHtml + '</div><div class="match-col">' + rightHtml + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
-    var streak = currentStreak > 1 ? '! ' + currentStreak + ' streak' : correctCount + ' / ' + totalAnswered;
+    var streak = correctCount + '/' + totalAnswered;
     return '<div class="session-card">' +
       '<div class="card-header"><div class="card-badge">✦ Matching</div><h2>' + (day.title||'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
@@ -2192,8 +2192,8 @@
 
   /* ── STATS ── */
   function updateStats() {
-    document.getElementById('correct-pill').textContent = correctCount + ' ✓';
-    document.getElementById('total-pill').textContent = totalAnswered + ' done';
+    var el = document.getElementById('score-pill');
+    if (el) el.textContent = correctCount + '/' + totalAnswered;
   }
 
   /* ── STRUGGLING ── */
@@ -2225,7 +2225,7 @@
       showMilestone('<svg width="28" height="28" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>', 'Halfway there!', 'You\'re killing it — keep that momentum going!');
     } else if (correctCount === 5 && !showedQuarterMilestone) {
       showedQuarterMilestone = true;
-      showMilestone('<svg width="28" height="28" viewBox="0 0 24 24" fill="#ef4444" stroke="none"><path d="M12 2C9 7 7 10 7 14a5 5 0 0 0 10 0c0-4-3-7-5-12zm-1 15a1 1 0 0 1-1-1c0-1.5 1-2.5 1-4 1 1.5 2 2.5 2 4a1 1 0 0 1-2 0z"/></svg>', '5 correct in a row!', 'You\'re on fire — keep grinding!');
+      showMilestone('<svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mg" x1="50%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#ff9500"/><stop offset="100%" stop-color="#ff3b00"/></linearGradient></defs><path d="M12 2C10 6 8 9 8 13a4 4 0 0 0 8 0c0-3-2.5-5.5-4-11zm-1 12a.8.8 0 0 1-.8-.8c0-1.2.8-2 .8-3.2.8 1.2 1.6 2 1.6 3.2a.8.8 0 0 1-1.6 0z" fill="url(#mg)"/></svg>', '5 correct in a row!', 'On fire — keep it up!');
     } else if (currentStreak === 10) {
       showMilestone('<svg width="28" height="28" viewBox="0 0 24 24" fill="#8b5cf6" stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', '10 streak!', 'Absolutely crushing it right now!');
     }
