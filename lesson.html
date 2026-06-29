@@ -842,6 +842,26 @@
       }
     }
 
+    // Big equation + word problem — math subjects, pulled from AI-generated fill questions
+    if (isMath) {
+      var fillQs = (day.questions || []).filter(function(q){ return q.type === 'fill' || q.type === 'bigequation' || q.type === 'wordproblem'; });
+      fillQs.forEach(function(q, i) {
+        var cardType = q.type === 'bigequation' ? 'bigequation'
+          : q.type === 'wordproblem' ? 'wordproblem'
+          : (q.equation || (q.question && /solve|simplify|factor|expand/i.test(q.question))) ? 'bigequation'
+          : (q.scenario || (q.question && /if|how many|costs|total|distance|speed|rate|percent/i.test(q.question))) ? 'wordproblem'
+          : 'fill';
+        var insertAt4 = Math.min(3 + i * 3, sessionCards.length);
+        sessionCards.splice(insertAt4, 0, { type: cardType, q: q });
+      });
+    }
+
+    // Error spot — math and science (great for catching common mistakes)
+    if ((isMath || isScience) && day.errorSpotQ) {
+      var insertAt5 = Math.min(8, sessionCards.length);
+      sessionCards.splice(insertAt5, 0, { type: 'errorspot', q: day.errorSpotQ });
+    }
+
     // Sequence — science (processes), history (timelines), any subject with 3+ keyTerms
     if (day.keyTerms && day.keyTerms.length >= 3 && (isScience || isHistory || day.keyTerms.length >= 4)) {
       var seqQ = buildSequenceQuestion(day, subjectType);
@@ -1106,6 +1126,15 @@
     else if (card.type === 'write') {
       html = renderWrite(card.q);
     }
+    else if (card.type === 'bigequation') {
+      html = renderBigEquation(card.q);
+    }
+    else if (card.type === 'wordproblem') {
+      html = renderWordProblem(card.q);
+    }
+    else if (card.type === 'errorspot') {
+      html = renderErrorSpot(card.q);
+    }
     else if (card.type === 'graph') {
       html = renderGraph(card.q);
     }
@@ -1267,48 +1296,69 @@
 
   // ── INTERACTIVE COORDINATE GRAPH (math) ──
   function renderGraph(q) {
-    // q: { question, slope, targetIntercept, min, max, hint, explanation, difficulty }
     var min = q.min != null ? q.min : -5;
     var max = q.max != null ? q.max : 5;
     var target = q.targetIntercept != null ? q.targetIntercept : 0;
-    var slope = q.slope != null ? q.slope : 1;
+    var slope  = q.slope  != null ? q.slope  : 1;
     window._graphState = { current: 0, target: target, slope: slope, min: min, max: max, explanation: q.explanation, hint: q.hint };
 
-    var size = 280, pad = 30;
+    var size = 280, pad = 36; // extra pad for labels
     var range = max - min;
     var scale = (size - pad * 2) / range;
+
     function toSvgX(x) { return pad + (x - min) * scale; }
     function toSvgY(y) { return size - pad - (y - min) * scale; }
 
-    // Grid lines
+    // ── GRID ──
     var grid = '';
     for (var i = min; i <= max; i++) {
-      grid += '<line x1="' + toSvgX(i) + '" y1="' + pad + '" x2="' + toSvgX(i) + '" y2="' + (size-pad) + '" stroke="var(--border)" stroke-width="1"/>';
-      grid += '<line x1="' + pad + '" y1="' + toSvgY(i) + '" x2="' + (size-pad) + '" y2="' + toSvgY(i) + '" stroke="var(--border)" stroke-width="1"/>';
+      var gx = toSvgX(i), gy = toSvgY(i);
+      grid += '<line x1="' + gx + '" y1="' + pad + '" x2="' + gx + '" y2="' + (size-pad) + '" stroke="rgba(0,0,0,.07)" stroke-width="1"/>';
+      grid += '<line x1="' + pad + '" y1="' + gy + '" x2="' + (size-pad) + '" y2="' + gy + '" stroke="rgba(0,0,0,.07)" stroke-width="1"/>';
     }
-    // Axes
-    grid += '<line x1="' + pad + '" y1="' + toSvgY(0) + '" x2="' + (size-pad) + '" y2="' + toSvgY(0) + '" stroke="var(--muted)" stroke-width="1.5"/>';
-    grid += '<line x1="' + toSvgX(0) + '" y1="' + pad + '" x2="' + toSvgX(0) + '" y2="' + (size-pad) + '" stroke="var(--muted)" stroke-width="1.5"/>';
+
+    // ── AXES ──
+    var ax = toSvgX(0), ay = toSvgY(0);
+    grid += '<line x1="' + pad + '" y1="' + ay + '" x2="' + (size-pad) + '" y2="' + ay + '" stroke="#94a3b8" stroke-width="1.5"/>';
+    grid += '<line x1="' + ax + '" y1="' + pad + '" x2="' + ax + '" y2="' + (size-pad) + '" stroke="#94a3b8" stroke-width="1.5"/>';
+
+    // ── AXIS LABELS ──
+    for (var j = min; j <= max; j++) {
+      if (j === 0) continue;
+      // X-axis numbers
+      grid += '<text x="' + toSvgX(j) + '" y="' + (ay + 13) + '" text-anchor="middle" font-size="9" fill="#94a3b8" font-family="sans-serif">' + j + '</text>';
+      // Y-axis numbers  
+      grid += '<text x="' + (ax - 5) + '" y="' + (toSvgY(j) + 3) + '" text-anchor="end" font-size="9" fill="#94a3b8" font-family="sans-serif">' + j + '</text>';
+    }
+    grid += '<text x="' + (ax - 5) + '" y="' + (ay + 13) + '" text-anchor="end" font-size="9" fill="#94a3b8" font-family="sans-serif">0</text>';
+
+    // ── ARROWHEAD MARKER ──
+    var defs = '<defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#7c3aed"/></marker>' +
+      '<marker id="arr2" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto-start-reverse"><path d="M0,0 L0,6 L6,3 z" fill="#7c3aed"/></marker></defs>';
 
     var body = '<div class="q-meta"><span class="q-type-label graph">Interactive Graph</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
       '<div class="q-text">' + q.question + '</div>' +
-      '<div class="graph-wrap">' +
-      '<svg class="graph-svg" viewBox="0 0 ' + size + ' ' + size + '" id="graph-svg">' + grid +
-      '<line id="graph-line" x1="0" y1="0" x2="0" y2="0" stroke="#7c3aed" stroke-width="3" stroke-linecap="round"/>' +
-      '<circle id="graph-dot" cx="' + toSvgX(0) + '" cy="' + toSvgY(0) + '" r="6" fill="#7c3aed" stroke="#fff" stroke-width="2"/>' +
+      '<div class="graph-wrap" style="background:#f8faff;">' +
+      '<svg class="graph-svg" viewBox="0 0 ' + size + ' ' + size + '" id="graph-svg">' +
+      defs + grid +
+      '<line id="graph-line" x1="0" y1="0" x2="0" y2="0" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" marker-end="url(#arr)" marker-start="url(#arr2)"/>' +
+      '<circle id="graph-dot" cx="' + toSvgX(0) + '" cy="' + toSvgY(0) + '" r="7" fill="#7c3aed" stroke="#fff" stroke-width="2.5"/>' +
       '</svg>' +
       '<div class="graph-controls">' +
-      '<div class="graph-value">y-intercept = (0, <span id="graph-val">0</span>)</div>' +
+      '<div class="graph-value" style="font-size:1.1rem;">y-intercept = (0, <span id="graph-val" style="font-weight:800;">0</span>)</div>' +
       '<div class="graph-slider-track" id="graph-slider-track">' +
       '<div class="graph-slider-rail"></div>' +
       '<div class="graph-slider-handle" id="graph-handle" style="left:50%;"><svg width="12" height="12" viewBox="0 0 24 24" fill="white"><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/></svg></div>' +
       '</div></div></div>' +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
-      '<div class="hint-box" id="hint-box">' + (q.hint || 'Drag the handle until the line passes through the target point.') + '</div></div>' +
+      '<div class="hint-box" id="hint-box">' + (q.hint || 'The y-intercept is where the line crosses the y-axis (x = 0). Drag the handle left or right.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>' +
       '<button class="fill-submit" id="graph-check-btn" onclick="checkGraph()" style="margin-top:.8rem;">Check →</button>';
 
+    // Store toSvgX/Y and slope in _graphState for initGraphDrag
+    window._graphState.toSvgX = toSvgX;
+    window._graphState.toSvgY = toSvgY;
     setTimeout(function() { initGraphDrag(min, max, toSvgX, toSvgY, slope); }, 50);
 
     var streak = currentStreak > 1 ? '! ' + currentStreak + ' streak' : correctCount + ' / ' + totalAnswered;
@@ -1336,16 +1386,38 @@
       handle.style.left = pct + '%';
       var valEl = document.getElementById('graph-val');
       if (valEl) valEl.textContent = val;
-      var x1 = min, y1 = slope * x1 + val;
-      var x2 = max, y2 = slope * x2 + val;
+
+      // Compute where line y = slope*x + val intersects the SVG boundary
+      // We want the line to extend across the full visible area
       var lineEl = document.getElementById('graph-line');
       var dotEl  = document.getElementById('graph-dot');
       if (lineEl) {
-        lineEl.setAttribute('x1', toSvgX(x1));
-        lineEl.setAttribute('y1', toSvgY(Math.max(min, Math.min(max, y1))));
-        lineEl.setAttribute('x2', toSvgX(x2));
-        lineEl.setAttribute('y2', toSvgY(Math.max(min, Math.min(max, y2))));
+        // Find x values where line exits the min/max box
+        // y = slope*x + val  →  x = (y - val) / slope
+        var pts = [];
+        // Left edge x = min
+        pts.push({ x: min, y: slope * min + val });
+        // Right edge x = max
+        pts.push({ x: max, y: slope * max + val });
+        // Bottom edge y = min  (if slope != 0)
+        if (slope !== 0) {
+          var xAtYmin = (min - val) / slope;
+          if (xAtYmin >= min && xAtYmin <= max) pts.push({ x: xAtYmin, y: min });
+          var xAtYmax = (max - val) / slope;
+          if (xAtYmax >= min && xAtYmax <= max) pts.push({ x: xAtYmax, y: max });
+        }
+        // Clamp to visible range and pick the two extreme x points
+        pts = pts.filter(function(p){ return p.x >= min && p.x <= max && p.y >= min && p.y <= max; });
+        if (pts.length >= 2) {
+          pts.sort(function(a,b){ return a.x - b.x; });
+          var p1 = pts[0], p2 = pts[pts.length - 1];
+          lineEl.setAttribute('x1', toSvgX(p1.x));
+          lineEl.setAttribute('y1', toSvgY(p1.y));
+          lineEl.setAttribute('x2', toSvgX(p2.x));
+          lineEl.setAttribute('y2', toSvgY(p2.y));
+        }
       }
+      // Dot sits exactly on the y-axis at the intercept
       if (dotEl) {
         dotEl.setAttribute('cx', toSvgX(0));
         dotEl.setAttribute('cy', toSvgY(val));
@@ -1419,7 +1491,119 @@
     updateStreak();
   }
 
-  // ── SEQUENCE / DRAG-TO-SORT ──
+  // ── BIG EQUATION (Duolingo-style: large displayed equation, student solves) ──
+  function renderBigEquation(q) {
+    // q: { question, equation, answer, steps, hint, explanation, difficulty }
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#f3f0ff;color:#7c3aed;">Solve</span>' +
+      '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
+      '<div style="text-align:center;padding:1.4rem .5rem 1rem;">' +
+      '<div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.6rem;">Solve for the unknown</div>' +
+      '<div style="font-family:\'Georgia\',serif;font-size:2.2rem;font-weight:700;color:var(--ink);letter-spacing:.02em;line-height:1.3;padding:.8rem 1rem;background:var(--soft);border-radius:14px;border:2px solid var(--border);">' +
+      (q.equation || q.question) + '</div></div>' +
+      (q.steps ? '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:.75rem;padding:.7rem .9rem;background:var(--soft);border-radius:10px;line-height:1.7;">' + q.steps + '</div>' : '') +
+      '<div class="fill-wrap">' +
+      '<input class="fill-input" id="fill-input" type="text" placeholder="Answer..." inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off"/>' +
+      '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
+      '</div>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show steps</button>' +
+      '<div class="hint-box" id="hint-box">' + (q.hint || 'Work step by step.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    var card = '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Equation</div><h2>Solve it</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left"></span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+
+    setTimeout(function() {
+      var btn = document.getElementById('fill-btn');
+      var inp = document.getElementById('fill-input');
+      if (btn) { btn.dataset.answer = q.answer || ''; btn.dataset.explanation = q.explanation || ''; }
+      if (inp) { inp.addEventListener('keydown', function(e){ if(e.key==='Enter') answerFillBtn(); }); inp.focus(); }
+    }, 60);
+    return card;
+  }
+
+  // ── WORD PROBLEM ──
+  function renderWordProblem(q) {
+    // q: { question, scenario, answer, hint, explanation, difficulty }
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#fff8ed;color:#d97706;">Word Problem</span>' +
+      '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
+      '<div style="background:linear-gradient(135deg,#f0f7ff,#e8f4ff);border-left:4px solid #4a7cf6;border-radius:0 14px 14px 0;padding:1rem 1.1rem;margin-bottom:1rem;font-size:0.9rem;line-height:1.75;color:var(--ink);">' +
+      (q.scenario || q.question) + '</div>' +
+      '<div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin-bottom:.5rem;">Your answer:</div>' +
+      '<div class="fill-wrap">' +
+      '<input class="fill-input" id="fill-input" type="text" placeholder="Type your answer..." inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off"/>' +
+      '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
+      '</div>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + (q.hint || 'Read carefully and identify what the question is asking for.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    var card = '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Word Problem</div><h2>Real world math</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left"></span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+
+    setTimeout(function() {
+      var btn = document.getElementById('fill-btn');
+      var inp = document.getElementById('fill-input');
+      if (btn) { btn.dataset.answer = q.answer || ''; btn.dataset.explanation = q.explanation || ''; }
+      if (inp) { inp.addEventListener('keydown', function(e){ if(e.key==='Enter') answerFillBtn(); }); inp.focus(); }
+    }, 60);
+    return card;
+  }
+
+  // ── ERROR SPOT (find the mistake in the worked solution) ──
+  function renderErrorSpot(q) {
+    // q: { question, steps: [{text, hasError}], correctStep, answer, hint, explanation, difficulty }
+    var steps = q.steps || [];
+    var stepsHtml = steps.map(function(step, i) {
+      return '<button class="error-step-btn" data-idx="' + i + '" onclick="selectErrorStep(this,' + i + ',' + (step.hasError ? 'true' : 'false') + ',\'' + esc(q.explanation) + '\')" ' +
+        'style="width:100%;text-align:left;padding:.7rem .9rem;border-radius:10px;border:1.5px solid var(--border);background:var(--soft);font-family:var(--sans);font-size:0.85rem;font-weight:500;color:var(--ink);cursor:pointer;margin-bottom:.4rem;transition:all .2s;">' +
+        '<span style="font-size:0.7rem;font-weight:700;color:var(--muted);margin-right:.5rem;">Step ' + (i+1) + ':</span>' + step.text + '</button>';
+    }).join('');
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#fee2e2;color:#dc2626;">Find the Error</span>' +
+      '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
+      '<div class="q-text">' + q.question + '</div>' +
+      '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:.75rem;">Tap the step that contains the mistake</div>' +
+      stepsHtml +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + (q.hint || 'Check each step carefully against the previous one.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Error Spotting</div><h2>Find the mistake</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left"></span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function selectErrorStep(btn, idx, isError, explanation) {
+    if (currentAnswered) return;
+    currentAnswered = true;
+    totalAnswered++;
+    document.querySelectorAll('.error-step-btn').forEach(function(b) { b.style.pointerEvents = 'none'; });
+    var fb = document.getElementById('feedback-box');
+    fb.style.display = 'block';
+    if (isError) {
+      correctCount++; currentStreak++;
+      btn.style.background = '#d1faf0'; btn.style.borderColor = '#38bfa1';
+      fb.className = 'feedback-box show correct-fb';
+      fb.innerHTML = '<div class="feedback-label">✓ Found it!</div><div class="feedback-text">' + (explanation || 'That step has the mistake.') + '</div>';
+      spawnConfetti(); flashCard(true);
+    } else {
+      currentStreak = 0;
+      btn.style.background = '#fee2e2'; btn.style.borderColor = '#ef4444';
+      fb.className = 'feedback-box show wrong-fb';
+      fb.innerHTML = '<div class="feedback-label">✗ Not this one</div><div class="feedback-text">' + (explanation || 'Check the other steps more carefully.') + '</div>';
+      flashCard(false);
+    }
+    document.getElementById('btn-next').disabled = false;
+    updateStreak();
+  }
   function renderSequence(q) {
     // q: { question, items: [...correct order], hint, explanation, difficulty }
     var shuffled = q.items.slice().sort(function(){ return Math.random() - 0.5; });
