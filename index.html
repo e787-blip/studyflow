@@ -56,7 +56,6 @@
   nav a:hover { color: var(--ink); }
   .nav-links { display:flex; align-items:center; flex-wrap:nowrap; white-space:nowrap; }
   .nav-links a { margin-left:2rem; }
-  .nav-links .dark-toggle { margin-left:1rem; flex-shrink:0; }
 
   /* iPad — tighten nav so everything fits on one row */
   @media (min-width:761px) and (max-width:1180px) {
@@ -1057,117 +1056,6 @@
   .faq-item.open .faq-a { max-height: 200px; padding: 0 1.5rem 1.2rem; }
 
   /* ── DARK MODE ── */
-  .dark-toggle {
-    background: none; border: 1.5px solid var(--border);
-    border-radius: 999px; width:34px; height:34px;
-    display:flex; align-items:center; justify-content:center;
-    cursor: pointer; color: var(--muted);
-    transition: all .3s ease; margin-left: 1rem; padding:0;
-  }
-  .dark-toggle:hover { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
-
-  body.dark {
-    --ink: #e8eeff;
-    --muted: #7a8aaa;
-    --soft: #161b28;
-    --white: #0f1219;
-    --border: #222840;
-    --blue-light: #1a2540;
-    background: #0f1219;
-    color: #e8eeff;
-    transition: background .4s ease, color .4s ease;
-  }
-  body.dark nav {
-    background: rgba(15,18,25,0.92);
-    border-bottom-color: #222840;
-  }
-  body.dark nav a { color: #7a8aaa; }
-  body.dark nav a:hover { color: #e8eeff; }
-  body.dark .logo text tspan:first-child { fill: #fff !important; }
-
-  /* Hero */
-  body.dark .hero {
-    background: linear-gradient(175deg, #131828 0%, #0f1219 50%, #0f1219 100%);
-    animation: none;
-  }
-  body.dark h1 { color: #e8eeff; }
-  body.dark h1 em { color: #7eb4ff; }
-  body.dark .hero-sub { color: #7a8aaa; }
-  body.dark .btn-ghost {
-    background: #161b28;
-    border-color: #222840;
-    color: #7eb4ff !important;
-    -webkit-text-fill-color: #7eb4ff !important;
-  }
-  body.dark .hero-preview {
-    background: #161b28;
-    border-color: #222840;
-  }
-  body.dark .preview-upload {
-    background: #1a2540;
-    border-color: rgba(74,124,246,.3);
-  }
-  body.dark .preview-upload strong { color: #7eb4ff; }
-
-  /* Sections */
-  body.dark #how { background: #161b28; }
-  body.dark #example { background: #0f1219; }
-  body.dark #features { background: #161b28; }
-  body.dark #faq { background: #161b28; }
-  body.dark #pricing { background: #0f1219 !important; }
-  body.dark .section-title { color: #e8eeff; }
-  body.dark .section-title em { color: #7eb4ff; }
-  body.dark .section-sub { color: #7a8aaa; }
-  body.dark .section-label { color: #7eb4ff; }
-
-  /* Cards */
-  body.dark .step {
-    background: #161b28;
-    border-color: #222840;
-  }
-  body.dark .step h3 { color: #e8eeff; }
-  body.dark .step p { color: #7a8aaa; }
-  body.dark .feature {
-    background: #161b28;
-    border-color: #222840;
-  }
-  body.dark .feature h3 { color: #e8eeff; }
-  body.dark .feature p { color: #7a8aaa; }
-  body.dark .faq-item {
-    background: #161b28;
-    border-color: #222840;
-  }
-  body.dark .faq-q { color: #e8eeff; }
-  body.dark .faq-a { color: #7a8aaa; }
-
-  /* Plan card */
-  body.dark .plan-card {
-    background: #161b28;
-    border-color: #222840;
-  }
-  body.dark .plan-aside h3 { color: #e8eeff; }
-  body.dark .plan-aside p { color: #7a8aaa; }
-  body.dark .session { border-bottom-color: #222840; }
-  body.dark .session-info h5 { color: #e8eeff; }
-  body.dark .session-info p { color: #7a8aaa; }
-  body.dark .session-time { color: #7a8aaa; }
-
-  /* Pricing free card */
-  body.dark .pricing-free {
-    background: #161b28 !important;
-    border-color: #222840 !important;
-  }
-
-  /* Benefits stay dark already */
-  /* Footer */
-  body.dark footer { background: #080b11; }
-
-  /* Dark mode toggle */
-  body.dark .dark-toggle {
-    border-color: #222840;
-    background: #161b28;
-  }
-
   body.dark #testimonials { background: #161b28; }
   body.dark #testimonials .section-title { color: #e8eeff; }
 
@@ -1246,9 +1134,6 @@
     <a href="contact.html">Help</a>
     <span id="teacher-nav-link"></span>
     <a href="https://studyflow-ten-vert.vercel.app/login.html" class="nav-cta">Start for free</a>
-    <button class="dark-toggle" onclick="toggleDark()" title="Toggle dark mode">
-      <svg id="landing-dark-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-    </button>
   </div>
 </nav>
 
@@ -2196,26 +2081,7 @@
   var SUN_SVG = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
   var MOON_SVG = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
 
-  function toggleDark() {
-    document.body.classList.toggle('dark');
-    var isDark = document.body.classList.contains('dark');
-    document.getElementById('landing-dark-icon').innerHTML = isDark ? SUN_SVG : MOON_SVG;
-    localStorage.setItem('darkMode', isDark);
-    updateLogoColor();
-  }
 
-  function updateLogoColor() {
-    var tspan = document.querySelector('nav svg text tspan');
-    if (tspan) {
-      tspan.setAttribute('fill', document.body.classList.contains('dark') ? '#ffffff' : '#1a1d2e');
-    }
-  }
-
-  if (localStorage.getItem('darkMode') === 'true') {
-    document.body.classList.add('dark');
-    document.getElementById('landing-dark-icon').innerHTML = SUN_SVG;
-    updateLogoColor();
-  }
   function submitWaitlist() {
     var email = document.getElementById('wl-email').value;
     if (!email || email.indexOf('@') === -1) {
