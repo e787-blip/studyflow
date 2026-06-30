@@ -854,8 +854,8 @@
       sessionCards.splice(insertAt5, 0, { type: 'errorspot', q: day.errorSpotQ });
     }
 
-    // Passage comprehension — English subjects only, from AI-generated passage questions
-    if (isEnglish) {
+    // Passage comprehension — English (literary) and History (primary source analysis)
+    if (isEnglish || isHistory) {
       var passageQs = (day.questions || []).filter(function(q){ return q.type === 'passage'; });
       passageQs.forEach(function(q, i) {
         var insertAt6 = Math.min(2 + i * 4, sessionCards.length);
@@ -1180,14 +1180,29 @@
         '</div>';
     } else {
       var letters = ['A','B','C','D'];
-      var validOpts = (q.options || []).filter(function(o){ return o && o.trim().length > 0; });
+      var rawOpts = q.options || [];
+      // Filter empty options while tracking original index -> new index mapping
+      // so correctIndex stays accurate even if some options were empty
+      var validOpts = [];
+      var newCorrectIndex = -1;
+      rawOpts.forEach(function(o, origIdx) {
+        if (o && o.trim().length > 0) {
+          if (origIdx === q.correctIndex) newCorrectIndex = validOpts.length;
+          validOpts.push(o);
+        }
+      });
       if (validOpts.length === 0) {
-        // Options are empty — render as fill-in-blank instead
+        // No usable options at all — render as fill-in-blank instead
         return renderFill(q);
+      }
+      if (newCorrectIndex === -1) {
+        // correctIndex pointed at an empty/missing option — can't reliably grade this question.
+        // Default to option 0 so the question is still answerable, rather than marking every answer wrong.
+        newCorrectIndex = 0;
       }
       optHtml = '<div class="q-options">';
       validOpts.forEach(function(opt, oi) {
-        optHtml += '<button class="q-option" onclick="answerMCQ(this,' + oi + ',' + q.correctIndex + ',\'' + esc(q.explanation) + '\')">' +
+        optHtml += '<button class="q-option" onclick="answerMCQ(this,' + oi + ',' + newCorrectIndex + ',\'' + esc(q.explanation) + '\')">' +
           '<span class="opt-letter">' + letters[oi] + '</span><span>' + opt + '</span></button>';
       });
       optHtml += '</div>';
@@ -1506,28 +1521,44 @@
   // questionType: 'main-idea' | 'vocab-in-context' | 'inference' | 'tone' | 'detail'
   function renderPassage(q) {
     var letters = ['A','B','C','D'];
-    var validOpts = (q.options || []).filter(function(o){ return o && o.trim().length > 0; });
+    var rawOpts = q.options || [];
+    var validOpts = [];
+    var newCorrectIndex = -1;
+    rawOpts.forEach(function(o, origIdx) {
+      if (o && o.trim().length > 0) {
+        if (origIdx === q.correctIndex) newCorrectIndex = validOpts.length;
+        validOpts.push(o);
+      }
+    });
     if (validOpts.length === 0) return renderFill(q);
+    if (newCorrectIndex === -1) newCorrectIndex = 0; // fallback if correctIndex pointed at an empty option
 
     var typeLabel = {
       'main-idea':      'Main Idea',
       'vocab-in-context': 'Vocabulary in Context',
       'inference':      'Inference',
       'tone':           'Tone & Style',
-      'detail':         'Reading Detail'
+      'detail':         'Reading Detail',
+      'sourcing':       'Source Analysis',
+      'cause-effect':   'Cause & Effect',
+      'perspective':    'Historical Perspective'
     }[q.questionType] || 'Reading Comprehension';
 
     var optHtml = '<div class="q-options">';
     validOpts.forEach(function(opt, oi) {
-      optHtml += '<button class="q-option" onclick="answerMCQ(this,' + oi + ',' + q.correctIndex + ',\'' + esc(q.explanation) + '\')">' +
+      optHtml += '<button class="q-option" onclick="answerMCQ(this,' + oi + ',' + newCorrectIndex + ',\'' + esc(q.explanation) + '\')">' +
         '<span class="opt-letter">' + letters[oi] + '</span><span>' + opt + '</span></button>';
     });
     optHtml += '</div>';
+
+    var isHistorySource = ['sourcing','cause-effect','perspective'].indexOf(q.questionType) !== -1;
+    var passageLabel = isHistorySource ? 'EXCERPT' : 'PASSAGE';
 
     var body =
       '<div class="q-meta"><span class="q-type-label" style="background:#f3f0ff;color:#7c3aed;">' + typeLabel + '</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
       // Passage block
+      '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.08em;color:#7c3aed;margin-bottom:.35rem;">' + passageLabel + '</div>' +
       '<div style="background:var(--soft);border-left:3px solid #7c3aed;border-radius:0 12px 12px 0;padding:.9rem 1rem 1rem;margin-bottom:1rem;font-size:0.88rem;line-height:1.8;color:var(--ink);font-style:italic;">' +
       (q.passage || '') +
       '</div>' +
@@ -1538,9 +1569,11 @@
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Re-read the passage carefully.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
+    var badgeLabel = isHistorySource ? 'Primary Source' : 'Reading';
+
     var streak = correctCount + '/' + totalAnswered;
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Reading</div><h2>' + (day.title || 'Practice') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">✦ ' + badgeLabel + '</div><h2>' + (day.title || 'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
