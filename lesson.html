@@ -1176,8 +1176,13 @@
         '</div>';
     } else {
       var letters = ['A','B','C','D'];
+      var validOpts = (q.options || []).filter(function(o){ return o && o.trim().length > 0; });
+      if (validOpts.length === 0) {
+        // Options are empty — render as fill-in-blank instead
+        return renderFill(q);
+      }
       optHtml = '<div class="q-options">';
-      (q.options || []).forEach(function(opt, oi) {
+      validOpts.forEach(function(opt, oi) {
         optHtml += '<button class="q-option" onclick="answerMCQ(this,' + oi + ',' + q.correctIndex + ',\'' + esc(q.explanation) + '\')">' +
           '<span class="opt-letter">' + letters[oi] + '</span><span>' + opt + '</span></button>';
       });
@@ -1198,7 +1203,7 @@
     var body = '<div class="q-meta"><span class="q-type-label ' + typeClass + '">' + typeLabel + '</span>' +
       '<span class="q-difficulty ' + diffClass + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       '<div class="q-text">' + q.question + '</div>' +
-      confidenceTap + optHtml +
+      optHtml + confidenceTap +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Think about the key concepts from today\'s lesson.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
@@ -1242,8 +1247,9 @@
         questionText = q.question.replace(new RegExp(answer.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'i'),
           '<span style="display:inline-block;min-width:72px;height:1.1em;border-bottom:2px solid var(--blue);margin:0 2px;vertical-align:-.15em;"></span>');
       } else {
-        questionText = (q.question || '').replace(/\?$/, '') +
-          ' = <span style="display:inline-block;min-width:72px;height:1.1em;border-bottom:2px solid var(--blue);margin:0 2px;vertical-align:-.15em;"></span>';
+        // Append blank naturally at the end — no weird " = "
+        questionText = (q.question || '').replace(/[?.!,]$/, '') +
+          ' <span style="display:inline-block;min-width:72px;height:1.1em;border-bottom:2px solid var(--blue);margin:0 2px;vertical-align:-.15em;"></span>';
       }
     }
 
