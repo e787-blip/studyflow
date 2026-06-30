@@ -1160,18 +1160,42 @@
       if (!day || !Array.isArray(day.questions)) return day;
       var PLACEHOLDER_RE = /^\[.*\]$|^real |^exact |^specific |^numerical answer|^your answer|^formula here/i;
       day.questions = day.questions.filter(function(q) {
-        // Keep MCQ and TF always — they don't have a free-text answer field
-        if (q.type === 'mcq' || q.type === 'truefalse') return true;
+        // MCQ and passage — must have 4 non-empty options AND a valid correctIndex pointing to a real option
+        if (q.type === 'mcq' || q.type === 'passage') {
+          var opts = q.options || [];
+          if (opts.length !== 4) return false;
+          var allFilled = opts.every(function(o){ return o && o.trim().length > 0; });
+          if (!allFilled) return false;
+          var idx = q.correctIndex;
+          if (typeof idx !== 'number' || idx < 0 || idx > 3) return false;
+          // passage type also needs a real passage and question
+          if (q.type === 'passage') {
+            if (!q.passage || !q.passage.trim() || PLACEHOLDER_RE.test(q.passage.trim())) return false;
+            if (!q.question || !q.question.trim() || PLACEHOLDER_RE.test(q.question.trim())) return false;
+          }
+          return true;
+        }
+        // True/False — must have a question and a valid correct value
+        if (q.type === 'truefalse') {
+          if (!q.question || !q.question.trim()) return false;
+          if (q.correct !== 'True' && q.correct !== 'False') return false;
+          return true;
+        }
         // For fill/bigequation/wordproblem — reject if answer is missing or is still a placeholder
         if (q.type === 'fill' || q.type === 'bigequation' || q.type === 'wordproblem') {
           var ans = (q.answer || '').trim();
           if (!ans || PLACEHOLDER_RE.test(ans)) return false; // drop it
+          if (!q.question || !q.question.trim()) return false;
+        }
+        // write type — needs a real question
+        if (q.type === 'write') {
+          if (!q.question || !q.question.trim() || PLACEHOLDER_RE.test(q.question.trim())) return false;
         }
         return true;
       });
       // Ensure at least 3 questions survive
       if (day.questions.length < 3) {
-        console.warn('[sanitize] Only', day.questions.length, 'valid questions — Claude may not have replaced placeholders');
+        console.warn('[sanitize] Only', day.questions.length, 'valid questions survived — Claude may not have replaced placeholders correctly');
       }
       return day;
     }
@@ -1228,19 +1252,31 @@
           '{"type":"write","question":"","modelAnswer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'history') {
-        questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
-          '- 3 MCQ: causes, effects, dates, people, or significance\n' +
-          '- 2 True/False: historical facts (one true, one false)\n' +
-          '- 2 fill: blank out a DATE, PERSON, or PLACE\n' +
-          '- 1 write: causes and consequences question\n';
-        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+        questionInstructions = '\n\nSOCIAL STUDIES / HISTORY QUESTION REQUIREMENTS (research shows primary source analysis and cause-effect reasoning produce the strongest historical thinking — modeled after AP DBQ format):\n' +
+          'Generate these 8 questions using ONLY real content from the student notes:\n\n' +
+          '1. PASSAGE question — type:"passage", questionType:"sourcing"\n' +
+          '   Write a SHORT original excerpt (2-4 sentences) written AS IF from a person who lived through or was involved in the real event/period from the notes (a primary-source style voice — a letter, speech, diary, or proclamation tone). Do not attribute it to a real named historical figure verbatim — write an original excerpt inspired by the period/event.\n' +
+          '   Then ask a SOURCING question: "What does this excerpt suggest about [the author\'s perspective / the time period / the situation]?" 4 options.\n\n' +
+          '2. PASSAGE question — type:"passage", questionType:"cause-effect"\n' +
+          '   Write a short excerpt (2-4 sentences) describing a real situation or decision from the notes.\n' +
+          '   Then ask: "Based on this excerpt, what was the most likely cause/effect of [event]?" 4 options.\n\n' +
+          '3. PASSAGE question — type:"passage", questionType:"perspective"\n' +
+          '   Write two contrasting short viewpoints (combined 2-4 sentences) on the same real event from the notes — e.g. two different groups\' reactions.\n' +
+          '   Then ask: "Which statement best explains why these perspectives differ?" 4 options.\n\n' +
+          '4. MCQ — Cause and effect: "What was the most significant CAUSE of [real event from notes]?" 4 options.\n' +
+          '5. MCQ — Significance: "What was the most important CONSEQUENCE of [real event from notes]?" 4 options.\n' +
+          '6. True/False — A specific historical fact from the notes (dates, names, outcomes)\n' +
+          '7. Fill — Blank out a DATE, PERSON, or PLACE in a sentence taken from the notes\n' +
+          '8. Fill — Blank out a KEY TERM or CONCEPT (e.g. a political/economic/social term) from the notes\n\n' +
+          'CRITICAL: Every excerpt must be ORIGINAL writing inspired by real content in the notes — not a direct quote attributed to a real person, and not generic filler. Every question must be answerable from the notes provided.\n';
+        questionSchema = '{"type":"passage","questionType":"sourcing","passage":"","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"passage","questionType":"cause-effect","passage":"","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"passage","questionType":"perspective","passage":"","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"write","question":"Why did [key event from notes] happen? What were its most important consequences?","modelAnswer":"","hint":"Think: causes first, then consequences","explanation":"","difficulty":"' + difficulty + '"}';
+          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'english') {
         questionInstructions = '\n\nENGLISH/LITERATURE QUESTION REQUIREMENTS (research shows passage-based comprehension, vocabulary-in-context, and inference questions are most effective):\n' +
