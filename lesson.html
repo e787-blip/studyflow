@@ -864,6 +864,15 @@
       sessionCards.splice(insertAt5, 0, { type: 'errorspot', q: day.errorSpotQ });
     }
 
+    // Passage comprehension — English subjects only, from AI-generated passage questions
+    if (isEnglish) {
+      var passageQs = (day.questions || []).filter(function(q){ return q.type === 'passage'; });
+      passageQs.forEach(function(q, i) {
+        var insertAt6 = Math.min(2 + i * 4, sessionCards.length);
+        sessionCards.splice(insertAt6, 0, { type: 'passage', q: q });
+      });
+    }
+
     // Sequence — science (processes), history (timelines), any subject with 3+ keyTerms
     if (day.keyTerms && day.keyTerms.length >= 3 && (isScience || isHistory || day.keyTerms.length >= 4)) {
       var seqQ = buildSequenceQuestion(day, subjectType);
@@ -1127,6 +1136,9 @@
     }
     else if (card.type === 'write') {
       html = renderWrite(card.q);
+    }
+    else if (card.type === 'passage') {
+      html = renderPassage(card.q);
     }
     else if (card.type === 'bigequation') {
       html = renderBigEquation(card.q);
@@ -1499,7 +1511,50 @@
     updateStreak();
   }
 
-  // ── BIG EQUATION (Duolingo-style: large displayed equation, student solves) ──
+  // ── PASSAGE (English: AI-generated passage + comprehension question) ──
+  // q: { passage, question, options, correctIndex, hint, explanation, questionType, difficulty }
+  // questionType: 'main-idea' | 'vocab-in-context' | 'inference' | 'tone' | 'detail'
+  function renderPassage(q) {
+    var letters = ['A','B','C','D'];
+    var validOpts = (q.options || []).filter(function(o){ return o && o.trim().length > 0; });
+    if (validOpts.length === 0) return renderFill(q);
+
+    var typeLabel = {
+      'main-idea':      'Main Idea',
+      'vocab-in-context': 'Vocabulary in Context',
+      'inference':      'Inference',
+      'tone':           'Tone & Style',
+      'detail':         'Reading Detail'
+    }[q.questionType] || 'Reading Comprehension';
+
+    var optHtml = '<div class="q-options">';
+    validOpts.forEach(function(opt, oi) {
+      optHtml += '<button class="q-option" onclick="answerMCQ(this,' + oi + ',' + q.correctIndex + ',\'' + esc(q.explanation) + '\')">' +
+        '<span class="opt-letter">' + letters[oi] + '</span><span>' + opt + '</span></button>';
+    });
+    optHtml += '</div>';
+
+    var body =
+      '<div class="q-meta"><span class="q-type-label" style="background:#f3f0ff;color:#7c3aed;">' + typeLabel + '</span>' +
+      '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
+      // Passage block
+      '<div style="background:var(--soft);border-left:3px solid #7c3aed;border-radius:0 12px 12px 0;padding:.9rem 1rem 1rem;margin-bottom:1rem;font-size:0.88rem;line-height:1.8;color:var(--ink);font-style:italic;">' +
+      (q.passage || '') +
+      '</div>' +
+      // Question
+      '<div class="q-text" style="font-style:normal;margin-bottom:.75rem;">' + q.question + '</div>' +
+      optHtml +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + (q.hint || 'Re-read the passage carefully.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    var streak = correctCount + '/' + totalAnswered;
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Reading</div><h2>' + (day.title || 'Practice') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
   function renderBigEquation(q) {
     // q: { question, equation, answer, steps, hint, explanation, difficulty }
     var body = '<div class="q-meta"><span class="q-type-label" style="background:#f3f0ff;color:#7c3aed;">Solve</span>' +
@@ -1981,14 +2036,14 @@
 
     if (isCorrect) {
       fb.innerHTML = '<div class="feedback-label">✓ Correct!</div>' +
-        '<div class="feedback-text">' + (explanation || 'Well done!') + '</div>';
+        '<div class="feedback-text"><strong>' + correct + '</strong>' +
+        (explanation ? ' — ' + explanation : '') + '</div>';
       spawnConfetti();
       flashCard(true);
     } else {
       fb.innerHTML = '<div class="feedback-label">✗ Not quite</div>' +
-        '<div class="feedback-text">Answer: <strong>' + correct + '</strong>' +
-        (explanation ? '<br>' + explanation : '') + '</div>' +
-        '<div class="feedback-growth">Missing it is normal — it means your brain is building a stronger memory of this answer.</div>';
+        '<div class="feedback-text">The answer is <strong style="font-size:1.1em;color:#dc2626;">' + correct + '</strong></div>' +
+        '<div class="feedback-growth">Missing it builds a stronger memory — you\'ll remember it next time.</div>';
       flashCard(false);
     }
 
