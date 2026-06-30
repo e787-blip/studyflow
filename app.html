@@ -1357,7 +1357,7 @@
     // ── SUBJECT CLASSIFICATION ──
     function classifySubject(subjectName, notes) {
       var text = (subjectName + ' ' + notes.substring(0, 300)).toLowerCase();
-      if (/math|algebra|calculus|geometry|trigonometry|equation|derivative|integral|polynomial|fraction|statistics|probability|theorem|proof|slope|linear|quadratic/.test(text)) return 'math';
+      if (/\bmath\b|algebra|calculus|geometry|trigonometry|\bequation\b|derivative|integral|polynomial|fraction|statistics|probability|\btheorem\b|\bslope\b|\blinear\b|quadratic/.test(text)) return 'math';
       if (/biology|chemistry|physics|science|cell|mitosis|meiosis|atom|molecule|element|compound|reaction|force|energy|evolution|genetics|ecosystem|periodic|DNA|RNA/.test(text)) return 'science';
       if (/history|war|revolution|empire|civilization|century|ancient|medieval|political|president|government|democracy|colonialism|treaty|battle|historian/.test(text)) return 'history';
       if (/literature|english|novel|poem|poetry|author|character|theme|metaphor|grammar|essay|writing|shakespeare|vocabulary|language|syntax|literary|fiction/.test(text)) return 'english';
