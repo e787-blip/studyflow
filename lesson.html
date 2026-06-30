@@ -746,10 +746,14 @@
   /* ── QUEUE ── */
   function buildQueue() {
     var questions = day.questions || [];
-    var shuffled = questions.slice().sort(function(){ return Math.random() - 0.5; });
+    // Only mcq/truefalse can render correctly through the generic question card —
+    // every other type has its own dedicated renderer and must be excluded here.
+    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1 };
+    var simpleQuestions = questions.filter(function(q){ return !SPECIAL_TYPES_PRETEST[q.type]; });
+    var shuffled = simpleQuestions.slice().sort(function(){ return Math.random() - 0.5; });
 
     // FEATURE 3: Pre-test on Day 1 — 3 questions BEFORE lesson content
-    if (dayIndex === 0 && questions.length >= 3) {
+    if (dayIndex === 0 && simpleQuestions.length >= 3) {
       sessionCards.push({ type: 'pretest-intro' });
       shuffled.slice(0, 3).forEach(function(q) {
         sessionCards.push({ type: 'question', q: q, isPretest: true });
@@ -792,8 +796,13 @@
     }
 
     // Separate AI-generated fill questions from regular questions
+    // CRITICAL: regularQuestions must ONLY be mcq/truefalse — every other type (bigequation,
+    // wordproblem, errorspot, passage, sentence, write) has its own dedicated rendering path
+    // injected separately below. Including them here would both render them incorrectly
+    // (renderQuestion only understands mcq/truefalse) AND duplicate them in the session.
+    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1 };
     var fillQuestions = questions.filter(function(q){ return q.type === 'fill'; });
-    var regularQuestions = questions.filter(function(q){ return q.type !== 'fill'; });
+    var regularQuestions = questions.filter(function(q){ return !SPECIAL_TYPES[q.type]; });
     var shuffled = regularQuestions.slice().sort(function(){ return Math.random() - 0.5; });
 
     // Main questions — interleave fill + interactive types on ALL plans
@@ -848,11 +857,22 @@
       });
     }
 
-    // Error spot — math and science (great for catching common mistakes)
-    if ((isMath || isScience) && day.errorSpotQ) {
-      var insertAt5 = Math.min(8, sessionCards.length);
-      sessionCards.splice(insertAt5, 0, { type: 'errorspot', q: day.errorSpotQ });
+    // Error spot — math and science, pulled from AI-generated errorspot questions
+    if (isMath || isScience) {
+      var errorSpotQs = (day.questions || []).filter(function(q){ return q.type === 'errorspot'; });
+      errorSpotQs.forEach(function(q, i) {
+        var insertAt5 = Math.min(8 + i * 3, sessionCards.length);
+        sessionCards.splice(insertAt5, 0, { type: 'errorspot', q: q });
+      });
     }
+
+    // Feynman write — AI-generated write questions from science/history/english/general schemas
+    // (separate from the inline MCQ-reuse mechanism above, which only fires every 5th question)
+    var aiWriteQs = (day.questions || []).filter(function(q){ return q.type === 'write'; });
+    aiWriteQs.forEach(function(q, i) {
+      var insertAtW = Math.min(6 + i * 4, sessionCards.length);
+      sessionCards.splice(insertAtW, 0, { type: 'write', q: q });
+    });
 
     // Passage comprehension — English (literary) and History (primary source analysis)
     if (isEnglish || isHistory) {
@@ -864,12 +884,22 @@
     }
 
     // Sequence — science (processes), history (timelines), any subject with 3+ keyTerms
-    if (day.keyTerms && day.keyTerms.length >= 3 && (isScience || isHistory || day.keyTerms.length >= 4)) {
+    // (language uses dedicated sentence-builder below instead of generic keyTerm sequencing)
+    if (!isLanguage && day.keyTerms && day.keyTerms.length >= 3 && (isScience || isHistory || day.keyTerms.length >= 4)) {
       var seqQ = buildSequenceQuestion(day, subjectType);
       if (seqQ) {
         var insertAt2 = Math.min(7, sessionCards.length);
         sessionCards.splice(insertAt2, 0, { type: 'sequence', q: seqQ });
       }
+    }
+
+    // Sentence Builder — language subjects, from AI-generated word-order questions (Duolingo-style)
+    if (isLanguage) {
+      var sentenceQs = (day.questions || []).filter(function(q){ return q.type === 'sentence' && Array.isArray(q.words) && q.words.length >= 3; });
+      sentenceQs.forEach(function(q, i) {
+        var insertAt7 = Math.min(3 + i * 3, sessionCards.length);
+        sessionCards.splice(insertAt7, 0, { type: 'sentence', q: q });
+      });
     }
 
     // Matching — vocabulary-heavy subjects: english, language, science, history
@@ -1144,6 +1174,9 @@
     }
     else if (card.type === 'sequence') {
       html = renderSequence(card.q);
+    }
+    else if (card.type === 'sentence') {
+      html = renderSentence(card.q);
     }
     else if (card.type === 'match') {
       html = renderMatch(card.q);
@@ -1513,6 +1546,7 @@
       flashCard(false);
     }
     document.getElementById('btn-next').disabled = false;
+    updateStats();
     updateStreak();
   }
 
@@ -1688,8 +1722,51 @@
       flashCard(false);
     }
     document.getElementById('btn-next').disabled = false;
+    updateStats();
     updateStreak();
   }
+  // ── SENTENCE BUILDER (Duolingo-style: arrange shuffled words into correct order) ──
+  // q: { question, words: [...correct word order], translation, hint, explanation, difficulty }
+  function renderSentence(q) {
+    // Defense in depth — sanitizeDayQuestions should already guarantee this, but guard anyway
+    if (!q || !Array.isArray(q.words) || q.words.length < 3) {
+      return renderFill(q || {});
+    }
+    var shuffled = q.words.slice().sort(function(){ return Math.random() - 0.5; });
+    // Guard against an accidental already-correct shuffle on short sentences
+    if (q.words.length > 2 && JSON.stringify(shuffled) === JSON.stringify(q.words)) {
+      shuffled.reverse();
+    }
+    window._seqState = { correctOrder: q.words.slice(), current: shuffled, explanation: q.explanation };
+
+    var itemsHtml = shuffled.map(function(word, i) {
+      return '<div class="seq-item" draggable="true" data-text="' + esc(word) + '" id="seq-item-' + i + '">' +
+        '<span class="seq-num">' + (i+1) + '</span>' +
+        '<svg class="seq-drag-handle" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>' +
+        '<span class="seq-text">' + word + '</span></div>';
+    }).join('');
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#eef4ff;color:#4a7cf6;">Sentence Builder</span>' +
+      '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
+      '<div class="q-text">' + q.question + '</div>' +
+      (q.translation ? '<div style="background:var(--soft);border-radius:10px;padding:.6rem .85rem;margin:.5rem 0 .75rem;font-size:0.82rem;color:var(--muted);font-style:italic;">"' + q.translation + '"</div>' : '') +
+      '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:.7rem;">Drag the words into the correct order</div>' +
+      '<div class="seq-wrap" id="seq-wrap">' + itemsHtml + '</div>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + (q.hint || 'Think about correct word order and grammar in this language.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>' +
+      '<button class="fill-submit" id="seq-check-btn" onclick="checkSequence()" style="margin-top:.8rem;">Check sentence →</button>';
+
+    setTimeout(initSeqDrag, 50);
+
+    var streak = correctCount + '/' + totalAnswered;
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Sentence Builder</div><h2>' + (day.title||'Practice') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
   function renderSequence(q) {
     // q: { question, items: [...correct order], hint, explanation, difficulty }
     var shuffled = q.items.slice().sort(function(){ return Math.random() - 0.5; });
@@ -1777,12 +1854,15 @@
   }
 
   function checkSequence() {
+    if (currentAnswered) return;
     var items = document.querySelectorAll('#seq-wrap .seq-item');
     var currentOrder = Array.prototype.map.call(items, function(i){ return i.dataset.text; });
     var correctOrder = window._seqState.correctOrder;
     var isCorrect = JSON.stringify(currentOrder) === JSON.stringify(correctOrder);
+    currentAnswered = true;
     totalAnswered++;
-    document.getElementById('seq-check-btn').disabled = true;
+    var checkBtn = document.getElementById('seq-check-btn');
+    if (checkBtn) checkBtn.disabled = true;
 
     items.forEach(function(item, i) {
       item.setAttribute('draggable', 'false');
@@ -1790,19 +1870,21 @@
     });
 
     var fb = document.getElementById('feedback-box');
-    fb.style.display = 'block';
     if (isCorrect) {
       correctCount++; currentStreak++;
-      fb.className = 'feedback-box correct';
-      fb.innerHTML = '<strong>Perfect order!</strong> ' + (window._seqState.explanation || '');
+      fb.className = 'feedback-box show correct-fb';
+      fb.innerHTML = '<div class="feedback-label">✓ Perfect order!</div><div class="feedback-text">' + (window._seqState.explanation || 'Great work.') + '</div>';
       spawnConfetti();
+      flashCard(true);
     } else {
       currentStreak = 0;
-      fb.className = 'feedback-box wrong';
-      fb.innerHTML = '<strong>Not quite right.</strong> ' + (window._seqState.explanation || 'Check the correct order shown above.');
+      fb.className = 'feedback-box show wrong-fb';
+      fb.innerHTML = '<div class="feedback-label">✗ Not quite</div><div class="feedback-text">' + (window._seqState.explanation || 'Check the correct order shown above.') + '</div>';
+      flashCard(false);
     }
     document.getElementById('btn-next').disabled = false;
-    recordAnswer(isCorrect);
+    updateStats();
+    updateStreak();
   }
 
   // ── MATCHING PAIRS ──
@@ -1860,16 +1942,19 @@
       ms.correctCount++;
       ms.selected = null;
       if (ms.matched === ms.total) {
+        if (currentAnswered) return;
+        currentAnswered = true;
         totalAnswered++;
         correctCount++;
         currentStreak++;
         var fb = document.getElementById('feedback-box');
-        fb.style.display = 'block';
-        fb.className = 'feedback-box correct';
-        fb.innerHTML = '<strong>All matched!</strong> ' + (ms.explanation || 'Great work connecting these concepts.');
+        fb.className = 'feedback-box show correct-fb';
+        fb.innerHTML = '<div class="feedback-label">✓ All matched!</div><div class="feedback-text">' + (ms.explanation || 'Great work connecting these concepts.') + '</div>';
         document.getElementById('btn-next').disabled = false;
         spawnConfetti();
-        recordAnswer(true);
+        flashCard(true);
+        updateStats();
+        updateStreak();
       }
     } else {
       el.classList.add('wrong-flash');
@@ -1910,7 +1995,7 @@
       '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:.5rem;">' + getFeynmanTip(plan.subjectType) + '</div>' +
       '<textarea class="write-area" id="write-input" placeholder="Write your explanation here. The more specific the better — include examples, causes, effects, dates, names..."></textarea>' +
       '<div style="display:flex;align-items:center;gap:.75rem;margin-top:.65rem;">' +
-      '<button class="write-submit" onclick="submitWrite(\'' + esc(q.explanation) + '\',\'' + esc(q.question) + '\')">Get AI feedback →</button>' +
+      '<button class="write-submit" onclick="submitWrite(\'' + esc(q.modelAnswer || q.explanation || '') + '\',\'' + esc(q.question) + '\')">Get AI feedback →</button>' +
       '<div class="write-analyzing" id="write-analyzing"><div class="mini-spinner"></div><span>Claude is analyzing your explanation...</span></div>' +
       '</div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
@@ -2598,12 +2683,16 @@
   }
 
   function buildWrongItem(item) {
-    var correctAns = item.q && item.q.type === 'truefalse' ? item.q.correct : (item.q && item.q.options ? item.q.options[item.q.correctIndex] : '—');
+    var q = item.q || {};
+    var correctAns = '—';
+    if (q.type === 'truefalse') correctAns = q.correct || '—';
+    else if (q.options && typeof q.correctIndex === 'number') correctAns = q.options[q.correctIndex] || '—';
+    else if (q.answer) correctAns = q.answer; // fill, bigequation, wordproblem all use .answer
     return '<div class="wrong-item">' +
-      '<div class="wi-q">' + (item.q && item.q.question ? item.q.question : 'Question') + '</div>' +
+      '<div class="wi-q">' + (q.question || 'Question') + '</div>' +
       (item.userAns ? '<div class="wi-yours">Your answer: ' + item.userAns + '</div>' : '') +
       '<div class="wi-correct">Correct: ' + correctAns + '</div>' +
-      '<div class="wi-why">' + (item.q && item.q.explanation ? item.q.explanation : 'Review this in your notes.') + '</div>' +
+      '<div class="wi-why">' + (q.explanation || 'Review this in your notes.') + '</div>' +
       '</div>';
   }
 
