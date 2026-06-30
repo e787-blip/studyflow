@@ -1181,6 +1181,24 @@
           if (q.correct !== 'True' && q.correct !== 'False') return false;
           return true;
         }
+        // Sentence builder (language) — needs 3+ real words and a real question
+        if (q.type === 'sentence') {
+          if (!Array.isArray(q.words) || q.words.length < 3) return false;
+          var wordsFilled = q.words.every(function(w){ return w && typeof w === 'string' && w.trim().length > 0; });
+          if (!wordsFilled) return false;
+          if (!q.question || !q.question.trim() || PLACEHOLDER_RE.test(q.question.trim())) return false;
+          return true;
+        }
+        // Error spot (math/science) — needs 3+ real steps with EXACTLY one marked as the error
+        if (q.type === 'errorspot') {
+          if (!Array.isArray(q.steps) || q.steps.length < 3) return false;
+          var stepsFilled = q.steps.every(function(s){ return s && s.text && s.text.trim().length > 0 && typeof s.hasError === 'boolean'; });
+          if (!stepsFilled) return false;
+          var errorCount = q.steps.filter(function(s){ return s.hasError === true; }).length;
+          if (errorCount !== 1) return false; // must be exactly one error — zero or multiple is unanswerable/ambiguous
+          if (!q.question || !q.question.trim()) return false;
+          return true;
+        }
         // For fill/bigequation/wordproblem — reject if answer is missing or is still a placeholder
         if (q.type === 'fill' || q.type === 'bigequation' || q.type === 'wordproblem') {
           var ans = (q.answer || '').trim();
@@ -1214,21 +1232,21 @@
       var questionSchema = '';
 
       if (subjectType === 'math') {
-        questionInstructions = '\n\nQUESTION REQUIREMENTS — replace ALL [bracketed] placeholders with REAL content from notes:\n' +
-          '- 2 MCQ: conceptual questions about definitions, properties, or theorems\n' +
+        questionInstructions = '\n\nMATH QUESTION REQUIREMENTS — mostly equation/computation work, minimal multiple choice (replace ALL [bracketed] placeholders with REAL content from notes):\n' +
+          '- 1 MCQ ONLY: a single conceptual question about a definition, property, or theorem (why a method works, not a calculation)\n' +
           '- 1 True/False: a common student misconception about this topic\n' +
-          '- 2 bigequation: a REAL equation from the notes the student must solve. The equation field shows the equation large. NEVER use placeholder text — use REAL numbers.\n' +
-          '- 2 wordproblem: a real-world scenario using math from the notes. The scenario field is the story. Answer is a number.\n' +
-          '- 1 fill: formula or definition with a key term blanked\n' +
+          '- 3 bigequation: REAL equations from the notes the student must solve by typing the answer. NEVER use placeholder text — use REAL numbers from the notes. Vary the type: solving for a variable, simplifying an expression, evaluating an expression.\n' +
+          '- 2 wordproblem: real-world scenarios using math from the notes. The scenario field is the story. Answer is a number.\n' +
+          '- 1 errorspot: take a real multi-step solution to a problem from the notes (3-4 steps), and introduce EXACTLY ONE deliberate calculation or sign error into one step. The "steps" array has 3-4 objects {"text":"step shown to student","hasError":true/false} — exactly one must have hasError:true. The student finds which step contains the mistake.\n' +
           'ALL answers must be specific values — NEVER say "numerical answer" or placeholder text.\n';
         questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"bigequation","question":"Solve or simplify","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"bigequation","question":"Simplify","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"bigequation","question":"Evaluate","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"wordproblem","question":"Word Problem","scenario":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"wordproblem","question":"Word Problem","scenario":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+          '{"type":"errorspot","question":"Find the step with the mistake:","steps":[{"text":"","hasError":false},{"text":"","hasError":false},{"text":"","hasError":true}],"hint":"","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'science') {
         questionInstructions = '\n\nSCIENCE QUESTION REQUIREMENTS (research-backed — scenario-based + cause-effect highest retention):\n' +
@@ -1306,16 +1324,25 @@
           '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'language') {
-        questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
-          '- 3 MCQ: vocabulary meaning, grammar rule, or conjugation\n' +
-          '- 2 True/False: grammar rules or vocabulary usage\n' +
-          '- 3 fill: translation or conjugation — blank the TARGET LANGUAGE word\n';
-        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+        questionInstructions = '\n\nLANGUAGE LEARNING QUESTION REQUIREMENTS (research shows sentence-building, contextual translation, and multi-word chunks outperform isolated word drilling):\n' +
+          'Generate these 8 questions using ONLY real vocabulary/grammar from the student notes:\n\n' +
+          '1. SENTENCE question — type:"sentence"\n' +
+          '   Pick a real, complete sentence in the TARGET LANGUAGE from the notes (or construct one using real vocabulary from the notes). Split it into individual words as the "words" array in CORRECT order (3-7 words). Provide "translation" as the English meaning.\n' +
+          '   The "question" field should say something like "Build the sentence:" plus the English meaning to translate FROM.\n\n' +
+          '2. SENTENCE question — type:"sentence" — a second, different real sentence (different grammar pattern if possible: e.g. question form, negative form, or different verb tense) using real vocabulary from the notes.\n\n' +
+          '3. MCQ — Vocabulary meaning: "What does [target language word from notes] mean?" 4 options\n' +
+          '4. MCQ — Grammar rule or conjugation: test a specific conjugation/grammar rule from the notes\n' +
+          '5. MCQ — Translation: "How do you say [English phrase] in [target language]?" 4 options\n' +
+          '6. True/False — A grammar rule or vocabulary usage fact from the notes\n' +
+          '7. Fill — Translation cloze: an English sentence with the target-language word blanked: "The word for [English meaning] is _______ ." Answer is the exact target-language word.\n' +
+          '8. Fill — Conjugation cloze: "[subject] + [verb stem] + _______" Answer is the exact correct ending/form.\n\n' +
+          'CRITICAL: Use REAL vocabulary, verbs, and sentence patterns from the notes — not generic textbook examples. Sentence word arrays must be in the grammatically correct target-language order.\n';
+        questionSchema = '{"type":"sentence","question":"","words":["","",""],"translation":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"sentence","question":"","words":["","",""],"translation":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
 
