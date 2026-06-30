@@ -826,9 +826,11 @@
 
     // ── INTERACTIVE TYPES — all plans, woven into session ──
     var subjectType = plan.subjectType || 'general';
-    var subjectText = ((plan.subject || '') + ' ' + (day.title || '') + ' ' + subjectType + ' ' + ((day.content || '').substring(0, 200))).toLowerCase();
-    var isMath     = subjectType === 'math'     || /math|algebra|geometry|calculus|trig|equation|graph|slope|linear|quadratic|formula|solve|variable|coefficient|polynomial/.test(subjectText);
-    var isScience  = subjectType === 'science'  || /biology|chemistry|physics|science|cell|atom|molecule|reaction|genetics|ecosystem/.test(subjectText);
+    var subjectText = ((plan.subject || '') + ' ' + (day.title || '') + ' ' + subjectType).toLowerCase();
+    // NOTE: day.content intentionally excluded from subjectText — it causes false positives
+    // (e.g. "graph" in a science lesson triggering math graph questions)
+    var isMath     = subjectType === 'math'     || /\bmath\b|algebra|calculus|trigonometry|geometry|equation|slope|linear\b|quadratic|formula\b|\bsolve\b|polynomial|coefficient/.test(subjectText);
+    var isScience  = subjectType === 'science'  || /biology|chemistry|physics|\bscience\b|cell\b|atom\b|molecule|reaction|genetics|ecosystem/.test(subjectText);
     var isHistory  = subjectType === 'history'  || /history|war|revolution|empire|century|ancient|medieval|political/.test(subjectText);
     var isEnglish  = subjectType === 'english'  || /literature|english|novel|poem|author|character|theme|metaphor|grammar/.test(subjectText);
     var isLanguage = subjectType === 'language' || /spanish|french|german|japanese|chinese|language|verb|conjugate|translate/.test(subjectText);
