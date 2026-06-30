@@ -1243,19 +1243,31 @@
           '{"type":"write","question":"Why did [key event from notes] happen? What were its most important consequences?","modelAnswer":"","hint":"Think: causes first, then consequences","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'english') {
-        questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
-          '- 3 MCQ: themes, literary devices, character motivation, or author intent\n' +
-          '- 2 True/False: literary analysis or grammar\n' +
-          '- 2 fill: blank out a LITERARY TERM, AUTHOR, or KEY CONCEPT\n' +
-          '- 1 write: identify literary device and explain its effect\n';
-        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+        questionInstructions = '\n\nENGLISH/LITERATURE QUESTION REQUIREMENTS (research shows passage-based comprehension, vocabulary-in-context, and inference questions are most effective):\n' +
+          'Generate these 8 questions using content from the student notes:\n\n' +
+          '1. PASSAGE question — type:"passage", questionType:"main-idea"\n' +
+          '   Write a SHORT original passage (3-5 sentences) in the style of the text being studied, OR quote/adapt a key idea from the notes.\n' +
+          '   Then ask: "What is the main idea of this passage?" with 4 options. correctIndex must point to the correct answer.\n\n' +
+          '2. PASSAGE question — type:"passage", questionType:"vocab-in-context"\n' +
+          '   Write a passage that uses a KEY VOCABULARY WORD from the notes in context.\n' +
+          '   Then ask: "As used in the passage, the word [word] most nearly means..." with 4 options.\n\n' +
+          '3. PASSAGE question — type:"passage", questionType:"inference"\n' +
+          '   Write a passage that implies something without stating it directly.\n' +
+          '   Then ask an inference question like "The author suggests that..." or "We can conclude that..."\n\n' +
+          '4. MCQ — Literary device: ask students to identify a device (metaphor, simile, irony, etc.) from the notes\n' +
+          '5. MCQ — Theme or character motivation from the notes\n' +
+          '6. True/False — Statement about a theme, device, or author intent from the notes\n' +
+          '7. Fill — Blank out a KEY LITERARY TERM in a sentence: "The use of _______ in this text creates a sense of [effect]."\n' +
+          '8. Fill — Vocabulary fill: "The word [word from notes] means _______ in this context."\n\n' +
+          'CRITICAL: Every passage must be original, 3-5 sentences, and directly tied to the content in the student notes. Do not use placeholder text.\n';
+        questionSchema = '{"type":"passage","questionType":"main-idea","passage":"","question":"What is the main idea of this passage?","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"passage","questionType":"vocab-in-context","passage":"","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"passage","questionType":"inference","passage":"","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"write","question":"Identify the literary device used and explain what effect it creates for the reader.","modelAnswer":"","hint":"Name the device first, then explain its effect","explanation":"","difficulty":"' + difficulty + '"}';
+          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'language') {
         questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
