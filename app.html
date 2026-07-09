@@ -1202,8 +1202,18 @@
         // For fill/bigequation/wordproblem — reject if answer is missing or is still a placeholder
         if (q.type === 'fill' || q.type === 'bigequation' || q.type === 'wordproblem') {
           var ans = (q.answer || '').trim();
-          if (!ans || PLACEHOLDER_RE.test(ans)) return false; // drop it
+          if (!ans || PLACEHOLDER_RE.test(ans)) return false;
           if (!q.question || !q.question.trim()) return false;
+          // wordproblem must have a real scenario (not just a generic title)
+          if (q.type === 'wordproblem') {
+            var scenario = (q.scenario || q.question || '').trim();
+            if (!scenario || scenario.length < 15 || /^word problem$/i.test(scenario)) return false;
+          }
+          // bigequation must have a real equation
+          if (q.type === 'bigequation') {
+            var eq = (q.equation || '').trim();
+            if (!eq || PLACEHOLDER_RE.test(eq) || eq.length < 3) return false;
+          }
         }
         // write type — needs a real question
         if (q.type === 'write') {
@@ -1232,20 +1242,19 @@
       var questionSchema = '';
 
       if (subjectType === 'math') {
-        questionInstructions = '\n\nMATH QUESTION REQUIREMENTS — mostly equation/computation work, minimal multiple choice (replace ALL [bracketed] placeholders with REAL content from notes):\n' +
-          '- 1 MCQ ONLY: a single conceptual question about a definition, property, or theorem (why a method works, not a calculation)\n' +
-          '- 1 True/False: a common student misconception about this topic\n' +
-          '- 3 bigequation: REAL equations from the notes the student must solve by typing the answer. NEVER use placeholder text — use REAL numbers from the notes. Vary the type: solving for a variable, simplifying an expression, evaluating an expression.\n' +
-          '- 2 wordproblem: real-world scenarios using math from the notes. The scenario field is the story. Answer is a number.\n' +
-          '- 1 errorspot: take a real multi-step solution to a problem from the notes (3-4 steps), and introduce EXACTLY ONE deliberate calculation or sign error into one step. The "steps" array has 3-4 objects {"text":"step shown to student","hasError":true/false} — exactly one must have hasError:true. The student finds which step contains the mistake.\n' +
-          'ALL answers must be specific values — NEVER say "numerical answer" or placeholder text.\n';
+        questionInstructions = '\n\nMATH QUESTION REQUIREMENTS — 75% equation work (replace ALL [bracketed] placeholders with REAL content from notes):\n' +
+          '- 1 MCQ ONLY: a single conceptual question about a definition, property, or theorem\n' +
+          '- 6 bigequation: REAL equations from the notes the student must solve. Use REAL numbers and expressions. Vary types: solving for x, simplifying, expanding, factoring, evaluating, substituting. NEVER use placeholder equations.\n' +
+          '- 1 errorspot: a real multi-step solution with EXACTLY ONE deliberate mistake. 3-4 steps, exactly one hasError:true.\n' +
+          'ALL equation answers must be real computed values or simplified expressions — NEVER placeholder text.\n' +
+          'For fill questions in the session: the question MUST be a complete sentence with exactly one key term or value blanked at the END, like "The slope formula is m = _______" or "The vertex of a parabola is called the _______".\n';
         questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"bigequation","question":"Simplify","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"bigequation","question":"Evaluate","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"wordproblem","question":"Word Problem","scenario":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"wordproblem","question":"Word Problem","scenario":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"bigequation","question":"Simplify or expand","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
+          '{"type":"bigequation","question":"Find the value","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
           '{"type":"errorspot","question":"Find the step with the mistake:","steps":[{"text":"","hasError":false},{"text":"","hasError":false},{"text":"","hasError":true}],"hint":"","explanation":"","difficulty":"' + difficulty + '"}';
 
       } else if (subjectType === 'science') {
@@ -1372,7 +1381,9 @@
         '2. Every string under 120 characters\n' +
         '3. Replace ALL [bracketed] placeholders in the schema with REAL content from the notes\n' +
         '4. Every question must be answerable using the notes above\n' +
-        '5. Fill question answers must be the EXACT correct answer, not a description of one\n\n' +
+        '5. Fill question answers must be the EXACT correct answer — a single word or short phrase\n' +
+        '6. Fill questions must be a complete sentence with the blank at the END: "The [concept] is called _______" NOT "_______ is the concept"\n' +
+        '7. Never prefix fill questions with "Word Problem:" — that is for wordproblem type only\n\n' +
         'OUTPUT THIS EXACT JSON STRUCTURE — replace every field with REAL content from the notes above:\n' +
         '{"title":"short title for this day",' +
         '"briefing":"one sentence: what the student will learn today",' +
