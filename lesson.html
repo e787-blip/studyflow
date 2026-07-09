@@ -3110,7 +3110,17 @@
       var student = classData.students.find(function(s){ return s.email === user.email; });
       if (student) {
         var history = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
-        student.streak = history.length;
+        // Count consecutive days ending today — NOT history.length which counts all-time
+        var sortedHistory = history.slice().sort(function(a,b){ return new Date(b) - new Date(a); });
+        var streak = 0;
+        var checkDate = new Date(); checkDate.setHours(0,0,0,0);
+        for (var si = 0; si < sortedHistory.length; si++) {
+          var d = new Date(sortedHistory[si]); d.setHours(0,0,0,0);
+          var diff = Math.round((checkDate - d) / 86400000);
+          if (diff === 0 || diff === 1) { streak++; checkDate = d; }
+          else break;
+        }
+        student.streak = streak;
         var allScores = plan.days.filter(function(d){ return d.score; }).map(function(d){ return d.score; });
         student.avgScore = allScores.length ? Math.round(allScores.reduce(function(a,b){ return a+b; },0)/allScores.length) : null;
         student.questionsAnswered = (student.questionsAnswered || 0) + totalAnswered;
