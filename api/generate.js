@@ -35,8 +35,8 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4096,
-        system: 'You are a study plan generator. You ONLY output valid compact JSON with no whitespace, no line breaks, no markdown. Keep all string values under 120 characters. Never truncate. Always complete the full JSON.',
+        max_tokens: 8096,
+        system: 'You are a study plan generator. You ONLY output valid compact JSON with no whitespace, no line breaks, no markdown. Keep all string values under 100 characters. Always output the complete JSON — never truncate or stop early.',
         messages: [{ role: 'user', content: trimmedPrompt }]
       })
     });
@@ -45,7 +45,15 @@ module.exports = async function handler(req, res) {
     if (!data.content?.[0]?.text)
       return res.status(500).json({ error: 'No response from AI' });
 
-    return res.status(200).json({ result: data.content[0].text });
+    // If Claude hit the token limit, the JSON will be truncated
+    // Signal this so the client can try repair
+    const stopReason = data.stop_reason || '';
+    const text = data.content[0].text;
+
+    return res.status(200).json({
+      result: text,
+      truncated: stopReason === 'max_tokens'
+    });
   } catch (err) {
     if (err.name === 'AbortError')
       return res.status(504).json({ error: 'AI service timeout — please try again' });
