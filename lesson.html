@@ -103,9 +103,8 @@
   .milestone-close { margin-left:auto; background:rgba(255,255,255,.2); border:none; color:#fff; width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center; }
 
   /* STRUGGLING BANNER */
-  .struggling-banner {
-    background:#fff8e0; border:1.5px solid var(--orange); border-radius:16px;
-    padding:1rem 1.3rem; margin-bottom:1.2rem; display:none;
+  .struggling-banner {    background:#fff8e0; border:1.5px solid var(--orange); border-radius:16px;
+    padding:1rem 1.3rem; margin-bottom:1.2rem; display:none; position:relative;
     animation:fadeIn .4s ease;
   }
   .struggling-banner.show { display:flex; align-items:flex-start; gap:.75rem; }
@@ -576,6 +575,7 @@
       <p>You've missed a few in a row — no worries. Review the lesson content and try again.</p>
       <button class="btn-review-lesson" onclick="showReviewCard()">Review lesson →</button>
     </div>
+    <button onclick="document.getElementById('struggling-banner').classList.remove('show');recentWrong=0;" style="position:absolute;top:.6rem;right:.75rem;background:none;border:none;cursor:pointer;color:#92400e;font-size:1.1rem;line-height:1;padding:.2rem .4rem;border-radius:6px;font-weight:700;" title="Dismiss">✕</button>
   </div>
 
   <!-- RECAP CARD -->
@@ -834,8 +834,11 @@
     var isEnglish  = subjectType === 'english'  || /literature|english|novel|poem|author|character|theme|metaphor|grammar/.test(subjectText);
     var isLanguage = subjectType === 'language' || /spanish|french|german|japanese|chinese|language|verb|conjugate|translate/.test(subjectText);
 
-    // Graph — math only
-    if (isMath) {
+    // Graph — ONLY for topics that explicitly involve graphing/coordinates
+    // NOT for algebra, arithmetic, equations in general — only when notes mention graphing
+    var graphKeywords = /\bgraph\b|coordinate|y-intercept|x-intercept|slope.*intercept|intercept.*slope|plot.*point|scatter|linear.*graph|parabola|quadrant/i;
+    var isGraphTopic = graphKeywords.test(subjectText) || graphKeywords.test((day.content || '').substring(0, 400));
+    if (isMath && isGraphTopic) {
       var graphQ = buildGraphQuestion(day);
       if (graphQ) {
         var insertAt = Math.min(4, sessionCards.length);
@@ -2182,10 +2185,11 @@
       // SM-2: Update algorithm — wrong answer resets interval
       if (wrongQ) updateSM2(wrongQ, false);
 
-      // FEATURE 1: Spaced repetition — reinject this question 4 cards later
-      if (wrongQ && !sessionCards[cardIndex - 1].isReview && !sessionCards[cardIndex - 1].isPretest) {
+      // FEATURE 1: Spaced repetition — reinject this question ONCE, 4 cards later
+      // Only reinject if not already a spaced-repeat card (prevents infinite loop of wrong answers)
+      var prevCard = sessionCards[cardIndex - 1];
+      if (wrongQ && prevCard && !prevCard.isReview && !prevCard.isPretest && !prevCard.isSpacedRepeat) {
         var reinjectAt = cardIndex + 4;
-        // Insert spaced repeat card into sessionCards at that position
         if (reinjectAt < sessionCards.length) {
           sessionCards.splice(reinjectAt, 0, { type: 'question', q: wrongQ, isSpacedRepeat: true });
         } else {
@@ -2305,12 +2309,16 @@
       var scoreColor = score ? (score >= 8 ? '#38bfa1' : (score >= 5 ? '#4a7cf6' : '#ef4444')) : '#4a7cf6';
       var scoreHtml = score ? '<div style="font-size:2rem;font-weight:700;color:' + scoreColor + ';margin-bottom:.5rem;">' + score + '/10</div>' : '';
 
-      // Format the feedback nicely
+      // Format the feedback nicely — convert newlines to HTML, strip any markdown code fences
       var formatted = feedback
+        .replace(/```[\s\S]*?```/g, '')      // strip code blocks
+        .replace(/`([^`]+)`/g, '<code style="background:var(--soft);padding:.1em .3em;border-radius:4px;font-size:.85em;">$1</code>')
         .replace(/SCORE:[^\n]*/i, '')
         .replace(/WHAT YOU NAILED:/gi, '<div style="font-weight:700;color:#38bfa1;margin-top:.75rem;">✓ What you nailed</div>')
         .replace(/KNOWLEDGE GAPS:/gi, '<div style="font-weight:700;color:#ef4444;margin-top:.75rem;">✗ Knowledge gaps</div>')
-        .replace(/ADVICE:/gi, '<div style="font-weight:700;color:#4a7cf6;margin-top:.75rem;"> To improve</div>');
+        .replace(/ADVICE:/gi, '<div style="font-weight:700;color:#4a7cf6;margin-top:.75rem;"> To improve</div>')
+        .replace(/\n{2,}/g, '</p><p style="margin-top:.5rem;">')  // double newline = paragraph
+        .replace(/\n/g, '<br>');             // single newline = line break
 
       var fb = document.getElementById('feedback-box');
       fb.className = 'feedback-box info-fb show';
@@ -2697,9 +2705,17 @@
   }
 
   function goToDashboard() {
+    // Mark current day as completed so dashboard advances to the next day
+    plan.days[dayIndex].completed = true;
     if (!day.isFinal && dayIndex < plan.days.length - 1) {
       localStorage.setItem('studyflow_current_day', dayIndex + 1);
     }
+    // Save updated plan back so completed flag persists
+    localStorage.setItem('studyflow_plan', JSON.stringify(plan));
+    // Also update in the plans array
+    var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+    var idx = allPlans.findIndex(function(p){ return String(p.id) === String(plan.id); });
+    if (idx >= 0) { allPlans[idx] = plan; localStorage.setItem('studyflow_plans', JSON.stringify(allPlans)); }
     window.location.href = 'dashboard.html';
   }
 
