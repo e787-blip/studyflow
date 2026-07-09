@@ -1615,36 +1615,221 @@
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
+  // ── BIG EQUATION — smart visual renderer, auto-detects topic from equation ──
   function renderBigEquation(q) {
-    // q: { question, equation, answer, steps, hint, explanation, difficulty }
-    var body = '<div class="q-meta"><span class="q-type-label" style="background:#f3f0ff;color:#7c3aed;">Solve</span>' +
-      '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
-      '<div style="text-align:center;padding:1.4rem .5rem 1rem;">' +
-      '<div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.6rem;">Solve for the unknown</div>' +
-      '<div style="font-family:\'Georgia\',serif;font-size:2.2rem;font-weight:700;color:var(--ink);letter-spacing:.02em;line-height:1.3;padding:.8rem 1rem;background:var(--soft);border-radius:14px;border:2px solid var(--border);">' +
-      (q.equation || q.question) + '</div></div>' +
-      (q.steps ? '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:.75rem;padding:.7rem .9rem;background:var(--soft);border-radius:10px;line-height:1.7;">' + q.steps + '</div>' : '') +
-      '<div class="fill-wrap">' +
-      '<input class="fill-input" id="fill-input" type="text" placeholder="Answer..." inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off"/>' +
+    var eq = (q.equation || q.question || '').trim();
+    var ans = q.answer || '';
+    var diff = (q.difficulty || 'Medium');
+    var diffClass = diff.toLowerCase();
+    var expl = q.explanation || '';
+    var hint = q.hint || 'Work step by step.';
+
+    // ── TOPIC DETECTION ──
+    var topic = detectMathTopic(eq);
+    var visual = buildMathVisual(topic, eq, q);
+
+    var body =
+      '<div class="q-meta">' +
+      '<span class="q-type-label" style="background:#f3f0ff;color:#7c3aed;">' + topic.label + '</span>' +
+      '<span class="q-difficulty ' + diffClass + '">' + diff + '</span>' +
+      '</div>' +
+      '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:.75rem;">' + topic.instruction + '</div>' +
+      visual +
+      '<div class="fill-wrap" style="margin-top:.9rem;">' +
+      '<input class="fill-input" id="fill-input" type="text" placeholder="' + topic.placeholder + '" inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off"/>' +
       '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
       '</div>' +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show steps</button>' +
-      '<div class="hint-box" id="hint-box">' + (q.hint || 'Work step by step.') + '</div></div>' +
+      '<div class="hint-box" id="hint-box">' + hint + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
     var card = '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Equation</div><h2>Solve it</h2></div>' +
+      '<div class="card-header"><div class="card-badge">✦ ' + topic.badge + '</div><h2>' + topic.title + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
-      '<div class="card-footer"><span class="footer-left"></span>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
 
     setTimeout(function() {
       var btn = document.getElementById('fill-btn');
       var inp = document.getElementById('fill-input');
-      if (btn) { btn.dataset.answer = q.answer || ''; btn.dataset.explanation = q.explanation || ''; }
-      if (inp) { inp.addEventListener('keydown', function(e){ if(e.key==='Enter') answerFillBtn(); }); inp.focus(); }
+      if (btn) { btn.dataset.answer = ans; btn.dataset.explanation = expl; }
+      if (inp) {
+        inp.addEventListener('keydown', function(e){ if(e.key==='Enter') answerFillBtn(); });
+        inp.focus();
+      }
+      // Run any topic-specific post-render (e.g. fraction SVG animations)
+      if (topic.postRender) topic.postRender();
     }, 60);
     return card;
+  }
+
+  // ── TOPIC DETECTOR ──
+  function detectMathTopic(eq) {
+    var e = eq.toLowerCase();
+    // Order matters — most specific first
+    if (/d\/dx|dy\/dx|f'\(|derivative|integral|∫|lim|limit/.test(e))
+      return { id:'calculus', label:'Calculus', badge:'Calculus', title:'Solve it', instruction:'Differentiate, integrate, or evaluate the limit.', placeholder:'Answer…' };
+    if (/\bsin\b|\bcos\b|\btan\b|\bcsc\b|\bsec\b|\bcot\b|\bθ\b|\bangle\b|°|\bradian\b/.test(e))
+      return { id:'trig', label:'Trigonometry', badge:'Trig', title:'Solve it', instruction:'Apply the trig identity or evaluate the expression.', placeholder:'Answer…' };
+    if (/f\s*\(|g\s*\(|h\s*\(|function|→|domain|range|f\(x\)|g\(x\)/.test(e))
+      return { id:'function', label:'Functions', badge:'Functions', title:'Evaluate the function', instruction:'Substitute the input value and solve.', placeholder:'f(x) = ?' };
+    if (/\^2|\^3|x²|x³|quadratic|ax²|bx\+c/.test(e))
+      return { id:'algebra', label:'Algebra', badge:'Equation', title:'Solve for x', instruction:'Solve the equation — show your work step by step.', placeholder:'x = ?' };
+    if (/√|sqrt|radical|∛/.test(e))
+      return { id:'radical', label:'Radicals', badge:'Equation', title:'Simplify', instruction:'Simplify the radical expression.', placeholder:'Answer…' };
+    if (/\/|\bfraction\b|\b\d+\s*over\s*\d+\b|\d+\/\d+/.test(e) && !/https?/.test(e))
+      return { id:'fraction', label:'Fractions', badge:'Fractions', title:'Compute the fraction', instruction:'Perform the operation and simplify your answer.', placeholder:'Answer as fraction…' };
+    if (/\bperimeter\b|\barea\b|\bvolume\b|\bangle\b|\btriangle\b|\bcircle\b|\brectangle\b|\bsquare\b|\bgeometry\b|\br\s*=|\bπ\b/.test(e))
+      return { id:'geometry', label:'Geometry', badge:'Geometry', title:'Find the measurement', instruction:'Apply the formula and solve.', placeholder:'Answer with units…' };
+    if (/\bpercent\b|%|\bratio\b|\bproportion\b|\brate\b|\bper\b/.test(e))
+      return { id:'ratio', label:'Ratios & %', badge:'Equation', title:'Solve it', instruction:'Set up the proportion or percentage equation and solve.', placeholder:'Answer…' };
+    if (/×|multiplication|\*\s*\d|\d\s*\*|\bproduct\b/.test(e) && !/\^/.test(e))
+      return { id:'multiply', label:'Multiplication', badge:'Arithmetic', title:'Multiply', instruction:'Find the product.', placeholder:'Answer…' };
+    if (/÷|division|\/\s*\d|\d\s*\/\s*\d|\bquotient\b/.test(e) && !/http|[a-z]{2,}/.test(e))
+      return { id:'divide', label:'Division', badge:'Arithmetic', title:'Divide', instruction:'Find the quotient.', placeholder:'Answer…' };
+    if (/\+|\bsum\b|\badd\b/.test(e) && !/-.*=/.test(e) && !/[a-z]/.test(e))
+      return { id:'add', label:'Addition', badge:'Arithmetic', title:'Add', instruction:'Stack and add.', placeholder:'Answer…' };
+    if ((/\bsubtract\b|\bminus\b|\bdifference\b/.test(e) || /^\s*\d[\d\s]*-\s*\d/.test(e)) && !/[a-z]/.test(e))
+      return { id:'subtract', label:'Subtraction', badge:'Arithmetic', title:'Subtract', instruction:'Find the difference.', placeholder:'Answer…' };
+    // Default: algebra/equation
+    return { id:'algebra', label:'Algebra', badge:'Equation', title:'Solve for x', instruction:'Solve the equation step by step.', placeholder:'x = ?' };
+  }
+
+  // ── VISUAL BUILDER — builds the topic-specific visual display ──
+  function buildMathVisual(topic, eq, q) {
+    var SERIF = 'font-family:\'Georgia\',serif;';
+    var BOX = 'padding:.9rem 1.1rem;background:var(--soft);border-radius:14px;border:2px solid var(--border);';
+
+    // ── ADDITION: vertical stacked format ──
+    if (topic.id === 'add' || topic.id === 'subtract') {
+      var nums = eq.match(/-?\d+(?:\.\d+)?/g) || [];
+      if (nums.length >= 2) {
+        var top = nums[0], bot = nums[1];
+        var op = topic.id === 'subtract' ? '−' : '+';
+        var maxLen = Math.max(top.replace('-','').length, bot.replace('-','').length);
+        var pad = function(n){ var s = String(n); while(s.length < maxLen + 1) s = '\u00a0' + s; return s; };
+        return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;display:inline-block;min-width:140px;">' +
+          '<div style="' + SERIF + 'font-size:2.2rem;font-weight:700;color:var(--ink);letter-spacing:.05em;white-space:pre;font-variant-numeric:tabular-nums;">' +
+          '\u00a0' + pad(top) + '<br>' +
+          op + pad(bot) + '<br>' +
+          '<span style="display:inline-block;border-top:3px solid var(--ink);width:100%;margin:4px 0;"></span><br>' +
+          '<span style="color:#7c3aed;">___</span>' +
+          '</div></div>';
+      }
+    }
+
+    // ── MULTIPLICATION: vertical long-form ──
+    if (topic.id === 'multiply') {
+      var nums2 = eq.match(/\d+(?:\.\d+)?/g) || [];
+      if (nums2.length >= 2) {
+        var a = nums2[0], b = nums2[1];
+        return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;display:inline-block;min-width:140px;">' +
+          '<div style="' + SERIF + 'font-size:2.2rem;font-weight:700;color:var(--ink);letter-spacing:.05em;white-space:pre;font-variant-numeric:tabular-nums;">' +
+          '\u00a0\u00a0' + a + '<br>' +
+          '×\u00a0' + b + '<br>' +
+          '<span style="display:inline-block;border-top:3px solid var(--ink);width:100%;margin:4px 0;"></span><br>' +
+          '<span style="color:#7c3aed;">___</span>' +
+          '</div></div>';
+      }
+    }
+
+    // ── DIVISION: long division bracket ──
+    if (topic.id === 'divide') {
+      var nums3 = eq.match(/\d+(?:\.\d+)?/g) || [];
+      if (nums3.length >= 2) {
+        var dividend = nums3[0], divisor = nums3[1];
+        return '<div style="' + BOX + 'margin:.5rem 0 .9rem;text-align:center;">' +
+          '<div style="' + SERIF + 'font-size:1.6rem;font-weight:700;color:var(--ink);display:inline-block;text-align:left;">' +
+          '<span style="font-size:0.85em;color:var(--muted);">' + divisor + '</span>' +
+          '<span style="border-left:2.5px solid var(--ink);border-top:2.5px solid var(--ink);padding:.1em .5em .1em .4em;margin-left:2px;">' + dividend + '</span>' +
+          '</div>' +
+          '<div style="font-size:0.8rem;color:var(--muted);margin-top:.5rem;">' + dividend + ' ÷ ' + divisor + ' = ?</div>' +
+          '</div>';
+      }
+    }
+
+    // ── FRACTIONS: visual fraction bars ──
+    if (topic.id === 'fraction') {
+      // Find fractions like 3/4, 1/2 in the equation
+      var fracParts = eq.match(/(-?\d+)\s*\/\s*(-?\d+)/g) || [];
+      var fracHtml = '';
+      if (fracParts.length > 0) {
+        fracHtml = fracParts.map(function(f) {
+          var parts = f.split('/');
+          var num = (parts[0] || '').trim();
+          var den = (parts[1] || '').trim();
+          return '<span style="display:inline-flex;flex-direction:column;align-items:center;' + SERIF + 'font-size:1.8rem;font-weight:700;color:var(--ink);margin:0 .4rem;vertical-align:middle;">' +
+            '<span>' + num + '</span>' +
+            '<span style="border-top:2.5px solid var(--ink);width:100%;display:block;margin:3px 0;min-width:1.5rem;"></span>' +
+            '<span>' + den + '</span>' +
+            '</span>';
+        }).join('<span style="font-size:1.8rem;font-weight:700;color:var(--muted);vertical-align:middle;margin:0 .3rem;">' + (eq.includes('+') ? '+' : eq.includes('-') && !eq.startsWith('-') ? '−' : eq.includes('×') || eq.includes('*') ? '×' : eq.includes('÷') || eq.includes('/') ? '÷' : '') + '</span>');
+      }
+      return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:.5rem;">' +
+        (fracHtml || '<span style="' + SERIF + 'font-size:2rem;font-weight:700;color:var(--ink);">' + eq + '</span>') +
+        '<span style="font-size:1.8rem;font-weight:700;color:var(--muted);vertical-align:middle;margin:0 .3rem;">=</span>' +
+        '<span style="' + SERIF + 'font-size:2rem;font-weight:700;color:#7c3aed;">?</span>' +
+        '</div>';
+    }
+
+    // ── FUNCTIONS: f(x) input→output display ──
+    if (topic.id === 'function') {
+      // Extract f(x) = ... and show input→output table
+      var funcMatch = eq.match(/f\s*\(x\)\s*=\s*(.+)/i) || eq.match(/[fgh]\s*\(x\)\s*=\s*(.+)/i);
+      var inputMatch = eq.match(/f\s*\((-?\d+(?:\.\d+)?)\)/i);
+      var inputVal = inputMatch ? inputMatch[1] : null;
+      var funcDef = funcMatch ? funcMatch[1].trim() : eq;
+      return '<div style="' + BOX + 'margin:.5rem 0 .9rem;">' +
+        '<div style="text-align:center;' + SERIF + 'font-size:2rem;font-weight:700;color:var(--ink);margin-bottom:.85rem;">' + eq + '</div>' +
+        (inputVal ? '<div style="display:flex;align-items:center;justify-content:center;gap:.75rem;">' +
+          '<div style="text-align:center;padding:.6rem 1rem;background:#eef4ff;border-radius:10px;border:1.5px solid #4a7cf6;">' +
+          '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.07em;color:#4a7cf6;text-transform:uppercase;">Input</div>' +
+          '<div style="' + SERIF + 'font-size:1.6rem;font-weight:700;color:var(--ink);">x = ' + inputVal + '</div>' +
+          '</div>' +
+          '<div style="font-size:1.4rem;color:var(--muted);">→</div>' +
+          '<div style="text-align:center;padding:.6rem 1rem;background:#f3f0ff;border-radius:10px;border:1.5px solid #7c3aed;">' +
+          '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.07em;color:#7c3aed;text-transform:uppercase;">Output</div>' +
+          '<div style="' + SERIF + 'font-size:1.6rem;font-weight:700;color:#7c3aed;">f(' + inputVal + ') = ?</div>' +
+          '</div>' +
+          '</div>' : '') +
+        '</div>';
+    }
+
+    // ── GEOMETRY: formula + shape label ──
+    if (topic.id === 'geometry') {
+      var shapeIcon = '▭';
+      if (/circle|radius|diameter|π/.test(eq.toLowerCase())) shapeIcon = '○';
+      else if (/triangle/.test(eq.toLowerCase())) shapeIcon = '△';
+      else if (/square/.test(eq.toLowerCase())) shapeIcon = '□';
+      return '<div style="' + BOX + 'margin:.5rem 0 .9rem;text-align:center;">' +
+        '<div style="font-size:2.8rem;margin-bottom:.5rem;">' + shapeIcon + '</div>' +
+        '<div style="' + SERIF + 'font-size:1.7rem;font-weight:700;color:var(--ink);margin-bottom:.4rem;">' + eq + '</div>' +
+        '<div style="font-size:0.78rem;color:var(--muted);">Find the value — include units in your answer</div>' +
+        '</div>';
+    }
+
+    // ── CALCULUS: properly formatted with notation hint ──
+    if (topic.id === 'calculus') {
+      return '<div style="' + BOX + 'margin:.5rem 0 .9rem;text-align:center;">' +
+        '<div style="' + SERIF + 'font-size:2rem;font-weight:700;color:var(--ink);margin-bottom:.5rem;line-height:1.4;">' + eq + '</div>' +
+        '<div style="display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:.6rem;">' +
+        '<span style="font-size:0.72rem;padding:.25rem .6rem;background:#f3f0ff;color:#7c3aed;border-radius:6px;font-weight:600;">Power rule: d/dx[xⁿ] = nxⁿ⁻¹</span>' +
+        '<span style="font-size:0.72rem;padding:.25rem .6rem;background:#eef4ff;color:#4a7cf6;border-radius:6px;font-weight:600;">Chain rule: d/dx[f(g(x))] = f\'(g(x))·g\'(x)</span>' +
+        '</div>' +
+        '</div>';
+    }
+
+    // ── ALGEBRA (default for x-based equations) ──
+    if (topic.id === 'algebra' || topic.id === 'radical' || topic.id === 'trig' || topic.id === 'ratio') {
+      return '<div style="text-align:center;padding:1.4rem .5rem 1rem;">' +
+        '<div style="' + SERIF + 'font-size:2.4rem;font-weight:700;color:var(--ink);letter-spacing:.02em;line-height:1.3;' + BOX + 'display:inline-block;min-width:200px;">' +
+        eq + '</div></div>';
+    }
+
+    // ── FALLBACK: plain display ──
+    return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;">' +
+      '<div style="' + SERIF + 'font-size:2.2rem;font-weight:700;color:var(--ink);">' + eq + '</div>' +
+      '</div>';
   }
 
   // ── WORD PROBLEM ──
