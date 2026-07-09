@@ -1308,9 +1308,16 @@
       }
     }
 
+    // Inject science diagram if applicable
+    var sciDiagram = '';
+    if (plan && plan.subjectType === 'science') {
+      sciDiagram = getScienceDiagram(q.question || '');
+    }
+
     var body =
       '<div class="q-meta"><span class="q-type-label fill">Fill in the Blank</span>' +
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
+      sciDiagram +
       '<div class="q-text" style="line-height:2.2;">' + questionText + '</div>' +
       '<div style="font-size:0.75rem;color:var(--muted);margin:.6rem 0 .75rem;">Type the missing word, number, or formula</div>' +
       '<div class="fill-wrap">' +
@@ -1591,15 +1598,26 @@
     var isHistorySource = ['sourcing','cause-effect','perspective'].indexOf(q.questionType) !== -1;
     var passageLabel = isHistorySource ? 'EXCERPT' : 'PASSAGE';
 
+    // For vocab-in-context: highlight the target word in the passage
+    var passageText = q.passage || '';
+    if (q.questionType === 'vocab-in-context') {
+      // Extract the target word from question "As used in the passage, the word X most nearly means..."
+      var wordMatch = q.question && q.question.match(/the word[s]?\s+[""""]?(\w+)[""""]?\s+most nearly/i);
+      if (!wordMatch) wordMatch = q.question && q.question.match(/[""](\w+)[""]|the word\s+(\w+)/i);
+      var targetWord = wordMatch ? (wordMatch[1] || wordMatch[2] || '') : '';
+      if (targetWord && passageText.toLowerCase().includes(targetWord.toLowerCase())) {
+        var re = new RegExp('\\b(' + targetWord.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')\\b', 'i');
+        passageText = passageText.replace(re, '<mark style="background:#fef08a;padding:.05em .2em;border-radius:3px;font-style:normal;font-weight:700;">$1</mark>');
+      }
+    }
+
     var body =
       '<div class="q-meta"><span class="q-type-label" style="background:#f3f0ff;color:#7c3aed;">' + typeLabel + '</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
-      // Passage block
       '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.08em;color:#7c3aed;margin-bottom:.35rem;">' + passageLabel + '</div>' +
       '<div style="background:var(--soft);border-left:3px solid #7c3aed;border-radius:0 12px 12px 0;padding:.9rem 1rem 1rem;margin-bottom:1rem;font-size:0.88rem;line-height:1.8;color:var(--ink);font-style:italic;">' +
-      (q.passage || '') +
+      passageText +
       '</div>' +
-      // Question
       '<div class="q-text" style="font-style:normal;margin-bottom:.75rem;">' + q.question + '</div>' +
       optHtml +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
@@ -1834,11 +1852,97 @@
 
   // ── WORD PROBLEM ──
   function renderWordProblem(q) {
-    // q: { question, scenario, answer, hint, explanation, difficulty }
+    var scenario = q.scenario || q.question || '';
+    var s = scenario.toLowerCase();
+
+    // ── Detect problem type and build visual aid ──
+    var visual = '';
+    var CELL = 'padding:.6rem .8rem;border:1.5px solid var(--border);border-radius:8px;background:var(--soft);text-align:center;min-width:70px;';
+    var LABEL = 'font-size:0.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.2rem;';
+    var VAL = 'font-size:1rem;font-weight:700;color:var(--ink);font-family:\'Georgia\',serif;';
+
+    if (/speed|mph|kph|km\/h|hour|distance|travel|train|car|walk|run|rate|time/.test(s)) {
+      // Distance = Rate × Time table
+      var rMatch = scenario.match(/(\d+(?:\.\d+)?)\s*(?:mph|kph|km\/h|miles per hour|km per hour)/i);
+      var tMatch = scenario.match(/(\d+(?:\.\d+)?)\s*hour/i);
+      var r = rMatch ? rMatch[1] : '?'; var t = tMatch ? tMatch[1] : '?';
+      var d = (rMatch && tMatch) ? String(parseFloat(r) * parseFloat(t)) : '?';
+      visual = '<div style="margin:.75rem 0;overflow-x:auto;">' +
+        '<table style="border-collapse:collapse;width:100%;font-family:var(--sans);font-size:0.82rem;">' +
+        '<tr style="background:#eef4ff;"><th style="padding:.5rem .75rem;border:1.5px solid var(--border);color:#4a7cf6;font-weight:700;">Distance</th>' +
+        '<th style="padding:.5rem .75rem;border:1.5px solid var(--border);color:#4a7cf6;font-weight:700;">=</th>' +
+        '<th style="padding:.5rem .75rem;border:1.5px solid var(--border);color:#4a7cf6;font-weight:700;">Rate</th>' +
+        '<th style="padding:.5rem .75rem;border:1.5px solid var(--border);color:#4a7cf6;font-weight:700;">×</th>' +
+        '<th style="padding:.5rem .75rem;border:1.5px solid var(--border);color:#4a7cf6;font-weight:700;">Time</th></tr>' +
+        '<tr><td style="padding:.5rem .75rem;border:1.5px solid var(--border);text-align:center;font-weight:700;color:#7c3aed;font-family:Georgia,serif;">' + (d !== '?' ? d : '?') + '</td>' +
+        '<td style="padding:.5rem .75rem;border:1.5px solid var(--border);text-align:center;color:var(--muted);">=</td>' +
+        '<td style="padding:.5rem .75rem;border:1.5px solid var(--border);text-align:center;font-weight:600;">' + r + '</td>' +
+        '<td style="padding:.5rem .75rem;border:1.5px solid var(--border);text-align:center;color:var(--muted);">×</td>' +
+        '<td style="padding:.5rem .75rem;border:1.5px solid var(--border);text-align:center;font-weight:600;">' + t + '</td></tr>' +
+        '</table></div>';
+
+    } else if (/percent|%|discount|tax|tip|sale|markup|interest/.test(s)) {
+      // Proportion / percentage setup
+      var numMatch = scenario.match(/(\d+(?:\.\d+)?)\s*%/);
+      var totalMatch = scenario.match(/of\s+\$?(\d+(?:\.\d+)?)/i) || scenario.match(/\$?(\d+(?:\.\d+)?)/);
+      var pct = numMatch ? numMatch[1] : '?'; var total = totalMatch ? totalMatch[1] : '?';
+      visual = '<div style="display:flex;align-items:center;justify-content:center;gap:.75rem;margin:.75rem 0;flex-wrap:wrap;">' +
+        '<div style="' + CELL + '"><div style="' + LABEL + '">Percent</div><div style="' + VAL + '">' + pct + '%</div></div>' +
+        '<div style="font-size:1.2rem;color:var(--muted);">of</div>' +
+        '<div style="' + CELL + '"><div style="' + LABEL + '">Total</div><div style="' + VAL + '">' + (total !== '?' ? '$'+total : '?') + '</div></div>' +
+        '<div style="font-size:1.2rem;color:var(--muted);">=</div>' +
+        '<div style="' + CELL + 'border-color:#7c3aed;background:#f3f0ff;"><div style="' + LABEL + 'color:#7c3aed;">Answer</div><div style="' + VAL + 'color:#7c3aed;">?</div></div>' +
+        '</div>';
+
+    } else if (/area|perimeter|rectangle|square|triangle|circle|length|width|radius|diameter/.test(s)) {
+      // Geometry diagram
+      var shape = /circle|radius|diameter/.test(s) ? 'circle' : /triangle/.test(s) ? 'triangle' : 'rectangle';
+      var lMatch = scenario.match(/length(?:\s+of)?\s*(?:is|=|:)?\s*(\d+)/i) || scenario.match(/l\s*=\s*(\d+)/i);
+      var wMatch = scenario.match(/width(?:\s+of)?\s*(?:is|=|:)?\s*(\d+)/i) || scenario.match(/w\s*=\s*(\d+)/i);
+      var rMatchG = scenario.match(/radius(?:\s+of)?\s*(?:is|=|:)?\s*(\d+)/i) || scenario.match(/r\s*=\s*(\d+)/i);
+      var l = lMatch ? lMatch[1] : '?'; var w = wMatch ? wMatch[1] : '?'; var r2 = rMatchG ? rMatchG[1] : '?';
+      if (shape === 'circle') {
+        visual = '<div style="text-align:center;margin:.75rem 0;">' +
+          '<svg viewBox="0 0 120 120" width="100" height="100" style="overflow:visible;">' +
+          '<circle cx="60" cy="60" r="45" fill="#eef4ff" stroke="#4a7cf6" stroke-width="2"/>' +
+          '<line x1="60" y1="60" x2="105" y2="60" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="4 2"/>' +
+          '<text x="82" y="55" font-size="10" fill="#7c3aed" font-weight="700" text-anchor="middle">r=' + r2 + '</text>' +
+          '<circle cx="60" cy="60" r="3" fill="#4a7cf6"/>' +
+          '</svg></div>';
+      } else if (shape === 'rectangle') {
+        visual = '<div style="text-align:center;margin:.75rem 0;">' +
+          '<svg viewBox="0 0 140 90" width="140" height="90">' +
+          '<rect x="10" y="10" width="120" height="70" fill="#eef4ff" stroke="#4a7cf6" stroke-width="2" rx="4"/>' +
+          '<text x="70" y="56" font-size="10" fill="#7c3aed" font-weight="700" text-anchor="middle">l=' + l + ', w=' + w + '</text>' +
+          '</svg></div>';
+      } else {
+        visual = '<div style="text-align:center;margin:.75rem 0;">' +
+          '<svg viewBox="0 0 120 100" width="110" height="90">' +
+          '<polygon points="60,10 110,90 10,90" fill="#eef4ff" stroke="#4a7cf6" stroke-width="2"/>' +
+          '<text x="60" y="65" font-size="10" fill="#7c3aed" font-weight="700" text-anchor="middle">Find area</text>' +
+          '</svg></div>';
+      }
+
+    } else if (/total|sum|add|bought|spent|paid|cost|price|each|per|combined/.test(s)) {
+      // Number line for simple addition/totals
+      var nums = scenario.match(/\d+(?:\.\d+)?/g) || [];
+      if (nums.length >= 2) {
+        var a2 = parseFloat(nums[0]); var b2 = parseFloat(nums[1]);
+        visual = '<div style="display:flex;align-items:center;gap:.5rem;margin:.75rem 0;flex-wrap:wrap;">' +
+          '<div style="' + CELL + '"><div style="' + LABEL + '">Amount 1</div><div style="' + VAL + '">' + nums[0] + '</div></div>' +
+          '<div style="font-size:1.4rem;color:var(--muted);font-weight:700;">+</div>' +
+          '<div style="' + CELL + '"><div style="' + LABEL + '">Amount 2</div><div style="' + VAL + '">' + nums[1] + '</div></div>' +
+          '<div style="font-size:1.4rem;color:var(--muted);font-weight:700;">=</div>' +
+          '<div style="' + CELL + 'border-color:#7c3aed;background:#f3f0ff;"><div style="' + LABEL + 'color:#7c3aed;">Total</div><div style="' + VAL + 'color:#7c3aed;">?</div></div>' +
+          '</div>';
+      }
+    }
+
     var body = '<div class="q-meta"><span class="q-type-label" style="background:#fff8ed;color:#d97706;">Word Problem</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
-      '<div style="background:linear-gradient(135deg,#f0f7ff,#e8f4ff);border-left:4px solid #4a7cf6;border-radius:0 14px 14px 0;padding:1rem 1.1rem;margin-bottom:1rem;font-size:0.9rem;line-height:1.75;color:var(--ink);">' +
-      (q.scenario || q.question) + '</div>' +
+      '<div style="background:linear-gradient(135deg,#f0f7ff,#e8f4ff);border-left:4px solid #4a7cf6;border-radius:0 14px 14px 0;padding:1rem 1.1rem;margin-bottom:.75rem;font-size:0.9rem;line-height:1.75;color:var(--ink);">' +
+      scenario + '</div>' +
+      visual +
       '<div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin-bottom:.5rem;">Your answer:</div>' +
       '<div class="fill-wrap">' +
       '<input class="fill-input" id="fill-input" type="text" placeholder="Type your answer..." inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off"/>' +
@@ -1851,7 +1955,7 @@
     var card = '<div class="session-card">' +
       '<div class="card-header"><div class="card-badge">✦ Word Problem</div><h2>Real world math</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
-      '<div class="card-footer"><span class="footer-left"></span>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
 
     setTimeout(function() {
@@ -1865,18 +1969,62 @@
 
   // ── ERROR SPOT (find the mistake in the worked solution) ──
   function renderErrorSpot(q) {
-    // q: { question, steps: [{text, hasError}], correctStep, answer, hint, explanation, difficulty }
     var steps = q.steps || [];
+
+    // ── Detect math topic from first step text to show a relevant visual ──
+    var topicVisual = '';
+    var firstStepText = (steps[0] && steps[0].text) || (q.question || '');
+    var topic = detectMathTopic(firstStepText);
+    // Only show visual for topics that have a meaningful compact display
+    var visualTopics = { fraction:1, add:1, subtract:1, multiply:1, divide:1, algebra:1, geometry:1 };
+    if (visualTopics[topic.id] && firstStepText.length < 60) {
+      var BOX_SMALL = 'display:inline-block;padding:.5rem .9rem;background:var(--soft);border-radius:10px;border:2px solid var(--border);margin-bottom:.75rem;';
+      if (topic.id === 'fraction') {
+        // Mini fraction bar visual
+        var fracParts = firstStepText.match(/(-?\d+)\s*\/\s*(-?\d+)/g) || [];
+        if (fracParts.length > 0) {
+          topicVisual = '<div style="text-align:center;' + BOX_SMALL + '">' +
+            fracParts.slice(0,2).map(function(f){
+              var p = f.split('/');
+              return '<span style="display:inline-flex;flex-direction:column;align-items:center;font-family:Georgia,serif;font-size:1.2rem;font-weight:700;color:var(--ink);margin:0 .3rem;">' +
+                '<span>' + p[0].trim() + '</span>' +
+                '<span style="border-top:2px solid var(--ink);width:100%;min-width:1rem;display:block;margin:2px 0;"></span>' +
+                '<span>' + p[1].trim() + '</span>' +
+                '</span>';
+            }).join('<span style="font-size:1.2rem;font-weight:700;color:var(--muted);vertical-align:middle;margin:0 .2rem;">=</span>') +
+            '<span style="font-family:Georgia,serif;font-size:1.2rem;font-weight:700;color:#7c3aed;margin-left:.3rem;">?</span>' +
+            '</div>';
+        }
+      } else if (topic.id === 'add' || topic.id === 'subtract') {
+        var nums = firstStepText.match(/\d+/g) || [];
+        if (nums.length >= 2) {
+          topicVisual = '<div style="text-align:center;' + BOX_SMALL + '">' +
+            '<span style="font-family:Georgia,serif;font-size:1.4rem;font-weight:700;color:var(--ink);white-space:pre;">' +
+            '\u00a0' + nums[0] + '\n' + (topic.id==='subtract'?'−':'+') + nums[1] + '\n─────' +
+            '</span></div>';
+        }
+      } else if (topic.id === 'algebra' || topic.id === 'geometry') {
+        // Show the initial equation from the first step
+        var eqMatch = firstStepText.match(/[0-9x\^+\-=\(\)]+/);
+        if (eqMatch) {
+          topicVisual = '<div style="text-align:center;' + BOX_SMALL + 'font-family:Georgia,serif;font-size:1.3rem;font-weight:700;color:var(--ink);">' + firstStepText + '</div>';
+        }
+      }
+    }
+
     var stepsHtml = steps.map(function(step, i) {
       return '<button class="error-step-btn" data-idx="' + i + '" onclick="selectErrorStep(this,' + i + ',' + (step.hasError ? 'true' : 'false') + ',\'' + esc(q.explanation) + '\')" ' +
-        'style="width:100%;text-align:left;padding:.7rem .9rem;border-radius:10px;border:1.5px solid var(--border);background:var(--soft);font-family:var(--sans);font-size:0.85rem;font-weight:500;color:var(--ink);cursor:pointer;margin-bottom:.4rem;transition:all .2s;">' +
-        '<span style="font-size:0.7rem;font-weight:700;color:var(--muted);margin-right:.5rem;">Step ' + (i+1) + ':</span>' + step.text + '</button>';
+        'style="width:100%;text-align:left;padding:.7rem .9rem;border-radius:10px;border:1.5px solid var(--border);background:var(--soft);font-family:var(--sans);font-size:0.88rem;font-weight:500;color:var(--ink);cursor:pointer;margin-bottom:.4rem;transition:border-color .2s,background .2s;">' +
+        '<span style="display:inline-block;min-width:20px;font-size:0.7rem;font-weight:700;color:var(--muted);margin-right:.5rem;font-variant-numeric:tabular-nums;">Step ' + (i+1) + '</span>' +
+        '<span style="font-family:\'Georgia\',serif;">' + step.text + '</span>' +
+        '</button>';
     }).join('');
 
     var body = '<div class="q-meta"><span class="q-type-label" style="background:#fee2e2;color:#dc2626;">Find the Error</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
       '<div class="q-text">' + q.question + '</div>' +
-      '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:.75rem;">Tap the step that contains the mistake</div>' +
+      topicVisual +
+      '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:.6rem;">Tap the step that contains the mistake</div>' +
       stepsHtml +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Check each step carefully against the previous one.') + '</div></div>' +
@@ -1885,7 +2033,7 @@
     return '<div class="session-card">' +
       '<div class="card-header"><div class="card-badge">✦ Error Spotting</div><h2>Find the mistake</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
-      '<div class="card-footer"><span class="footer-left"></span>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
@@ -1898,22 +2046,118 @@
     fb.style.display = 'block';
     if (isError) {
       correctCount++; currentStreak++;
-      btn.style.background = '#d1faf0'; btn.style.borderColor = '#38bfa1';
+      btn.style.background = '#d1faf0'; btn.style.borderColor = '#38bfa1'; btn.style.color = '#065f46';
       fb.className = 'feedback-box show correct-fb';
       fb.innerHTML = '<div class="feedback-label">✓ Found it!</div><div class="feedback-text">' + (explanation || 'That step has the mistake.') + '</div>';
       spawnConfetti(); flashCard(true);
     } else {
       currentStreak = 0;
       btn.style.background = '#fee2e2'; btn.style.borderColor = '#ef4444';
+      // Also reveal which step was actually wrong
+      document.querySelectorAll('.error-step-btn').forEach(function(b, i) {
+        // check data-idx — the correct error step has hasError:true encoded in its onclick
+        if (b.onclick && b.onclick.toString().indexOf('true') !== -1 && b !== btn) {
+          b.style.background = '#d1faf0'; b.style.borderColor = '#38bfa1';
+        }
+      });
       fb.className = 'feedback-box show wrong-fb';
-      fb.innerHTML = '<div class="feedback-label">✗ Not this one</div><div class="feedback-text">' + (explanation || 'Check the other steps more carefully.') + '</div>';
+      fb.innerHTML = '<div class="feedback-label">✗ Not this one</div><div class="feedback-text">' + (explanation || 'The correct step is highlighted in green.') + '</div>';
       flashCard(false);
     }
     document.getElementById('btn-next').disabled = false;
     updateStats();
     updateStreak();
   }
-  // ── SENTENCE BUILDER (Duolingo-style: arrange shuffled words into correct order) ──
+  // ── SCIENCE DIAGRAMS — inline SVG diagrams auto-injected for science questions ──
+  function getScienceDiagram(questionText) {
+    var t = (questionText || '').toLowerCase();
+
+    // ── CELL (biology) ──
+    if (/cell|membrane|nucleus|mitochondria|organelle|cytoplasm|ribosome|chloroplast|vacuole/.test(t)) {
+      return '<div style="text-align:center;margin:.75rem 0;">' +
+        '<svg viewBox="0 0 200 140" width="180" height="126" style="max-width:100%;">' +
+        // Cell membrane
+        '<ellipse cx="100" cy="70" rx="90" ry="58" fill="#eef4ff" stroke="#4a7cf6" stroke-width="2"/>' +
+        // Nucleus
+        '<ellipse cx="85" cy="65" rx="28" ry="22" fill="#dce8ff" stroke="#4a7cf6" stroke-width="1.5" stroke-dasharray="4 2"/>' +
+        '<text x="85" y="68" font-size="8" fill="#2851c8" text-anchor="middle" font-weight="700">Nucleus</text>' +
+        // Mitochondria
+        '<ellipse cx="138" cy="52" rx="16" ry="9" fill="#fff8ed" stroke="#f59e0b" stroke-width="1.5"/>' +
+        '<text x="138" y="55" font-size="6.5" fill="#b45309" text-anchor="middle" font-weight="700">Mito.</text>' +
+        // Vacuole
+        '<ellipse cx="130" cy="88" rx="12" ry="10" fill="#f0fdf4" stroke="#38bfa1" stroke-width="1.5"/>' +
+        '<text x="130" y="91" font-size="6" fill="#065f46" text-anchor="middle">Vacuole</text>' +
+        // Cell membrane label
+        '<text x="100" y="135" font-size="8" fill="#4a7cf6" text-anchor="middle" font-weight="700">Cell (simplified)</text>' +
+        '</svg></div>';
+    }
+
+    // ── ATOM (chemistry) ──
+    if (/atom|electron|proton|neutron|nucleus|orbital|element|periodic|ion|bond|molecule/.test(t)) {
+      return '<div style="text-align:center;margin:.75rem 0;">' +
+        '<svg viewBox="0 0 160 160" width="130" height="130" style="max-width:100%;">' +
+        // Nucleus
+        '<circle cx="80" cy="80" r="14" fill="#fee2e2" stroke="#ef4444" stroke-width="2"/>' +
+        '<text x="80" y="84" font-size="8" fill="#991b1b" text-anchor="middle" font-weight="700">Nucleus</text>' +
+        // Orbits
+        '<ellipse cx="80" cy="80" rx="55" ry="22" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 2"/>' +
+        '<ellipse cx="80" cy="80" rx="55" ry="22" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 2" transform="rotate(60 80 80)"/>' +
+        '<ellipse cx="80" cy="80" rx="55" ry="22" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 2" transform="rotate(120 80 80)"/>' +
+        // Electrons
+        '<circle cx="135" cy="80" r="5" fill="#4a7cf6"/>' +
+        '<circle cx="52" cy="58" r="5" fill="#4a7cf6"/>' +
+        '<circle cx="52" cy="102" r="5" fill="#4a7cf6"/>' +
+        '<text x="80" y="155" font-size="8" fill="#4a7cf6" text-anchor="middle" font-weight="700">Atom (simplified)</text>' +
+        '</svg></div>';
+    }
+
+    // ── WAVE (physics) ──
+    if (/wave|frequency|wavelength|amplitude|sound|light|electromagnetic|vibration|oscillat/.test(t)) {
+      return '<div style="text-align:center;margin:.75rem 0;">' +
+        '<svg viewBox="0 0 200 90" width="190" height="85" style="max-width:100%;">' +
+        '<line x1="10" y1="45" x2="190" y2="45" stroke="#e2e8f0" stroke-width="1"/>' +
+        '<path d="M10,45 C25,15 45,15 60,45 C75,75 95,75 110,45 C125,15 145,15 160,45 C175,75 185,75 190,45" fill="none" stroke="#4a7cf6" stroke-width="2.5"/>' +
+        // Amplitude arrow
+        '<line x1="60" y1="45" x2="60" y2="15" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3 2"/>' +
+        '<text x="65" y="30" font-size="8" fill="#ef4444" font-weight="700">Amplitude</text>' +
+        // Wavelength arrow
+        '<line x1="10" y1="75" x2="110" y2="75" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arr3)"/>' +
+        '<text x="60" y="85" font-size="8" fill="#7c3aed" text-anchor="middle" font-weight="700">Wavelength (λ)</text>' +
+        '</svg></div>';
+    }
+
+    // ── FORCE / NEWTON (physics mechanics) ──
+    if (/force|newton|mass|acceleration|gravity|friction|velocity|momentum|pressure/.test(t)) {
+      return '<div style="text-align:center;margin:.75rem 0;">' +
+        '<svg viewBox="0 0 200 80" width="185" height="74" style="max-width:100%;">' +
+        '<rect x="80" y="25" width="40" height="30" rx="5" fill="#eef4ff" stroke="#4a7cf6" stroke-width="2"/>' +
+        '<text x="100" y="44" font-size="9" fill="#2851c8" text-anchor="middle" font-weight="700">Mass</text>' +
+        '<line x1="20" y1="40" x2="75" y2="40" stroke="#ef4444" stroke-width="2.5"/>' +
+        '<polygon points="75,35 85,40 75,45" fill="#ef4444"/>' +
+        '<text x="42" y="35" font-size="9" fill="#ef4444" font-weight="700">F</text>' +
+        '<line x1="125" y1="40" x2="180" y2="40" stroke="#38bfa1" stroke-width="2.5"/>' +
+        '<polygon points="180,35 190,40 180,45" fill="#38bfa1"/>' +
+        '<text x="152" y="35" font-size="9" fill="#38bfa1" font-weight="700">a</text>' +
+        '<text x="100" y="72" font-size="8" fill="#4a7cf6" text-anchor="middle" font-weight="700">F = ma</text>' +
+        '</svg></div>';
+    }
+
+    // ── PHOTOSYNTHESIS (biology) ──
+    if (/photosynthesis|chlorophyll|glucose|sunlight|carbon dioxide|co2|oxygen|o2/.test(t)) {
+      return '<div style="text-align:center;margin:.75rem 0;padding:.75rem;background:var(--soft);border-radius:12px;border:1.5px solid var(--border);">' +
+        '<div style="display:flex;align-items:center;justify-content:center;gap:.5rem;flex-wrap:wrap;font-size:0.82rem;">' +
+        '<div style="padding:.3rem .6rem;background:#fef9c3;border:1.5px solid #f59e0b;border-radius:8px;font-weight:700;color:#92400e;">CO₂ + H₂O</div>' +
+        '<div style="color:var(--muted);">+</div>' +
+        '<div style="padding:.3rem .6rem;background:#fff8ed;border:1.5px solid #f59e0b;border-radius:8px;font-weight:700;color:#92400e;">☀️ Sunlight</div>' +
+        '<div style="color:var(--muted);">→</div>' +
+        '<div style="padding:.3rem .6rem;background:#d1faf0;border:1.5px solid #38bfa1;border-radius:8px;font-weight:700;color:#065f46;">C₆H₁₂O₆ + O₂</div>' +
+        '</div>' +
+        '<div style="font-size:0.72rem;color:var(--muted);margin-top:.4rem;">via Chloroplasts</div>' +
+        '</div>';
+    }
+
+    return ''; // no diagram for this topic
+  }
   // q: { question, words: [...correct word order], translation, hint, explanation, difficulty }
   function renderSentence(q) {
     // Defense in depth — sanitizeDayQuestions should already guarantee this, but guard anyway
@@ -1967,9 +2211,31 @@
         '<span class="seq-text">' + item + '</span></div>';
     }).join('');
 
+    // For history: show a static horizontal timeline above the drag items
+    var isHistory = plan && (plan.subjectType === 'history' || /history|war|revolution|empire/.test((plan.subject || '').toLowerCase()));
+    var timelineHtml = '';
+    if (isHistory && q.items && q.items.length >= 3) {
+      var count = q.items.length;
+      var dotSpacing = Math.floor(220 / (count - 1));
+      var dots = q.items.map(function(item, i) {
+        var x = 20 + i * dotSpacing;
+        var label = item.length > 18 ? item.substring(0, 16) + '…' : item;
+        return '<circle cx="' + x + '" cy="20" r="5" fill="#4a7cf6" stroke="#fff" stroke-width="1.5"/>' +
+          '<text x="' + x + '" y="35" font-size="6.5" fill="var(--muted)" text-anchor="middle">' + (i+1) + '</text>';
+      }).join('');
+      var lineX2 = 20 + (count - 1) * dotSpacing;
+      timelineHtml = '<div style="margin:.5rem 0 .85rem;overflow-x:auto;">' +
+        '<svg viewBox="0 0 260 42" width="100%" style="max-width:280px;">' +
+        '<line x1="20" y1="20" x2="' + lineX2 + '" y2="20" stroke="#e2e8f0" stroke-width="2"/>' +
+        dots +
+        '<text x="130" y="10" font-size="7" fill="#4a7cf6" text-anchor="middle" font-weight="700">Drag to put in chronological order</text>' +
+        '</svg></div>';
+    }
+
     var body = '<div class="q-meta"><span class="q-type-label sequence">Put in Order</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
       '<div class="q-text">' + q.question + '</div>' +
+      timelineHtml +
       '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:.7rem;">Drag to reorder, then check your answer</div>' +
       '<div class="seq-wrap" id="seq-wrap">' + itemsHtml + '</div>' +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
