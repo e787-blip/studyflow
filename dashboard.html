@@ -1456,7 +1456,17 @@
     if (name) user.name = name;
     localStorage.setItem('studyflow_user', JSON.stringify(user));
 
-    var studentRecord = { name: name || user.name || 'Student', email: user.email, joinedAt: new Date().toISOString(), streak: 0, avgScore: null, lastActive: null };
+    var studentRecord = { 
+      name: name || user.name || 'Student', 
+      email: user.email, 
+      joinedAt: new Date().toISOString(), 
+      streak: 0, 
+      avgScore: null, 
+      lastActive: null,
+      questionsAnswered: 0,
+      timeStudied: 0,
+      subject: ''
+    };
     var classData = JSON.parse(localStorage.getItem('studyflow_class_' + code) || '{"students":[]}');
     if (!classData.students.find(function(s){ return s.email === user.email; })) {
       classData.students.push(studentRecord);
