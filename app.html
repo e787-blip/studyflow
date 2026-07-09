@@ -1400,39 +1400,113 @@
       .then(function(res) { return res.json(); })
       .then(function(data) {
         var raw = data.result || data.plan || '';
-        var jsonMatch = raw.match(/\{[\s\S]*/);
-        if (!jsonMatch) throw new Error('No JSON for day ' + dayNum);
-        var jsonStr = jsonMatch[0];
-        // Clean special characters that break JSON
-        jsonStr = jsonStr
-          .replace(/[\u2018\u2019]/g, "'")   // smart single quotes
-          .replace(/[\u201C\u201D]/g, '"')   // smart double quotes
-          .replace(/[\u2013\u2014]/g, '-')   // em/en dashes
-          .replace(/\u00A0/g, ' ')           // non-breaking spaces
-          .replace(/[\x00-\x1F\x7F]/g, ' ') // control characters
-          .replace(/\\'/g, "'");             // escaped apostrophes
-        // Fix truncated JSON by closing open brackets
-        var opens = (jsonStr.match(/\[/g)||[]).length;
-        var closes = (jsonStr.match(/\]/g)||[]).length;
-        var ob = (jsonStr.match(/\{/g)||[]).length;
-        var cb = (jsonStr.match(/\}/g)||[]).length;
-        for (var i=0;i<opens-closes;i++) jsonStr+=']';
-        for (var i=0;i<ob-cb;i++) jsonStr+='}';
-        var day;
-        try { day = JSON.parse(jsonStr); }
-        catch(e) {
-          // Last resort — strip everything after last valid closing brace
-          var lastBrace = jsonStr.lastIndexOf('}');
-          if (lastBrace > 0) {
-            jsonStr = jsonStr.substring(0, lastBrace + 1);
-            day = JSON.parse(jsonStr);
-          } else {
-            throw new Error('JSON parse failed for day ' + dayNum + ': ' + e.message);
-          }
+        var wasTruncated = data.truncated === true;
+        if (wasTruncated) {
+          console.warn('[generate] Day ' + dayNum + ' response was truncated by max_tokens — running repair');
         }
-        callback(null, sanitizeDayQuestions(day));
+
+        // ── LAYER 1: Extract JSON object from response ──
+        var jsonMatch = raw.match(/\{[\s\S]*/);
+        if (!jsonMatch) throw new Error('No JSON found in response for day ' + dayNum);
+        var jsonStr = jsonMatch[0];
+
+        // ── LAYER 2: Clean characters that corrupt JSON ──
+        jsonStr = jsonStr
+          .replace(/[\u2018\u2019]/g, "'")    // smart single quotes
+          .replace(/[\u201C\u201D]/g, '"')    // smart double quotes
+          .replace(/[\u2013\u2014]/g, '-')    // em/en dashes
+          .replace(/\u00A0/g, ' ')            // non-breaking spaces
+          .replace(/\\'/g, "'")               // escaped apostrophes
+          .replace(/\t/g, ' ')               // tabs
+          // Fix unescaped newlines INSIDE string values (the #1 cause of the error you saw)
+          .replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, function(match) {
+            return match.replace(/\n/g, ' ').replace(/\r/g, ' ');
+          });
+
+        // ── LAYER 3: Try to parse as-is ──
+        var day;
+        try {
+          day = JSON.parse(jsonStr);
+          return callback(null, sanitizeDayQuestions(day));
+        } catch(e1) { /* continue to repair */ }
+
+        // ── LAYER 4: Smart truncation repair ──
+        // Find the last COMPLETE question object — walk backwards from end
+        // looking for a valid closing pattern: "}]}" which closes questions array + day obj
+        var repaired = jsonStr;
+
+        // Try closing unclosed brackets/braces
+        var opens  = (repaired.match(/\[/g) || []).length;
+        var closes = (repaired.match(/\]/g) || []).length;
+        var ob = (repaired.match(/\{/g) || []).length;
+        var cb = (repaired.match(/\}/g) || []).length;
+        for (var i = 0; i < opens - closes; i++) repaired += ']';
+        for (var i = 0; i < ob - cb;    i++) repaired += '}';
+
+        try {
+          day = JSON.parse(repaired);
+          return callback(null, sanitizeDayQuestions(day));
+        } catch(e2) { /* continue to repair */ }
+
+        // ── LAYER 5: Cut at last complete question object ──
+        // Find the last occurrence of "}," or "}]" in the questions array
+        // This salvages all complete questions even if the last one was truncated
+        var questionsStart = repaired.indexOf('"questions":[');
+        if (questionsStart !== -1) {
+          // Find last complete question: last '}' followed by ',' or ']' or end
+          var afterQ = repaired.indexOf('[', questionsStart) + 1;
+          var lastCompleteQ = afterQ;
+          var depth = 0;
+          for (var ci = afterQ; ci < repaired.length; ci++) {
+            if (repaired[ci] === '{') depth++;
+            else if (repaired[ci] === '}') {
+              depth--;
+              if (depth === 0) lastCompleteQ = ci + 1; // end of a complete question object
+            }
+          }
+          // Cut JSON at last complete question, close the structure
+          var cutStr = repaired.substring(0, lastCompleteQ) + ']}';
+          // Fix the outer object — make sure it started properly
+          try {
+            day = JSON.parse(cutStr);
+            return callback(null, sanitizeDayQuestions(day));
+          } catch(e3) { /* continue */ }
+        }
+
+        // ── LAYER 6: Last resort — extract what fields we can, build minimal day ──
+        var titleMatch  = raw.match(/"title"\s*:\s*"([^"]{1,80})"/);
+        var briefMatch  = raw.match(/"briefing"\s*:\s*"([^"]{1,200})"/);
+        var contentMatch = raw.match(/"content"\s*:\s*"([^"]{1,400})"/);
+        var fallbackDay = {
+          title: titleMatch  ? titleMatch[1]  : 'Day ' + dayNum,
+          briefing: briefMatch ? briefMatch[1] : 'Study session ' + dayNum,
+          content: contentMatch ? contentMatch[1] : 'Review your notes for this topic.',
+          keyTerms: [],
+          duration: 30,
+          isFinal: isLast,
+          completed: false,
+          questions: []
+        };
+        // Extract any complete question objects via regex
+        var qMatches = raw.match(/\{"type":"[^}]{10,300}?"difficulty":"[^"]+"\}/g) || [];
+        qMatches.forEach(function(qStr) {
+          try {
+            var q = JSON.parse(qStr);
+            if (q.type) fallbackDay.questions.push(q);
+          } catch(e) {}
+        });
+        console.warn('[generate] Day ' + dayNum + ' used fallback parser — recovered ' + fallbackDay.questions.length + ' questions');
+        callback(null, sanitizeDayQuestions(fallbackDay));
       })
-      .catch(function(err) { callback(err); });
+      .catch(function(err) {
+        // Network or server error — show specific message and allow retry
+        var msg = err.message || 'Unknown error';
+        // Never show raw JSON errors to the student
+        if (msg.toLowerCase().includes('json') || msg.toLowerCase().includes('parse') || msg.toLowerCase().includes('unexpected')) {
+          msg = 'Could not generate this day — please try again.';
+        }
+        callback(new Error('Day ' + dayNum + ' failed: ' + msg));
+      });
     }
 
     var timeoutId = setTimeout(function() {
@@ -1519,8 +1593,19 @@
         generateDay(dayNum, numDays, subjectType, strategy, function(err, day) {
           if (err) {
             clearTimeout(timeoutId);
-            alert('Error on day ' + dayNum + ': ' + err.message);
-            goToStep(2);
+            // Never show raw JSON/parse errors — show a clean retry message
+            var loadEl = document.getElementById('loading');
+            if (loadEl) loadEl.style.display = 'none';
+            var step2El = document.getElementById('step2');
+            if (step2El) {
+              step2El.style.display = 'block';
+              step2El.innerHTML = '<div style="text-align:center;padding:2rem 1rem;">' +
+                '<div style="font-size:2rem;margin-bottom:1rem;">⚠️</div>' +
+                '<h3 style="font-family:var(--serif);font-size:1.4rem;margin-bottom:.75rem;color:var(--ink);">Hmm, something went wrong</h3>' +
+                '<p style="color:var(--muted);font-size:0.9rem;margin-bottom:1.5rem;line-height:1.6;">Your notes are saved. Click below to try again — this usually works on the second attempt.</p>' +
+                '<button onclick="window.location.reload()" style="background:var(--blue);color:#fff;border:none;padding:.85rem 2rem;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;">Try again →</button>' +
+                '</div>';
+            }
             return;
           }
           allDays.push(day);
@@ -1554,7 +1639,7 @@
     })
     .catch(function(err) {
       clearTimeout(timeoutId);
-      alert('Error detecting subject: ' + err.message);
+      alert('Could not detect subject — please try again.');
       goToStep(2);
     });
   }
