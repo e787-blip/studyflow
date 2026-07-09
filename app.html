@@ -651,7 +651,19 @@
     document.getElementById('upgrade-modal').style.display = 'none';
     var notes = fileContent || document.getElementById('notes-input').value.trim();
     var deadline = document.getElementById('deadline-input') ? document.getElementById('deadline-input').value : '';
-    startGeneration(notes, 7, deadline, 'free');
+    // Calculate real days — don't hardcode 7 (free plan cap is enforced inside startGeneration)
+    var numDays = 7; // default for free plan
+    if (deadline) {
+      var parts = deadline.split('-');
+      if (parts.length === 3) {
+        var examDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+        var today = new Date(); today.setHours(12, 0, 0, 0);
+        var days = Math.round((examDate - today) / 86400000);
+        if (days >= 1) numDays = Math.min(7, days); // free plan cap of 7
+        else if (days === 0) numDays = 1;
+      }
+    }
+    startGeneration(notes, numDays, deadline, 'free');
   }
 
   // ── JOIN A CLASS ──
@@ -1124,23 +1136,39 @@
     }
 
     var maxDays = userPlan === 'vip' ? 999 : (userPlan === 'pro' ? 14 : 7);
-    var numDays = 7;
-    if (deadline) {
-      var daysLeft = Math.ceil((new Date(deadline) - new Date()) / 86400000);
-      numDays = Math.min(maxDays, Math.max(1, daysLeft));
+
+    // ── CORRECT DAY CALCULATION ──
+    // Parse deadline as LOCAL date (not UTC midnight which causes timezone errors)
+    // "2026-07-11" at UTC midnight = July 10 2pm in Hawaii → wrong count
+    // Fix: parse as local noon so it's always the same calendar day everywhere
+    function daysUntilExam(deadlineStr) {
+      if (!deadlineStr) return null;
+      var parts = deadlineStr.split('-');
+      if (parts.length !== 3) return null;
+      // Set to local noon to avoid any timezone-crossing issues
+      var examDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+      var today = new Date();
+      today.setHours(12, 0, 0, 0); // compare noon to noon — full calendar days
+      var diff = Math.round((examDate - today) / 86400000);
+      return diff;
+    }
+
+    var daysLeft = daysUntilExam(deadline);
+    var numDays;
+    if (daysLeft !== null && daysLeft >= 1) {
+      numDays = Math.min(maxDays, daysLeft);
+    } else if (daysLeft === 0) {
+      numDays = 1; // exam is today — give them a 1-day cram session
     } else {
-      numDays = Math.min(maxDays, 7);
+      numDays = Math.min(maxDays, 7); // no deadline — default 7
     }
 
     // Show upgrade modal if free user has exam more than 7 days away
-    if (userPlan === 'free' && deadline) {
-      var daysLeft2 = Math.ceil((new Date(deadline) - new Date()) / 86400000);
-      if (daysLeft2 > 7) {
-        document.getElementById('upgrade-modal').style.display = 'flex';
-        document.getElementById('upgrade-modal-msg').textContent = 'Your exam is ' + daysLeft2 + ' days away but free plans are capped at 7 days. Upgrade to Pro for 14-day plans or VIP for unlimited.';
-        document.getElementById('upgrade-modal-days').textContent = daysLeft2 + ' days until your exam';
-        return;
-      }
+    if (userPlan === 'free' && daysLeft !== null && daysLeft > 7) {
+      document.getElementById('upgrade-modal').style.display = 'flex';
+      document.getElementById('upgrade-modal-msg').textContent = 'Your exam is ' + daysLeft + ' days away but free plans are capped at 7 days. Upgrade to Pro for 14-day plans or VIP for unlimited.';
+      document.getElementById('upgrade-modal-days').textContent = daysLeft + ' days until your exam';
+      return;
     }
 
     startGeneration(notes, numDays, deadline, userPlan);
