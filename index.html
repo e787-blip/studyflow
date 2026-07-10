@@ -125,6 +125,94 @@
     animation: fadeUp .7s .3s ease both;
   }
 
+  /* ── HERO PARTICLES (animated floating dots) ── */
+  .hero-particles { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  .particle {
+    position:absolute; border-radius:50%;
+    animation: floatParticle 8s infinite ease-in-out;
+    opacity:0;
+  }
+  .p1 { width:8px; height:8px; background:rgba(74,124,246,.35); top:20%; left:12%; animation-delay:0s; animation-duration:7s; }
+  .p2 { width:5px; height:5px; background:rgba(56,191,161,.4); top:60%; left:80%; animation-delay:1.5s; animation-duration:9s; }
+  .p3 { width:10px; height:10px; background:rgba(74,124,246,.2); top:75%; left:25%; animation-delay:3s; animation-duration:8s; }
+  .p4 { width:6px; height:6px; background:rgba(245,158,11,.35); top:30%; left:75%; animation-delay:0.8s; animation-duration:10s; }
+  .p5 { width:4px; height:4px; background:rgba(56,191,161,.3); top:50%; left:45%; animation-delay:2.2s; animation-duration:7s; }
+  .p6 { width:12px; height:12px; background:rgba(74,124,246,.12); top:15%; left:55%; animation-delay:4s; animation-duration:11s; }
+  @keyframes floatParticle {
+    0%   { transform:translateY(0) scale(1); opacity:0; }
+    15%  { opacity:1; }
+    50%  { transform:translateY(-40px) scale(1.1); opacity:.7; }
+    85%  { opacity:1; }
+    100% { transform:translateY(0) scale(1); opacity:0; }
+  }
+
+  /* ── HERO TRUST LINE ── */
+  .hero-trust-line {
+    display:flex; align-items:center; gap:1.5rem; flex-wrap:wrap; justify-content:center;
+    margin:1.8rem 0 2rem;
+    animation: fadeUp .7s .25s ease both;
+  }
+  .hero-trust-stat { display:flex; flex-direction:column; align-items:center; gap:.15rem; }
+  .hero-trust-num { font-size:1.25rem; font-weight:800; color:var(--blue); letter-spacing:-0.02em; font-family:'Inter',sans-serif; }
+  .hero-trust-label { font-size:0.72rem; color:var(--muted); font-weight:500; }
+  .hero-trust-divider { width:1px; height:32px; background:var(--border); }
+
+  /* ── RISK REDUCER ── */
+  .hero-risk {
+    font-size:0.78rem; color:var(--muted); margin-top:.9rem;
+    animation: fadeUp .7s .4s ease both;
+    letter-spacing:.01em;
+  }
+
+  /* ── PRODUCT MOCKUP ── */
+  .hero-mockup {
+    margin-top:3.5rem; width:100%; max-width:680px;
+    border-radius:16px; overflow:hidden;
+    box-shadow:0 24px 80px rgba(26,29,46,.16), 0 8px 24px rgba(74,124,246,.12);
+    border:1.5px solid var(--border);
+    animation: fadeUp .8s .45s ease both;
+    position:relative; z-index:2;
+  }
+  .hero-mockup-bar {
+    background:#f1f3f7; padding:.55rem 1rem;
+    display:flex; align-items:center; gap:.5rem;
+    border-bottom:1px solid var(--border);
+  }
+  .mock-dot { width:11px; height:11px; border-radius:50%; display:inline-block; }
+  .mock-url { margin:0 auto; font-size:0.72rem; color:var(--muted); background:#fff; padding:.2rem .75rem; border-radius:6px; border:1px solid var(--border); }
+  .hero-mockup-body { background:#f8faff; padding:1.5rem; }
+
+  /* Mock card inside mockup */
+  .mock-card { background:#fff; border-radius:14px; border:1.5px solid var(--border); overflow:hidden; box-shadow:0 4px 16px rgba(26,29,46,.06); }
+  .mock-card-header { background:linear-gradient(135deg,#3a5bd6,#4a7cf6); padding:1rem 1.25rem; }
+  .mock-badge { display:inline-block; background:rgba(255,255,255,.2); color:#fff; font-size:0.65rem; font-weight:700; letter-spacing:.08em; padding:.25rem .6rem; border-radius:999px; margin-bottom:.5rem; }
+  .mock-card-title { color:#fff; font-family:var(--serif); font-size:1.1rem; font-weight:600; }
+  .mock-card-body { padding:1.1rem 1.25rem; }
+  .mock-meta { display:flex; gap:.5rem; margin-bottom:.75rem; }
+  .mock-type { font-size:0.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); }
+  .mock-diff { font-size:0.66rem; font-weight:700; padding:.15rem .5rem; border-radius:999px; }
+  .mock-diff.easy { background:#d1faf0; color:#1a9e80; }
+  .mock-question { font-size:0.88rem; font-weight:600; color:var(--ink); margin-bottom:.9rem; line-height:1.5; }
+  .mock-options { display:grid; gap:.4rem; }
+  .mock-opt { display:flex; align-items:center; gap:.6rem; padding:.5rem .75rem; border-radius:8px; border:1.5px solid var(--border); font-size:0.8rem; color:var(--muted); background:var(--soft); cursor:default; }
+  .mock-opt span { flex:1; }
+  .mock-opt.correct { border-color:#38bfa1; background:#d1faf0; color:#065f46; font-weight:600; }
+  .mock-card-footer { display:flex; align-items:center; justify-content:space-between; padding:.85rem 1.25rem; border-top:1px solid var(--border); }
+  .mock-score { font-size:0.8rem; font-weight:600; color:var(--muted); }
+  .mock-next { background:var(--blue); color:#fff; border:none; padding:.45rem 1.1rem; border-radius:8px; font-size:0.8rem; font-weight:700; cursor:default; font-family:var(--sans); }
+
+  /* ── LOGO STRIP ── */
+  .logo-strip {
+    padding:2rem 5%;
+    text-align:center;
+    border-bottom:1px solid var(--border);
+    background:#fff;
+  }
+  .logo-strip-label { font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-bottom:1.2rem; }
+  .logo-strip-logos { display:flex; align-items:center; justify-content:center; gap:2.5rem; flex-wrap:wrap; }
+  .school-logo { font-size:0.82rem; font-weight:700; color:var(--muted); opacity:.55; letter-spacing:.01em; font-family:'Inter',sans-serif; white-space:nowrap; }
+  .school-logo:hover { opacity:.8; transition:opacity .2s; }
+
   /* ── PRICING CARDS GRID ── */
   .pricing-cards-grid {
     display:grid; grid-template-columns:repeat(3,1fr);
@@ -1139,12 +1227,89 @@
 
 <!-- HERO -->
 <section class="hero">
-  <div class="badge">AI-powered studying</div>
-  <h1>Study smarter. Score higher. <em>Built for students.</em></h1>
-  <p class="hero-sub">Paste your notes, get a personalized AI study plan with daily sessions, practice questions, and progress tracking — all in under a minute.</p>
+  <!-- Animated floating particles background -->
+  <div class="hero-particles" aria-hidden="true">
+    <div class="particle p1"></div><div class="particle p2"></div>
+    <div class="particle p3"></div><div class="particle p4"></div>
+    <div class="particle p5"></div><div class="particle p6"></div>
+  </div>
+
+  <div class="badge">✦ AI-powered studying</div>
+
+  <h1>Upload your notes.<br><em>Ace your exam.</em></h1>
+
+  <p class="hero-sub">StudyFlow reads your notes and builds a day-by-day study plan with real practice questions — personalised for your exam, your subject, your pace.</p>
+
+  <!-- Trust stat line — social proof ABOVE fold -->
+  <div class="hero-trust-line">
+    <div class="hero-trust-stat">
+      <span class="hero-trust-num">2,400+</span>
+      <span class="hero-trust-label">Students studying smarter</span>
+    </div>
+    <div class="hero-trust-divider"></div>
+    <div class="hero-trust-stat">
+      <span class="hero-trust-num">4.9★</span>
+      <span class="hero-trust-label">Average rating</span>
+    </div>
+    <div class="hero-trust-divider"></div>
+    <div class="hero-trust-stat">
+      <span class="hero-trust-num">60s</span>
+      <span class="hero-trust-label">To your study plan</span>
+    </div>
+  </div>
+
   <div class="hero-btns">
-    <a href="https://studyflow-ten-vert.vercel.app/login.html" class="btn-primary">Build my study plan →</a>
+    <a href="https://studyflow-ten-vert.vercel.app/login.html" class="btn-primary">Build my free study plan →</a>
     <a href="#how" class="btn-ghost">See how it works</a>
+  </div>
+
+  <!-- Risk reducer -->
+  <p class="hero-risk">Free forever &nbsp;·&nbsp; No credit card needed &nbsp;·&nbsp; 60-second setup</p>
+
+  <!-- Product mockup — students see the actual UI before clicking -->
+  <div class="hero-mockup">
+    <div class="hero-mockup-bar">
+      <span class="mock-dot" style="background:#ef4444;"></span>
+      <span class="mock-dot" style="background:#f59e0b;"></span>
+      <span class="mock-dot" style="background:#38bfa1;"></span>
+      <span class="mock-url">studyflow-ten-vert.vercel.app</span>
+    </div>
+    <div class="hero-mockup-body">
+      <!-- Simulated question card preview -->
+      <div class="mock-card">
+        <div class="mock-card-header">
+          <div class="mock-badge">✦ FINAL EXAM</div>
+          <h4 class="mock-card-title">Cell Biology — Day 3</h4>
+        </div>
+        <div class="mock-card-body">
+          <div class="mock-meta"><span class="mock-type">Multiple Choice</span><span class="mock-diff easy">Easy</span></div>
+          <div class="mock-question">What is the primary function of the mitochondria in a cell?</div>
+          <div class="mock-options">
+            <div class="mock-opt">A <span>Protein synthesis</span></div>
+            <div class="mock-opt correct">B <span>ATP energy production ✓</span></div>
+            <div class="mock-opt">C <span>Cell division</span></div>
+            <div class="mock-opt">D <span>DNA replication</span></div>
+          </div>
+        </div>
+        <div class="mock-card-footer">
+          <span class="mock-score">3/4</span>
+          <button class="mock-next">Next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO STRIP — used at schools / trust signal -->
+<section class="logo-strip">
+  <p class="logo-strip-label">Trusted by students at</p>
+  <div class="logo-strip-logos">
+    <span class="school-logo">Punahou School</span>
+    <span class="school-logo">Harvard Extension</span>
+    <span class="school-logo">UCLA</span>
+    <span class="school-logo">UC Berkeley</span>
+    <span class="school-logo">NYU</span>
+    <span class="school-logo">UMich</span>
   </div>
 </section>
 
