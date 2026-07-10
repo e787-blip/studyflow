@@ -37,23 +37,22 @@
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     display: flex; align-items: center; justify-content: space-between;
     padding: 1.1rem 5%;
-    background: rgba(255,255,255,0.88);
-    backdrop-filter: blur(14px);
-    border-bottom: 1px solid var(--border);
+    background: transparent;
+    border-bottom: none;
   }
   .logo {
     font-family: 'Inter', sans-serif;
     font-size: 1.35rem;
     font-weight: 700;
-    color: var(--ink);
+    color: #fff;
     letter-spacing: -0.01em;
   }
   .logo span { color: var(--blue); font-style: italic; }
   nav a {
-    font-size: 0.88rem; font-weight: 500; color: var(--muted);
+    font-size: 0.88rem; font-weight: 500; color: rgba(255,255,255,.9);
     text-decoration: none; margin-left: 2rem; transition: color .2s;
   }
-  nav a:hover { color: var(--ink); }
+  nav a:hover { color: #fff; }
   .nav-links { display:flex; align-items:center; flex-wrap:nowrap; white-space:nowrap; }
   .nav-links a { margin-left:2rem; }
 
@@ -70,8 +69,11 @@
     font-size: 0.88rem !important;
     transition: background .2s, transform .15s !important;
     -webkit-text-fill-color: #fff !important;
+    margin-left: 1.5rem !important;
   }
   .nav-cta:hover { background: #3567e0 !important; transform: translateY(-1px); }
+  /* Logo SVG text visible on video */
+  nav tspan[fill="var(--ink)"] { fill: #fff; }
 
   /* ── HERO ── */
   /* ── HERO — video background ── */
@@ -95,55 +97,8 @@
     z-index: 0;
   }
 
-  /* Text overlay — centered, matching video layout */
-  .hero-content {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    max-width: 680px;
-    padding: 0 2rem;
-    animation: fadeUp .7s ease both;
-  }
-
-  h1 {
-    font-family: var(--serif);
-    font-size: clamp(2.8rem, 5.5vw, 4.8rem);
-    line-height: 1.08;
-    letter-spacing: -0.03em;
-    color: #0e1a2b;
-    margin-bottom: 1.1rem;
-    animation: fadeUp .7s .1s ease both;
-  }
-  h1 em { font-style: italic; color: #1e55d7; -webkit-text-fill-color: #1e55d7; }
-
-  .hero-sub {
-    font-size: clamp(0.95rem, 1.8vw, 1.05rem);
-    color: rgba(14,26,43,.72);
-    max-width: 480px;
-    margin: 0 auto 1.8rem;
-    font-weight: 400;
-    line-height: 1.75;
-    animation: fadeUp .7s .18s ease both;
-  }
-
-  .hero-trust-line {
-    display: flex; align-items: center; justify-content: center; gap: 1.5rem;
-    margin-bottom: 2rem;
-    animation: fadeUp .7s .26s ease both;
-  }
-  .hero-trust-stat { display:flex; flex-direction:column; align-items:center; gap:.1rem; }
-  .hero-trust-num { font-size:1.2rem; font-weight:800; color:#1e55d7; letter-spacing:-0.02em; font-family:'Inter',sans-serif; }
-  .hero-trust-label { font-size:0.7rem; color:rgba(14,26,43,.55); font-weight:500; }
-  .hero-trust-divider { width:1px; height:28px; background:rgba(14,26,43,.2); }
-
-  .hero-btns {
-    display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;
-    animation: fadeUp .7s .32s ease both;
-  }
-
   /* ── RESPONSIVE ── */
   @media (max-width: 600px) {
-    .hero-content { padding: 0 1.2rem; }
     h1 { font-size: 2.4rem; }
   }
 
@@ -1154,7 +1109,7 @@
       <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
       <!-- Text -->
       <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
-        <tspan fill="var(--ink)">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
+        <tspan fill="#ffffff">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
       </text>
     </svg>
   </a>
@@ -1171,41 +1126,9 @@
 
 <!-- HERO -->
 <section class="hero">
-
-  <!-- VIDEO BACKGROUND — the actual video, looping silently -->
   <video class="hero-video" autoplay muted loop playsinline preload="auto" aria-hidden="true">
     <source src="hero-bg.mp4" type="video/mp4">
   </video>
-
-  <!-- Text overlay — centered, exactly as in video -->
-  <div class="hero-content">
-    <h1>Upload your notes.<br><em>Ace your exam.</em></h1>
-
-    <p class="hero-sub">StudyFlow reads your notes and builds a day-by-day study plan with real practice questions — personalized for your exam, your subject, your pace.</p>
-
-    <div class="hero-trust-line">
-      <div class="hero-trust-stat">
-        <span class="hero-trust-num">2,400+</span>
-        <span class="hero-trust-label">Students studying smarter</span>
-      </div>
-      <div class="hero-trust-divider"></div>
-      <div class="hero-trust-stat">
-        <span class="hero-trust-num">4.5★</span>
-        <span class="hero-trust-label">Average rating</span>
-      </div>
-      <div class="hero-trust-divider"></div>
-      <div class="hero-trust-stat">
-        <span class="hero-trust-num">50s</span>
-        <span class="hero-trust-label">To your study plan</span>
-      </div>
-    </div>
-
-    <div class="hero-btns">
-      <a href="https://studyflow-ten-vert.vercel.app/login.html" class="btn-primary">Build my free study plan →</a>
-      <a href="#how" class="btn-ghost">See how it works</a>
-    </div>
-  </div>
-
 </section>
 
 <!-- LOGO STRIP -->
