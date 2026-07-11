@@ -37,72 +37,299 @@
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
     display: flex; align-items: center; justify-content: space-between;
     padding: 1.1rem 5%;
+    /* Start transparent — over the hero */
     background: transparent;
-    border-bottom: none;
+    border-bottom: 1px solid transparent;
+    transition: background .3s ease, border-color .3s ease, box-shadow .3s ease;
   }
-  .logo {
-    font-family: 'Inter', sans-serif;
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: -0.01em;
+  /* Scrolled state — added by JS once past hero */
+  nav.nav-scrolled {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 1px 20px rgba(26,29,46,.06);
   }
-  .logo span { color: var(--blue); font-style: italic; }
-  nav a {
-    font-size: 0.88rem; font-weight: 500; color: rgba(255,255,255,.9);
-    text-decoration: none; margin-left: 2rem; transition: color .2s;
-  }
-  nav a:hover { color: #fff; }
-  .nav-links { display:flex; align-items:center; flex-wrap:nowrap; white-space:nowrap; }
-  .nav-links a { margin-left:2rem; }
-
-  /* iPad — tighten nav so everything fits on one row */
-  @media (min-width:761px) and (max-width:1180px) {
-    nav { padding:1rem 2.5%; }
-    .nav-links a { margin-left:1.1rem; font-size:0.82rem; }
-    .nav-links .nav-cta { padding:.42rem .85rem; }
-    nav > a > svg { width:150px; height:37px; }
-  }
-  .nav-cta {
-    background: var(--blue); color: #fff !important;
-    padding: .45rem 1.1rem; border-radius: 8px;
-    font-size: 0.88rem !important;
-    transition: background .2s, transform .15s !important;
-    -webkit-text-fill-color: #fff !important;
-    margin-left: 1.5rem !important;
-  }
-  .nav-cta:hover { background: #3567e0 !important; transform: translateY(-1px); }
-  /* Logo SVG text visible on video */
-  nav tspan[fill="var(--ink)"] { fill: #fff; }
+  /* Logo text: white over hero shader, ink after scroll */
+  nav tspan:first-child { fill: #ffffff; transition: fill .3s; }
+  nav.nav-scrolled tspan:first-child { fill: var(--ink); }
 
   /* ── HERO ── */
   /* ── HERO — video background ── */
+  /* ══════════════════════════════════════════
+     NAV — floating liquid glass pill
+  ══════════════════════════════════════════ */
+  nav {
+    position: fixed; top: 1.2rem; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2rem;
+    pointer-events: none; /* children handle clicks */
+    transition: top .3s ease;
+  }
+
+  /* Logo — left, always clickable */
+  .nav-logo { pointer-events: all; }
+  .logo-study { fill: #ffffff; transition: fill .3s; }
+  nav.nav-scrolled .logo-study { fill: var(--ink); }
+
+  /* Center pill — liquid glass */
+  .nav-pill {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: .25rem;
+    background: rgba(255,255,255,.08);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 999px;
+    padding: .45rem .6rem;
+    box-shadow: 0 4px 24px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.12);
+    pointer-events: all;
+    transition: background .3s, border-color .3s, box-shadow .3s;
+  }
+  nav.nav-scrolled .nav-pill {
+    background: rgba(255,255,255,.85);
+    border-color: rgba(0,0,0,.08);
+    box-shadow: 0 2px 20px rgba(0,0,0,.1), inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  .nav-pill a {
+    font-size: 0.84rem; font-weight: 500;
+    color: rgba(255,255,255,.82);
+    text-decoration: none;
+    padding: .4rem .85rem;
+    border-radius: 999px;
+    transition: background .18s, color .18s;
+    white-space: nowrap;
+  }
+  .nav-pill a:hover {
+    background: rgba(255,255,255,.14);
+    color: #fff;
+  }
+  nav.nav-scrolled .nav-pill a { color: var(--muted); }
+  nav.nav-scrolled .nav-pill a:hover { background: rgba(74,124,246,.08); color: var(--ink); }
+
+  /* Right side */
+  .nav-right { display: flex; align-items: center; gap: .75rem; pointer-events: all; }
+
+  /* My Dashboard — its own glass pill, distinct from CTA */
+  .nav-dashboard {
+    display: inline-flex; align-items: center;
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.2);
+    backdrop-filter: blur(12px);
+    color: rgba(255,255,255,.88) !important;
+    -webkit-text-fill-color: rgba(255,255,255,.88) !important;
+    font-size: 0.84rem; font-weight: 600;
+    padding: .48rem 1.05rem;
+    border-radius: 999px;
+    text-decoration: none !important;
+    transition: background .2s, border-color .2s, transform .18s;
+    white-space: nowrap;
+  }
+  .nav-dashboard:hover {
+    background: rgba(255,255,255,.18);
+    border-color: rgba(255,255,255,.4);
+    transform: translateY(-1px);
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+  }
+  nav.nav-scrolled .nav-dashboard {
+    background: rgba(74,124,246,.08);
+    border-color: rgba(74,124,246,.2);
+    color: var(--blue) !important;
+    -webkit-text-fill-color: var(--blue) !important;
+  }
+  nav.nav-scrolled .nav-dashboard:hover {
+    background: rgba(74,124,246,.14);
+    border-color: rgba(74,124,246,.35);
+    color: var(--blue) !important;
+    -webkit-text-fill-color: var(--blue) !important;
+  }
+  .nav-cta {
+    background: rgba(255,255,255,.95);
+    color: var(--ink) !important;
+    -webkit-text-fill-color: var(--ink) !important;
+    font-size: 0.84rem; font-weight: 700;
+    padding: .5rem 1.15rem;
+    border-radius: 999px;
+    text-decoration: none !important;
+    border: none;
+    transition: background .2s, transform .18s, box-shadow .2s;
+    box-shadow: 0 2px 12px rgba(0,0,0,.15);
+    white-space: nowrap;
+  }
+  .nav-cta:hover {
+    background: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(0,0,0,.22);
+    color: var(--ink) !important;
+    -webkit-text-fill-color: var(--ink) !important;
+  }
+  nav.nav-scrolled .nav-cta {
+    background: var(--blue);
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+    box-shadow: 0 2px 12px rgba(74,124,246,.35);
+  }
+  nav.nav-scrolled .nav-cta:hover { background: #3567e0; }
+
+  /* Scrolled state — nav moves up slightly into viewport edge */
+  nav.nav-scrolled { top: 0; padding: .85rem 2rem; }
+
+  /* Mobile — collapse pill links */
+  @media (max-width: 768px) {
+    .nav-pill { display: none; }
+    nav { padding: 0 1.2rem; top: .85rem; }
+    nav.nav-scrolled { padding: .7rem 1.2rem; }
+  }
+
+  /* ══════════════════════════════════════════
+     HERO — reference layout (3-line headline)
+  ══════════════════════════════════════════ */
   .hero {
-    position: relative;
     min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 8rem 6% 5rem;
+    position: relative;
     overflow: hidden;
+    background: #0e142a; /* fallback while shader loads */
+  }
+  #hero-shader {
+    position: absolute; inset: 0;
+    width: 100% !important; height: 100% !important;
+    display: block; z-index: 0;
+  }
+  .hero::after {
+    content: '';
+    position: absolute; inset: 0; z-index: 1;
+    background: radial-gradient(ellipse 80% 60% at 50% 40%, transparent 30%, rgba(10,14,30,.4) 100%);
+    pointer-events: none;
+  }
+  .hero::before { content: none; }
+  .hero-content {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 0;
   }
 
-  /* Video fills the section exactly */
-  .hero-video {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center center;
-    z-index: 0;
+  /* Badge — star + label, like reference */
+  .hero-badge-ref {
+    display: inline-flex; align-items: center; gap: .45rem;
+    color: rgba(255,255,255,.65);
+    font-size: 0.78rem; font-weight: 500; letter-spacing: .04em;
+    margin-bottom: 2rem;
+    animation: fadeUp .6s ease both;
+  }
+  .hero-badge-ref svg { opacity: .7; flex-shrink: 0; }
+
+  /* Headline — 3 lines, massive, bold, each line fades in */
+  .hero-h1-ref {
+    display: flex; flex-direction: column; align-items: center;
+    gap: .05em;
+    margin: 0 0 1.6rem;
+  }
+  .h1-line {
+    display: block;
+    font-family: var(--serif);
+    font-size: clamp(2.8rem, 6.5vw, 5.2rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    color: #fff;
+    animation: fadeUp .7s ease both;
+    text-shadow: 0 2px 32px rgba(10,14,40,.35);
+  }
+  .h1-line:nth-child(1) { animation-delay: .08s; }
+  .h1-line:nth-child(2) { animation-delay: .16s; }
+  .h1-line:nth-child(3) { animation-delay: .24s; }
+  /* Second line — soft blue, italic, like reference em */
+  .h1-line-em { color: #93b4ff; font-style: italic; }
+
+  /* Subtext — narrow, 2 lines, grey */
+  .hero-sub-ref {
+    font-size: clamp(0.95rem, 1.8vw, 1.1rem);
+    color: rgba(255,255,255,.55);
+    line-height: 1.75; font-weight: 300;
+    max-width: 480px;
+    margin: 0 0 2.2rem;
+    animation: fadeUp .7s .3s ease both;
   }
 
-  /* ── RESPONSIVE ── */
+  /* Buttons — pill style matching reference */
+  .hero-btns-ref {
+    display: flex; gap: .9rem; align-items: center; flex-wrap: wrap; justify-content: center;
+    margin-bottom: 3.5rem;
+    animation: fadeUp .7s .38s ease both;
+  }
+  .hero-btn-primary {
+    display: inline-flex; align-items: center;
+    background: #fff; color: #0e142a !important;
+    -webkit-text-fill-color: #0e142a !important;
+    font-family: var(--sans); font-size: 0.95rem; font-weight: 700;
+    padding: .85rem 1.9rem; border-radius: 999px;
+    text-decoration: none !important; border: none; cursor: pointer;
+    transition: background .2s, transform .2s, box-shadow .2s;
+    box-shadow: 0 4px 20px rgba(0,0,0,.25);
+  }
+  .hero-btn-primary:hover {
+    background: #f0f4ff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0,0,0,.3);
+  }
+  .hero-btn-ghost {
+    display: inline-flex; align-items: center;
+    background: rgba(255,255,255,.08);
+    color: rgba(255,255,255,.85) !important;
+    -webkit-text-fill-color: rgba(255,255,255,.85) !important;
+    font-family: var(--sans); font-size: 0.95rem; font-weight: 600;
+    padding: .85rem 1.9rem; border-radius: 999px;
+    text-decoration: none !important;
+    border: 1px solid rgba(255,255,255,.2);
+    backdrop-filter: blur(8px);
+    transition: background .2s, border-color .2s, transform .2s;
+  }
+  .hero-btn-ghost:hover {
+    background: rgba(255,255,255,.14);
+    border-color: rgba(255,255,255,.4);
+    transform: translateY(-2px);
+    color: #fff !important;
+    -webkit-text-fill-color: #fff !important;
+  }
+
+  /* Stats — 3 column, like reference */
+  .hero-stats-ref {
+    display: flex; align-items: flex-start; gap: 3.5rem; flex-wrap: wrap; justify-content: center;
+    animation: fadeUp .7s .46s ease both;
+  }
+  .hero-stat-ref { display: flex; flex-direction: column; align-items: center; gap: .2rem; }
+  .hero-stat-num-ref {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.9rem; font-weight: 800;
+    color: #fff; letter-spacing: -0.03em; line-height: 1;
+  }
+  .hero-stat-lbl-ref {
+    font-size: 0.75rem; font-weight: 400;
+    color: rgba(255,255,255,.45); letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  /* ── MOBILE ── */
   @media (max-width: 600px) {
-    h1 { font-size: 2.4rem; }
+    .hero { padding: 7rem 5% 4rem; }
+    .h1-line { font-size: clamp(2rem, 9vw, 2.8rem); }
+    .hero-sub-ref { font-size: 0.92rem; }
+    .hero-btns-ref { flex-direction: column; width: 100%; }
+    .hero-btn-primary, .hero-btn-ghost { width: 100%; max-width: 320px; justify-content: center; }
+    .hero-stats-ref { gap: 2rem; }
+    .hero-stat-num-ref { font-size: 1.5rem; }
+  }
+  @media (max-width: 380px) {
+    .h1-line { font-size: 1.85rem; }
+    .hero-stats-ref { gap: 1.5rem; }
   }
 
-  /* ── LOGO STRIP ── */
+
   .logo-strip {
     padding:2rem 5%; text-align:center;
     border-bottom:1px solid var(--border); background:rgba(255,255,255,.6);
@@ -938,18 +1165,6 @@
   .feature:hover { border-color: var(--blue) !important; box-shadow: 0 4px 20px rgba(74,124,246,.1) !important; }
 
   /* Nav links hover */
-  nav a:not(.nav-cta) {
-    position: relative;
-  }
-  nav a:not(.nav-cta)::after {
-    content: '';
-    position: absolute; bottom: -3px; left: 0; right: 0;
-    height: 2px; background: var(--blue); border-radius: 2px;
-    transform: scaleX(0);
-    transition: transform .3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  nav a:not(.nav-cta):hover::after { transform: scaleX(1); }
-
   /* Animated gradient hero background */
   .hero {
     background: linear-gradient(135deg, #e8f0ff, #f0f4ff, #e4edff, #f4f7ff);
@@ -1087,49 +1302,230 @@
 
 <!-- NAV -->
 <nav>
-  <a href="#" style="text-decoration:none;">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="180" height="44">
+  <!-- Logo — left -->
+  <a href="#" class="nav-logo" style="text-decoration:none;flex-shrink:0;">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="160" height="40">
       <defs>
         <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" style="stop-color:#5b8df8"/>
           <stop offset="100%" style="stop-color:#2851c8"/>
         </linearGradient>
       </defs>
-      <!-- Icon background -->
       <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#iconGrad)"/>
-      <!-- Book pages -->
       <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
       <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
       <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
-      <!-- Lines -->
       <rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/>
       <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
       <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
-      <!-- Sparkle -->
       <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
-      <!-- Text -->
       <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
-        <tspan fill="#ffffff">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
+        <tspan class="logo-study">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
       </text>
     </svg>
   </a>
-  <div class="nav-links">
+
+  <!-- Center pill — liquid glass links -->
+  <div class="nav-pill">
     <a href="#how">How it works</a>
     <a href="#features">Features</a>
     <a href="#pricing">Plans</a>
     <a href="about.html">Our story</a>
     <a href="contact.html">Help</a>
+  </div>
+
+  <!-- Right side — CTA -->
+  <div class="nav-right">
     <span id="teacher-nav-link"></span>
-    <a href="https://studyflow-ten-vert.vercel.app/login.html" class="nav-cta">Start for free</a>
+    <a href="https://studyflow-ten-vert.vercel.app/login.html" class="nav-cta">Start for free →</a>
   </div>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <video class="hero-video" autoplay muted loop playsinline preload="auto" aria-hidden="true">
-    <source src="hero-bg.mp4" type="video/mp4">
-  </video>
+
+  <canvas id="hero-shader" aria-hidden="true"></canvas>
+
+  <div class="hero-content">
+
+    <div class="hero-badge-ref">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      AI-powered studying
+    </div>
+
+    <h1 class="hero-h1-ref">
+      <span class="h1-line">Upload your notes.</span>
+      <span class="h1-line h1-line-em">Ace your exam.</span>
+      <span class="h1-line">Start in 60 seconds.</span>
+    </h1>
+
+    <p class="hero-sub-ref">StudyFlow reads your notes and builds a personalised<br>day-by-day study plan with real practice questions.</p>
+
+    <div class="hero-btns-ref">
+      <a href="https://studyflow-ten-vert.vercel.app/login.html" class="hero-btn-primary">Build my study plan →</a>
+      <a href="#how" class="hero-btn-ghost">See how it works</a>
+    </div>
+
+    <div class="hero-stats-ref">
+      <div class="hero-stat-ref">
+        <span class="hero-stat-num-ref">2,400+</span>
+        <span class="hero-stat-lbl-ref">Students</span>
+      </div>
+      <div class="hero-stat-ref">
+        <span class="hero-stat-num-ref">4.9★</span>
+        <span class="hero-stat-lbl-ref">Rating</span>
+      </div>
+      <div class="hero-stat-ref">
+        <span class="hero-stat-num-ref">60s</span>
+        <span class="hero-stat-lbl-ref">Setup</span>
+      </div>
+    </div>
+
+  </div>
 </section>
+
+<!-- Three.js via CDN - loaded before the shader script -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function() {
+  var canvas = document.getElementById('hero-shader');
+  if (!canvas || !window.THREE) return;
+
+  // ── VERTEX SHADER (unchanged from original) ──
+  var vertexShader = [
+    'void main() {',
+    '  gl_Position = vec4(position, 1.0);',
+    '}'
+  ].join('\n');
+
+  // ── FRAGMENT SHADER ──
+  // Colors tuned to StudyFlow palette:
+  // Deep navy #1a1d2e → rgb(0.10, 0.11, 0.18)  — base/dark
+  // Brand blue #4a7cf6 → rgb(0.29, 0.49, 0.96) — primary
+  // Soft blue #dce8ff → rgb(0.86, 0.91, 1.00)  — light
+  // The shader adds ripple rings; we tint channel weights:
+  //   R: 0.18 (low — no red harshness)
+  //   G: 0.32 (low-mid — slight teal quality)
+  //   B: 0.80 (dominant — our brand blue)
+  // Base color is the dark navy so the BG reads as deep blue, not black
+  var fragmentShader = [
+    '#define TWO_PI 6.2831853072',
+    '#define PI 3.14159265359',
+    'precision highp float;',
+    'uniform vec2 resolution;',
+    'uniform float time;',
+    'void main(void) {',
+    // Normalized coords, centered, aspect-corrected
+    '  vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);',
+    '  float t = time * 0.03;',  // slower = calmer (was 0.05)
+    '  float lineWidth = 0.0015;', // slightly thinner rings
+    // Start from our dark navy base instead of black
+    '  vec3 color = vec3(0.08, 0.10, 0.18);',
+    // Channel weights: R=low, G=mid, B=high → calm blue palette
+    '  float rw = 0.18;',
+    '  float gw = 0.30;',
+    '  float bw = 0.85;',
+    '  float weights[3];',
+    '  weights[0] = rw;',
+    '  weights[1] = gw;',
+    '  weights[2] = bw;',
+    '  for(int j = 0; j < 3; j++){',
+    '    for(int i = 0; i < 5; i++){',
+    '      float wave = lineWidth * float(i * i) / abs(',
+    '        fract(t - 0.008 * float(j) + float(i) * 0.012) * 5.0',
+    '        - length(uv)',
+    '        + mod(uv.x + uv.y, 0.2)',
+    '      );',
+    '      color[j] += wave * weights[j];',
+    '    }',
+    '  }',
+    // Soft vignette — darker at edges, lighter at center
+    '  float vignette = 1.0 - smoothstep(0.4, 1.2, length(uv));',
+    '  color *= (0.75 + 0.25 * vignette);',
+    // Clamp so it never blows out to pure white
+    '  color = clamp(color, 0.0, 0.88);',
+    '  gl_FragColor = vec4(color, 1.0);',
+    '}'
+  ].join('\n');
+
+  // ── THREE.JS SETUP ──
+  var camera = new THREE.Camera();
+  camera.position.z = 1;
+
+  var scene = new THREE.Scene();
+  var geometry = new THREE.PlaneGeometry(2, 2);
+
+  var uniforms = {
+    time:       { type: 'f',  value: 1.0 },
+    resolution: { type: 'v2', value: new THREE.Vector2() }
+  };
+
+  var material = new THREE.ShaderMaterial({
+    uniforms:       uniforms,
+    vertexShader:   vertexShader,
+    fragmentShader: fragmentShader
+  });
+
+  scene.add(new THREE.Mesh(geometry, material));
+
+  var renderer = new THREE.WebGLRenderer({
+    canvas:    canvas,
+    antialias: true,
+    alpha:     false
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // cap at 2x — mobile perf
+
+  // ── RESIZE ──
+  function resize() {
+    var hero = canvas.parentElement;
+    var w = hero ? hero.clientWidth  : window.innerWidth;
+    var h = hero ? hero.clientHeight : window.innerHeight;
+    renderer.setSize(w, h, false);
+    uniforms.resolution.value.set(
+      renderer.domElement.width,
+      renderer.domElement.height
+    );
+  }
+  resize();
+
+  var resizeTimer;
+  window.addEventListener('resize', function() {
+    // Debounce — avoid hammering WebGL on every pixel of resize
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(resize, 80);
+  });
+
+  // ── ANIMATION LOOP ──
+  var rafId;
+  var running = true;
+
+  function animate() {
+    if (!running) return;
+    rafId = requestAnimationFrame(animate);
+    uniforms.time.value += 0.04; // slightly slower than original 0.05 — calmer feel
+    renderer.render(scene, camera);
+  }
+
+  // ── PAUSE WHEN OFF-SCREEN (battery / perf) ──
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function(entries) {
+      running = entries[0].isIntersecting;
+      if (running) animate();
+    }, { threshold: 0.01 });
+    io.observe(canvas.parentElement || canvas);
+  }
+
+  animate();
+
+  // ── REDUCED MOTION SUPPORT ──
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    running = false;
+    cancelAnimationFrame(rafId);
+    // Show static first frame only
+    renderer.render(scene, camera);
+  }
+})();
+</script>
 
 <!-- LOGO STRIP -->
 <section class="logo-strip">
@@ -1995,6 +2391,23 @@
   }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
   allReveal.forEach(function(el) { revealObserver.observe(el); });
 
+  // ── NAV: transparent over hero, solid after scrolling past it ──
+  (function() {
+    var nav = document.querySelector('nav');
+    var hero = document.querySelector('.hero');
+    if (!nav || !hero) return;
+    function updateNav() {
+      var threshold = (hero.offsetTop + hero.offsetHeight) - 80;
+      if (window.pageYOffset > threshold) {
+        nav.classList.add('nav-scrolled');
+      } else {
+        nav.classList.remove('nav-scrolled');
+      }
+    }
+    window.addEventListener('scroll', updateNav, { passive: true });
+    updateNav();
+  })();
+
   // 7. Parallax on hero badge and sub elements
   window.addEventListener('scroll', function() {
     var scrollY = window.pageYOffset;
@@ -2054,14 +2467,14 @@
     var teacher = localStorage.getItem('studyflow_teacher');
     var student = localStorage.getItem('studyflow_user');
     var navLink = document.getElementById('teacher-nav-link');
+    if (!navLink) return;
 
     if (teacher) {
-      navLink.innerHTML = '<a href="https://studyflow-ten-vert.vercel.app/teacher.html" style="font-weight:700;">My Dashboard</a>';
+      navLink.innerHTML = '<a href="https://studyflow-ten-vert.vercel.app/teacher.html" class="nav-dashboard">My Dashboard</a>';
     } else if (student) {
-      navLink.innerHTML = '<a href="https://studyflow-ten-vert.vercel.app/dashboard.html" style="font-weight:700;">My Dashboard</a>';
+      navLink.innerHTML = '<a href="https://studyflow-ten-vert.vercel.app/dashboard.html" class="nav-dashboard">My Dashboard</a>';
     } else {
-      // Not logged in — show My Dashboard but redirect to login
-      navLink.innerHTML = '<a href="https://studyflow-ten-vert.vercel.app/login.html">My Dashboard</a>';
+      navLink.innerHTML = '<a href="https://studyflow-ten-vert.vercel.app/login.html" class="nav-dashboard">My Dashboard</a>';
     }
   })();
 
@@ -2080,10 +2493,7 @@
 
   function submitWaitlist() {
     var email = document.getElementById('wl-email').value;
-    if (!email || email.indexOf('@') === -1) {
-      alert('Please enter a valid email!');
-      return;
-    }
+    if (!email || email.indexOf('@') === -1) { alert('Please enter a valid email!'); return; }
     window.open('https://tally.so/r/Gx0Veo?email=' + encodeURIComponent(email), '_blank');
     document.getElementById('wl-input').style.display = 'none';
     document.getElementById('wl-success').style.display = 'block';
