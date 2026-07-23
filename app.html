@@ -438,12 +438,31 @@
 
     <div class="divider">or paste text</div>
 
-    <label class="field-label">Your lesson notes</label>
-    <textarea id="notes-input" placeholder="Paste your notes here..." oninput="checkNotesLength(this)"></textarea>
-    <div id="notes-warning" style="display:none; margin-top:.6rem; padding:.7rem 1rem; background:#fff8e0; border:1px solid #f59e0b; border-radius:10px; font-size:0.82rem; color:#92400e; line-height:1.5;">
+    <label class="field-label">Your lesson notes
+      <span id="autosave-indicator" style="font-size:0.7rem;font-weight:400;color:var(--green);margin-left:.5rem;opacity:0;transition:opacity .4s;">✓ Saved</span>
+    </label>
+    <textarea id="notes-input" placeholder="Paste your notes here..." oninput="checkNotesLength(this);autosaveNotes(this.value)"></textarea>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:.4rem;">
+      <button id="camera-btn" onclick="openCamera()" style="display:flex;align-items:center;gap:.35rem;background:none;border:none;font-family:var(--sans);font-size:0.75rem;font-weight:600;color:var(--blue);cursor:pointer;padding:.2rem 0;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Scan with camera
+      </button>
+      <div id="notes-counter" style="font-size:0.72rem;color:var(--muted);"></div>
+    </div>
+    <div id="notes-warning" style="display:none;margin-top:.6rem;padding:.7rem 1rem;background:#fff8e0;border:1px solid #f59e0b;border-radius:10px;font-size:0.82rem;color:#92400e;line-height:1.5;">
       Your notes are long — we'll use the most important parts to build your plan. For best results, paste the key concepts and vocabulary only.
     </div>
-    <div id="notes-counter" style="font-size:0.72rem; color:var(--muted); margin-top:.4rem; text-align:right;"></div>
+
+    <!-- Camera modal -->
+    <div id="camera-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:1rem;">
+      <video id="camera-video" autoplay playsinline style="max-width:100%;max-height:60vh;border-radius:16px;"></video>
+      <div style="display:flex;gap:1rem;">
+        <button onclick="captureCamera()" style="background:#fff;color:var(--ink);border:none;border-radius:12px;padding:.8rem 1.8rem;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Capture</button>
+        <button onclick="closeCamera()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:.8rem 1.4rem;font-family:var(--sans);font-size:0.95rem;font-weight:600;cursor:pointer;">Cancel</button>
+      </div>
+      <canvas id="camera-canvas" style="display:none;"></canvas>
+    </div>
 
     <button class="btn-next" onclick="goToStep2()" style="margin-top:1.2rem;">Continue →</button>
 
@@ -1048,6 +1067,74 @@
       warning.style.display = 'none';
       counter.style.color = 'var(--muted)';
     }
+  }
+
+  // ── AUTOSAVE — debounced 800ms, survives refresh ──
+  var autosaveTimer;
+  function autosaveNotes(val) {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(function() {
+      try {
+        localStorage.setItem('studyflow_notes_draft', val);
+        var ind = document.getElementById('autosave-indicator');
+        if (ind) {
+          ind.style.opacity = '1';
+          setTimeout(function() { ind.style.opacity = '0'; }, 2000);
+        }
+      } catch(e) {}
+    }, 800);
+  }
+
+  // Restore draft on page load
+  (function restoreNotesDraft() {
+    try {
+      var draft = localStorage.getItem('studyflow_notes_draft');
+      if (draft) {
+        var ta = document.getElementById('notes-input');
+        if (ta && !ta.value) {
+          ta.value = draft;
+          checkNotesLength(ta);
+        }
+      }
+    } catch(e) {}
+  })();
+
+  // ── CAMERA — scan handwritten notes ──
+  var cameraStream = null;
+  function openCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert('Camera not supported on this device. Try uploading a photo instead.');
+      return;
+    }
+    var modal = document.getElementById('camera-modal');
+    modal.style.display = 'flex';
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(function(stream) {
+        cameraStream = stream;
+        document.getElementById('camera-video').srcObject = stream;
+      })
+      .catch(function() {
+        modal.style.display = 'none';
+        alert('Could not access camera. Please allow camera permission or upload a photo instead.');
+      });
+  }
+
+  function captureCamera() {
+    var video = document.getElementById('camera-video');
+    var canvas = document.getElementById('camera-canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    canvas.toBlob(function(blob) {
+      closeCamera();
+      var file = new File([blob], 'camera-notes.jpg', { type: 'image/jpeg' });
+      handleFiles([file]);
+    }, 'image/jpeg', 0.92);
+  }
+
+  function closeCamera() {
+    if (cameraStream) { cameraStream.getTracks().forEach(function(t){ t.stop(); }); cameraStream = null; }
+    document.getElementById('camera-modal').style.display = 'none';
   }
 
   function selectOption(btn, group) {
