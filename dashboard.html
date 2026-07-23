@@ -26,6 +26,84 @@
   @keyframes slideUp { 0%{transform:translateY(30px);opacity:0} 100%{transform:none;opacity:1} }
   @keyframes milestoneIn { 0%{transform:translateY(-20px);opacity:0} 100%{transform:none;opacity:1} }
 
+  /* ── LOAD ANIMATION — staggered card entrance ── */
+  @keyframes dashCardIn {
+    0%   { opacity:0; transform:translateY(22px) scale(.97); }
+    100% { opacity:1; transform:none; }
+  }
+  @keyframes navSlideDown {
+    0%   { opacity:0; transform:translateY(-100%); }
+    100% { opacity:1; transform:none; }
+  }
+  @keyframes sidebarSlide {
+    0%   { opacity:0; transform:translateX(-20px); }
+    100% { opacity:1; transform:none; }
+  }
+  @keyframes greetingPop {
+    0%   { opacity:0; transform:scale(.92) translateY(10px); }
+    60%  { transform:scale(1.02) translateY(-2px); }
+    100% { opacity:1; transform:none; }
+  }
+  @keyframes statCount {
+    0%   { opacity:0; transform:translateY(8px); }
+    100% { opacity:1; transform:none; }
+  }
+  @keyframes progressRingIn {
+    0%   { opacity:0; transform:scale(.8); }
+    70%  { transform:scale(1.04); }
+    100% { opacity:1; transform:none; }
+  }
+
+  /* Apply to elements — JS adds .dash-loaded class to body */
+  .dash-card-1  { animation: dashCardIn .55s cubic-bezier(0.16,1,.3,1) .08s both; }
+  .dash-card-2  { animation: dashCardIn .55s cubic-bezier(0.16,1,.3,1) .16s both; }
+  .dash-card-3  { animation: dashCardIn .55s cubic-bezier(0.16,1,.3,1) .24s both; }
+  .dash-card-4  { animation: dashCardIn .55s cubic-bezier(0.16,1,.3,1) .32s both; }
+  .dash-card-5  { animation: dashCardIn .55s cubic-bezier(0.16,1,.3,1) .40s both; }
+  .dash-greeting { animation: greetingPop .65s cubic-bezier(0.16,1,.3,1) .05s both; }
+  .dash-progress { animation: progressRingIn .7s cubic-bezier(0.16,1,.3,1) .18s both; }
+  .dash-stat-1   { animation: statCount .5s cubic-bezier(0.16,1,.3,1) .22s both; }
+  .dash-stat-2   { animation: statCount .5s cubic-bezier(0.16,1,.3,1) .3s both; }
+  .dash-stat-3   { animation: statCount .5s cubic-bezier(0.16,1,.3,1) .38s both; }
+  .sidebar       { animation: sidebarSlide .5s cubic-bezier(0.16,1,.3,1) .04s both; }
+
+  /* ── PLAN COMPLETE MODAL ── */
+  .complete-modal-bg {
+    display:none; position:fixed; inset:0; background:rgba(10,14,46,.6);
+    backdrop-filter:blur(6px); z-index:500;
+    align-items:center; justify-content:center;
+  }
+  .complete-modal-bg.show { display:flex; }
+  .complete-modal {
+    background:#fff; border-radius:28px; padding:2.5rem 2rem;
+    max-width:400px; width:calc(100% - 2rem); text-align:center;
+    box-shadow:0 32px 80px rgba(0,0,0,.25);
+    animation:dashCardIn .55s cubic-bezier(0.16,1,.3,1) both;
+    position:relative; overflow:hidden;
+  }
+  .complete-modal::before {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(135deg,rgba(74,124,246,.06),rgba(56,191,161,.06));
+    pointer-events:none;
+  }
+  .complete-trophy { font-size:3.5rem; margin-bottom:.75rem; display:block; }
+  .complete-modal h2 { font-family:var(--serif); font-size:1.8rem; letter-spacing:-.03em; margin-bottom:.5rem; }
+  .complete-modal h2 em { font-style:italic; color:var(--blue); }
+  .complete-modal p { color:var(--muted); font-size:0.9rem; line-height:1.65; margin-bottom:1.5rem; }
+  .complete-stats-row { display:flex; justify-content:center; gap:2rem; margin-bottom:1.5rem; }
+  .complete-stat { display:flex; flex-direction:column; align-items:center; }
+  .complete-stat-num { font-family:'Inter',sans-serif; font-size:1.6rem; font-weight:800; color:var(--blue); letter-spacing:-.03em; }
+  .complete-stat-lbl { font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; }
+  .complete-btns { display:flex; gap:.75rem; flex-wrap:wrap; justify-content:center; }
+  .complete-btn-primary { background:var(--blue); color:#fff; border:none; border-radius:12px; padding:.8rem 1.5rem; font-family:var(--sans); font-size:0.9rem; font-weight:700; cursor:pointer; transition:background .2s,transform .2s; }
+  .complete-btn-primary:hover { background:#3567e0; transform:translateY(-1px); }
+  .complete-btn-ghost { background:var(--soft); color:var(--ink); border:none; border-radius:12px; padding:.8rem 1.2rem; font-family:var(--sans); font-size:0.9rem; font-weight:600; cursor:pointer; transition:background .2s; }
+  .complete-btn-ghost:hover { background:var(--blue-light); }
+
+  /* ── EXPORT PROGRESS TOAST ── */
+  .export-toast { position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%) translateY(80px); background:var(--ink); color:#fff; padding:.75rem 1.4rem; border-radius:12px; font-size:0.85rem; font-weight:600; z-index:400; transition:transform .3s cubic-bezier(0.16,1,.3,1),opacity .3s; opacity:0; pointer-events:none; white-space:nowrap; }
+  .export-toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+
   /* NAV */
   nav {
     background:#fff; border-bottom:1px solid var(--border);
@@ -580,7 +658,7 @@
     </div>
 
     <div id="plan-view" style="display:none;">
-      <div class="welcome">
+      <div class="welcome dash-greeting">
         <h1><span id="greeting-time">Good day</span>, <em id="user-name">Student</em>.</h1>
         <p id="welcome-sub">Here's your study plan — let's get it done!</p>
       </div>
@@ -594,14 +672,14 @@
         <button onclick="startAssignment()" style="background:#4a7cf6;color:#fff;border:none;padding:.7rem 1.3rem;border-radius:12px;font-family:var(--sans);font-weight:700;font-size:0.88rem;cursor:pointer;box-shadow:0 4px 14px rgba(74,124,246,.4);position:relative;z-index:1;">Start studying →</button>
       </div>
 
-      <!-- EXAM URGENCY BANNER — shown when ≤3 days left -->
+      <!-- EXAM URGENCY BANNER -->
       <div id="exam-urgency-banner" style="display:none;border-radius:16px;padding:1rem 1.2rem;margin-bottom:1.2rem;display:none;align-items:center;gap:.85rem;">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         <span id="exam-urgency-text" style="font-size:0.88rem;font-weight:600;"></span>
       </div>
 
       <div class="stats-row">
-        <div class="ring-card">
+        <div class="ring-card dash-progress">
           <svg width="72" height="72" viewBox="0 0 80 80">
             <circle class="ring-track" cx="40" cy="40" r="35"/>
             <circle class="ring-fill" cx="40" cy="40" r="35" id="progress-ring"/>
@@ -614,20 +692,26 @@
             <div class="ring-sub">days completed</div>
           </div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card dash-stat-1">
           <div class="stat-label">Study Streak</div>
           <div class="stat-value" id="streak-val">0</div>
           <div class="stat-sub" id="streak-sub">days in a row</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card dash-stat-2">
           <div class="stat-label">Days Left</div>
           <div class="stat-value" id="days-left-val">—</div>
           <div class="stat-sub">until exam</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card dash-stat-3">
           <div class="stat-label">Best Score</div>
           <div class="stat-value" id="best-score-val">—</div>
           <div class="stat-sub" id="avg-score-sub">avg accuracy</div>
+        </div>
+        <!-- Estimated time remaining stat -->
+        <div class="stat-card dash-card-1" id="time-remain-card" style="display:none;">
+          <div class="stat-label">Est. Time Left</div>
+          <div class="stat-value" id="time-remain-val">—</div>
+          <div class="stat-sub">to finish plan</div>
         </div>
       </div>
 
@@ -646,15 +730,21 @@
         </div>
       </div>
 
-      <div class="today-card" id="today-card">
+      <div class="today-card dash-card-2" id="today-card">
         <div class="today-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg> Today — Day <span id="today-day-num">1</span></div>
         <h2 id="today-title">Loading...</h2>
         <p id="today-description">Getting your plan ready...</p>
-        <button class="btn-start" onclick="startToday()">Start today's lesson →</button>
+        <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;margin-top:1.2rem;">
+          <button class="btn-start" onclick="startToday()" style="margin-top:0;">Start today's lesson →</button>
+          <button onclick="exportProgress()" style="background:none;border:1.5px solid var(--border);border-radius:10px;padding:.55rem 1rem;font-family:var(--sans);font-size:0.82rem;font-weight:600;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:.4rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            Share progress
+          </button>
+        </div>
       </div>
 
       <!-- SCORE HISTORY -->
-      <div class="score-history-card" id="score-history-card" style="display:none;">
+      <div class="score-history-card dash-card-3" id="score-history-card" style="display:none;">
         <div class="section-label">Score History</div>
         <div class="score-chart" id="score-chart"></div>
         <div id="score-analytics"></div>
@@ -893,6 +983,29 @@
 
     currentDayIndex = completed < total ? completed : total - 1;
 
+    // ── ESTIMATED TIME REMAINING ──
+    var remaining = total - completed;
+    var timeCard = document.getElementById('time-remain-card');
+    var timeVal = document.getElementById('time-remain-val');
+    if (timeCard && timeVal && remaining > 0) {
+      // Each session averages ~20 mins
+      var totalMins = remaining * 20;
+      var timeStr = totalMins >= 60
+        ? Math.round(totalMins / 60) + 'h ' + (totalMins % 60 > 0 ? (totalMins % 60) + 'm' : '')
+        : totalMins + 'm';
+      timeVal.textContent = timeStr.trim();
+      timeCard.style.display = '';
+    }
+
+    // ── PLAN COMPLETE CHECK ──
+    if (completed === total && total > 0) {
+      var alreadyShown = localStorage.getItem('studyflow_complete_shown_' + plan.id);
+      if (!alreadyShown) {
+        localStorage.setItem('studyflow_complete_shown_' + plan.id, '1');
+        setTimeout(function() { showPlanComplete(); }, 800);
+      }
+    }
+
     renderStreak();
     renderScoreHistory();
     checkNotificationPrompt();
@@ -900,6 +1013,71 @@
     renderToday();
     renderCalendar();
     } catch(e) { alert('Dashboard error: ' + e.message); }
+  }
+
+  // ── PLAN COMPLETE MODAL ──
+  function showPlanComplete() {
+    var modal = document.getElementById('complete-modal-bg');
+    if (!modal) return;
+    var scores = [];
+    (plan.days || []).forEach(function(d) {
+      if (d.score != null) scores.push(d.score);
+    });
+    var best = scores.length ? Math.max.apply(null, scores) + '%' : '—';
+    var streak = calculateStreak();
+    document.getElementById('complete-days').textContent = plan.days.length;
+    document.getElementById('complete-score').textContent = best;
+    document.getElementById('complete-streak').textContent = streak;
+    document.getElementById('complete-msg').textContent =
+      'You finished all ' + plan.days.length + ' sessions in your ' +
+      (plan.subject || 'study') + ' plan. Time to ace that exam.';
+    modal.classList.add('show');
+    // Confetti burst
+    if (window.spawnConfetti) { spawnConfetti(); setTimeout(spawnConfetti, 400); setTimeout(spawnConfetti, 800); }
+  }
+
+  // ── EXPORT / SHARE PROGRESS ──
+  function exportProgress() {
+    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var completed = (plan.days || []).filter(function(d){ return d.completed; }).length;
+    var total = (plan.days || []).length;
+    var scores = [];
+    (plan.days || []).forEach(function(d){ if (d.score != null) scores.push(d.score); });
+    var best = scores.length ? Math.max.apply(null, scores) : null;
+    var avg = scores.length ? Math.round(scores.reduce(function(a,b){ return a+b; }, 0) / scores.length) : null;
+    var streak = calculateStreak();
+
+    var lines = [
+      'StudyFlow Progress Report',
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+      'Student:  ' + (user.name || user.email || 'Student'),
+      'Subject:  ' + (plan.subject || 'Study Plan'),
+      'Progress: ' + completed + '/' + total + ' days completed (' + Math.round(completed/Math.max(total,1)*100) + '%)',
+      streak > 0 ? 'Streak:   ' + streak + ' day' + (streak !== 1 ? 's' : '') + ' in a row' : null,
+      best != null ? 'Best score: ' + best + '%' : null,
+      avg != null ? 'Avg score:  ' + avg + '%' : null,
+      plan.deadline ? 'Exam date: ' + plan.deadline : null,
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+      'Made with StudyFlow — studyflow-ten-vert.vercel.app'
+    ].filter(Boolean).join('\n');
+
+    if (navigator.share) {
+      navigator.share({ title: 'My StudyFlow Progress', text: lines })
+        .catch(function() { copyToClipboard(lines); });
+    } else {
+      copyToClipboard(lines);
+    }
+  }
+
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+      var toast = document.getElementById('export-toast');
+      if (!toast) return;
+      toast.classList.add('show');
+      setTimeout(function() { toast.classList.remove('show'); }, 2800);
+    }).catch(function() {
+      alert('Progress:\n\n' + text);
+    });
   }
 
   function renderStreak() {
@@ -1523,6 +1701,38 @@
   <button class="mobile-nav-btn" onclick="shareCurrentPlan()"><span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>Share</button>
   <button class="mobile-nav-btn" onclick="mobilePage('upgrade',this)"><span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>Upgrade</button>
 </div>
+
+<!-- PLAN COMPLETE MODAL -->
+<div class="complete-modal-bg" id="complete-modal-bg">
+  <div class="complete-modal">
+    <div class="complete-trophy">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>
+    </div>
+    <h2>Plan <em>complete!</em></h2>
+    <p id="complete-msg">You finished all sessions in your study plan. That's real dedication — now go crush that exam.</p>
+    <div class="complete-stats-row">
+      <div class="complete-stat">
+        <div class="complete-stat-num" id="complete-days">—</div>
+        <div class="complete-stat-lbl">Days studied</div>
+      </div>
+      <div class="complete-stat">
+        <div class="complete-stat-num" id="complete-score">—</div>
+        <div class="complete-stat-lbl">Best score</div>
+      </div>
+      <div class="complete-stat">
+        <div class="complete-stat-num" id="complete-streak">—</div>
+        <div class="complete-stat-lbl">Day streak</div>
+      </div>
+    </div>
+    <div class="complete-btns">
+      <button class="complete-btn-primary" onclick="exportProgress();document.getElementById('complete-modal-bg').classList.remove('show');">Share results</button>
+      <button class="complete-btn-ghost" onclick="document.getElementById('complete-modal-bg').classList.remove('show');">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT TOAST -->
+<div class="export-toast" id="export-toast">Progress copied to clipboard!</div>
 
 </body>
 </html>
