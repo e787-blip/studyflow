@@ -126,9 +126,11 @@
   textarea::placeholder { color: #9ca3af; }
 
   .text-input {
-    width: 100%; padding: .9rem 1.2rem; border: 1.5px solid var(--border); border-radius: 14px;
+    width: 100%; max-width: 100%; box-sizing: border-box;
+    padding: .9rem 1.2rem; border: 1.5px solid var(--border); border-radius: 14px;
     font-family: var(--sans); font-size: 0.95rem; color: var(--ink);
     background: var(--soft); outline: none; transition: border-color .25s, box-shadow .25s;
+    -webkit-appearance: none; appearance: none;
   }
   .text-input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(74,124,246,.1); }
 
@@ -1812,74 +1814,62 @@
       return strategies[subjectType] || strategies.general;
     }
 
-    // Detect subject first then generate all days sequentially
-    var subjectPrompt = 'In 3 words max, what subject is this? Reply with ONLY the subject name, nothing else.\nNotes: ' + notesShort;
-    fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: subjectPrompt })
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-      var subject = (data.result || data.plan || 'General').trim().split('\n')[0].substring(0, 30);
-      var subjectType = classifySubject(subject, notes);
-      var strategy = getSubjectStrategy(subjectType);
+    // Classify subject directly from the user-entered subject + notes
+    // No extra API call — faster, more reliable, can't hallucinate wrong subject
+    var subject = (document.getElementById('subject-input') ?
+      (document.getElementById('subject-input').value || '').trim() : '').substring(0, 60)
+      || notes.substring(0, 40);
+    var subjectType = classifySubject(subject, notes);
+    var strategy = getSubjectStrategy(subjectType);
 
-      // Generate days sequentially
-      function generateNext(dayNum) {
-        document.getElementById('loading').querySelector('p').textContent = 'Building your ' + strategy.label + ' plan — day ' + dayNum + ' of ' + numDays + '...';
-        generateDay(dayNum, numDays, subjectType, strategy, function(err, day) {
-          if (err) {
-            clearTimeout(timeoutId);
-            // Never show raw JSON/parse errors — show a clean retry message
-            var loadEl = document.getElementById('loading');
-            if (loadEl) loadEl.style.display = 'none';
-            var step2El = document.getElementById('step2');
-            if (step2El) {
-              step2El.style.display = 'block';
-              step2El.innerHTML = '<div style="text-align:center;padding:2rem 1rem;">' +
-                '<div style="font-size:2rem;margin-bottom:1rem;">⚠️</div>' +
-                '<h3 style="font-family:var(--serif);font-size:1.4rem;margin-bottom:.75rem;color:var(--ink);">Hmm, something went wrong</h3>' +
-                '<p style="color:var(--muted);font-size:0.9rem;margin-bottom:1.5rem;line-height:1.6;">Your notes are saved. Click below to try again — this usually works on the second attempt.</p>' +
-                '<button onclick="window.location.reload()" style="background:var(--blue);color:#fff;border:none;padding:.85rem 2rem;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;">Try again →</button>' +
-                '</div>';
-            }
-            return;
+    // Generate days sequentially
+    function generateNext(dayNum) {
+      document.getElementById('loading').querySelector('p').textContent = 'Building your ' + strategy.label + ' plan — day ' + dayNum + ' of ' + numDays + '...';
+      generateDay(dayNum, numDays, subjectType, strategy, function(err, day) {
+        if (err) {
+          clearTimeout(timeoutId);
+          var loadEl = document.getElementById('loading');
+          if (loadEl) loadEl.style.display = 'none';
+          var step2El = document.getElementById('step2');
+          if (step2El) {
+            step2El.style.display = 'block';
+            step2El.innerHTML = '<div style="text-align:center;padding:2rem 1rem;">' +
+              '<div style="font-size:2rem;margin-bottom:1rem;">&#9888;</div>' +
+              '<h3 style="font-family:var(--serif);font-size:1.4rem;margin-bottom:.75rem;color:var(--ink);">Hmm, something went wrong</h3>' +
+              '<p style="color:var(--muted);font-size:0.9rem;margin-bottom:1.5rem;line-height:1.6;">Your notes are saved. Click below to try again — this usually works on the second attempt.</p>' +
+              '<button onclick="window.location.reload()" style="background:var(--blue);color:#fff;border:none;padding:.85rem 2rem;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;">Try again &#8594;</button>' +
+              '</div>';
           }
-          allDays.push(day);
-          if (dayNum < numDays) {
-            generateNext(dayNum + 1);
-          } else {
-            clearTimeout(timeoutId);
-            var newPlan = {
-              id: Date.now(),
-              createdAt: new Date().toISOString(),
-              subject: subject,
-              goal: selectedGoal,
-              deadline: deadline || '',
-              subjectType: subjectType,
-              days: allDays
-            };
-            var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
-            allPlans.push(newPlan);
-            localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
-            localStorage.setItem('studyflow_active_plan', newPlan.id);
-            localStorage.setItem('studyflow_plan', JSON.stringify(newPlan));
-            localStorage.removeItem('studyflow_seconds_left');
-            localStorage.removeItem('studyflow_timer_day');
-            localStorage.removeItem('studyflow_minutes');
-            localStorage.setItem('studyflow_current_day', '0');
-            window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html';
-          }
-        });
-      }
-      generateNext(1);
-    })
-    .catch(function(err) {
-      clearTimeout(timeoutId);
-      alert('Could not detect subject — please try again.');
-      goToStep(2);
-    });
+          return;
+        }
+        allDays.push(day);
+        if (dayNum < numDays) {
+          generateNext(dayNum + 1);
+        } else {
+          clearTimeout(timeoutId);
+          var newPlan = {
+            id: Date.now(),
+            createdAt: new Date().toISOString(),
+            subject: subject,
+            goal: selectedGoal,
+            deadline: deadline || '',
+            subjectType: subjectType,
+            days: allDays
+          };
+          var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+          allPlans.push(newPlan);
+          localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
+          localStorage.setItem('studyflow_active_plan', newPlan.id);
+          localStorage.setItem('studyflow_plan', JSON.stringify(newPlan));
+          localStorage.removeItem('studyflow_seconds_left');
+          localStorage.removeItem('studyflow_timer_day');
+          localStorage.removeItem('studyflow_minutes');
+          localStorage.setItem('studyflow_current_day', '0');
+          window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html';
+        }
+      });
+    }
+    generateNext(1);
   }
 
   function copyPlan() {
