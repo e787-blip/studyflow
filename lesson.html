@@ -331,6 +331,31 @@
 
   /* CARD FOOTER */
   .card-footer { padding:1.2rem 2rem; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+
+  /* Flag / bookmark button */
+  .btn-flag {
+    background:none; border:1.5px solid var(--border); border-radius:8px;
+    padding:.38rem .6rem; cursor:pointer; color:var(--muted);
+    transition:all .18s; display:flex; align-items:center; gap:.3rem;
+    font-family:var(--sans); font-size:0.75rem; font-weight:600;
+  }
+  .btn-flag:hover { border-color:#f59e0b; color:#d97706; }
+  .btn-flag.flagged { border-color:#f59e0b; background:#fff8e0; color:#d97706; }
+
+  /* Keyboard hint chip */
+  .kbd-hint {
+    display:inline-flex; align-items:center; gap:.2rem;
+    font-size:0.65rem; color:var(--muted); font-weight:500;
+  }
+  .kbd { display:inline-block; background:var(--soft); border:1px solid var(--border); border-radius:4px; padding:.1rem .3rem; font-family:monospace; font-size:0.65rem; color:var(--muted); }
+
+  /* Flagged questions review panel */
+  .flagged-panel {
+    background:#fff8e0; border:1.5px solid #f59e0b; border-radius:16px;
+    padding:1.1rem 1.3rem; margin-bottom:1rem; display:none;
+  }
+  .flagged-panel.show { display:block; }
+  .flagged-panel-title { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#d97706; margin-bottom:.6rem; }
   .footer-left { font-size:0.75rem; color:var(--muted); font-weight:500; }
   .footer-left span { color:var(--blue); font-weight:700; }
   .btn-next {
@@ -3222,6 +3247,94 @@
   }
 
   
+
+  // ── KEYBOARD SHORTCUTS ──
+  var flaggedQuestions = JSON.parse(localStorage.getItem('studyflow_flagged') || '[]');
+
+  document.addEventListener('keydown', function(e) {
+    // Don't intercept when typing in inputs
+    if (['INPUT','TEXTAREA'].indexOf(document.activeElement.tagName) > -1) return;
+
+    var key = e.key;
+
+    // 1-4: select MCQ / TF options
+    if (['1','2','3','4'].indexOf(key) > -1) {
+      var idx = parseInt(key) - 1;
+      var opts = document.querySelectorAll('.option-btn:not(.selected):not(.correct):not(.wrong)');
+      if (opts.length > 0 && !currentAnswered) {
+        var allOpts = document.querySelectorAll('.option-btn');
+        if (allOpts[idx]) { allOpts[idx].click(); }
+      }
+    }
+
+    // Enter / Space → Next card (only when btn-next is enabled)
+    if (key === 'Enter' || key === ' ') {
+      e.preventDefault();
+      var nextBtn = document.getElementById('btn-next');
+      if (nextBtn && !nextBtn.disabled) nextBtn.click();
+    }
+
+    // H → toggle hint
+    if (key === 'h' || key === 'H') {
+      var hintBtn = document.querySelector('.hint-btn');
+      if (hintBtn) hintBtn.click();
+    }
+
+    // F → flag current question
+    if (key === 'f' || key === 'F') {
+      var flagBtn = document.querySelector('.btn-flag');
+      if (flagBtn) flagBtn.click();
+    }
+  });
+
+  // ── QUESTION FLAGGING ──
+  function flagQuestion(questionText) {
+    var idx = flaggedQuestions.indexOf(questionText);
+    if (idx > -1) {
+      flaggedQuestions.splice(idx, 1);
+    } else {
+      flaggedQuestions.push(questionText);
+    }
+    localStorage.setItem('studyflow_flagged', JSON.stringify(flaggedQuestions));
+    // Update button state
+    var btn = document.querySelector('.btn-flag');
+    if (btn) {
+      var isFlagged = flaggedQuestions.indexOf(questionText) > -1;
+      btn.classList.toggle('flagged', isFlagged);
+      btn.title = isFlagged ? 'Flagged for review (press F)' : 'Flag for review (press F)';
+      btn.querySelector('span').textContent = isFlagged ? ' Flagged' : ' Flag';
+    }
+  }
+
+  // Inject flag button into card footer after render
+  var _origShowNextCard = showNextCard;
+  // Patch buildCard to include flag btn in question cards
+  var _origBuildCard = buildCard;
+  function buildCard(badge, title, struggling, bodyHtml, footerLeft, nextLabel, disabled) {
+    return _origBuildCard(badge, title, struggling, bodyHtml, footerLeft, nextLabel, disabled);
+  }
+
+  // After each card renders, inject the flag button if it's a question
+  var _origRenderCard = renderCard;
+  function renderCard(card) {
+    _origRenderCard(card);
+    if (card.type === 'question' || card.type === 'fill' || card.type === 'bigequation' || card.type === 'wordproblem' || card.type === 'errorspot') {
+      var footer = document.querySelector('.card-footer');
+      if (footer && card.q && card.q.question) {
+        var qText = card.q.question;
+        var isFlagged = flaggedQuestions.indexOf(qText) > -1;
+        var flagBtn = document.createElement('button');
+        flagBtn.className = 'btn-flag' + (isFlagged ? ' flagged' : '');
+        flagBtn.title = isFlagged ? 'Flagged for review (press F)' : 'Flag for review (press F)';
+        flagBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="' + (isFlagged ? '#d97706' : 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg><span>' + (isFlagged ? ' Flagged' : ' Flag') + '</span>';
+        flagBtn.onclick = function() { flagQuestion(qText); };
+        // Insert before the Next button
+        var nextBtn = footer.querySelector('.btn-next');
+        if (nextBtn) footer.insertBefore(flagBtn, nextBtn);
+        else footer.appendChild(flagBtn);
+      }
+    }
+  }
 
   init();
 </script>
