@@ -1565,23 +1565,35 @@
           '{"type":"write","question":"Explain [key concept from notes] in your own words.","modelAnswer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
       }
 
-      var prompt = 'You are generating a study day JSON for a ' + (strategy.label || 'General') + ' student.\n\n' +
+      var prompt = 'You are a world-class instructional designer generating a hyper-specific, media-rich study day for a ' + (strategy.label || 'General') + ' student.\n\n' +
         'STUDENT NOTES:\n' + notesShort + '\n\n' +
         'Day ' + dayNum + ' of ' + totalDays + '. Difficulty: ' + difficulty + '. Goal: ' + selectedGoal + '.\n' +
-        (isLast ? 'This is the FINAL day — use hardest questions.\n' : '') +
+        (isLast ? 'This is the FINAL day — maximum depth and hardest questions.\n' : '') +
+        '\nCONTENT GENERATION RULES:\n' +
+        '1. title: Give this day a MICRO-TOPIC title — not "Biology" but "Synaptic Plasticity & Long-Term Potentiation". Not "Math" but "Solving Systems via Gaussian Elimination". Be hyper-specific to what is actually in the notes.\n' +
+        '2. microTopic: One sentence naming the EXACT concept being studied today, drilling 3 levels deep (domain > subdomain > micro-concept).\n' +
+        '3. content: 3-4 rich sentences of explanatory content. Include the WHY behind the concept, not just the what. If this is a process topic (math/science/cs), describe it step by step in the sentences.\n' +
+        '4. steps: For PROCEDURAL topics (math equations, algorithms, chemical reactions, historical processes), generate 3-5 micro-steps, each with a "step" label, "action" (what happens), and "why" (the reasoning behind it). For CONCEPTUAL topics (vocabulary, history analysis, literature themes), leave steps as empty array [].\n' +
+        '5. diagram: If the topic involves a VISUAL structure (brain, cell, circuit, market graph, map, molecule, algorithm flowchart, timeline), provide a diagram object with "type" (one of: brain|cell|atom|supply-demand|timeline|circuit|dna|neuron|ecosystem|water-cycle|mitosis|memory-model|plate-tectonics|photosynthesis|none) and "label" describing what should be shown. If no diagram is relevant, set type:"none".\n' +
+        '6. concepts: 3-5 key concepts, each with "name", "definition" (precise, not generic), "why" (why this concept matters for the exam/topic), and "misconception" (the #1 thing students get wrong about this).\n' +
+        '7. keyTerms: 4 flashcard-style terms from the notes with precise definitions.\n' +
         questionInstructions +
-        '\nRULES:\n' +
+        '\nSTRICT OUTPUT RULES:\n' +
         '1. Output ONLY valid compact JSON — no spaces, no line breaks, no markdown\n' +
-        '2. Every string under 120 characters\n' +
-        '3. Replace ALL [bracketed] placeholders in the schema with REAL content from the notes\n' +
+        '2. Every string value under 200 characters\n' +
+        '3. Replace ALL placeholder text with REAL content from the notes\n' +
         '4. Every question must be answerable using the notes above\n' +
         '5. Fill question answers must be the EXACT correct answer — a single word or short phrase\n' +
-        '6. Fill questions must be a complete sentence with the blank at the END: "The [concept] is called _______" NOT "_______ is the concept"\n' +
-        '7. Never prefix fill questions with "Word Problem:" — that is for wordproblem type only\n\n' +
-        'OUTPUT THIS EXACT JSON STRUCTURE — replace every field with REAL content from the notes above:\n' +
-        '{"title":"short title for this day",' +
-        '"briefing":"one sentence: what the student will learn today",' +
-        '"content":"2-3 sentences of lesson content summarizing key ideas",' +
+        '6. Fill questions must be a complete sentence with the blank at the END\n' +
+        '7. Never prefix fill questions with "Word Problem:"\n\n' +
+        'OUTPUT THIS EXACT JSON STRUCTURE:\n' +
+        '{"title":"Micro-Topic Title",' +
+        '"microTopic":"exact micro-concept being studied today",' +
+        '"briefing":"one sentence: what the student will learn and be able to do after this session",' +
+        '"content":"3-4 sentences of rich explanatory content with WHY behind the concept",' +
+        '"steps":[{"step":"Step 1","action":"what happens","why":"reasoning"},{"step":"Step 2","action":"what happens","why":"reasoning"}],' +
+        '"diagram":{"type":"brain","label":"what to show in the diagram"},' +
+        '"concepts":[{"name":"concept name","definition":"precise definition","why":"why this matters","misconception":"common student mistake"}],' +
         '"keyTerms":[{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"}],' +
         '"duration":30,"isFinal":' + isLast + ',"completed":false,' +
         '"questions":[' + questionSchema + ']}';
