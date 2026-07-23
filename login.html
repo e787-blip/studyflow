@@ -13,143 +13,285 @@
     --ink: #1a1d2e; --muted: #6b7280; --soft: #f0f4ff;
     --blue: #4a7cf6; --blue-light: #dce8ff; --white: #fff; --border: #e8ecf4;
     --sans: 'DM Sans', sans-serif; --serif: 'Instrument Serif', Georgia, serif;
+    --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
   }
   body { font-family: var(--sans); color: var(--ink); min-height: 100vh; display: flex; }
 
-  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
-  @keyframes gradientShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+  @keyframes fadeUp    { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:none} }
+  @keyframes gradShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+  @keyframes viewIn    { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+  @keyframes ripple    { from{transform:scale(0);opacity:.35} to{transform:scale(4);opacity:0} }
 
-  /* LEFT PANEL */
+  /* ── LEFT PANEL — centered, never moves ── */
   .left-panel {
-    width: 45%; background: linear-gradient(135deg, #4a7cf6 0%, #3567e0 50%, #2851c8 100%);
+    width: 45%;
+    min-height: 100vh;
+    background: linear-gradient(145deg, #4a7cf6 0%, #3567e0 45%, #2851c8 100%);
     background-size: 200% 200%;
-    animation: gradientShift 6s ease infinite;
-    display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
-    padding: 4rem; position: relative; overflow: hidden;
+    animation: gradShift 8s ease infinite;
+    display: flex;
+    flex-direction: column;
+    align-items: center;        /* horizontal center */
+    justify-content: center;    /* vertical center */
+    text-align: center;         /* text centered */
+    padding: 3rem 3.5rem;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
   }
+  /* Subtle dot grid */
   .left-panel::before {
     content: ''; position: absolute; inset: 0;
-    background-image: radial-gradient(circle, rgba(255,255,255,.1) 1px, transparent 1px);
-    background-size: 28px 28px; pointer-events: none;
+    background-image: radial-gradient(circle, rgba(255,255,255,.08) 1px, transparent 1px);
+    background-size: 26px 26px; pointer-events: none;
   }
-  .left-logo { text-decoration: none; display: flex; align-items: center; margin-bottom: 3rem; position: relative; z-index: 1; }
-  .left-panel h1 { font-family: var(--serif); font-size: clamp(2rem, 3vw, 2.8rem); color: #fff; letter-spacing: -0.03em; line-height: 1.15; margin-bottom: 1rem; position: relative; z-index: 1; }
+  /* Glow blobs for depth */
+  .left-panel::after {
+    content: ''; position: absolute;
+    width: 340px; height: 340px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,.12), transparent 70%);
+    bottom: -80px; right: -80px; pointer-events: none;
+  }
+  .left-logo {
+    text-decoration: none;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 2.5rem;
+    position: relative; z-index: 1;
+    animation: fadeUp .5s var(--ease-spring) both;
+  }
+  .left-panel h1 {
+    font-family: var(--serif);
+    font-size: clamp(1.8rem, 2.8vw, 2.6rem);
+    color: #fff; letter-spacing: -0.03em; line-height: 1.18;
+    margin-bottom: 1rem;
+    position: relative; z-index: 1;
+    animation: fadeUp .5s .08s var(--ease-spring) both;
+    max-width: 320px;
+  }
   .left-panel h1 em { font-style: italic; color: #c5d9ff; }
-  .left-panel p { color: rgba(255,255,255,.75); font-size: 0.95rem; font-weight: 300; line-height: 1.7; max-width: 320px; position: relative; z-index: 1; margin-bottom: 2.5rem; }
-  .left-features { display: flex; flex-direction: column; gap: .75rem; position: relative; z-index: 1; }
-  .left-feature { display: flex; align-items: center; gap: .75rem; color: rgba(255,255,255,.85); font-size: 0.88rem; font-weight: 400; }
-  .left-feature-dot { width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,.25); display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: #fff; flex-shrink: 0; }
+  .left-panel > p {
+    color: rgba(255,255,255,.72);
+    font-size: 0.93rem; font-weight: 300; line-height: 1.72;
+    max-width: 300px;
+    position: relative; z-index: 1;
+    margin-bottom: 2.5rem;
+    animation: fadeUp .5s .16s var(--ease-spring) both;
+  }
+  .left-features {
+    display: flex; flex-direction: column; gap: .65rem;
+    position: relative; z-index: 1;
+    align-items: flex-start; text-align: left;
+    animation: fadeUp .5s .24s var(--ease-spring) both;
+    width: 100%; max-width: 280px;
+  }
+  .left-feature {
+    display: flex; align-items: center; gap: .65rem;
+    color: rgba(255,255,255,.82); font-size: 0.86rem; font-weight: 400;
+  }
+  .left-feature-dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: rgba(255,255,255,.22);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; color: #fff; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,.3);
+  }
 
-  /* RIGHT PANEL */
+  /* ── RIGHT PANEL ── */
   .right-panel {
-    flex: 1; background: var(--white); display: flex; flex-direction: column;
-    align-items: center; justify-content: center; padding: 3rem 2rem;
-    overflow-y: auto;
+    flex: 1; background: var(--white);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 3rem 2rem; overflow-y: auto;
   }
-  .auth-box { width: 100%; max-width: 400px; animation: fadeUp .6s cubic-bezier(0.16,1,.3,1) both; }
+  .auth-box {
+    width: 100%; max-width: 400px;
+    animation: fadeUp .55s var(--ease-spring) both;
+  }
 
-  /* TABS */
-  .tabs { display: flex; background: var(--soft); border-radius: 14px; padding: .3rem; margin-bottom: 2rem; }
+  /* ── TABS — pill segmented control ── */
+  .tabs {
+    display: flex;
+    background: var(--soft);
+    border-radius: 14px;
+    padding: .28rem;
+    margin-bottom: 2rem;
+    position: relative;
+  }
   .tab {
-    flex: 1; padding: .7rem; border-radius: 10px; border: none; background: none;
-    font-family: var(--sans); font-size: 0.92rem; font-weight: 600; color: var(--muted);
-    cursor: pointer; transition: all .25s;
+    flex: 1; padding: .68rem;
+    border-radius: 11px; border: none; background: none;
+    font-family: var(--sans); font-size: 0.9rem; font-weight: 600;
+    color: var(--muted); cursor: pointer;
+    transition: color .22s var(--ease-spring);
+    position: relative; z-index: 1;
   }
-  .tab.active { background: #fff; color: var(--ink); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .tab.active { color: var(--ink); }
+  /* Sliding pill indicator */
+  .tab-indicator {
+    position: absolute;
+    top: .28rem; bottom: .28rem;
+    width: calc(50% - .28rem);
+    background: #fff;
+    border-radius: 11px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.09), 0 1px 2px rgba(0,0,0,.06);
+    transition: transform .28s var(--ease-spring);
+    left: .28rem;
+  }
+  .tab-indicator.right { transform: translateX(calc(100% + .28rem)); }
 
-  .auth-box h2 { font-family: var(--serif); font-size: 1.8rem; color: var(--ink); margin-bottom: .3rem; letter-spacing: -0.02em; }
+  /* ── AUTH HEADINGS ── */
+  .auth-box h2 {
+    font-family: var(--serif); font-size: 1.75rem;
+    color: var(--ink); margin-bottom: .28rem; letter-spacing: -0.02em;
+  }
   .auth-box h2 em { font-style: italic; color: var(--blue); }
-  .auth-box p { color: var(--muted); font-size: 0.88rem; font-weight: 300; margin-bottom: 1.8rem; }
-
-  /* GOOGLE BTN */
-  .btn-google {
-    width: 100%; padding: .9rem; border-radius: 12px;
-    border: 1.5px solid var(--border); background: #fff;
-    font-family: var(--sans); font-size: 0.92rem; font-weight: 600; color: var(--ink);
-    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .75rem;
-    transition: all .2s; margin-bottom: 1.2rem;
+  .auth-box > p, .view-sub {
+    color: var(--muted); font-size: 0.86rem; font-weight: 300; margin-bottom: 1.75rem;
   }
-  .btn-google:hover { border-color: var(--blue); background: var(--soft); }
-  .google-icon { width: 20px; height: 20px; }
 
-  /* DIVIDER */
-  .divider { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.2rem; color: var(--muted); font-size: 0.78rem; }
+  /* ── VIEWS — crossfade instead of snap ── */
+  #login-view, #signup-view {
+    animation: viewIn .3s var(--ease-spring) both;
+  }
+
+  /* ── GOOGLE BTN ── */
+  .btn-google {
+    width: 100%; padding: .88rem;
+    border-radius: 12px;
+    border: 1.5px solid var(--border); background: #fff;
+    font-family: var(--sans); font-size: 0.9rem; font-weight: 600; color: var(--ink);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: .7rem;
+    transition: border-color .2s, background .2s, transform .18s var(--ease-spring), box-shadow .2s;
+    margin-bottom: 1.2rem;
+  }
+  .btn-google:hover { border-color: #c5d9ff; background: #fafcff; box-shadow: 0 2px 12px rgba(74,124,246,.1); }
+  .btn-google:active { transform: scale(.98); }
+
+  .btn-google .google-icon, .btn-google svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .divider {
+    display: flex; align-items: center; gap: .9rem;
+    margin-bottom: 1.2rem; color: var(--muted); font-size: 0.76rem;
+  }
   .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-  /* FORM */
-  .form-field { margin-bottom: 1rem; }
-  .form-label { display: block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--ink); margin-bottom: .45rem; }
+  /* ── FORM FIELDS ── */
+  .form-field { margin-bottom: .95rem; }
+  .form-label {
+    display: block; font-size: 0.75rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em;
+    color: var(--ink); margin-bottom: .4rem;
+  }
   .form-input {
-    width: 100%; padding: .85rem 1.1rem; border: 1.5px solid var(--border); border-radius: 12px;
-    font-family: var(--sans); font-size: 0.92rem; color: var(--ink); background: var(--soft);
-    outline: none; transition: border-color .2s, box-shadow .2s;
+    width: 100%; padding: .85rem 1.05rem;
+    border: 1.5px solid var(--border); border-radius: 12px;
+    font-family: var(--sans); font-size: 0.9rem; color: var(--ink);
+    background: var(--soft); outline: none;
+    transition: border-color .22s, box-shadow .22s, background .22s;
   }
-  .form-input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(74,124,246,.1); }
-  .form-input::placeholder { color: #9ca3af; }
+  .form-input:hover { border-color: #c5d9ff; }
+  .form-input:focus {
+    border-color: var(--blue);
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(74,124,246,.1);
+  }
+  .form-input::placeholder { color: #b0b8cc; }
 
-  .role-btn { flex:1; padding:.7rem; border-radius:10px; border:1.5px solid var(--border); background:var(--soft); font-family:var(--sans); font-size:0.88rem; font-weight:600; color:var(--muted); cursor:pointer; transition:all .2s; }
-  .role-btn:hover { border-color:var(--blue); color:var(--blue); }
-  .role-btn.active { background:var(--blue); color:#fff; border-color:var(--blue); } text-decoration: none; float: right; margin-top: -2rem; margin-bottom: 1.2rem; display: block; font-weight: 500; }
-  .forgot:hover { text-decoration: underline; }
+  /* ── ROLE BUTTONS ── */
+  .role-btn {
+    flex: 1; padding: .68rem;
+    border-radius: 10px; border: 1.5px solid var(--border);
+    background: var(--soft); font-family: var(--sans);
+    font-size: 0.87rem; font-weight: 600; color: var(--muted);
+    cursor: pointer;
+    transition: border-color .2s, color .2s, background .2s, transform .18s var(--ease-spring);
+  }
+  .role-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .role-btn:active { transform: scale(.97); }
+  .role-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
 
+  /* ── FORGOT ── */
+  .forgot {
+    font-size: 0.78rem; color: var(--muted); text-decoration: none;
+    float: right; margin-top: -1.8rem; margin-bottom: 1.2rem; display: block;
+    font-weight: 500; transition: color .18s;
+  }
+  .forgot:hover { color: var(--blue); text-decoration: none; }
+
+  /* ── SUBMIT BUTTON — smooth press with ripple ── */
   .btn-submit {
-    width: 100%; padding: .95rem; background: var(--blue); color: #fff; border: none; border-radius: 12px;
-    font-family: var(--sans); font-size: 0.95rem; font-weight: 600; cursor: pointer;
-    transition: all .3s; box-shadow: 0 4px 14px rgba(74,124,246,.3); margin-top: .5rem;
+    width: 100%; padding: .93rem;
+    background: var(--blue); color: #fff; border: none; border-radius: 12px;
+    font-family: var(--sans); font-size: 0.93rem; font-weight: 700;
+    cursor: pointer; margin-top: .5rem;
+    position: relative; overflow: hidden;
+    transition: background .22s, transform .18s var(--ease-spring), box-shadow .22s;
+    box-shadow: 0 4px 14px rgba(74,124,246,.28);
   }
-  .btn-submit:hover { background: #3567e0; transform: translateY(-1px); box-shadow: 0 8px 22px rgba(74,124,246,.4); }
+  .btn-submit:hover {
+    background: #3567e0;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(74,124,246,.38);
+  }
+  .btn-submit:active {
+    transform: scale(.98) translateY(0);
+    box-shadow: 0 2px 8px rgba(74,124,246,.25);
+  }
+  /* Ripple effect on click */
+  .btn-submit .ripple {
+    position: absolute; border-radius: 50%;
+    width: 60px; height: 60px;
+    margin-top: -30px; margin-left: -30px;
+    background: rgba(255,255,255,.35);
+    animation: ripple .5s linear;
+    pointer-events: none;
+  }
 
-  .terms { font-size: 0.75rem; color: var(--muted); text-align: center; margin-top: 1rem; line-height: 1.6; }
+  /* ── TERMS ── */
+  .terms {
+    font-size: 0.73rem; color: var(--muted); text-align: center;
+    margin-top: 1rem; line-height: 1.6;
+  }
   .terms a { color: var(--blue); text-decoration: none; }
   .terms a:hover { text-decoration: underline; }
 
-  /* ERROR / SUCCESS */
-  .msg-box { padding: .75rem 1rem; border-radius: 10px; font-size: 0.85rem; margin-bottom: 1rem; display: none; }
-  .msg-box.error { background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; }
+  /* ── MSG BOX ── */
+  .msg-box {
+    padding: .7rem 1rem; border-radius: 10px;
+    font-size: 0.83rem; margin-bottom: .9rem;
+    display: none;
+    animation: fadeUp .3s var(--ease-spring) both;
+  }
+  .msg-box.error   { background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; }
   .msg-box.success { background: #d1faf0; border: 1px solid #38bfa1; color: #1a9e80; }
-  .msg-box.show { display: block; }
+  .msg-box.show    { display: block; }
 
+  /* ── MOBILE ── */
   @media (max-width: 768px) {
     body { flex-direction: column; }
     .left-panel {
-      width: 100%; padding: 2rem 1.5rem 1.5rem;
-      min-height: auto; min-height: 200px;
+      width: 100%; min-height: auto; padding: 2.2rem 1.5rem 1.8rem;
     }
-    .left-panel h1 { font-size: 1.5rem; margin-bottom:.5rem; }
-    .left-panel p { font-size:0.85rem; opacity:.85; }
+    .left-panel h1 { font-size: 1.45rem; margin-bottom: .5rem; }
+    .left-panel > p { font-size: .84rem; margin-bottom: 1.5rem; }
     .left-features { display: none; }
-    .left-logo svg { width:130px; height:32px; }
+    .left-logo svg { width: 130px; height: 32px; }
     .right-panel {
-      padding: 1.8rem 1.2rem 2.5rem;
-      flex: 1; min-height: auto;
-      border-radius: 24px 24px 0 0;
-      margin-top: -16px;
-      position: relative;
-      background: #fff;
+      flex: 1; padding: 1.8rem 1.2rem 2.5rem;
+      border-radius: 22px 22px 0 0;
+      margin-top: -14px;
       box-shadow: 0 -8px 32px rgba(0,0,0,.08);
     }
-    .tabs { margin-bottom: 1.2rem; }
-    .tab-btn { padding:.6rem 1rem; font-size:0.85rem; }
-    .form-field { margin-bottom:1.1rem; }
-    input { padding:.8rem 1rem; font-size:0.92rem; }
-    .btn-submit { padding:.9rem; font-size:0.95rem; min-height:48px; }
-    .btn-google { padding:.85rem 1rem; font-size:0.88rem; min-height:48px; }
-    .msg-box { font-size:0.82rem; padding:.6rem .9rem; }
-    .forgot { font-size:0.8rem; }
   }
-
-  @media(max-width:390px) {
-    .left-panel { padding:1.5rem 1.2rem 1.2rem; min-height:160px; }
-    .left-panel h1 { font-size:1.3rem; }
-    .right-panel { padding:1.5rem 1rem 2rem; }
+  @media (max-width: 390px) {
+    .left-panel { padding: 1.6rem 1.2rem 1.4rem; }
+    .left-panel h1 { font-size: 1.25rem; }
+    .right-panel { padding: 1.5rem 1rem 2rem; }
   }
-
-  /* ── GLOBAL TYPOGRAPHY STANDARD ── */
-  nav { min-height:60px; }
-  h1,h2,h3 { font-family:var(--serif); letter-spacing:-0.02em; }
-  body, p, span, div, button, input, textarea { font-family:var(--sans); }
-
-  </style>
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+  }
+</style>
 </head>
 <body>
 
@@ -185,19 +327,16 @@
 <div class="right-panel">
   <div class="auth-box">
 
-    <!-- TABS -->
-    <div class="tabs">
-      <button class="tab active" id="tab-login" onclick="switchTab('login')">Sign in</button>
-      <button class="tab" id="tab-signup" onclick="switchTab('signup')">Create account</button>
+    <div class="tabs" role="tablist">
+      <div class="tab-indicator" id="tab-indicator"></div>
+      <button class="tab active" id="tab-login" role="tab" aria-selected="true" onclick="switchTab('login')">Sign in</button>
+      <button class="tab" id="tab-signup" role="tab" aria-selected="false" onclick="switchTab('signup')">Create account</button>
     </div>
 
-    <!-- LOGIN -->
     <div id="login-view">
       <h2>Welcome <em>back</em></h2>
       <p>Sign in to continue your study plans.</p>
-
       <div class="msg-box" id="login-msg"></div>
-
       <button class="btn-google" onclick="googleAuth()">
         <svg class="google-icon" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -207,9 +346,7 @@
         </svg>
         Continue with Google
       </button>
-
       <div class="divider">or sign in with email</div>
-
       <div class="form-field">
         <label class="form-label">Email</label>
         <input type="email" class="form-input" id="login-email" placeholder="your@email.com" />
@@ -220,16 +357,13 @@
       </div>
       <a href="#" class="forgot" onclick="resetPassword();return false;">Forgot password?</a>
       <button class="btn-submit" onclick="handleLogin()">Sign in →</button>
-      <p class="terms">By signing in you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</p>
+      <p class="terms">By signing in you agree to our <a href="https://studyflow-ten-vert.vercel.app/terms.html">Terms</a> and <a href="https://studyflow-ten-vert.vercel.app/privacy.html">Privacy Policy</a>.</p>
     </div>
 
-    <!-- SIGNUP -->
     <div id="signup-view" style="display:none;">
       <h2>Get <em>started</em></h2>
       <p>Create your free account — no credit card needed.</p>
-
       <div class="msg-box" id="signup-msg"></div>
-
       <button class="btn-google" onclick="googleAuth()">
         <svg class="google-icon" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -239,9 +373,7 @@
         </svg>
         Continue with Google
       </button>
-
       <div class="divider">or sign up with email</div>
-
       <div class="form-field">
         <label class="form-label">Full name</label>
         <input type="text" class="form-input" id="signup-name" placeholder="Ethan Hwang" />
@@ -255,7 +387,7 @@
         <input type="password" class="form-input" id="signup-password" placeholder="Min. 8 characters" />
       </div>
       <div class="form-field">
-        <label class="form-label">Class code <span style="font-weight:300;text-transform:none;letter-spacing:0;">(optional — enter if your teacher gave you one)</span></label>
+        <label class="form-label">Class code <span style="font-weight:300;text-transform:none;letter-spacing:0;">(optional)</span></label>
         <input type="text" class="form-input" id="signup-classcode" placeholder="e.g. MS-7401" style="text-transform:uppercase;" />
       </div>
       <div class="form-field">
@@ -266,8 +398,7 @@
         </div>
       </div>
       <button class="btn-submit" onclick="handleSignup()">Create account →</button>
-      <p style="font-size:0.75rem;color:var(--muted);text-align:center;margin-top:.75rem;">By signing up you agree to our <a href="https://studyflow-ten-vert.vercel.app/terms.html" style="color:var(--blue);">Terms</a> and <a href="https://studyflow-ten-vert.vercel.app/privacy.html" style="color:var(--blue);">Privacy Policy</a></p>
-      <p class="terms">By creating an account you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</p>
+      <p class="terms">By creating an account you agree to our <a href="https://studyflow-ten-vert.vercel.app/terms.html">Terms</a> and <a href="https://studyflow-ten-vert.vercel.app/privacy.html">Privacy Policy</a>.</p>
     </div>
 
   </div>
@@ -332,12 +463,48 @@
   }
 
   function switchTab(tab) {
-    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
-    document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
-    document.getElementById('login-view').style.display = tab === 'login' ? 'block' : 'none';
-    document.getElementById('signup-view').style.display = tab === 'signup' ? 'block' : 'none';
+    // Update tab buttons
+    var loginTab  = document.getElementById('tab-login');
+    var signupTab = document.getElementById('tab-signup');
+    loginTab.classList.toggle('active', tab === 'login');
+    signupTab.classList.toggle('active', tab === 'signup');
+    loginTab.setAttribute('aria-selected', tab === 'login');
+    signupTab.setAttribute('aria-selected', tab === 'signup');
+
+    // Slide the pill indicator
+    var indicator = document.getElementById('tab-indicator');
+    if (indicator) indicator.classList.toggle('right', tab === 'signup');
+
+    // Crossfade views
+    var loginView  = document.getElementById('login-view');
+    var signupView = document.getElementById('signup-view');
+    if (tab === 'login') {
+      signupView.style.display = 'none';
+      loginView.style.display  = 'block';
+      loginView.style.animation = 'none';
+      void loginView.offsetWidth; // force reflow
+      loginView.style.animation = 'viewIn .3s cubic-bezier(0.16,1,.3,1) both';
+    } else {
+      loginView.style.display  = 'none';
+      signupView.style.display = 'block';
+      signupView.style.animation = 'none';
+      void signupView.offsetWidth;
+      signupView.style.animation = 'viewIn .3s cubic-bezier(0.16,1,.3,1) both';
+    }
   }
   window.switchTab = switchTab;
+
+  // ── RIPPLE on submit buttons ──
+  document.querySelectorAll('.btn-submit').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      var r = document.createElement('span');
+      r.className = 'ripple';
+      r.style.left = e.offsetX + 'px';
+      r.style.top  = e.offsetY + 'px';
+      btn.appendChild(r);
+      setTimeout(function() { r.remove(); }, 520);
+    });
+  });
 
   function handleLogin() {
     var email = document.getElementById('login-email').value.trim();
