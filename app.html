@@ -605,7 +605,7 @@
 
   <!-- LOADING -->
   <div class="loading-screen" id="loading" style="text-align:center;padding:2rem;">
-    <p style="color:var(--blue);font-weight:600;font-size:1rem;">Detecting subject...</p>
+    <p id="gen-progress-text" style="color:var(--blue);font-weight:600;font-size:1rem;">Building your study plan...</p>
   </div>
 
   <!-- RESULT -->
@@ -1282,9 +1282,12 @@
 
     // ── Progress ──
     function setProgress(msg) {
-      var pEl = loadEl.querySelector('p');
+      var pEl = document.getElementById('gen-progress-text');
       if (pEl) pEl.textContent = msg;
     }
+
+    // Set correct text immediately — no "Detecting subject..." flash
+    setProgress('Building your ' + strategy.label + ' plan\u2026');
 
     // ── Checkpoint after every day ──
     function checkpointPlan() {
@@ -1509,52 +1512,73 @@
       tryFetch();
     }
 
-    // ── Global timeout: 3 min, clean UI, resumable ──
+    // ── Global timeout: 90s (parallel is fast) ──
     var timeoutId = setTimeout(function() {
-      var dayNum = allDays.length + 1;
-      showFatalError(dayNum, function() { generateNext(dayNum); });
-    }, 180000);
+      var failedDays = [];
+      for (var n = 1; n <= numDays; n++) { if (!allDays[n-1]) failedDays.push(n); }
+      showFatalError(failedDays[0] || 1, function() { generateAllParallel(); });
+    }, 90000);
 
-    // ── Sequential generation with per-day checkpoint ──
-    function generateNext(dayNum) {
-      generateDay(dayNum, numDays, subjectType, strategy, function(err, day) {
-        if (err) {
-          clearTimeout(timeoutId);
-          showFatalError(dayNum, function() { generateNext(dayNum); });
-          return;
-        }
-        allDays.push(day);
-        checkpointPlan();
-        if (dayNum < numDays) {
-          generateNext(dayNum + 1);
-        } else {
-          clearTimeout(timeoutId);
-          var newPlan = {
-            id: Date.now(),
-            createdAt: new Date().toISOString(),
-            subject: subject,
-            goal: selectedGoal,
-            deadline: deadline || '',
-            subjectType: subjectType,
-            days: allDays
-          };
-          try {
-            var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
-            allPlans.push(newPlan);
-            localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
-            localStorage.setItem('studyflow_active_plan', newPlan.id);
-            localStorage.setItem('studyflow_plan', JSON.stringify(newPlan));
-            localStorage.removeItem('studyflow_plan_checkpoint');
-          } catch(e) { console.error('[save]', e); }
-          localStorage.removeItem('studyflow_seconds_left');
-          localStorage.removeItem('studyflow_timer_day');
-          localStorage.removeItem('studyflow_minutes');
-          localStorage.setItem('studyflow_current_day', '0');
-          window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html';
-        }
-      });
+    // ── PARALLEL generation — all days fire at once ──
+    function generateAllParallel() {
+      var results   = new Array(numDays); // indexed [0..numDays-1]
+      var completed = 0;
+      var failed    = false;
+
+      setProgress('Building your ' + strategy.label + ' plan\u2026');
+
+      for (var n = 1; n <= numDays; n++) {
+        (function(dayNum) {
+          generateDay(dayNum, numDays, subjectType, strategy, function(err, day) {
+            if (failed) return; // another day already fatal-errored
+
+            if (err) {
+              failed = true;
+              clearTimeout(timeoutId);
+              showFatalError(dayNum, function() { failed = false; generateAllParallel(); });
+              return;
+            }
+
+            results[dayNum - 1] = day;
+            completed++;
+
+            // Update progress counter
+            setProgress('Building your ' + strategy.label + ' plan\u2026 ' + completed + '/' + numDays + ' done');
+
+            if (completed === numDays) {
+              // All days finished — save and redirect
+              clearTimeout(timeoutId);
+              allDays = results; // ordered array
+              checkpointPlan();
+
+              var newPlan = {
+                id: Date.now(),
+                createdAt: new Date().toISOString(),
+                subject: subject,
+                goal: selectedGoal,
+                deadline: deadline || '',
+                subjectType: subjectType,
+                days: allDays
+              };
+              try {
+                var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+                allPlans.push(newPlan);
+                localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
+                localStorage.setItem('studyflow_active_plan', newPlan.id);
+                localStorage.setItem('studyflow_plan', JSON.stringify(newPlan));
+                localStorage.removeItem('studyflow_plan_checkpoint');
+              } catch(e) { console.error('[save]', e); }
+              localStorage.removeItem('studyflow_seconds_left');
+              localStorage.removeItem('studyflow_timer_day');
+              localStorage.removeItem('studyflow_minutes');
+              localStorage.setItem('studyflow_current_day', '0');
+              window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html';
+            }
+          });
+        })(n);
+      }
     }
-    generateNext(1);
+    generateAllParallel();
   }
 
 
