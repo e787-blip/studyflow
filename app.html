@@ -1266,583 +1266,265 @@
   function startGeneration(notes, numDays, deadline, userPlan) {
     userPlan = userPlan || (JSON.parse(localStorage.getItem('studyflow_user') || '{}').tier || 'free');
     document.querySelectorAll('.card').forEach(function(c) { c.classList.remove('active'); });
-    document.getElementById('loading').classList.add('active');
+    var loadEl = document.getElementById('loading');
+    loadEl.classList.add('active');
     updateDots(3);
 
-    var allDays = [];
-    var notesShort = notes.substring(0, 400);
+    // More notes context for Claude
+    var notesForPrompt = notes.substring(0, 3500);
 
-    // Validate and clean generated day — strip placeholder answers that Claude didn't fill in
+    // Classify from what user typed — no extra API call
+    var subjectInput = document.getElementById('subject-input');
+    var subject = (subjectInput ? (subjectInput.value || '').trim() : '').substring(0, 80) || notes.substring(0, 50);
+    var subjectType = classifySubject(subject, notes);
+    var strategy    = getSubjectStrategy(subjectType);
+    var allDays = [];
+
+    // ── Progress ──
+    function setProgress(msg) {
+      var pEl = loadEl.querySelector('p');
+      if (pEl) pEl.textContent = msg;
+    }
+
+    // ── Checkpoint after every day ──
+    function checkpointPlan() {
+      if (!allDays.length) return;
+      try {
+        localStorage.setItem('studyflow_plan_checkpoint', JSON.stringify({
+          id: Date.now(), createdAt: new Date().toISOString(),
+          subject: subject, goal: selectedGoal, deadline: deadline || '',
+          subjectType: subjectType, days: allDays, _partial: allDays.length < numDays
+        }));
+      } catch(e) {}
+    }
+
+    // ── Clean error UI — no alert() ──
+    function showFatalError(dayNum, retryFn) {
+      var le = document.getElementById('loading');
+      if (le) le.style.display = 'none';
+      var s2 = document.getElementById('step2');
+      if (!s2) return;
+      s2.style.display = 'block';
+      s2.innerHTML =
+        '<div style="text-align:center;padding:2rem 1.2rem;">' +
+        '<div style="width:52px;height:52px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">' +
+        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+        '</div>' +
+        '<h3 style="font-family:var(--serif);font-size:1.3rem;margin-bottom:.6rem;color:var(--ink);">Generation paused</h3>' +
+        '<p style="color:var(--muted);font-size:0.88rem;margin-bottom:.5rem;line-height:1.6;">' +
+        'Day ' + dayNum + ' of ' + numDays + ' hit a snag. ' +
+        (allDays.length > 0 ? allDays.length + ' day' + (allDays.length !== 1 ? 's' : '') + ' already saved.' : 'Your notes are safe.') +
+        '</p>' +
+        '<p style="color:var(--muted);font-size:0.82rem;margin-bottom:1.5rem;">This is usually temporary \u2014 retrying almost always works.</p>' +
+        '<div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;">' +
+        '<button id="gen-retry-btn" style="background:var(--blue);color:#fff;border:none;padding:.85rem 1.6rem;border-radius:12px;font-family:var(--sans);font-size:0.9rem;font-weight:700;cursor:pointer;">Retry day ' + dayNum + ' \u2192</button>' +
+        '<button onclick="window.location.reload()" style="background:var(--soft);color:var(--ink);border:1.5px solid var(--border);padding:.85rem 1.4rem;border-radius:12px;font-family:var(--sans);font-size:0.9rem;font-weight:600;cursor:pointer;">Start over</button>' +
+        '</div></div>';
+      var btn = document.getElementById('gen-retry-btn');
+      if (btn && retryFn) btn.onclick = function() {
+        s2.style.display = 'none';
+        if (le) { le.style.display = ''; le.classList.add('active'); }
+        retryFn();
+      };
+    }
+
+    // ── Sanitize questions ──
     function sanitizeDayQuestions(day) {
-      if (!day || !Array.isArray(day.questions)) return day;
-      var PLACEHOLDER_RE = /^\[.*\]$|^real |^exact |^specific |^numerical answer|^your answer|^formula here/i;
+      if (!day) return day;
+      if (!Array.isArray(day.questions)) { day.questions = []; return day; }
+      var PH = /^\[.*\]$|^real |^exact |^specific |^numerical answer|^your answer|^formula here/i;
       day.questions = day.questions.filter(function(q) {
-        // MCQ and passage — must have 4 non-empty options AND a valid correctIndex pointing to a real option
-        if (q.type === 'mcq' || q.type === 'passage') {
+        if (!q || !q.type) return false;
+        if (q.type === 'mcq' || q.type === 'passage' || q.type === 'scenario') {
           var opts = q.options || [];
-          if (opts.length !== 4) return false;
-          var allFilled = opts.every(function(o){ return o && o.trim().length > 0; });
-          if (!allFilled) return false;
+          if (opts.length < 2) return false;
+          if (!opts.every(function(o){ return o && String(o).trim(); })) return false;
           var idx = q.correctIndex;
-          if (typeof idx !== 'number' || idx < 0 || idx > 3) return false;
-          // passage type also needs a real passage and question
-          if (q.type === 'passage') {
-            if (!q.passage || !q.passage.trim() || PLACEHOLDER_RE.test(q.passage.trim())) return false;
-            if (!q.question || !q.question.trim() || PLACEHOLDER_RE.test(q.question.trim())) return false;
-          }
+          if (typeof idx !== 'number' || idx < 0 || idx >= opts.length) return false;
+          if (q.type === 'passage' && (!q.passage || PH.test((q.passage||'').trim()))) return false;
           return true;
         }
-        // True/False — must have a question and a valid correct value
-        if (q.type === 'truefalse') {
-          if (!q.question || !q.question.trim()) return false;
-          if (q.correct !== 'True' && q.correct !== 'False') return false;
-          return true;
-        }
-        // Sentence builder (language) — needs 3+ real words and a real question
-        if (q.type === 'sentence') {
-          if (!Array.isArray(q.words) || q.words.length < 3) return false;
-          var wordsFilled = q.words.every(function(w){ return w && typeof w === 'string' && w.trim().length > 0; });
-          if (!wordsFilled) return false;
-          if (!q.question || !q.question.trim() || PLACEHOLDER_RE.test(q.question.trim())) return false;
-          return true;
-        }
-        // Error spot (math/science) — needs 3+ real steps with EXACTLY one marked as the error
+        if (q.type === 'truefalse') return !!(q.question && q.question.trim() && (q.correct === 'True' || q.correct === 'False'));
+        if (q.type === 'sentence') return Array.isArray(q.words) && q.words.length >= 2 && q.words.every(function(w){ return w && String(w).trim(); });
         if (q.type === 'errorspot') {
-          if (!Array.isArray(q.steps) || q.steps.length < 3) return false;
-          var stepsFilled = q.steps.every(function(s){ return s && s.text && s.text.trim().length > 0 && typeof s.hasError === 'boolean'; });
-          if (!stepsFilled) return false;
-          var errorCount = q.steps.filter(function(s){ return s.hasError === true; }).length;
-          if (errorCount !== 1) return false; // must be exactly one error — zero or multiple is unanswerable/ambiguous
-          if (!q.question || !q.question.trim()) return false;
-          return true;
+          if (!Array.isArray(q.steps) || q.steps.length < 2) return false;
+          if (!q.steps.every(function(s){ return s && s.text && typeof s.hasError === 'boolean'; })) return false;
+          return q.steps.filter(function(s){ return s.hasError; }).length === 1;
         }
-        // For fill/bigequation/wordproblem — reject if answer is missing or is still a placeholder
+        if (q.type === 'classify') return !!(q.categoryA && q.categoryB && Array.isArray(q.itemsA) && Array.isArray(q.itemsB) && q.itemsA.length >= 2 && q.itemsB.length >= 2);
+        if (q.type === 'sequence') return Array.isArray(q.items) && q.items.length >= 3;
         if (q.type === 'fill' || q.type === 'bigequation' || q.type === 'wordproblem') {
           var ans = (q.answer || '').trim();
-          if (!ans || PLACEHOLDER_RE.test(ans)) return false;
-          if (!q.question || !q.question.trim()) return false;
-          // wordproblem must have a real scenario (not just a generic title)
-          if (q.type === 'wordproblem') {
-            var scenario = (q.scenario || q.question || '').trim();
-            if (!scenario || scenario.length < 15 || /^word problem$/i.test(scenario)) return false;
-          }
-          // bigequation must have a real equation
-          if (q.type === 'bigequation') {
-            var eq = (q.equation || '').trim();
-            if (!eq || PLACEHOLDER_RE.test(eq) || eq.length < 3) return false;
-          }
+          if (!ans || PH.test(ans) || !q.question || !q.question.trim()) return false;
+          if (q.type === 'bigequation' && (!q.equation || q.equation.trim().length < 2)) return false;
+          if (q.type === 'wordproblem') { var sc = (q.scenario||q.question||'').trim(); if (sc.length < 10) return false; }
+          return true;
         }
-        // write type — needs a real question
-        if (q.type === 'write') {
-          if (!q.question || !q.question.trim() || PLACEHOLDER_RE.test(q.question.trim())) return false;
-        }
-        return true;
+        if (q.type === 'write') return !!(q.question && q.question.trim() && !PH.test(q.question.trim()));
+        return !!q.question;
       });
-      // Ensure at least 3 questions survive
-      if (day.questions.length < 3) {
-        console.warn('[sanitize] Only', day.questions.length, 'valid questions survived — Claude may not have replaced placeholders correctly');
-      }
       return day;
     }
 
+    // ── 6-layer JSON repair ──
+    function repairJSON(raw) {
+      var m = raw.match(/\{[\s\S]*/);
+      if (!m) return null;
+      var s = m[0]
+        .replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2013\u2014]/g, '-').replace(/\u00A0/g, ' ')
+        .replace(/\\'/g, "'").replace(/\t/g, ' ')
+        .replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, function(x){ return x.replace(/\n/g,' ').replace(/\r/g,' '); });
+      try { return JSON.parse(s); } catch(e) {}
+      var r = s.replace(/,\s*([}\]])/g, '$1');
+      var ob=(r.match(/\{/g)||[]).length, cb=(r.match(/\}/g)||[]).length;
+      var oa=(r.match(/\[/g)||[]).length, ca=(r.match(/\]/g)||[]).length;
+      var i;
+      for(i=0;i<oa-ca;i++) r+=']';
+      for(i=0;i<ob-cb;i++) r+='}';
+      try { return JSON.parse(r); } catch(e) {}
+      var qi = r.indexOf('"questions":[');
+      if (qi !== -1) {
+        var pos = r.indexOf('[', qi)+1, last = pos, d = 0, ci;
+        for(ci=pos; ci<r.length; ci++){
+          if(r[ci]==='{') d++; else if(r[ci]==='}'){d--; if(d===0) last=ci+1;}
+        }
+        try { return JSON.parse(r.substring(0, last)+']}'); } catch(e) {}
+      }
+      var title   = (raw.match(/"title"\s*:\s*"([^"]{1,80})"/) ||[])[1];
+      var brief   = (raw.match(/"briefing"\s*:\s*"([^"]{1,200})"/) ||[])[1];
+      var content = (raw.match(/"content"\s*:\s*"([^"]{1,400})"/) ||[])[1];
+      var qs = [];
+      (raw.match(/\{"type":"[^"]+","question":"[^}]{5,300}?"difficulty":"[^"]+"\}/g)||[])
+        .forEach(function(qs2){ try{ var q=JSON.parse(qs2); if(q.type) qs.push(q); }catch(e){} });
+      return { title:title||'Study Session', briefing:brief||'', content:content||'',
+               keyTerms:[], steps:[], concepts:[], diagram:{type:'none',label:''},
+               microTopic:'', duration:30, isFinal:false, completed:false, questions:qs };
+    }
+
+    // ── generateDay with 3 auto-retries + exponential backoff ──
     function generateDay(dayNum, totalDays, subjectType, strategy, callback) {
-      var isFirst = dayNum === 1;
-      var isLast = dayNum === totalDays;
+      var MAX_RETRIES = 3;
+      var attempt = 0;
+      var isFirst = dayNum === 1, isLast = dayNum === totalDays;
       var difficulty = isFirst ? 'Easy' : (isLast ? 'Hard' : 'Medium');
-      var dayType = isFirst ? 'introductory, covering basics and key terms' : (isLast ? 'final exam level, hardest questions, isFinal must be true' : 'building on previous days, medium difficulty');
-
-      var isPro = (userPlan === 'pro' || userPlan === 'vip');
-      var fillSection = isPro ? ',{"type":"fill","question":"The _______ is responsible for [key concept from notes].","answer":"exact answer word or phrase","hint":"specific fact from notes","explanation":"why this is correct","difficulty":"' + difficulty + '"},{"type":"fill","question":"In [year/context], _______ [did/caused/resulted in something].","answer":"exact answer","hint":"specific fact","explanation":"why correct","difficulty":"' + difficulty + '"}' : '';
-
-      // Build subject-specific question instructions (kept OUTSIDE the JSON schema)
-      var questionInstructions = '';
-      var questionSchema = '';
+      var questionInstructions = '', questionSchema = '';
+      var d = difficulty;
 
       if (subjectType === 'math') {
-        questionInstructions = '\n\nMATH QUESTION REQUIREMENTS — 75% equation work:\n' +
-          '- 1 MCQ: a conceptual question about a definition, property, or theorem\n' +
-          '- 5 bigequation: REAL equations from the notes (vary: solve for x, simplify, expand, factor, evaluate, substitute)\n' +
-          '- 1 errorspot: a multi-step solution with EXACTLY ONE mistake. 3-4 steps, exactly one hasError:true\n' +
-          '- 1 wordproblem: a scenario-based problem with REAL numbers from the notes that applies the concept\n' +
-          'ALL equation answers must be real computed values or simplified expressions — NEVER placeholder text.\n' +
-          'Fill questions: complete sentence with blank at END. Never prefix "Word Problem:"\n';
-        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"bigequation","question":"Simplify","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"bigequation","question":"Evaluate","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"bigequation","question":"Simplify or expand","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"errorspot","question":"Find the step with the mistake:","steps":[{"text":"","hasError":false},{"text":"","hasError":false},{"text":"","hasError":true}],"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"wordproblem","scenario":"","question":"What is the answer?","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
-
+        questionInstructions = '\n\nMATH: 1 MCQ, 5 bigequation (real equations), 1 errorspot (EXACTLY 1 hasError:true), 1 wordproblem. All answers must be real values.\n';
+        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Simplify","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Evaluate","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Expand or factor","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"errorspot","question":"Find the mistake:","steps":[{"text":"","hasError":false},{"text":"","hasError":false},{"text":"","hasError":true}],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"wordproblem","scenario":"","question":"What is the answer?","answer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       } else if (subjectType === 'science') {
-        questionInstructions = '\n\nSCIENCE QUESTION REQUIREMENTS (scenario-based + cause-effect highest retention):\n' +
-          '1. MCQ — Cause and effect from notes\n' +
-          '2. MCQ — Predict the outcome of a real scenario\n' +
-          '3. MCQ — Structure and function from notes\n' +
-          '4. True/False — Scenario-framed (start with "A researcher observes...")\n' +
-          '5. True/False — Common misconception about this topic\n' +
-          '6. Fill — Process completion (blank at end of sentence)\n' +
-          '7. Fill — Definition completion (blank at end of sentence)\n' +
-          '8. Classify — give 6 real items from notes: 3 belong to Category A, 3 to Category B. Use real categories from the notes (e.g. "Prokaryote vs Eukaryote", "Element vs Compound"). type:"classify"\n' +
-          '9. Write (Feynman): Explain how [real process from notes] works step by step\n' +
-          'Use ONLY real terms from the notes. Fill blanks must be exact terms/phrases.\n';
-        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"classify","question":"Sort these into the correct categories:","categoryA":"","categoryB":"","itemsA":["","",""],"itemsB":["","",""],"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"write","question":"","modelAnswer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
-
+        questionInstructions = '\n\nSCIENCE: 3 MCQ (cause-effect, predict outcome, structure-function), 2 True/False, 2 Fill, 1 Classify, 1 Write.\n';
+        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"classify","question":"Sort:","categoryA":"","categoryB":"","itemsA":["","",""],"itemsB":["","",""],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"write","question":"","modelAnswer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       } else if (subjectType === 'psychology') {
-        questionInstructions = '\n\nPSYCHOLOGY QUESTION REQUIREMENTS:\n' +
-          '1. MCQ — Apply a concept to a real-life scenario: "A person who [real behavior] is BEST explained by which concept?"\n' +
-          '2. MCQ — Research design: "A psychologist wants to study [topic from notes]. Which method would be MOST appropriate?"\n' +
-          '3. MCQ — Compare theories or concepts from the notes\n' +
-          '4. True/False — A specific claim about a theory, study, or brain region from the notes\n' +
-          '5. True/False — A common misconception about psychology from the notes\n' +
-          '6. Scenario — type:"scenario": Describe a 2-3 sentence real-life situation, then ask "Which psychological concept BEST explains this behavior?" with 4 options\n' +
-          '7. Fill — Blank out a KEY TERM in a definition sentence (blank at END)\n' +
-          '8. Fill — Blank out a specific finding or brain region from the notes (blank at END)\n' +
-          '9. Write: "Using the concept of [term from notes], explain why a person might [real behavior]. Include the psychological mechanism."\n' +
-          'Make every question feel grounded in real human behavior, not just textbook definitions.\n';
-        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"scenario","question":"","options":["","","",""],"correctIndex":3,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"write","question":"","modelAnswer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
-
+        questionInstructions = '\n\nPSYCHOLOGY: 3 MCQ, 2 True/False, 1 Scenario, 2 Fill, 1 Write.\n';
+        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"scenario","question":"","options":["","","",""],"correctIndex":3,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"write","question":"","modelAnswer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       } else if (subjectType === 'geography') {
-        questionInstructions = '\n\nGEOGRAPHY QUESTION REQUIREMENTS:\n' +
-          '1. MCQ — Location or region identification from the notes\n' +
-          '2. MCQ — Cause-effect: "Why does [region from notes] have [climate/feature]?"\n' +
-          '3. MCQ — Human-environment interaction: "How does [geographic feature from notes] affect [human activity]?"\n' +
-          '4. True/False — A specific geographic fact from the notes (location, climate, population)\n' +
-          '5. True/False — A cause-effect claim about geography from the notes\n' +
-          '6. Classify — Give 6 items (countries, features, biomes, etc.) from notes, 3 belong to Region/Category A and 3 to Region/Category B. type:"classify"\n' +
-          '7. Sequence — Put 4-5 real geographic/historical events or migration patterns in chronological or spatial order. type:"sequence"\n' +
-          '8. Fill — Blank out a KEY PLACE NAME, CLIMATE TERM, or GEOGRAPHIC FEATURE (blank at END)\n' +
-          '9. Fill — Blank out a KEY STATISTIC or FACT from the notes (blank at END)\n' +
-          'Every question must use REAL place names, data, and relationships from the student notes.\n';
-        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"classify","question":"Sort into the correct categories:","categoryA":"","categoryB":"","itemsA":["","",""],"itemsB":["","",""],"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"sequence","question":"Put these in the correct order:","items":["","","",""],"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
-
+        questionInstructions = '\n\nGEOGRAPHY: 3 MCQ, 2 True/False, 1 Classify, 1 Sequence, 2 Fill.\n';
+        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"classify","question":"Sort:","categoryA":"","categoryB":"","itemsA":["","",""],"itemsB":["","",""],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"sequence","question":"Order:","items":["","","",""],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       } else if (subjectType === 'economics') {
-        questionInstructions = '\n\nECONOMICS QUESTION REQUIREMENTS:\n' +
-          '1. MCQ — Apply a concept to a market scenario from the notes\n' +
-          '2. MCQ — "If [economic variable from notes] increases/decreases, what happens to [other variable]?"\n' +
-          '3. MCQ — Policy or decision: "Which policy BEST addresses [economic problem from notes]?"\n' +
-          '4. True/False — A specific economic claim or relationship from the notes\n' +
-          '5. True/False — A cause-effect claim (e.g. "When demand increases and supply stays constant, price falls")\n' +
-          '6. Scenario — type:"scenario": A 2-3 sentence real market/economic situation, then "Which economic concept BEST explains this?" 4 options\n' +
-          '7. Wordproblem — A real numerical calculation (e.g. calculate elasticity, opportunity cost, profit). type:"wordproblem"\n' +
-          '8. Fill — Blank out a KEY ECONOMIC TERM in a definition (blank at END)\n' +
-          '9. Fill — Blank out a KEY RELATIONSHIP or EFFECT from the notes (blank at END)\n' +
-          'Use REAL economic terms, real examples from the notes. Wordproblem must include actual numbers.\n';
-        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":3,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"scenario","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"wordproblem","scenario":"","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
-
+        questionInstructions = '\n\nECONOMICS: 3 MCQ, 2 True/False, 1 Scenario, 1 Wordproblem (real numbers), 2 Fill.\n';
+        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":3,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"scenario","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"wordproblem","scenario":"","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       } else if (subjectType === 'cs') {
-        questionInstructions = '\n\nCOMPUTER SCIENCE QUESTION REQUIREMENTS:\n' +
-          '1. MCQ — Conceptual: "What does [term/algorithm/data structure from notes] do?"\n' +
-          '2. MCQ — Trace through: "What is the OUTPUT of this code/algorithm step?" Give 4 specific output options\n' +
-          '3. MCQ — "Which data structure is BEST suited for [real use case from notes]?" 4 options\n' +
-          '4. True/False — A specific claim about an algorithm, data structure, or concept from the notes\n' +
-          '5. True/False — Time/space complexity or algorithmic property claim\n' +
-          '6. Errorspot — Show 3-4 pseudocode or logic steps with EXACTLY ONE error. type:"errorspot"\n' +
-          '7. Classify — Give 6 items (algorithms, data structures, concepts) from notes: 3 belong to Category A (e.g. O(n) time), 3 to Category B (e.g. O(n²) time). type:"classify"\n' +
-          '8. Fill — Blank out a KEY TERM, COMPLEXITY, or OPERATION at the END of a sentence\n' +
-          '9. Write: "Explain in plain English what [algorithm/concept from notes] does and why it works. Give an example with real data."\n' +
-          'Use REAL concepts and terminology from the notes. Errorspot steps should be pseudocode-style.\n';
-        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"errorspot","question":"Find the step with the mistake:","steps":[{"text":"","hasError":false},{"text":"","hasError":false},{"text":"","hasError":true},{"text":"","hasError":false}],"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"classify","question":"Sort into the correct categories:","categoryA":"","categoryB":"","itemsA":["","",""],"itemsB":["","",""],"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"write","question":"","modelAnswer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
-
+        questionInstructions = '\n\nCS: 3 MCQ, 2 True/False, 1 Errorspot (pseudocode, EXACTLY 1 error), 1 Classify, 1 Fill, 1 Write.\n';
+        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"errorspot","question":"Find the error:","steps":[{"text":"","hasError":false},{"text":"","hasError":false},{"text":"","hasError":true},{"text":"","hasError":false}],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"classify","question":"Sort:","categoryA":"","categoryB":"","itemsA":["","",""],"itemsB":["","",""],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"write","question":"","modelAnswer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       } else if (subjectType === 'history') {
-        questionInstructions = '\n\nSOCIAL STUDIES / HISTORY QUESTION REQUIREMENTS (AP DBQ-style):\n' +
-          '1. PASSAGE — sourcing: original primary-source-style excerpt, then sourcing question. type:"passage" questionType:"sourcing"\n' +
-          '2. PASSAGE — cause-effect: excerpt describing real situation, then cause/effect question. type:"passage" questionType:"cause-effect"\n' +
-          '3. PASSAGE — perspective: two contrasting viewpoints on same event, then "Why do these perspectives differ?". type:"passage" questionType:"perspective"\n' +
-          '4. MCQ — Cause: "What was the most significant CAUSE of [real event from notes]?"\n' +
-          '5. MCQ — Consequence: "What was the most important CONSEQUENCE of [real event from notes]?"\n' +
-          '6. True/False — A specific historical fact from the notes\n' +
-          '7. Classify — 6 real events/people/policies from notes: 3 to Era/Category A, 3 to Era/Category B. type:"classify"\n' +
-          '8. Sequence — 4-5 real events in chronological order. type:"sequence"\n' +
-          '9. Fill — Blank a DATE, PERSON, PLACE, or KEY TERM at END of sentence\n' +
-          'Every excerpt must be ORIGINAL writing from real content in notes. Every question answerable from notes.\n';
-        questionSchema = '{"type":"passage","questionType":"sourcing","passage":"","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"passage","questionType":"cause-effect","passage":"","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"passage","questionType":"perspective","passage":"","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":3,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"classify","question":"Sort into the correct categories:","categoryA":"","categoryB":"","itemsA":["","",""],"itemsB":["","",""],"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"sequence","question":"Put these events in chronological order:","items":["","","",""],"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
-
+        questionInstructions = '\n\nHISTORY: 3 Passage (sourcing/cause-effect/perspective), 2 MCQ, 1 True/False, 1 Classify, 1 Sequence, 1 Fill.\n';
+        questionSchema = '{"type":"passage","questionType":"sourcing","passage":"","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"passage","questionType":"cause-effect","passage":"","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"passage","questionType":"perspective","passage":"","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":3,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"classify","question":"Sort:","categoryA":"","categoryB":"","itemsA":["","",""],"itemsB":["","",""],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"sequence","question":"Order:","items":["","","",""],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       } else if (subjectType === 'english') {
-        questionInstructions = '\n\nENGLISH / LITERATURE QUESTION REQUIREMENTS:\n' +
-          '1. PASSAGE — main-idea: original 3-5 sentence passage tied to notes, then "What is the main idea?". type:"passage" questionType:"main-idea"\n' +
-          '2. PASSAGE — vocab-in-context: passage using KEY VOCABULARY WORD from notes, then "The word [word] most nearly means...". type:"passage" questionType:"vocab-in-context"\n' +
-          '3. PASSAGE — inference: passage implying something without stating it, then inference question. type:"passage" questionType:"inference"\n' +
-          '4. MCQ — Literary device identification from the notes\n' +
-          '5. MCQ — Theme or character motivation from the notes\n' +
-          '6. True/False — About theme, device, or author intent from the notes\n' +
-          '7. Write — Compare two characters/elements from notes: "Compare [A] and [B]: similarities, differences, and what this reveals". type:"write"\n' +
-          '8. Fill — KEY LITERARY TERM at END: "The use of _______ creates a sense of [effect]."\n' +
-          '9. Fill — Vocabulary at END: "The word [word from notes] means _______ in this context."\n' +
-          'Every passage must be original, 3-5 sentences, tied to notes.\n';
-        questionSchema = '{"type":"passage","questionType":"main-idea","passage":"","question":"What is the main idea of this passage?","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"passage","questionType":"vocab-in-context","passage":"","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"passage","questionType":"inference","passage":"","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":3,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"write","question":"Compare [two elements from notes]: How are they similar? How do they differ?","modelAnswer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
-
+        questionInstructions = '\n\nENGLISH: 3 Passage (main-idea/vocab-in-context/inference), 2 MCQ, 1 True/False, 1 Write (compare), 2 Fill.\n';
+        questionSchema = '{"type":"passage","questionType":"main-idea","passage":"","question":"What is the main idea?","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"passage","questionType":"vocab-in-context","passage":"","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"passage","questionType":"inference","passage":"","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":3,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"write","question":"Compare two elements from the notes.","modelAnswer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       } else if (subjectType === 'language') {
-        questionInstructions = '\n\nLANGUAGE LEARNING QUESTION REQUIREMENTS:\n' +
-          '1. SENTENCE — real sentence from notes, words array in correct order, English translation. type:"sentence"\n' +
-          '2. SENTENCE — second sentence, different grammar pattern (question, negative, or different tense). type:"sentence"\n' +
-          '3. MCQ — Vocabulary meaning: "What does [target language word from notes] mean?"\n' +
-          '4. MCQ — Grammar rule or conjugation from the notes\n' +
-          '5. MCQ — Translation: "How do you say [English phrase] in [target language]?"\n' +
-          '6. True/False — A grammar rule or vocabulary usage fact from the notes\n' +
-          '7. Fill — Dialogue cloze: short 2-line conversation, Speaker B response blanked at END. "Speaker A: [line]. Speaker B: _______" Answer is exact target-language response.\n' +
-          '8. Fill — Translation cloze at END: "The word for [English meaning] is _______ ."\n' +
-          '9. Fill — Conjugation cloze at END of a sentence\n' +
-          'Use REAL vocabulary and patterns from notes. Word arrays in grammatically correct target-language order.\n';
-        questionSchema = '{"type":"sentence","question":"","words":["","",""],"translation":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"sentence","question":"","words":["","",""],"translation":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
-
+        questionInstructions = '\n\nLANGUAGE: 2 Sentence builder, 3 MCQ (vocab/grammar/translation), 1 True/False, 3 Fill.\n';
+        questionSchema = '{"type":"sentence","question":"","words":["","",""],"translation":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"sentence","question":"","words":["","",""],"translation":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       } else {
-        questionInstructions = '\n\nQUESTION REQUIREMENTS:\n' +
-          '- 3 MCQ about key facts from the notes\n' +
-          '- 2 True/False statements\n' +
-          '- 2 fill with key terms blanked\n' +
-          '- 1 write explanation\n';
-        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"},' +
-          '{"type":"write","question":"Explain [key concept from notes] in your own words.","modelAnswer":"","hint":"","explanation":"","difficulty":"' + difficulty + '"}';
+        questionInstructions = '\n\nQUESTIONS: 3 MCQ, 2 True/False, 2 Fill, 1 Write.\n';
+        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"write","question":"Explain a key concept from your notes.","modelAnswer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       }
 
-      var prompt = 'You are a world-class instructional designer generating a hyper-specific, media-rich study day for a ' + (strategy.label || 'General') + ' student.\n\n' +
-        'STUDENT NOTES:\n' + notesShort + '\n\n' +
+      var prompt =
+        'You are a world-class instructional designer. Generate a hyper-specific study day JSON for a ' + (strategy.label||'General') + ' student.\n\n' +
+        'SUBJECT: ' + subject + '\nSTUDENT NOTES:\n' + notesForPrompt + '\n\n' +
         'Day ' + dayNum + ' of ' + totalDays + '. Difficulty: ' + difficulty + '. Goal: ' + selectedGoal + '.\n' +
-        (isLast ? 'This is the FINAL day — maximum depth and hardest questions.\n' : '') +
-        '\nCONTENT GENERATION RULES:\n' +
-        '1. title: Give this day a MICRO-TOPIC title — not "Biology" but "Synaptic Plasticity & Long-Term Potentiation". Not "Math" but "Solving Systems via Gaussian Elimination". Be hyper-specific to what is actually in the notes.\n' +
-        '2. microTopic: One sentence naming the EXACT concept being studied today, drilling 3 levels deep (domain > subdomain > micro-concept).\n' +
-        '3. content: 3-4 rich sentences of explanatory content. Include the WHY behind the concept, not just the what. If this is a process topic (math/science/cs), describe it step by step in the sentences.\n' +
-        '4. steps: For PROCEDURAL topics (math equations, algorithms, chemical reactions, historical processes), generate 3-5 micro-steps, each with a "step" label, "action" (what happens), and "why" (the reasoning behind it). For CONCEPTUAL topics (vocabulary, history analysis, literature themes), leave steps as empty array [].\n' +
-        '5. diagram: If the topic involves a VISUAL structure (brain, cell, circuit, market graph, map, molecule, algorithm flowchart, timeline), provide a diagram object with "type" (one of: brain|cell|atom|supply-demand|timeline|circuit|dna|neuron|ecosystem|water-cycle|mitosis|memory-model|plate-tectonics|photosynthesis|none) and "label" describing what should be shown. If no diagram is relevant, set type:"none".\n' +
-        '6. concepts: 3-5 key concepts, each with "name", "definition" (precise, not generic), "why" (why this concept matters for the exam/topic), and "misconception" (the #1 thing students get wrong about this).\n' +
-        '7. keyTerms: 4 flashcard-style terms from the notes with precise definitions.\n' +
+        (isLast ? 'FINAL DAY \u2014 maximum depth, hardest questions.\n' : '') +
+        '\nRULES:\n' +
+        '1. title: Hyper-specific micro-topic (e.g. "Missouri Compromise: Causes & Sectional Tensions" not "History").\n' +
+        '2. microTopic: domain > subdomain > micro-concept in one sentence.\n' +
+        '3. content: 3-4 sentences explaining WHY, not just WHAT.\n' +
+        '4. steps: Procedural topics: 3-5 steps each {step,action,why}. Conceptual: [].\n' +
+        '5. diagram: {"type":"brain|neuron|atom|supply-demand|timeline|circuit|dna|ecosystem|water-cycle|mitosis|memory-model|plate-tectonics|photosynthesis|none","label":"..."}\n' +
+        '6. concepts: 3-5 items each {name,definition,why,misconception}.\n' +
+        '7. keyTerms: exactly 4 items {term,definition}.\n' +
         questionInstructions +
-        '\nSTRICT OUTPUT RULES:\n' +
-        '1. Output ONLY valid compact JSON — no spaces, no line breaks, no markdown\n' +
-        '2. Every string value under 200 characters\n' +
-        '3. Replace ALL placeholder text with REAL content from the notes\n' +
-        '4. Every question must be answerable using the notes above\n' +
-        '5. Fill question answers must be the EXACT correct answer — a single word or short phrase\n' +
-        '6. Fill questions must be a complete sentence with the blank at the END\n' +
-        '7. Never prefix fill questions with "Word Problem:"\n\n' +
-        'OUTPUT THIS EXACT JSON STRUCTURE:\n' +
-        '{"title":"Micro-Topic Title",' +
-        '"microTopic":"exact micro-concept being studied today",' +
-        '"briefing":"one sentence: what the student will learn and be able to do after this session",' +
-        '"content":"3-4 sentences of rich explanatory content with WHY behind the concept",' +
-        '"steps":[{"step":"Step 1","action":"what happens","why":"reasoning"},{"step":"Step 2","action":"what happens","why":"reasoning"}],' +
-        '"diagram":{"type":"brain","label":"what to show in the diagram"},' +
-        '"concepts":[{"name":"concept name","definition":"precise definition","why":"why this matters","misconception":"common student mistake"}],' +
-        '"keyTerms":[{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"},{"term":"real term","definition":"real definition"}],' +
-        '"duration":30,"isFinal":' + isLast + ',"completed":false,' +
-        '"questions":[' + questionSchema + ']}';
+        '\nOUTPUT: ONLY valid compact JSON. No markdown. Replace ALL empty strings with REAL content.\n\n' +
+        '{"title":"","microTopic":"","briefing":"","content":"","steps":[],"diagram":{"type":"none","label":""},"concepts":[],' +
+        '"keyTerms":[{"term":"","definition":""},{"term":"","definition":""},{"term":"","definition":""},{"term":"","definition":""}],' +
+        '"duration":30,"isFinal":' + isLast + ',"completed":false,"questions":[' + questionSchema + ']}';
 
-      fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: prompt })
-      })
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        var raw = data.result || data.plan || '';
-        var wasTruncated = data.truncated === true;
-        if (wasTruncated) {
-          console.warn('[generate] Day ' + dayNum + ' response was truncated by max_tokens — running repair');
-        }
-
-        // ── LAYER 1: Extract JSON object from response ──
-        var jsonMatch = raw.match(/\{[\s\S]*/);
-        if (!jsonMatch) throw new Error('No JSON found in response for day ' + dayNum);
-        var jsonStr = jsonMatch[0];
-
-        // ── LAYER 2: Clean characters that corrupt JSON ──
-        jsonStr = jsonStr
-          .replace(/[\u2018\u2019]/g, "'")    // smart single quotes
-          .replace(/[\u201C\u201D]/g, '"')    // smart double quotes
-          .replace(/[\u2013\u2014]/g, '-')    // em/en dashes
-          .replace(/\u00A0/g, ' ')            // non-breaking spaces
-          .replace(/\\'/g, "'")               // escaped apostrophes
-          .replace(/\t/g, ' ')               // tabs
-          // Fix unescaped newlines INSIDE string values (the #1 cause of the error you saw)
-          .replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, function(match) {
-            return match.replace(/\n/g, ' ').replace(/\r/g, ' ');
-          });
-
-        // ── LAYER 3: Try to parse as-is ──
-        var day;
-        try {
-          day = JSON.parse(jsonStr);
-          return callback(null, sanitizeDayQuestions(day));
-        } catch(e1) { /* continue to repair */ }
-
-        // ── LAYER 4: Smart truncation repair ──
-        // Find the last COMPLETE question object — walk backwards from end
-        // looking for a valid closing pattern: "}]}" which closes questions array + day obj
-        var repaired = jsonStr;
-
-        // Try closing unclosed brackets/braces
-        var opens  = (repaired.match(/\[/g) || []).length;
-        var closes = (repaired.match(/\]/g) || []).length;
-        var ob = (repaired.match(/\{/g) || []).length;
-        var cb = (repaired.match(/\}/g) || []).length;
-        for (var i = 0; i < opens - closes; i++) repaired += ']';
-        for (var i = 0; i < ob - cb;    i++) repaired += '}';
-
-        try {
-          day = JSON.parse(repaired);
-          return callback(null, sanitizeDayQuestions(day));
-        } catch(e2) { /* continue to repair */ }
-
-        // ── LAYER 5: Cut at last complete question object ──
-        // Find the last occurrence of "}," or "}]" in the questions array
-        // This salvages all complete questions even if the last one was truncated
-        var questionsStart = repaired.indexOf('"questions":[');
-        if (questionsStart !== -1) {
-          // Find last complete question: last '}' followed by ',' or ']' or end
-          var afterQ = repaired.indexOf('[', questionsStart) + 1;
-          var lastCompleteQ = afterQ;
-          var depth = 0;
-          for (var ci = afterQ; ci < repaired.length; ci++) {
-            if (repaired[ci] === '{') depth++;
-            else if (repaired[ci] === '}') {
-              depth--;
-              if (depth === 0) lastCompleteQ = ci + 1; // end of a complete question object
-            }
+      function tryFetch() {
+        attempt++;
+        setProgress(
+          attempt > 1
+            ? 'Retrying day ' + dayNum + ' (attempt ' + attempt + ' of ' + MAX_RETRIES + ')...'
+            : 'Building your ' + strategy.label + ' plan \u2014 day ' + dayNum + ' of ' + totalDays + '...'
+        );
+        fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: prompt })
+        })
+        .then(function(res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          return res.json();
+        })
+        .then(function(data) {
+          var raw = data.result || data.plan || '';
+          if (!raw || raw.trim().length < 10) throw new Error('Empty API response');
+          var day = repairJSON(raw);
+          if (!day || typeof day !== 'object') throw new Error('JSON unrecoverable');
+          day.title      = day.title      || ('Day ' + dayNum);
+          day.briefing   = day.briefing   || '';
+          day.content    = day.content    || '';
+          day.keyTerms   = Array.isArray(day.keyTerms)  ? day.keyTerms  : [];
+          day.steps      = Array.isArray(day.steps)     ? day.steps     : [];
+          day.concepts   = Array.isArray(day.concepts)  ? day.concepts  : [];
+          day.diagram    = day.diagram    || { type: 'none', label: '' };
+          day.microTopic = day.microTopic || '';
+          day.duration   = day.duration   || 30;
+          day.isFinal    = !!isLast;
+          day.completed  = false;
+          sanitizeDayQuestions(day);
+          callback(null, day);
+        })
+        .catch(function(err) {
+          console.warn('[gen] day ' + dayNum + ' attempt ' + attempt + ':', err.message);
+          if (attempt < MAX_RETRIES) {
+            setTimeout(tryFetch, Math.pow(2, attempt - 1) * 1200);
+          } else {
+            callback(new Error('Day ' + dayNum + ' failed after ' + MAX_RETRIES + ' attempts'));
           }
-          // Cut JSON at last complete question, close the structure
-          var cutStr = repaired.substring(0, lastCompleteQ) + ']}';
-          // Fix the outer object — make sure it started properly
-          try {
-            day = JSON.parse(cutStr);
-            return callback(null, sanitizeDayQuestions(day));
-          } catch(e3) { /* continue */ }
-        }
-
-        // ── LAYER 6: Last resort — extract what fields we can, build minimal day ──
-        var titleMatch  = raw.match(/"title"\s*:\s*"([^"]{1,80})"/);
-        var briefMatch  = raw.match(/"briefing"\s*:\s*"([^"]{1,200})"/);
-        var contentMatch = raw.match(/"content"\s*:\s*"([^"]{1,400})"/);
-        var fallbackDay = {
-          title: titleMatch  ? titleMatch[1]  : 'Day ' + dayNum,
-          briefing: briefMatch ? briefMatch[1] : 'Study session ' + dayNum,
-          content: contentMatch ? contentMatch[1] : 'Review your notes for this topic.',
-          keyTerms: [],
-          duration: 30,
-          isFinal: isLast,
-          completed: false,
-          questions: []
-        };
-        // Extract any complete question objects via regex
-        var qMatches = raw.match(/\{"type":"[^}]{10,300}?"difficulty":"[^"]+"\}/g) || [];
-        qMatches.forEach(function(qStr) {
-          try {
-            var q = JSON.parse(qStr);
-            if (q.type) fallbackDay.questions.push(q);
-          } catch(e) {}
         });
-        console.warn('[generate] Day ' + dayNum + ' used fallback parser — recovered ' + fallbackDay.questions.length + ' questions');
-        callback(null, sanitizeDayQuestions(fallbackDay));
-      })
-      .catch(function(err) {
-        // Network or server error — show specific message and allow retry
-        var msg = err.message || 'Unknown error';
-        // Never show raw JSON errors to the student
-        if (msg.toLowerCase().includes('json') || msg.toLowerCase().includes('parse') || msg.toLowerCase().includes('unexpected')) {
-          msg = 'Could not generate this day — please try again.';
-        }
-        callback(new Error('Day ' + dayNum + ' failed: ' + msg));
-      });
+      }
+      tryFetch();
     }
 
+    // ── Global timeout: 3 min, clean UI, resumable ──
     var timeoutId = setTimeout(function() {
-      alert('Taking too long — please try again.');
-      goToStep(2);
-    }, 90000);
+      var dayNum = allDays.length + 1;
+      showFatalError(dayNum, function() { generateNext(dayNum); });
+    }, 180000);
 
-    // ── SUBJECT CLASSIFICATION ──
-    function classifySubject(subjectName, notes) {
-      var text = (subjectName + ' ' + notes.substring(0, 400)).toLowerCase();
-      if (/\bmath\b|algebra|calculus|geometry|trigonometry|\bequation\b|derivative|integral|polynomial|fraction|statistics|probability|\btheorem\b|\bslope\b|\blinear\b|quadratic|arithmetic|logarithm|matrix|vector/.test(text)) return 'math';
-      if (/biology|chemistry|physics|science|cell|mitosis|meiosis|atom|molecule|element|compound|reaction|force|energy|evolution|genetics|ecosystem|periodic|DNA|RNA|organ|tissue|photosynthesis|thermodynamics/.test(text)) return 'science';
-      if (/psychology|psych|neuroscience|brain|cognition|behavior|freud|piaget|pavlov|memory|perception|emotion|mental|therapy|disorder|consciousness|neuron|synapse|cognitive|developmental/.test(text)) return 'psychology';
-      if (/geography|continent|country|region|capital|climate|biome|latitude|longitude|river|mountain|ocean|population|migration|urbanization|demography|geopolitics|physical geography/.test(text)) return 'geography';
-      if (/economics|econ|supply|demand|market|inflation|gdp|trade|currency|fiscal|monetary|microeconomics|macroeconomics|opportunity cost|marginal|elasticity|recession|budget|tariff/.test(text)) return 'economics';
-      if (/computer science|programming|algorithm|code|function|variable|loop|array|data structure|binary|sorting|recursion|python|javascript|java|html|css|database|network|operating system/.test(text)) return 'cs';
-      if (/history|war|revolution|empire|civilization|century|ancient|medieval|political|president|government|democracy|colonialism|treaty|battle|historian|social studies|civics|constitution/.test(text)) return 'history';
-      if (/literature|english|novel|poem|poetry|author|character|theme|metaphor|grammar|essay|writing|shakespeare|vocabulary|syntax|literary|fiction|rhetoric|prose|narrative|symbolism/.test(text)) return 'english';
-      if (/spanish|french|german|japanese|chinese|korean|arabic|latin|italian|portuguese|\blanguage\b|verb|noun|conjugate|vocabulary|translate|pronunciation|grammar|tense|accent/.test(text)) return 'language';
-      return 'general';
-    }
-
-    // ── PER-SUBJECT QUESTION STRATEGY ──
-    function getSubjectStrategy(subjectType) {
-      var strategies = {
-        math: {
-          label: 'Math',
-          questionEmphasis: 'Focus on problem-solving steps, formulas, and application. Emphasize WHY formulas work, not just HOW to apply them. Include proof-based and error-spotting questions.',
-          fillTemplate: 'To solve [problem type], first _______ then apply the formula.',
-          feynmanPrompt: 'Explain this concept as if teaching it to a classmate who has never seen it. Include an example.',
-          questionTypes: 'mcq,truefalse,fill,graph,bigequation,errorspot,wordproblem,proof'
-        },
-        science: {
-          label: 'Science',
-          questionEmphasis: 'Focus on processes, cause-and-effect, and vocabulary. Include diagram labeling, experiment design, and classification tasks. Test understanding of mechanisms not just names.',
-          fillTemplate: 'During [process], the _______ is responsible for [function].',
-          feynmanPrompt: 'Explain this biological/chemical/physical process step by step in simple language.',
-          questionTypes: 'mcq,truefalse,fill,sequence,match,labeling,experiment,classify'
-        },
-        psychology: {
-          label: 'Psychology',
-          questionEmphasis: 'Apply concepts to real-world scenarios. Test understanding of research studies, brain structure/function, and psychological theories. Emphasize critical thinking over memorization.',
-          fillTemplate: 'The concept of _______ explains why [behavior/mental process] occurs in [situation].',
-          feynmanPrompt: 'Explain this psychological concept and give a real-world example of how it shows up in everyday life.',
-          questionTypes: 'mcq,truefalse,fill,scenario,case-study,match,labeling'
-        },
-        geography: {
-          label: 'Geography',
-          questionEmphasis: 'Focus on spatial reasoning, climate patterns, human-environment interaction, and geopolitical cause-effect. Include map-based reasoning and regional classification.',
-          fillTemplate: 'The region of _______ is characterized by [climate/feature] which influences [human activity].',
-          feynmanPrompt: 'Explain how this geographic feature or region influences the people and societies that live there.',
-          questionTypes: 'mcq,truefalse,fill,sequence,match,classify,scenario'
-        },
-        economics: {
-          label: 'Economics',
-          questionEmphasis: 'Apply economic concepts to real scenarios. Interpret supply-demand dynamics, policy effects, and market outcomes. Include word problems with real numbers.',
-          fillTemplate: 'When [economic factor] increases, _______ occurs because of [economic principle].',
-          feynmanPrompt: 'Explain this economic concept using a real-world example that makes intuitive sense.',
-          questionTypes: 'mcq,truefalse,fill,scenario,graph,match,wordproblem'
-        },
-        cs: {
-          label: 'Computer Science',
-          questionEmphasis: 'Focus on logic, algorithmic thinking, and debugging. Include code tracing, error-spotting, and explanation of WHY algorithms work. Test understanding of data structures and systems.',
-          fillTemplate: 'In a [loop/function/algorithm], the _______ step executes when [condition].',
-          feynmanPrompt: 'Explain this algorithm or concept as if describing it to someone who has never programmed before.',
-          questionTypes: 'mcq,truefalse,fill,errorspot,trace,match,classify'
-        },
-        history: {
-          label: 'History / Social Studies',
-          questionEmphasis: 'Focus on causes, effects, and significance. Include primary source analysis, chronological ordering, and perspective-taking. Ask WHY events happened. Test historical thinking, not just facts.',
-          fillTemplate: 'The _______ was caused by [event/factor] and led to [consequence].',
-          feynmanPrompt: 'Explain why this historical event happened and what its main consequences were.',
-          questionTypes: 'mcq,truefalse,fill,sequence,passage,debate,classify'
-        },
-        english: {
-          label: 'English / Literature',
-          questionEmphasis: 'Focus on vocabulary in context, themes, literary devices, and author intent. Include quote analysis, character comparison, and rewriting exercises. Test analytical thinking about texts.',
-          fillTemplate: 'The literary device used in "[quote]" is _______ because it [effect].',
-          feynmanPrompt: 'Explain the theme or literary technique in your own words and give an example from the text.',
-          questionTypes: 'mcq,truefalse,fill,match,passage,compare,rewrite'
-        },
-        language: {
-          label: 'Language Learning',
-          questionEmphasis: 'Focus on vocabulary, grammar rules, conjugation, dialogue completion, and error correction. Test both recognition and production. Include contextual usage over isolated drills.',
-          fillTemplate: 'The word "_______ " means [definition] in this context.',
-          feynmanPrompt: 'Explain this grammar rule or vocabulary concept and give 2 example sentences.',
-          questionTypes: 'mcq,truefalse,fill,sentence,match,dialogue,grammar-fix'
-        },
-        general: {
-          label: 'General',
-          questionEmphasis: 'Focus on key concepts, definitions, and relationships between ideas. Test both recall and understanding.',
-          fillTemplate: 'The key concept of _______ means [definition].',
-          feynmanPrompt: 'Explain this concept in your own words as clearly as possible.',
-          questionTypes: 'mcq,truefalse,fill,match,write'
-        }
-      };
-      return strategies[subjectType] || strategies.general;
-    }
-
-    // Classify subject directly from the user-entered subject + notes
-    // No extra API call — faster, more reliable, can't hallucinate wrong subject
-    var subject = (document.getElementById('subject-input') ?
-      (document.getElementById('subject-input').value || '').trim() : '').substring(0, 60)
-      || notes.substring(0, 40);
-    var subjectType = classifySubject(subject, notes);
-    var strategy = getSubjectStrategy(subjectType);
-
-    // Generate days sequentially
+    // ── Sequential generation with per-day checkpoint ──
     function generateNext(dayNum) {
-      document.getElementById('loading').querySelector('p').textContent = 'Building your ' + strategy.label + ' plan — day ' + dayNum + ' of ' + numDays + '...';
       generateDay(dayNum, numDays, subjectType, strategy, function(err, day) {
         if (err) {
           clearTimeout(timeoutId);
-          var loadEl = document.getElementById('loading');
-          if (loadEl) loadEl.style.display = 'none';
-          var step2El = document.getElementById('step2');
-          if (step2El) {
-            step2El.style.display = 'block';
-            step2El.innerHTML = '<div style="text-align:center;padding:2rem 1rem;">' +
-              '<div style="font-size:2rem;margin-bottom:1rem;">&#9888;</div>' +
-              '<h3 style="font-family:var(--serif);font-size:1.4rem;margin-bottom:.75rem;color:var(--ink);">Hmm, something went wrong</h3>' +
-              '<p style="color:var(--muted);font-size:0.9rem;margin-bottom:1.5rem;line-height:1.6;">Your notes are saved. Click below to try again — this usually works on the second attempt.</p>' +
-              '<button onclick="window.location.reload()" style="background:var(--blue);color:#fff;border:none;padding:.85rem 2rem;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;">Try again &#8594;</button>' +
-              '</div>';
-          }
+          showFatalError(dayNum, function() { generateNext(dayNum); });
           return;
         }
         allDays.push(day);
+        checkpointPlan();
         if (dayNum < numDays) {
           generateNext(dayNum + 1);
         } else {
@@ -1856,11 +1538,14 @@
             subjectType: subjectType,
             days: allDays
           };
-          var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
-          allPlans.push(newPlan);
-          localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
-          localStorage.setItem('studyflow_active_plan', newPlan.id);
-          localStorage.setItem('studyflow_plan', JSON.stringify(newPlan));
+          try {
+            var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+            allPlans.push(newPlan);
+            localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
+            localStorage.setItem('studyflow_active_plan', newPlan.id);
+            localStorage.setItem('studyflow_plan', JSON.stringify(newPlan));
+            localStorage.removeItem('studyflow_plan_checkpoint');
+          } catch(e) { console.error('[save]', e); }
           localStorage.removeItem('studyflow_seconds_left');
           localStorage.removeItem('studyflow_timer_day');
           localStorage.removeItem('studyflow_minutes');
@@ -1871,6 +1556,7 @@
     }
     generateNext(1);
   }
+
 
   function copyPlan() {
     navigator.clipboard.writeText(generatedPlan).then(function() {
