@@ -18,6 +18,7 @@
   body { font-family: var(--sans); color: var(--ink); background: var(--soft); min-height: 100vh; }
 
   @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
   @keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
   .typing-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--muted); margin:0 2px; animation:typingBounce 1.2s infinite; }
   .typing-dot:nth-child(2) { animation-delay:.2s; }
@@ -1328,6 +1329,30 @@
     sc.style.animation = 'none';
     void sc.offsetWidth;
     sc.style.animation = 'fadeUp .4s cubic-bezier(0.16,1,.3,1) both';
+
+    // Inject flag button for question-type cards
+    if (card.q && card.q.question &&
+        (card.type === 'question' || card.type === 'fill' ||
+         card.type === 'bigequation' || card.type === 'wordproblem' || card.type === 'errorspot')) {
+      var footer = sc.querySelector('.card-footer');
+      if (footer) {
+        var qText = card.q.question;
+        var isFlagged = flaggedQuestions.indexOf(qText) > -1;
+        var flagBtn = document.createElement('button');
+        flagBtn.className = 'btn-flag' + (isFlagged ? ' flagged' : '');
+        flagBtn.title = isFlagged ? 'Flagged (press F)' : 'Flag for review (press F)';
+        flagBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="' +
+          (isFlagged ? '#d97706' : 'none') +
+          '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+          '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>' +
+          '<line x1="4" y1="22" x2="4" y2="15"/></svg>' +
+          '<span>' + (isFlagged ? ' Flagged' : ' Flag') + '</span>';
+        flagBtn.onclick = function() { flagQuestion(qText); };
+        var nextBtn = footer.querySelector('.btn-next');
+        if (nextBtn) footer.insertBefore(flagBtn, nextBtn);
+        else footer.appendChild(flagBtn);
+      }
+    }
   }
 
   function buildCard(badge, title, struggling, bodyHtml, footerLeft, nextLabel, disabled) {
@@ -3909,36 +3934,6 @@
       btn.classList.toggle('flagged', isFlagged);
       btn.title = isFlagged ? 'Flagged for review (press F)' : 'Flag for review (press F)';
       btn.querySelector('span').textContent = isFlagged ? ' Flagged' : ' Flag';
-    }
-  }
-
-  // Inject flag button into card footer after render
-  var _origShowNextCard = showNextCard;
-  // Patch buildCard to include flag btn in question cards
-  var _origBuildCard = buildCard;
-  function buildCard(badge, title, struggling, bodyHtml, footerLeft, nextLabel, disabled) {
-    return _origBuildCard(badge, title, struggling, bodyHtml, footerLeft, nextLabel, disabled);
-  }
-
-  // After each card renders, inject the flag button if it's a question
-  var _origRenderCard = renderCard;
-  function renderCard(card) {
-    _origRenderCard(card);
-    if (card.type === 'question' || card.type === 'fill' || card.type === 'bigequation' || card.type === 'wordproblem' || card.type === 'errorspot') {
-      var footer = document.querySelector('.card-footer');
-      if (footer && card.q && card.q.question) {
-        var qText = card.q.question;
-        var isFlagged = flaggedQuestions.indexOf(qText) > -1;
-        var flagBtn = document.createElement('button');
-        flagBtn.className = 'btn-flag' + (isFlagged ? ' flagged' : '');
-        flagBtn.title = isFlagged ? 'Flagged for review (press F)' : 'Flag for review (press F)';
-        flagBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="' + (isFlagged ? '#d97706' : 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg><span>' + (isFlagged ? ' Flagged' : ' Flag') + '</span>';
-        flagBtn.onclick = function() { flagQuestion(qText); };
-        // Insert before the Next button
-        var nextBtn = footer.querySelector('.btn-next');
-        if (nextBtn) footer.insertBefore(flagBtn, nextBtn);
-        else footer.appendChild(flagBtn);
-      }
     }
   }
 
