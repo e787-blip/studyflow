@@ -214,20 +214,33 @@
   }
 
   /* Badge — star + label, like reference */
+  @keyframes heroWordIn {
+    0%   { opacity: 0; transform: translateY(28px) skewY(2deg); }
+    60%  { transform: translateY(-3px) skewY(0deg); }
+    100% { opacity: 1; transform: none; }
+  }
+  @keyframes badgePop {
+    0%   { opacity: 0; transform: scale(.85) translateY(8px); }
+    70%  { transform: scale(1.04) translateY(-1px); }
+    100% { opacity: 1; transform: none; }
+  }
+  @keyframes shimmerHero {
+    0%   { background-position: 200% center; }
+    100% { background-position: -200% center; }
+  }
+
   .hero-badge-ref {
     display: inline-flex; align-items: center; gap: .45rem;
     color: rgba(255,255,255,.65);
     font-size: 0.78rem; font-weight: 500; letter-spacing: .04em;
     margin-bottom: 2rem;
-    animation: fadeUp .6s ease both;
+    animation: badgePop .75s cubic-bezier(0.16,1,.3,1) both;
   }
   .hero-badge-ref svg { opacity: .7; flex-shrink: 0; }
 
-  /* Headline — 3 lines, massive, bold, each line fades in */
   .hero-h1-ref {
     display: flex; flex-direction: column; align-items: center;
-    gap: .05em;
-    margin: 0 0 1.6rem;
+    gap: .05em; margin: 0 0 1.6rem;
   }
   .h1-line {
     display: block;
@@ -237,30 +250,38 @@
     line-height: 1.1;
     letter-spacing: -0.04em;
     color: #fff;
-    animation: fadeUp .7s ease both;
+    animation: heroWordIn .75s cubic-bezier(0.16,1,.3,1) both;
     text-shadow: 0 2px 32px rgba(10,14,40,.35);
   }
-  .h1-line:nth-child(1) { animation-delay: .08s; }
-  .h1-line:nth-child(2) { animation-delay: .16s; }
+  .h1-line:nth-child(1) { animation-delay: .04s; }
+  .h1-line:nth-child(2) { animation-delay: .14s; }
   .h1-line:nth-child(3) { animation-delay: .24s; }
-  /* Second line — soft blue, italic, like reference em */
-  .h1-line-em { color: #93b4ff; font-style: italic; }
 
-  /* Subtext — narrow, 2 lines, grey */
+  /* "Ace your exam." — shimmer gradient, starts after entrance */
+  .h1-line-em {
+    background: linear-gradient(90deg, #93b4ff 0%, #c8daff 35%, #7eb0ff 55%, #b8d0ff 75%, #93b4ff 100%);
+    background-size: 250% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-style: italic;
+    animation: heroWordIn .75s cubic-bezier(0.16,1,.3,1) .14s both,
+               shimmerHero 5s linear 1.2s infinite;
+  }
+
   .hero-sub-ref {
     font-size: clamp(0.95rem, 1.8vw, 1.1rem);
     color: rgba(255,255,255,.55);
     line-height: 1.75; font-weight: 300;
     max-width: 480px;
     margin: 0 0 2.2rem;
-    animation: fadeUp .7s .3s ease both;
+    animation: heroWordIn .75s cubic-bezier(0.16,1,.3,1) .32s both;
   }
 
-  /* Buttons — pill style matching reference */
   .hero-btns-ref {
     display: flex; gap: .9rem; align-items: center; flex-wrap: wrap; justify-content: center;
     margin-bottom: 3.5rem;
-    animation: fadeUp .7s .38s ease both;
+    animation: heroWordIn .75s cubic-bezier(0.16,1,.3,1) .42s both;
   }
   .hero-btn-primary {
     display: inline-flex; align-items: center;
@@ -297,10 +318,9 @@
     -webkit-text-fill-color: #fff !important;
   }
 
-  /* Stats — 3 column, like reference */
   .hero-stats-ref {
     display: flex; align-items: flex-start; gap: 3.5rem; flex-wrap: wrap; justify-content: center;
-    animation: fadeUp .7s .46s ease both;
+    animation: heroWordIn .75s cubic-bezier(0.16,1,.3,1) .52s both;
   }
   .hero-stat-ref { display: flex; flex-direction: column; align-items: center; gap: .2rem; }
   .hero-stat-num-ref {
