@@ -746,10 +746,25 @@
     var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
     userPlan = user.tier || 'free';
 
-    if (!saved) { window.location.href = 'dashboard.html'; return; }
+    if (!saved) { window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html'; return; }
     plan = JSON.parse(saved);
-    day = JSON.parse(JSON.stringify(plan.days[dayIndex]));
-    if (!day) { window.location.href = 'dashboard.html'; return; }
+
+    // Validate plan has days
+    if (!plan || !Array.isArray(plan.days) || plan.days.length === 0) {
+      window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html'; return;
+    }
+
+    // Clamp dayIndex to valid range
+    if (isNaN(dayIndex) || dayIndex < 0) dayIndex = 0;
+    if (dayIndex >= plan.days.length) dayIndex = plan.days.length - 1;
+
+    // Find first non-null day at or after dayIndex
+    while (dayIndex < plan.days.length && (plan.days[dayIndex] == null)) dayIndex++;
+    if (dayIndex >= plan.days.length) dayIndex = 0; // all null — fallback to 0
+
+    day = plan.days[dayIndex];
+    if (!day) { window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html'; return; }
+    day = JSON.parse(JSON.stringify(day)); // deep copy
 
     // Restore timer
     var savedSeconds = localStorage.getItem('studyflow_seconds_left');
@@ -1286,6 +1301,11 @@
     }
     else if (card.type === 'scenario') {
       html = renderScenario(card.q);
+    }
+    else if (card.type === 'done') {
+      html = buildCard('Session Complete', 'Great work today!', false,
+        '<p class="content-text" style="text-align:center;">You\'ve finished all the cards for this session. Tap below to see your results.</p>',
+        '', 'See results →', false);
     }
     else { endSession(); return; }
 
