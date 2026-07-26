@@ -1421,34 +1421,65 @@
       var PH = /^\[.*\]$|^real |^exact |^specific |^numerical answer|^your answer|^formula here/i;
       day.questions = day.questions.filter(function(q) {
         if (!q || !q.type) return false;
+        // Must have some question text
+        var qText = (q.question || q.scenario || '').trim();
+
         if (q.type === 'mcq' || q.type === 'passage' || q.type === 'scenario') {
           var opts = q.options || [];
-          if (opts.length < 2) return false;
-          if (!opts.every(function(o){ return o && String(o).trim(); })) return false;
+          // Need at least 2 non-empty options
+          var realOpts = opts.filter(function(o){ return o && String(o).trim().length > 0; });
+          if (realOpts.length < 2) return false;
           var idx = q.correctIndex;
-          if (typeof idx !== 'number' || idx < 0 || idx >= opts.length) return false;
-          if (q.type === 'passage' && (!q.passage || PH.test((q.passage||'').trim()))) return false;
+          if (typeof idx !== 'number' || idx < 0 || idx >= opts.length) q.correctIndex = 0;
+          // Fill any empty options with placeholder so renderer doesn't crash
+          while (q.options.length < 4) q.options.push('Option ' + (q.options.length + 1));
+          if (q.type === 'passage' && (!q.passage || q.passage.trim().length < 5)) return false;
           return true;
         }
-        if (q.type === 'truefalse') return !!(q.question && q.question.trim() && (q.correct === 'True' || q.correct === 'False'));
-        if (q.type === 'sentence') return Array.isArray(q.words) && q.words.length >= 2 && q.words.every(function(w){ return w && String(w).trim(); });
+        if (q.type === 'truefalse') {
+          if (!qText) return false;
+          if (q.correct !== 'True' && q.correct !== 'False') q.correct = 'True';
+          return true;
+        }
+        if (q.type === 'sentence') return Array.isArray(q.words) && q.words.length >= 2 && q.words.filter(function(w){ return w && String(w).trim(); }).length >= 2;
         if (q.type === 'errorspot') {
           if (!Array.isArray(q.steps) || q.steps.length < 2) return false;
-          if (!q.steps.every(function(s){ return s && s.text && typeof s.hasError === 'boolean'; })) return false;
-          return q.steps.filter(function(s){ return s.hasError; }).length === 1;
-        }
-        if (q.type === 'classify') return !!(q.categoryA && q.categoryB && Array.isArray(q.itemsA) && Array.isArray(q.itemsB) && q.itemsA.length >= 2 && q.itemsB.length >= 2);
-        if (q.type === 'sequence') return Array.isArray(q.items) && q.items.length >= 3;
-        if (q.type === 'fill' || q.type === 'bigequation' || q.type === 'wordproblem') {
-          var ans = (q.answer || '').trim();
-          if (!ans || PH.test(ans) || !q.question || !q.question.trim()) return false;
-          if (q.type === 'bigequation' && (!q.equation || q.equation.trim().length < 2)) return false;
-          if (q.type === 'wordproblem') { var sc = (q.scenario||q.question||'').trim(); if (sc.length < 10) return false; }
+          var validSteps = q.steps.filter(function(s){ return s && s.text && s.text.trim(); });
+          if (validSteps.length < 2) return false;
+          var errCount = q.steps.filter(function(s){ return s.hasError; }).length;
+          if (errCount !== 1) return false;
           return true;
         }
-        if (q.type === 'write') return !!(q.question && q.question.trim() && !PH.test(q.question.trim()));
-        return !!q.question;
+        if (q.type === 'classify') return !!(q.categoryA && q.categoryB && Array.isArray(q.itemsA) && Array.isArray(q.itemsB) && q.itemsA.filter(function(i){ return i && String(i).trim(); }).length >= 2 && q.itemsB.filter(function(i){ return i && String(i).trim(); }).length >= 2);
+        if (q.type === 'sequence') return Array.isArray(q.items) && q.items.filter(function(i){ return i && String(i).trim(); }).length >= 3;
+        if (q.type === 'fill' || q.type === 'bigequation' || q.type === 'wordproblem') {
+          if (!qText) return false;
+          // Accept even if answer is empty — better to show question than strip it
+          if (q.type === 'bigequation' && (!q.equation || q.equation.trim().length < 1)) {
+            // Promote to fill if no equation
+            q.type = 'fill';
+          }
+          return true;
+        }
+        if (q.type === 'write') return !!(qText && qText.length > 3);
+        // Unknown types — keep if they have question text
+        return qText.length > 3;
       });
+      // If sanitize stripped everything, build fallback questions from keyTerms
+      if (day.questions.length === 0 && Array.isArray(day.keyTerms) && day.keyTerms.length >= 2) {
+        day.keyTerms.forEach(function(t) {
+          if (t && t.term && t.definition) {
+            day.questions.push({
+              type: 'fill',
+              question: t.term + ' is defined as _______',
+              answer: t.definition.substring(0, 80),
+              hint: 'Think about what ' + t.term + ' means',
+              explanation: t.definition,
+              difficulty: 'Easy'
+            });
+          }
+        });
+      }
       return day;
     }
 
@@ -1629,9 +1660,14 @@
             setProgress('Building your ' + strategy.label + ' plan\u2026 ' + completed + '/' + numDays + ' done');
 
             if (completed === numDays) {
-              // All days finished — save and redirect
+              // All days finished — filter any undefined slots then save and redirect
               clearTimeout(timeoutId);
-              allDays = results; // ordered array
+              allDays = results.filter(function(d){ return d != null; });
+
+              if (allDays.length === 0) {
+                showFatalError(1, function() { failed = false; generateAllParallel(); });
+                return;
+              }
               checkpointPlan();
 
               var newPlan = {
