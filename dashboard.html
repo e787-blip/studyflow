@@ -131,11 +131,41 @@
 
   /* SIDEBAR */
   .sidebar {
-    width:var(--sidebar-w); flex-shrink:0;
-    background:#fff; border-right:1px solid var(--border);
-    overflow-y:auto; display:flex; flex-direction:column;
-    animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both;
+    width: var(--sidebar-w); flex-shrink: 0;
+    background: #fff; border-right: 1px solid var(--border);
+    overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column;
+    animation: sidebarSlide .5s cubic-bezier(0.16,1,.3,1) .04s both;
+    transition: width .32s cubic-bezier(0.16,1,.3,1),
+                opacity .25s ease,
+                transform .32s cubic-bezier(0.16,1,.3,1);
+    position: relative;
   }
+  .sidebar.collapsed {
+    width: 48px;
+    overflow: hidden;
+  }
+  .sidebar.collapsed .sidebar-top,
+  .sidebar.collapsed .sidebar-label,
+  .sidebar.collapsed .day-info,
+  .sidebar.collapsed .plan-switcher-item,
+  .sidebar.collapsed .sidebar-section,
+  .sidebar.collapsed .topic-group { opacity: 0; pointer-events: none; transition: opacity .15s; }
+  .sidebar.collapsed .day-num { margin: 0 auto; }
+  .sidebar.collapsed .day-item { justify-content: center; padding: .65rem .5rem; }
+
+  /* Toggle button — always visible on the sidebar edge */
+  .sidebar-toggle-btn {
+    position: absolute; top: 1rem; right: -14px; z-index: 10;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #fff; border: 1.5px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: transform .32s cubic-bezier(0.16,1,.3,1), box-shadow .2s, background .2s;
+    flex-shrink: 0;
+  }
+  .sidebar-toggle-btn:hover { background: var(--blue-light); border-color: var(--blue); box-shadow: 0 4px 14px rgba(74,124,246,.2); }
+  .sidebar-toggle-btn svg { transition: transform .32s cubic-bezier(0.16,1,.3,1); }
+  .sidebar.collapsed .sidebar-toggle-btn svg { transform: rotate(180deg); }
   .sidebar-top { padding:1.2rem 1rem 0; }
   .sidebar-label { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:.7rem; padding:0 .3rem; }
   .day-item {
@@ -635,6 +665,12 @@
 
 <div class="app-layout">
   <aside class="sidebar" id="sidebar">
+    <!-- Collapse toggle button -->
+    <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" onclick="toggleSidebarCollapse()" title="Collapse sidebar" aria-label="Toggle sidebar">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </button>
     <div class="sidebar-top">
       <div class="sidebar-label">Study Plans</div>
       <div id="sidebar-days"></div>
@@ -908,6 +944,28 @@
       document.getElementById('user-menu').style.display = 'none';
     }
   });
+
+  // ── SIDEBAR COLLAPSE TOGGLE ──
+  function toggleSidebarCollapse() {
+    var sidebar = document.getElementById('sidebar');
+    var btn = document.getElementById('sidebar-toggle-btn');
+    if (!sidebar) return;
+    var isCollapsed = sidebar.classList.toggle('collapsed');
+    try { localStorage.setItem('studyflow_sidebar_collapsed', isCollapsed ? '1' : '0'); } catch(e) {}
+    if (btn) btn.title = isCollapsed ? 'Expand sidebar' : 'Collapse sidebar';
+  }
+
+  // Restore sidebar state on load
+  (function() {
+    try {
+      if (localStorage.getItem('studyflow_sidebar_collapsed') === '1') {
+        var sidebar = document.getElementById('sidebar');
+        var btn = document.getElementById('sidebar-toggle-btn');
+        if (sidebar) { sidebar.classList.add('collapsed'); }
+        if (btn) btn.title = 'Expand sidebar';
+      }
+    } catch(e) {}
+  })();
 
   function signOut() {
     // Only clear credentials — preserve plans so they survive logout/login
