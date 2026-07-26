@@ -17,6 +17,7 @@
   }
   body { font-family: var(--sans); color: var(--ink); background: var(--soft); min-height: 100vh; }
 
+  @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
   @keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
   .typing-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--muted); margin:0 2px; animation:typingBounce 1.2s infinite; }
   .typing-dot:nth-child(2) { animation-delay:.2s; }
@@ -1134,7 +1135,21 @@
 
     var card = getNextCard();
     cardIndex++;
-    renderCard(card);
+
+    try {
+      renderCard(card);
+    } catch(err) {
+      // Never show blank — display error and a retry button
+      var sc = document.getElementById('session-card');
+      if (sc) {
+        sc.innerHTML = '<div class="session-card"><div class="card-header"><div class="card-badge">✦ Oops</div><h2>Something went wrong</h2></div>' +
+          '<div class="card-body"><p class="content-text">There was an error rendering this card. Tap Next to skip it.</p>' +
+          '<p class="content-text" style="font-size:0.78rem;color:var(--muted);margin-top:.5rem;">' + (err && err.message ? err.message : 'Unknown error') + '</p></div>' +
+          '<div class="card-footer"><span class="footer-left"></span>' +
+          '<button class="btn-next" onclick="showNextCard()">Next →</button></div></div>';
+      }
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -3927,7 +3942,17 @@
     }
   }
 
-  init();
+  try {
+    init();
+  } catch(err) {
+    var sc = document.getElementById('session-card');
+    if (sc) {
+      sc.innerHTML = '<div class="session-card"><div class="card-header"><div class="card-badge">✦ Error</div><h2>Could not load session</h2></div>' +
+        '<div class="card-body"><p class="content-text">Error: ' + (err && err.message ? err.message : String(err)) + '</p>' +
+        '<p class="content-text" style="margin-top:1rem;"><a href="dashboard.html" style="color:var(--blue);font-weight:600;">← Back to dashboard</a></p></div></div>';
+    }
+    console.error('[lesson init]', err);
+  }
 </script>
 </body>
 </html>
