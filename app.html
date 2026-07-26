@@ -466,6 +466,11 @@
       <canvas id="camera-canvas" style="display:none;"></canvas>
     </div>
 
+    <div class="field" style="margin-top:1.2rem;">
+      <label class="field-label" for="subject-input">Subject <span>(optional — helps us tailor your questions)</span></label>
+      <input type="text" id="subject-input" class="text-input" placeholder="e.g. US History, Biology, Spanish, Algebra..." autocomplete="off" />
+    </div>
+
     <button class="btn-next" onclick="goToStep2()" style="margin-top:1.2rem;">Continue →</button>
 
     <!-- JOIN A CLASS -->
@@ -1263,6 +1268,38 @@
     startGeneration(notes, numDays, deadline, userPlan);
   }
 
+  // ── Subject classification — pure local, no API call ──
+  function classifySubject(subjectName, notes) {
+    var text = (subjectName + ' ' + notes.substring(0, 600)).toLowerCase();
+    if (/\bmath\b|algebra|calculus|geometry|trigonometry|\bequation\b|derivative|integral|polynomial|fraction|statistics|probability|\btheorem\b|\bslope\b|\blinear\b|quadratic|arithmetic|logarithm|matrix|vector/.test(text)) return 'math';
+    if (/biology|chemistry|physics|science|cell|mitosis|meiosis|atom|molecule|element|compound|reaction|force|energy|evolution|genetics|ecosystem|periodic|dna|rna|organ|tissue|photosynthesis|thermodynamics/.test(text)) return 'science';
+    if (/psychology|psych|neuroscience|brain|cognition|behavior|freud|piaget|pavlov|memory|perception|emotion|mental|therapy|disorder|consciousness|neuron|synapse|cognitive|developmental/.test(text)) return 'psychology';
+    if (/geography|continent|country|region|capital|climate|biome|latitude|longitude|river|mountain|ocean|population|migration|urbanization|demography|geopolitics|physical geography/.test(text)) return 'geography';
+    if (/economics|econ|supply|demand|market|inflation|gdp|trade|currency|fiscal|monetary|microeconomics|macroeconomics|opportunity cost|marginal|elasticity|recession|budget|tariff/.test(text)) return 'economics';
+    if (/computer science|programming|algorithm|code|function|variable|loop|array|data structure|binary|sorting|recursion|python|javascript|java|html|css|database|network|operating system/.test(text)) return 'cs';
+    if (/history|war|revolution|empire|civilization|century|ancient|medieval|political|president|government|democracy|colonialism|treaty|battle|historian|social studies|civics|constitution/.test(text)) return 'history';
+    if (/literature|english|novel|poem|poetry|author|character|theme|metaphor|grammar|essay|writing|shakespeare|vocabulary|syntax|literary|fiction|rhetoric|prose|narrative|symbolism/.test(text)) return 'english';
+    if (/spanish|french|german|japanese|chinese|korean|arabic|latin|italian|portuguese|\blanguage\b|verb|noun|conjugate|translate|pronunciation|tense|accent/.test(text)) return 'language';
+    return 'general';
+  }
+
+  // ── Per-subject strategy ──
+  function getSubjectStrategy(subjectType) {
+    var strategies = {
+      math:        { label: 'Math',                  feynmanPrompt: 'Explain this concept and give a worked example.' },
+      science:     { label: 'Science',               feynmanPrompt: 'Explain this process step by step in simple language.' },
+      psychology:  { label: 'Psychology',            feynmanPrompt: 'Explain this concept with a real-world example.' },
+      geography:   { label: 'Geography',             feynmanPrompt: 'Explain how this geographic feature affects people.' },
+      economics:   { label: 'Economics',             feynmanPrompt: 'Explain this concept with a real market example.' },
+      cs:          { label: 'Computer Science',      feynmanPrompt: 'Explain this algorithm as if to a non-programmer.' },
+      history:     { label: 'History',               feynmanPrompt: 'Explain why this event happened and its consequences.' },
+      english:     { label: 'English / Literature',  feynmanPrompt: 'Explain this literary concept with a text example.' },
+      language:    { label: 'Language',              feynmanPrompt: 'Explain this grammar rule with two example sentences.' },
+      general:     { label: 'General',               feynmanPrompt: 'Explain this concept in your own words.' }
+    };
+    return strategies[subjectType] || strategies.general;
+  }
+
   function startGeneration(notes, numDays, deadline, userPlan) {
     userPlan = userPlan || (JSON.parse(localStorage.getItem('studyflow_user') || '{}').tier || 'free');
     document.querySelectorAll('.card').forEach(function(c) { c.classList.remove('active'); });
@@ -1280,14 +1317,54 @@
     var strategy    = getSubjectStrategy(subjectType);
     var allDays = [];
 
+    // ── Background tab protection ──
+    // Browsers throttle JS timers and fetch when tab is hidden.
+    // We show a banner and use keepalive:true on fetch to survive it.
+    var bgBanner = document.createElement('div');
+    bgBanner.id = 'bg-banner';
+    bgBanner.style.cssText = 'display:none;position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);' +
+      'background:#1a1d2e;color:#fff;padding:.7rem 1.4rem;border-radius:12px;font-family:var(--sans);' +
+      'font-size:0.82rem;font-weight:600;z-index:9999;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.3);' +
+      'display:flex;align-items:center;gap:.6rem;opacity:0;transition:opacity .3s;';
+    bgBanner.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+      'Generating in background \u2014 keep this tab open';
+    bgBanner.style.display = 'none';
+    document.body.appendChild(bgBanner);
+
+    function showBgBanner() {
+      bgBanner.style.display = 'flex';
+      setTimeout(function() { bgBanner.style.opacity = '1'; }, 10);
+    }
+    function hideBgBanner() {
+      bgBanner.style.opacity = '0';
+      setTimeout(function() { bgBanner.style.display = 'none'; }, 300);
+    }
+
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        showBgBanner();
+        // Set page title to show progress when tab is in background
+        document.title = 'Building plan\u2026 \u2014 StudyFlow';
+      } else {
+        hideBgBanner();
+        document.title = 'StudyFlow \u2014 Build my study plan';
+      }
+    });
+
+    // Cleanup on completion
+    function cleanupBgHandlers() {
+      hideBgBanner();
+      document.title = 'StudyFlow';
+    }
+
     // ── Progress ──
     function setProgress(msg) {
       var pEl = document.getElementById('gen-progress-text');
       if (pEl) pEl.textContent = msg;
     }
 
-    // Set correct text immediately — no "Detecting subject..." flash
-    setProgress('Building your ' + strategy.label + ' plan\u2026');
+    // Set correct text immediately
+    setProgress('Building your ' + strategy.label + '\u2026');
 
     // ── Checkpoint after every day ──
     function checkpointPlan() {
@@ -1301,32 +1378,38 @@
       } catch(e) {}
     }
 
-    // ── Clean error UI — no alert() ──
+    // ── Clean error UI — shows on the step-2 card ──
     function showFatalError(dayNum, retryFn) {
+      // Hide loading screen
       var le = document.getElementById('loading');
-      if (le) le.style.display = 'none';
-      var s2 = document.getElementById('step2');
+      if (le) le.classList.remove('active');
+      // Show step-2 card with error content
+      document.querySelectorAll('.card').forEach(function(c) { c.classList.remove('active'); });
+      var s2 = document.getElementById('step-2');
       if (!s2) return;
-      s2.style.display = 'block';
+      s2.classList.add('active');
       s2.innerHTML =
         '<div style="text-align:center;padding:2rem 1.2rem;">' +
-        '<div style="width:52px;height:52px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">' +
-        '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+        '<div style="width:56px;height:56px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">' +
+        '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
         '</div>' +
-        '<h3 style="font-family:var(--serif);font-size:1.3rem;margin-bottom:.6rem;color:var(--ink);">Generation paused</h3>' +
-        '<p style="color:var(--muted);font-size:0.88rem;margin-bottom:.5rem;line-height:1.6;">' +
-        'Day ' + dayNum + ' of ' + numDays + ' hit a snag. ' +
-        (allDays.length > 0 ? allDays.length + ' day' + (allDays.length !== 1 ? 's' : '') + ' already saved.' : 'Your notes are safe.') +
+        '<h3 style="font-family:var(--serif);font-size:1.4rem;margin-bottom:.6rem;color:var(--ink);">Generation paused</h3>' +
+        '<p style="color:var(--muted);font-size:0.88rem;margin-bottom:.5rem;line-height:1.65;">' +
+        'Day ' + dayNum + ' of ' + numDays + ' hit a snag after 3 attempts. ' +
         '</p>' +
-        '<p style="color:var(--muted);font-size:0.82rem;margin-bottom:1.5rem;">This is usually temporary \u2014 retrying almost always works.</p>' +
+        '<p style="color:var(--muted);font-size:0.82rem;margin-bottom:1.5rem;">Your notes are safe. Tap Retry \u2014 this almost always works on the second go.</p>' +
         '<div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;">' +
-        '<button id="gen-retry-btn" style="background:var(--blue);color:#fff;border:none;padding:.85rem 1.6rem;border-radius:12px;font-family:var(--sans);font-size:0.9rem;font-weight:700;cursor:pointer;">Retry day ' + dayNum + ' \u2192</button>' +
-        '<button onclick="window.location.reload()" style="background:var(--soft);color:var(--ink);border:1.5px solid var(--border);padding:.85rem 1.4rem;border-radius:12px;font-family:var(--sans);font-size:0.9rem;font-weight:600;cursor:pointer;">Start over</button>' +
+        '<button id="gen-retry-btn" style="background:var(--blue);color:#fff;border:none;padding:.9rem 1.8rem;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(74,124,246,.35);">Retry \u2192</button>' +
+        '<button onclick="window.location.reload()" style="background:var(--soft);color:var(--ink);border:1.5px solid var(--border);padding:.9rem 1.4rem;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:600;cursor:pointer;">Start over</button>' +
         '</div></div>';
+      updateDots(2);
       var btn = document.getElementById('gen-retry-btn');
       if (btn && retryFn) btn.onclick = function() {
-        s2.style.display = 'none';
-        if (le) { le.style.display = ''; le.classList.add('active'); }
+        s2.innerHTML = '';
+        s2.classList.remove('active');
+        var le2 = document.getElementById('loading');
+        if (le2) le2.classList.add('active');
+        updateDots(3);
         retryFn();
       };
     }
@@ -1475,7 +1558,8 @@
         fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: prompt })
+          body: JSON.stringify({ prompt: prompt }),
+          keepalive: true  // tells browser to keep this fetch alive even if tab goes background
         })
         .then(function(res) {
           if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -1512,11 +1596,10 @@
       tryFetch();
     }
 
-    // ── Global timeout: 90s (parallel is fast) ──
+    // ── Global timeout: 90s ──
     var timeoutId = setTimeout(function() {
-      var failedDays = [];
-      for (var n = 1; n <= numDays; n++) { if (!allDays[n-1]) failedDays.push(n); }
-      showFatalError(failedDays[0] || 1, function() { generateAllParallel(); });
+      clearTimeout(timeoutId);
+      showFatalError(1, function() { generateAllParallel(); });
     }, 90000);
 
     // ── PARALLEL generation — all days fire at once ──
@@ -1572,6 +1655,7 @@
               localStorage.removeItem('studyflow_timer_day');
               localStorage.removeItem('studyflow_minutes');
               localStorage.setItem('studyflow_current_day', '0');
+              cleanupBgHandlers();
               window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html';
             }
           });
