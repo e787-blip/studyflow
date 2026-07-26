@@ -1373,13 +1373,10 @@
   var selectedMinutes = 30;
 
   function startToday() {
-    // Reset everything so timer is fresh every day
-    selectedMinutes = 30;
-    document.querySelectorAll('.time-btn').forEach(function(b){ b.classList.remove('selected'); });
-    document.getElementById('custom-time').value = '';
-    localStorage.removeItem('studyflow_seconds_left');
-    localStorage.removeItem('studyflow_timer_day');
-    document.getElementById('time-modal').classList.add('active');
+    localStorage.setItem('studyflow_current_day', currentDayIndex);
+    localStorage.setItem('studyflow_minutes', '30');
+    recordStudyToday();
+    window.location.href = 'lesson.html';
   }
 
   function selectTime(mins) {
@@ -1526,11 +1523,6 @@
 
     // Add legend
     document.getElementById('cal-exam-label').textContent = examDate ? 'Exam: ' + examDate.toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-  }
-
-  function startToday() {
-    localStorage.setItem('studyflow_current_day', currentDayIndex);
-    window.location.href = 'lesson.html';
   }
 
   function toggleDark() {
