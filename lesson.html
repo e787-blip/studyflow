@@ -902,14 +902,12 @@
       sessionCards.splice(insertAtW, 0, { type: 'write', q: q });
     });
 
-    // Passage comprehension — English (literary) and History (primary source analysis)
-    if (isEnglish || isHistory) {
-      var passageQs = (day.questions || []).filter(function(q){ return q.type === 'passage'; });
-      passageQs.forEach(function(q, i) {
-        var insertAt6 = Math.min(2 + i * 4, sessionCards.length);
-        sessionCards.splice(insertAt6, 0, { type: 'passage', q: q });
-      });
-    }
+    // Passage comprehension — ALL subjects that generate passage-type questions
+    var passageQs = (day.questions || []).filter(function(q){ return q.type === 'passage'; });
+    passageQs.forEach(function(q, i) {
+      var insertAt6 = Math.min(2 + i * 4, sessionCards.length);
+      sessionCards.splice(insertAt6, 0, { type: 'passage', q: q });
+    });
 
     // Sequence — science (processes), history (timelines), any subject with 3+ keyTerms
     // (language uses dedicated sentence-builder below instead of generic keyTerm sequencing)
@@ -921,28 +919,35 @@
       }
     }
 
-    // Sentence Builder — language subjects, from AI-generated word-order questions (Duolingo-style)
+    // Sentence Builder — language subjects only
     if (isLanguage) {
       var sentenceQs = (day.questions || []).filter(function(q){ return q.type === 'sentence' && Array.isArray(q.words) && q.words.length >= 3; });
       sentenceQs.forEach(function(q, i) {
         var insertAt7 = Math.min(3 + i * 3, sessionCards.length);
         sessionCards.splice(insertAt7, 0, { type: 'sentence', q: q });
       });
-
-      // Classify questions — science, history, geography, cs
-      var classifyQs = (day.questions || []).filter(function(q){ return q.type === 'classify' && q.categoryA && q.categoryB && Array.isArray(q.itemsA) && Array.isArray(q.itemsB); });
-      classifyQs.forEach(function(q, i) {
-        var insertAt8 = Math.min(6 + i * 4, sessionCards.length);
-        sessionCards.splice(insertAt8, 0, { type: 'classify', q: q });
-      });
-
-      // Scenario questions — psychology, economics, geography
-      var scenarioQs = (day.questions || []).filter(function(q){ return q.type === 'scenario' && q.question && Array.isArray(q.options); });
-      scenarioQs.forEach(function(q, i) {
-        var insertAt9 = Math.min(5 + i * 4, sessionCards.length);
-        sessionCards.splice(insertAt9, 0, { type: 'scenario', q: q });
-      });
     }
+
+    // Classify questions — ALL subjects (science, history, geography, cs, psychology, economics)
+    var classifyQs = (day.questions || []).filter(function(q){ return q.type === 'classify' && q.categoryA && q.categoryB && Array.isArray(q.itemsA) && Array.isArray(q.itemsB); });
+    classifyQs.forEach(function(q, i) {
+      var insertAt8 = Math.min(6 + i * 4, sessionCards.length);
+      sessionCards.splice(insertAt8, 0, { type: 'classify', q: q });
+    });
+
+    // Scenario questions — ALL subjects (psychology, economics, geography, history)
+    var scenarioQs = (day.questions || []).filter(function(q){ return q.type === 'scenario' && q.question && Array.isArray(q.options); });
+    scenarioQs.forEach(function(q, i) {
+      var insertAt9 = Math.min(5 + i * 4, sessionCards.length);
+      sessionCards.splice(insertAt9, 0, { type: 'scenario', q: q });
+    });
+
+    // Sequence questions from AI — history, geography, science
+    var aiSeqQs = (day.questions || []).filter(function(q){ return q.type === 'sequence' && Array.isArray(q.items) && q.items.length >= 3; });
+    aiSeqQs.forEach(function(q, i) {
+      var insertAtSeq = Math.min(7 + i * 4, sessionCards.length);
+      sessionCards.splice(insertAtSeq, 0, { type: 'sequence', q: q });
+    });
 
     // Matching — vocabulary-heavy subjects: english, language, science, history
     if (day.keyTerms && day.keyTerms.length >= 4) {
