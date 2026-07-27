@@ -1676,9 +1676,8 @@
   // ── JOIN CLASS FROM DASHBOARD ──
   function initJoinClassButton() {
     var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
-    if (!user.classCode) {
-      document.getElementById('join-class-sidebar').style.display = 'block';
-    }
+    var el = document.getElementById('join-class-sidebar');
+    if (!user.classCode && el) el.style.display = 'block';
   }
 
   function joinClassFromDashboard() {
@@ -1735,7 +1734,7 @@
       showMsg('Joined ' + code + '!', true);
       setTimeout(function(){
         document.getElementById('join-class-modal').style.display = 'none';
-        document.getElementById('join-class-sidebar').style.display = 'none';
+        var jcs = document.getElementById('join-class-sidebar'); if (jcs) jcs.style.display = 'none';
         // Check for assignment now that they've joined
         checkAssignment();
       }, 1200);
@@ -1744,7 +1743,7 @@
       showMsg('Joined ' + code + '!', true);
       setTimeout(function(){
         document.getElementById('join-class-modal').style.display = 'none';
-        document.getElementById('join-class-sidebar').style.display = 'none';
+        var jcs = document.getElementById('join-class-sidebar'); if (jcs) jcs.style.display = 'none';
       }, 1200);
     });
   }
