@@ -3487,365 +3487,484 @@
   // ── DIAGRAM GENERATOR — produces real SVG from [DIAGRAM: description] tags ──
   function generateDiagramSVG(desc) {
     var d = desc.toLowerCase();
+    // Shared style constants — consistent across all diagrams
+    var LF = "font-family:'DM Sans',sans-serif;";
+    var LS = 'font-size:9px;';      // secondary label (callouts, sub-labels)
+    var LP = 'font-size:10px;font-weight:600;'; // primary node label
+    var LT = 'font-size:8px;';      // tertiary / micro annotation
 
-    // ── BRAIN / NEUROSCIENCE ──
-    if (/brain|lobe|cortex|neuron|cerebr|hippocamp|amygdala|frontal|temporal|parietal|occipital/.test(d)) {
-      return '<svg viewBox="0 0 300 200" width="280" height="190" style="max-width:100%;font-family:DM Sans,sans-serif;">' +
-        // Brain outline
-        '<ellipse cx="150" cy="105" rx="110" ry="80" fill="#fce4ec" stroke="#e91e63" stroke-width="2"/>' +
-        // Dividing line
-        '<line x1="150" y1="28" x2="150" y2="182" stroke="#e91e63" stroke-width="1.5" stroke-dasharray="4 3"/>' +
-        // Frontal lobe
-        '<ellipse cx="100" cy="75" rx="55" ry="40" fill="rgba(74,124,246,.18)" stroke="#4a7cf6" stroke-width="1.5"/>' +
-        '<text x="96" y="75" font-size="9" fill="#2851c8" text-anchor="middle" font-weight="700">Frontal</text>' +
-        '<text x="96" y="86" font-size="7.5" fill="#2851c8" text-anchor="middle">Lobe</text>' +
-        // Parietal lobe
-        '<ellipse cx="175" cy="70" rx="45" ry="32" fill="rgba(56,191,161,.18)" stroke="#38bfa1" stroke-width="1.5"/>' +
-        '<text x="175" y="70" font-size="9" fill="#065f46" text-anchor="middle" font-weight="700">Parietal</text>' +
-        '<text x="175" y="81" font-size="7.5" fill="#065f46" text-anchor="middle">Lobe</text>' +
-        // Temporal lobe
-        '<ellipse cx="95" cy="140" rx="50" ry="30" fill="rgba(245,158,11,.18)" stroke="#f59e0b" stroke-width="1.5"/>' +
-        '<text x="95" y="140" font-size="9" fill="#92400e" text-anchor="middle" font-weight="700">Temporal</text>' +
-        '<text x="95" y="151" font-size="7.5" fill="#92400e" text-anchor="middle">Lobe</text>' +
-        // Occipital lobe
-        '<ellipse cx="215" cy="135" rx="38" ry="28" fill="rgba(124,58,237,.18)" stroke="#7c3aed" stroke-width="1.5"/>' +
-        '<text x="215" y="135" font-size="9" fill="#5b21b6" text-anchor="middle" font-weight="700">Occipital</text>' +
-        '<text x="215" y="146" font-size="7.5" fill="#5b21b6" text-anchor="middle">Lobe</text>' +
-        // Cerebellum
-        '<ellipse cx="240" cy="158" rx="28" ry="18" fill="rgba(239,68,68,.18)" stroke="#ef4444" stroke-width="1.5"/>' +
-        '<text x="240" y="160" font-size="8" fill="#991b1b" text-anchor="middle" font-weight="700">Cerebellum</text>' +
+    // ── BRAIN LOBES ──────────────────────────────────────────────────────────
+    if (/brain|lobe|cortex|cerebr|hippocamp|amygdala|frontal|temporal|parietal|occipital/.test(d)) {
+      return '<svg viewBox="0 0 420 268" width="100%" style="max-width:480px;display:block;margin:0 auto;' + LF + '">' +
+        '<path d="M80 200 Q40 160 45 110 Q48 65 90 45 Q120 28 160 30 Q200 28 230 42 Q270 30 300 50 Q340 75 345 115 Q350 155 320 185 Q295 205 260 210 Q220 225 180 220 Q140 225 105 215 Z" fill="#fff5f7" stroke="#f472b6" stroke-width="2"/>' +
+        '<path d="M160 30 Q165 120 160 220" fill="none" stroke="#f9a8d4" stroke-width="1" stroke-dasharray="5 3"/>' +
+        '<path d="M90 45 Q95 35 160 30 Q160 80 135 110 Q110 125 80 115 Q55 100 55 80 Q58 58 90 45" fill="rgba(99,102,241,.13)" stroke="#6366f1" stroke-width="1.5" stroke-linejoin="round"/>' +
+        '<path d="M160 30 Q230 42 265 65 Q275 90 260 115 Q240 130 210 130 Q185 128 165 115 Q160 80 160 30" fill="rgba(16,185,129,.13)" stroke="#10b981" stroke-width="1.5" stroke-linejoin="round"/>' +
+        '<path d="M80 115 Q110 125 135 110 Q150 125 145 165 Q135 195 105 215 Q75 210 60 190 Q45 170 55 140 Z" fill="rgba(245,158,11,.13)" stroke="#f59e0b" stroke-width="1.5" stroke-linejoin="round"/>' +
+        '<path d="M260 115 Q295 130 320 185 Q295 205 260 210 Q220 225 180 220 Q155 215 145 185 Q140 165 145 145 Q165 128 210 130 Z" fill="rgba(239,68,68,.13)" stroke="#ef4444" stroke-width="1.5" stroke-linejoin="round"/>' +
+        '<path d="M145 185 Q160 210 180 220 Q165 232 145 237 Q122 239 108 228 Q97 217 105 215 Q122 207 145 185" fill="rgba(124,58,237,.16)" stroke="#7c3aed" stroke-width="1.5"/>' +
+        // Callout: Frontal — leader exits lobe, label offset left with 12px clear gap
+        '<line x1="93" y1="78" x2="30" y2="62" stroke="#6366f1" stroke-width="1" stroke-dasharray="3 2"/>' +
+        '<rect x="0" y="48" width="60" height="26" rx="5" fill="white" stroke="#6366f1" stroke-width="1"/>' +
+        '<text x="30" y="59" style="' + LP + '" fill="#4338ca" text-anchor="middle">Frontal</text>' +
+        '<text x="30" y="70" style="' + LT + '" fill="#6366f1" text-anchor="middle">planning</text>' +
+        // Callout: Parietal — offset right, clear of brain edge
+        '<line x1="213" y1="80" x2="314" y2="46" stroke="#10b981" stroke-width="1" stroke-dasharray="3 2"/>' +
+        '<rect x="314" y="32" width="66" height="26" rx="5" fill="white" stroke="#10b981" stroke-width="1"/>' +
+        '<text x="347" y="43" style="' + LP + '" fill="#065f46" text-anchor="middle">Parietal</text>' +
+        '<text x="347" y="54" style="' + LT + '" fill="#10b981" text-anchor="middle">sensation</text>' +
+        // Callout: Temporal — offset downward-left, label clear of lobe stroke
+        '<line x1="105" y1="162" x2="32" y2="176" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3 2"/>' +
+        '<rect x="0" y="163" width="60" height="26" rx="5" fill="white" stroke="#f59e0b" stroke-width="1"/>' +
+        '<text x="30" y="174" style="' + LP + '" fill="#92400e" text-anchor="middle">Temporal</text>' +
+        '<text x="30" y="185" style="' + LT + '" fill="#f59e0b" text-anchor="middle">memory</text>' +
+        // Callout: Occipital — offset right-lower
+        '<line x1="228" y1="178" x2="338" y2="202" stroke="#ef4444" stroke-width="1" stroke-dasharray="3 2"/>' +
+        '<rect x="338" y="190" width="68" height="26" rx="5" fill="white" stroke="#ef4444" stroke-width="1"/>' +
+        '<text x="372" y="201" style="' + LP + '" fill="#991b1b" text-anchor="middle">Occipital</text>' +
+        '<text x="372" y="212" style="' + LT + '" fill="#ef4444" text-anchor="middle">vision</text>' +
+        // Callout: Cerebellum — offset down, label 14px below the lobe boundary
+        '<line x1="133" y1="220" x2="108" y2="252" stroke="#7c3aed" stroke-width="1" stroke-dasharray="3 2"/>' +
+        '<rect x="66" y="242" width="80" height="18" rx="5" fill="white" stroke="#7c3aed" stroke-width="1"/>' +
+        '<text x="106" y="254" style="' + LT + 'font-weight:600;" fill="#5b21b6" text-anchor="middle">Cerebellum (balance)</text>' +
         '</svg>';
     }
 
-    // ── NEURON / SYNAPSE ──
+    // ── NEURON ───────────────────────────────────────────────────────────────
     if (/neuron|synapse|axon|dendrite|myelin/.test(d)) {
-      return '<svg viewBox="0 0 320 140" width="300" height="130" style="max-width:100%;font-family:DM Sans,sans-serif;">' +
-        // Cell body
-        '<circle cx="80" cy="70" r="35" fill="#fce4ec" stroke="#e91e63" stroke-width="2"/>' +
-        '<text x="80" y="68" font-size="9" fill="#880e4f" text-anchor="middle" font-weight="700">Cell</text>' +
-        '<text x="80" y="79" font-size="9" fill="#880e4f" text-anchor="middle" font-weight="700">Body</text>' +
-        // Dendrites (left)
-        '<line x1="47" y1="52" x2="18" y2="30" stroke="#e91e63" stroke-width="2"/>' +
-        '<line x1="47" y1="70" x2="12" y2="70" stroke="#e91e63" stroke-width="2"/>' +
-        '<line x1="47" y1="88" x2="18" y2="110" stroke="#e91e63" stroke-width="2"/>' +
-        '<text x="8" y="26" font-size="8" fill="#e91e63">Dendrites</text>' +
+      return '<svg viewBox="0 0 500 190" width="100%" style="max-width:560px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs><marker id="nArr" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#6366f1"/></marker></defs>' +
+        // Dendrites
+        '<path d="M112 95 Q88 56 52 42" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round"/>' +
+        '<path d="M112 95 Q82 76 44 72" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round"/>' +
+        '<path d="M112 95 Q84 95 44 95" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round"/>' +
+        '<path d="M112 95 Q82 114 44 118" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round"/>' +
+        '<path d="M112 95 Q87 134 54 148" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round"/>' +
+        // Dendrite label — placed in top-left clear zone, offset from branch tips
+        '<text x="14" y="26" style="' + LP + '" fill="#be185d">Dendrites</text>' +
+        '<text x="14" y="37" style="' + LT + '" fill="#be185d">(receive signals)</text>' +
+        // Soma
+        '<circle cx="142" cy="95" r="36" fill="#fdf2f8" stroke="#ec4899" stroke-width="2"/>' +
+        '<circle cx="142" cy="95" r="13" fill="#fce7f3" stroke="#ec4899" stroke-width="1.2" stroke-dasharray="3 2"/>' +
+        // Nucleus label — INSIDE soma, centered, not on the circle border
+        '<text x="142" y="98" style="' + LT + 'font-weight:600;" fill="#9d174d" text-anchor="middle">nucleus</text>' +
+        // Soma label — 14px BELOW the soma circle bottom (95+36+14=145)
+        '<text x="142" y="148" style="' + LS + 'font-weight:600;" fill="#9d174d" text-anchor="middle">Soma</text>' +
         // Axon
-        '<line x1="115" y1="70" x2="230" y2="70" stroke="#4a7cf6" stroke-width="3"/>' +
-        '<text x="172" y="62" font-size="8" fill="#2851c8" text-anchor="middle">Axon</text>' +
+        '<path d="M178 95 L212 95" fill="none" stroke="#374151" stroke-width="3" stroke-linecap="round"/>' +
+        '<line x1="212" y1="95" x2="378" y2="95" stroke="#6366f1" stroke-width="3.5" stroke-linecap="round"/>' +
+        // Axon label — 13px ABOVE the axon line, not touching it
+        '<text x="288" y="78" style="' + LS + 'font-weight:600;" fill="#4338ca" text-anchor="middle">Axon</text>' +
         // Myelin sheaths
-        '<rect x="130" y="64" width="18" height="12" rx="6" fill="rgba(74,124,246,.3)" stroke="#4a7cf6" stroke-width="1"/>' +
-        '<rect x="162" y="64" width="18" height="12" rx="6" fill="rgba(74,124,246,.3)" stroke="#4a7cf6" stroke-width="1"/>' +
-        '<rect x="194" y="64" width="18" height="12" rx="6" fill="rgba(74,124,246,.3)" stroke="#4a7cf6" stroke-width="1"/>' +
-        // Terminal buttons
-        '<circle cx="245" cy="58" r="8" fill="#38bfa1" stroke="#0d9488" stroke-width="1.5"/>' +
-        '<circle cx="245" cy="70" r="8" fill="#38bfa1" stroke="#0d9488" stroke-width="1.5"/>' +
-        '<circle cx="245" cy="82" r="8" fill="#38bfa1" stroke="#0d9488" stroke-width="1.5"/>' +
-        '<text x="270" y="70" font-size="8" fill="#065f46" dominant-baseline="middle">Terminal</text>' +
-        '<text x="270" y="80" font-size="8" fill="#065f46">Buttons</text>' +
-        // Synapse gap
-        '<line x1="253" y1="58" x2="275" y2="45" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3 2"/>' +
-        '<text x="278" y="43" font-size="7" fill="#b45309">Synapse</text>' +
+        '<ellipse cx="232" cy="95" rx="15" ry="9" fill="rgba(99,102,241,.22)" stroke="#6366f1" stroke-width="1.2"/>' +
+        '<ellipse cx="267" cy="95" rx="15" ry="9" fill="rgba(99,102,241,.22)" stroke="#6366f1" stroke-width="1.2"/>' +
+        '<ellipse cx="302" cy="95" rx="15" ry="9" fill="rgba(99,102,241,.22)" stroke="#6366f1" stroke-width="1.2"/>' +
+        '<ellipse cx="337" cy="95" rx="15" ry="9" fill="rgba(99,102,241,.22)" stroke="#6366f1" stroke-width="1.2"/>' +
+        // Myelin label — 16px below sheath centers (95+9+7=111)
+        '<text x="285" y="115" style="' + LT + '" fill="#6366f1" text-anchor="middle">myelin sheath</text>' +
+        // Nodes of Ranvier
+        '<circle cx="249" cy="95" r="2.5" fill="white" stroke="#6366f1" stroke-width="1.5"/>' +
+        '<circle cx="284" cy="95" r="2.5" fill="white" stroke="#6366f1" stroke-width="1.5"/>' +
+        '<circle cx="319" cy="95" r="2.5" fill="white" stroke="#6366f1" stroke-width="1.5"/>' +
+        // Axon terminals
+        '<path d="M378 95 Q394 76 414 68" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>' +
+        '<path d="M378 95 Q394 95 418 95" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>' +
+        '<path d="M378 95 Q394 114 414 122" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>' +
+        '<circle cx="417" cy="68" r="6" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>' +
+        '<circle cx="421" cy="95" r="6" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>' +
+        '<circle cx="417" cy="122" r="6" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>' +
+        // Terminal label — right of the terminal buttons, vertically centered
+        '<text x="434" y="91" style="' + LT + 'font-weight:600;" fill="#065f46">Axon</text>' +
+        '<text x="434" y="103" style="' + LT + 'font-weight:600;" fill="#065f46">terminals</text>' +
+        // Signal arrow — above axon, 10px gap between text and arrow
+        '<path d="M218 82 L372 82" fill="none" stroke="#6366f1" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#nArr)"/>' +
+        '<text x="295" y="72" style="' + LT + '" fill="#6366f1" text-anchor="middle">electrical signal →</text>' +
         '</svg>';
     }
 
-    // ── SUPPLY & DEMAND CURVE ──
+    // ── SUPPLY & DEMAND ──────────────────────────────────────────────────────
     if (/supply|demand|market|equilibrium|price.*quantity|curve/.test(d)) {
-      return '<svg viewBox="0 0 260 220" width="240" height="200" style="max-width:100%;font-family:DM Sans,sans-serif;">' +
+      return '<svg viewBox="0 0 280 240" width="100%" style="max-width:320px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs><marker id="axA" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#374151"/></marker></defs>' +
+        // Subtle grid
+        '<line x1="58" y1="198" x2="58" y2="28" stroke="#f3f4f6" stroke-width="1"/>' +
+        '<line x1="108" y1="198" x2="108" y2="28" stroke="#f3f4f6" stroke-width="1"/>' +
+        '<line x1="158" y1="198" x2="158" y2="28" stroke="#f3f4f6" stroke-width="1"/>' +
+        '<line x1="208" y1="198" x2="208" y2="28" stroke="#f3f4f6" stroke-width="1"/>' +
+        '<line x1="36" y1="52" x2="240" y2="52" stroke="#f3f4f6" stroke-width="1"/>' +
+        '<line x1="36" y1="102" x2="240" y2="102" stroke="#f3f4f6" stroke-width="1"/>' +
+        '<line x1="36" y1="152" x2="240" y2="152" stroke="#f3f4f6" stroke-width="1"/>' +
         // Axes
-        '<line x1="40" y1="20" x2="40" y2="185" stroke="#374151" stroke-width="2"/>' +
-        '<line x1="40" y1="185" x2="240" y2="185" stroke="#374151" stroke-width="2"/>' +
-        // Axis labels
-        '<text x="20" y="105" font-size="9" fill="#374151" text-anchor="middle" transform="rotate(-90 20 105)">Price</text>' +
-        '<text x="140" y="200" font-size="9" fill="#374151" text-anchor="middle">Quantity</text>' +
-        // Demand curve (downward)
-        '<path d="M55 40 Q120 100 220 170" fill="none" stroke="#ef4444" stroke-width="2.5"/>' +
-        '<text x="224" y="166" font-size="9" fill="#dc2626" font-weight="700">D</text>' +
-        // Supply curve (upward)
-        '<path d="M55 170 Q120 100 220 40" fill="none" stroke="#3b82f6" stroke-width="2.5"/>' +
-        '<text x="224" y="38" font-size="9" fill="#1d4ed8" font-weight="700">S</text>' +
+        '<line x1="36" y1="200" x2="248" y2="200" stroke="#374151" stroke-width="1.5" marker-end="url(#axA)"/>' +
+        '<line x1="36" y1="200" x2="36" y2="22" stroke="#374151" stroke-width="1.5" marker-end="url(#axA)"/>' +
+        // Axis labels — 10px outside axis end points, never on the axis line
+        '<text x="144" y="220" style="' + LS + 'font-weight:600;" fill="#374151" text-anchor="middle">Quantity (Q)</text>' +
+        '<text x="14" y="112" style="' + LS + 'font-weight:600;" fill="#374151" text-anchor="middle" transform="rotate(-90 14 112)">Price (P)</text>' +
+        // Demand curve
+        '<path d="M58 44 C100 80 150 130 236 188" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round"/>' +
+        // Demand label — sits 8px right of curve endpoint, not on curve
+        '<rect x="224" y="180" width="44" height="18" rx="4" fill="#fef2f2" stroke="#ef4444" stroke-width="0.8"/>' +
+        '<text x="246" y="192" style="' + LT + 'font-weight:700;" fill="#dc2626" text-anchor="middle">Demand</text>' +
+        // Supply curve
+        '<path d="M58 188 C100 150 155 100 236 44" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round"/>' +
+        // Supply label — 8px right of curve endpoint, not on curve
+        '<rect x="224" y="34" width="44" height="18" rx="4" fill="#eff6ff" stroke="#3b82f6" stroke-width="0.8"/>' +
+        '<text x="246" y="46" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">Supply</text>' +
         // Equilibrium point
-        '<circle cx="137" cy="104" r="5" fill="#f59e0b" stroke="#d97706" stroke-width="1.5"/>' +
-        '<line x1="40" y1="104" x2="137" y2="104" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4 3"/>' +
-        '<line x1="137" y1="104" x2="137" y2="185" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4 3"/>' +
-        '<text x="32" y="107" font-size="8" fill="#b45309" text-anchor="end">P*</text>' +
-        '<text x="137" y="197" font-size="8" fill="#b45309" text-anchor="middle">Q*</text>' +
-        '<text x="137" y="90" font-size="8" fill="#b45309" text-anchor="middle">Equilibrium</text>' +
+        '<circle cx="148" cy="116" r="7" fill="rgba(251,191,36,.3)"/>' +
+        '<circle cx="148" cy="116" r="4" fill="#fbbf24" stroke="#d97706" stroke-width="1.5"/>' +
+        // Dashed lines to axes — stop 4px short of axis, never crossing
+        '<line x1="36" y1="116" x2="142" y2="116" stroke="#d97706" stroke-width="1" stroke-dasharray="4 3"/>' +
+        '<line x1="148" y1="120" x2="148" y2="200" stroke="#d97706" stroke-width="1" stroke-dasharray="4 3"/>' +
+        // P* and Q* — labels offset 10px outside axis, inside pill rects
+        '<rect x="20" y="108" width="16" height="16" rx="3" fill="#fef3c7" stroke="#d97706" stroke-width="0.8"/>' +
+        '<text x="28" y="119" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">P*</text>' +
+        '<rect x="140" y="202" width="16" height="14" rx="3" fill="#fef3c7" stroke="#d97706" stroke-width="0.8"/>' +
+        '<text x="148" y="212" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">Q*</text>' +
+        // Equilibrium callout — leader goes to clear space above the intersection point
+        '<line x1="152" y1="110" x2="180" y2="88" stroke="#d97706" stroke-width="0.8" stroke-dasharray="3 2"/>' +
+        '<rect x="178" y="76" width="68" height="16" rx="4" fill="#fefce8" stroke="#fbbf24" stroke-width="0.8"/>' +
+        '<text x="212" y="87" style="' + LT + 'font-weight:600;" fill="#92400e" text-anchor="middle">Equilibrium</text>' +
         '</svg>';
     }
 
-    // ── WATER CYCLE ──
+    // ── WATER CYCLE ──────────────────────────────────────────────────────────
     if (/water cycle|hydrologic|evaporation|condensation|precipitation/.test(d)) {
-      return '<svg viewBox="0 0 300 180" width="280" height="168" style="max-width:100%;font-family:DM Sans,sans-serif;">' +
-        // Ground
-        '<rect x="0" y="148" width="300" height="32" fill="#d1faf0" stroke="#38bfa1" stroke-width="1"/>' +
-        '<text x="150" y="162" font-size="8" fill="#065f46" text-anchor="middle">Ground</text>' +
-        // Ocean/Lake
-        '<ellipse cx="50" cy="148" rx="45" ry="14" fill="#bfdbfe" stroke="#3b82f6" stroke-width="1.5"/>' +
-        '<text x="50" y="152" font-size="8" fill="#1d4ed8" text-anchor="middle">Ocean/Lake</text>' +
-        // Sun
-        '<circle cx="260" cy="28" r="20" fill="#fef08a" stroke="#f59e0b" stroke-width="2"/>' +
-        '<text x="260" y="32" font-size="9" fill="#b45309" text-anchor="middle" font-weight="700">☀</text>' +
+      return '<svg viewBox="0 0 380 230" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
+        // Sky zone
+        '<rect x="0" y="0" width="380" height="160" rx="10" fill="#e0f2fe"/>' +
+        // Ground zone
+        '<rect x="0" y="160" width="380" height="70" rx="10" fill="#d1fae5"/>' +
+        // Water body
+        '<ellipse cx="66" cy="161" rx="60" ry="18" fill="#bae6fd" stroke="#0284c7" stroke-width="1.5"/>' +
+        '<text x="66" y="165" style="' + LT + 'font-weight:600;" fill="#075985" text-anchor="middle">Ocean / Lake</text>' +
+        // Sun — clear of all labels, top-right corner with 8px inset
+        '<circle cx="344" cy="30" r="24" fill="#fef08a" stroke="#f59e0b" stroke-width="2"/>' +
+        '<text x="344" y="24" style="font-size:14px;" fill="#d97706" text-anchor="middle">☀</text>' +
+        '<text x="344" y="60" style="' + LT + '" fill="#92400e" text-anchor="middle">Solar energy</text>' +
         // Cloud
-        '<ellipse cx="150" cy="40" rx="50" ry="22" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>' +
-        '<text x="150" y="44" font-size="8" fill="#475569" text-anchor="middle" font-weight="700">Cloud</text>' +
-        // Evaporation arrow
-        '<path d="M60 130 Q60 80 110 50" fill="none" stroke="#ef4444" stroke-width="2" marker-end="url(#arrD)"/>' +
-        '<text x="55" y="90" font-size="8" fill="#dc2626" text-anchor="end">Evaporation</text>' +
-        // Condensation label
-        '<text x="150" y="22" font-size="8" fill="#475569" text-anchor="middle">Condensation</text>' +
-        // Precipitation arrows
-        '<line x1="130" y1="62" x2="115" y2="120" stroke="#3b82f6" stroke-width="2"/>' +
-        '<line x1="150" y1="62" x2="148" y2="120" stroke="#3b82f6" stroke-width="2"/>' +
-        '<line x1="170" y1="62" x2="180" y2="120" stroke="#3b82f6" stroke-width="2"/>' +
-        '<text x="195" y="100" font-size="8" fill="#1d4ed8">Precipitation</text>' +
-        // Runoff
-        '<path d="M200 148 Q170 150 100 148" fill="none" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="4 2"/>' +
-        '<text x="155" y="143" font-size="7" fill="#0284c7" text-anchor="middle">Runoff</text>' +
-        '<defs><marker id="arrD" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#ef4444"/></marker></defs>' +
+        '<ellipse cx="188" cy="52" rx="46" ry="24" fill="white" stroke="#cbd5e1" stroke-width="1.5"/>' +
+        '<ellipse cx="165" cy="62" rx="32" ry="18" fill="white" stroke="#cbd5e1" stroke-width="1"/>' +
+        '<ellipse cx="212" cy="62" rx="32" ry="18" fill="white" stroke="#cbd5e1" stroke-width="1"/>' +
+        // Cloud label — 10px above cloud top, clear of cloud outline (52-24-10=18)
+        '<text x="188" y="18" style="' + LS + 'font-weight:600;" fill="#475569" text-anchor="middle">Condensation</text>' +
+        // Evaporation arrow — label placed 10px to the left of the path midpoint
+        '<path d="M90 145 Q78 110 90 76 Q102 52 148 68" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round"/>' +
+        '<path d="M148 68 L140 62 L152 60 Z" fill="#f97316"/>' +
+        // Evaporation label — in clear left margin, no overlap with path
+        '<text x="46" y="112" style="' + LS + 'font-weight:600;" fill="#c2410c" text-anchor="middle">Evaporation</text>' +
+        // Rain drops — below cloud base (62+18=80), dropping to ground
+        '<line x1="168" y1="82" x2="155" y2="130" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"/>' +
+        '<line x1="184" y1="82" x2="175" y2="140" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"/>' +
+        '<line x1="200" y1="82" x2="194" y2="138" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"/>' +
+        '<line x1="216" y1="82" x2="213" y2="136" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"/>' +
+        '<circle cx="152" cy="133" r="2.5" fill="#3b82f6"/>' +
+        '<circle cx="174" cy="143" r="2.5" fill="#3b82f6"/>' +
+        '<circle cx="193" cy="141" r="2.5" fill="#3b82f6"/>' +
+        '<circle cx="212" cy="139" r="2.5" fill="#3b82f6"/>' +
+        // Precipitation label — right of rain, clear of drops
+        '<rect x="230" y="97" width="68" height="16" rx="4" fill="white" stroke="#3b82f6" stroke-width="0.8"/>' +
+        '<text x="264" y="108" style="' + LT + 'font-weight:600;" fill="#1d4ed8" text-anchor="middle">Precipitation</text>' +
+        // Runoff arrow — dashed, 4px above ground line
+        '<path d="M240 157 Q210 154 170 154 Q130 154 80 157" fill="none" stroke="#0ea5e9" stroke-width="1.5" stroke-dasharray="5 3" stroke-linecap="round"/>' +
+        '<path d="M80 157 L90 152 L90 162 Z" fill="#0ea5e9"/>' +
+        '<text x="175" y="175" style="' + LT + '" fill="#0284c7" text-anchor="middle">Runoff / Collection</text>' +
         '</svg>';
     }
 
-    // ── DNA / DOUBLE HELIX ──
+    // ── DNA ───────────────────────────────────────────────────────────────────
     if (/dna|double helix|nucleotide|base pair|chromosome/.test(d)) {
-      return '<svg viewBox="0 0 160 240" width="140" height="220" style="max-width:100%;font-family:DM Sans,sans-serif;">' +
+      return '<svg viewBox="0 0 260 310" width="100%" style="max-width:300px;display:block;margin:0 auto;' + LF + '">' +
+        // Title
+        '<text x="130" y="18" style="' + LS + 'font-weight:700;" fill="#1e293b" text-anchor="middle">DNA Double Helix</text>' +
+        // Strand end labels — 8px above the first helix point, not on the path
+        '<text x="62" y="38" style="' + LT + 'font-weight:700;" fill="#dc2626">5\'</text>' +
+        '<text x="184" y="38" style="' + LT + 'font-weight:700;" fill="#2563eb">3\'</text>' +
         // Left strand
-        '<path d="M40 20 C20 50 80 70 60 100 C40 130 20 150 40 180 C60 210 80 220 60 240" fill="none" stroke="#ef4444" stroke-width="3"/>' +
+        '<path d="M78 44 C58 68 58 92 78 116 C98 140 98 164 78 188 C58 212 58 236 78 260 C94 280 96 292 82 300" fill="none" stroke="#ef4444" stroke-width="4.5" stroke-linecap="round"/>' +
         // Right strand
-        '<path d="M120 20 C140 50 80 70 100 100 C120 130 140 150 120 180 C100 210 80 220 100 240" fill="none" stroke="#3b82f6" stroke-width="3"/>' +
-        // Base pairs (rungs)
-        '<line x1="50" y1="45" x2="110" y2="45" stroke="#374151" stroke-width="2"/>' +
-        '<line x1="58" y1="70" x2="102" y2="70" stroke="#374151" stroke-width="2"/>' +
-        '<line x1="72" y1="95" x2="88" y2="95" stroke="#374151" stroke-width="2"/>' +
-        '<line x1="62" y1="120" x2="98" y2="120" stroke="#374151" stroke-width="2"/>' +
-        '<line x1="50" y1="145" x2="110" y2="145" stroke="#374151" stroke-width="2"/>' +
-        '<line x1="58" y1="170" x2="102" y2="170" stroke="#374151" stroke-width="2"/>' +
-        '<line x1="68" y1="195" x2="92" y2="195" stroke="#374151" stroke-width="2"/>' +
-        // Base pair labels
-        '<text x="80" y="42" font-size="7.5" fill="#374151" text-anchor="middle">A — T</text>' +
-        '<text x="80" y="67" font-size="7.5" fill="#374151" text-anchor="middle">G — C</text>' +
-        '<text x="80" y="92" font-size="7.5" fill="#374151" text-anchor="middle">T — A</text>' +
-        '<text x="80" y="117" font-size="7.5" fill="#374151" text-anchor="middle">C — G</text>' +
-        '<text x="80" y="142" font-size="7.5" fill="#374151" text-anchor="middle">A — T</text>' +
-        // Labels
-        '<text x="20" y="18" font-size="9" fill="#dc2626" font-weight="700">5\'</text>' +
-        '<text x="128" y="18" font-size="9" fill="#1d4ed8" font-weight="700">3\'</text>' +
+        '<path d="M182 44 C202 68 202 92 182 116 C162 140 162 164 182 188 C202 212 202 236 182 260 C166 280 164 292 178 300" fill="none" stroke="#3b82f6" stroke-width="4.5" stroke-linecap="round"/>' +
+        // Base pairs with circles — labels centered inside circles, not on pair lines
+        '<line x1="86" y1="70" x2="174" y2="70" stroke="#10b981" stroke-width="3" stroke-linecap="round"/>' +
+        '<circle cx="86" cy="70" r="7" fill="#dcfce7" stroke="#10b981" stroke-width="1.2"/>' +
+        '<circle cx="174" cy="70" r="7" fill="#dcfce7" stroke="#10b981" stroke-width="1.2"/>' +
+        '<text x="86" y="74" style="' + LT + 'font-weight:700;" fill="#065f46" text-anchor="middle">A</text>' +
+        '<text x="174" y="74" style="' + LT + 'font-weight:700;" fill="#065f46" text-anchor="middle">T</text>' +
+        // Pair label — centered between pair circles, offset 11px above the pair line
+        '<text x="130" y="60" style="' + LT + '" fill="#059669" text-anchor="middle">A — T (2 bonds)</text>' +
+        '<line x1="82" y1="106" x2="178" y2="106" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>' +
+        '<circle cx="82" cy="106" r="7" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.2"/>' +
+        '<circle cx="178" cy="106" r="7" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.2"/>' +
+        '<text x="82" y="110" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">G</text>' +
+        '<text x="178" y="110" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">C</text>' +
+        '<text x="130" y="96" style="' + LT + '" fill="#d97706" text-anchor="middle">G — C (3 bonds)</text>' +
+        '<line x1="82" y1="142" x2="178" y2="142" stroke="#10b981" stroke-width="3" stroke-linecap="round"/>' +
+        '<circle cx="82" cy="142" r="7" fill="#dcfce7" stroke="#10b981" stroke-width="1.2"/>' +
+        '<circle cx="178" cy="142" r="7" fill="#dcfce7" stroke="#10b981" stroke-width="1.2"/>' +
+        '<text x="82" y="146" style="' + LT + 'font-weight:700;" fill="#065f46" text-anchor="middle">T</text>' +
+        '<text x="178" y="146" style="' + LT + 'font-weight:700;" fill="#065f46" text-anchor="middle">A</text>' +
+        '<text x="130" y="132" style="' + LT + '" fill="#059669" text-anchor="middle">T — A</text>' +
+        '<line x1="86" y1="178" x2="174" y2="178" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>' +
+        '<circle cx="86" cy="178" r="7" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.2"/>' +
+        '<circle cx="174" cy="178" r="7" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.2"/>' +
+        '<text x="86" y="182" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">C</text>' +
+        '<text x="174" y="182" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">G</text>' +
+        '<text x="130" y="168" style="' + LT + '" fill="#d97706" text-anchor="middle">C — G</text>' +
+        '<line x1="86" y1="214" x2="174" y2="214" stroke="#10b981" stroke-width="3" stroke-linecap="round"/>' +
+        '<circle cx="86" cy="214" r="7" fill="#dcfce7" stroke="#10b981" stroke-width="1.2"/>' +
+        '<circle cx="174" cy="214" r="7" fill="#dcfce7" stroke="#10b981" stroke-width="1.2"/>' +
+        '<text x="86" y="218" style="' + LT + 'font-weight:700;" fill="#065f46" text-anchor="middle">A</text>' +
+        '<text x="174" y="218" style="' + LT + 'font-weight:700;" fill="#065f46" text-anchor="middle">T</text>' +
+        '<text x="130" y="204" style="' + LT + '" fill="#059669" text-anchor="middle">A — T</text>' +
+        // Strand end labels bottom — 8px below last path point
+        '<text x="82" y="308" style="' + LT + 'font-weight:700;" fill="#dc2626">3\'</text>' +
+        '<text x="178" y="308" style="' + LT + 'font-weight:700;" fill="#2563eb">5\'</text>' +
         '</svg>';
     }
 
-    // ── CELL DIVISION / MITOSIS ──
+    // ── MITOSIS ───────────────────────────────────────────────────────────────
     if (/mitosis|meiosis|cell division|chromosome|anaphase|metaphase|prophase/.test(d)) {
-      return '<svg viewBox="0 0 320 160" width="300" height="150" style="max-width:100%;font-family:DM Sans,sans-serif;">' +
-        // Phase labels
-        '<text x="28" y="12" font-size="8.5" fill="#374151" text-anchor="middle" font-weight="700">Prophase</text>' +
-        '<text x="100" y="12" font-size="8.5" fill="#374151" text-anchor="middle" font-weight="700">Metaphase</text>' +
-        '<text x="185" y="12" font-size="8.5" fill="#374151" text-anchor="middle" font-weight="700">Anaphase</text>' +
-        '<text x="272" y="12" font-size="8.5" fill="#374151" text-anchor="middle" font-weight="700">Telophase</text>' +
-        // Prophase cell
-        '<ellipse cx="28" cy="85" rx="24" ry="32" fill="#fce4ec" stroke="#e91e63" stroke-width="1.5"/>' +
-        '<ellipse cx="22" cy="78" rx="6" ry="3" fill="#e91e63" transform="rotate(-30 22 78)"/>' +
-        '<ellipse cx="34" cy="92" rx="6" ry="3" fill="#e91e63" transform="rotate(-30 34 92)"/>' +
-        // Metaphase cell
-        '<ellipse cx="100" cy="85" rx="24" ry="32" fill="#e3f2fd" stroke="#3b82f6" stroke-width="1.5"/>' +
-        '<line x1="100" y1="60" x2="100" y2="110" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>' +
-        '<rect x="90" y="75" width="20" height="8" rx="3" fill="#3b82f6" opacity="0.7"/>' +
-        '<rect x="90" y="88" width="20" height="8" rx="3" fill="#3b82f6" opacity="0.7"/>' +
-        // Anaphase cell
-        '<ellipse cx="185" cy="85" rx="30" ry="30" fill="#f3f0ff" stroke="#7c3aed" stroke-width="1.5"/>' +
-        '<ellipse cx="174" cy="72" rx="9" ry="6" fill="#7c3aed" opacity="0.6"/>' +
-        '<ellipse cx="196" cy="98" rx="9" ry="6" fill="#7c3aed" opacity="0.6"/>' +
-        '<line x1="174" y1="78" x2="196" y2="92" stroke="#94a3b8" stroke-width="1" stroke-dasharray="2 2"/>' +
-        // Telophase - two cells forming
-        '<ellipse cx="258" cy="85" rx="16" ry="20" fill="#d1faf0" stroke="#38bfa1" stroke-width="1.5"/>' +
-        '<ellipse cx="287" cy="85" rx="16" ry="20" fill="#d1faf0" stroke="#38bfa1" stroke-width="1.5"/>' +
-        '<circle cx="258" cy="85" r="6" fill="#38bfa1" opacity="0.6"/>' +
-        '<circle cx="287" cy="85" r="6" fill="#38bfa1" opacity="0.6"/>' +
-        // Arrows between phases
-        '<path d="M54 85 L70 85" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrM)"/>' +
-        '<path d="M126 85 L152 85" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrM)"/>' +
-        '<path d="M217 85 L238 85" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arrM)"/>' +
-        '<defs><marker id="arrM" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#94a3b8"/></marker></defs>' +
+      return '<svg viewBox="0 0 440 190" width="100%" style="max-width:500px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs><marker id="mA" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#94a3b8"/></marker></defs>' +
+        // Phase labels — 12px above each cell shape top (y=48), at y=36
+        '<text x="50" y="35" style="' + LT + 'font-weight:700;" fill="#be185d" text-anchor="middle">Prophase</text>' +
+        '<text x="148" y="35" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">Metaphase</text>' +
+        '<text x="246" y="35" style="' + LT + 'font-weight:700;" fill="#5b21b6" text-anchor="middle">Anaphase</text>' +
+        '<text x="374" y="35" style="' + LT + 'font-weight:700;" fill="#065f46" text-anchor="middle">Telophase</text>' +
+        // Phase 1: Prophase
+        '<rect x="8" y="48" width="84" height="96" rx="42" fill="#fce7f3" stroke="#ec4899" stroke-width="1.8"/>' +
+        '<path d="M30 86 Q42 74 42 96 Q42 114 30 108" fill="#f472b6" stroke="#db2777" stroke-width="1.8" stroke-linecap="round"/>' +
+        '<path d="M72 86 Q60 74 60 96 Q60 114 72 108" fill="#f472b6" stroke="#db2777" stroke-width="1.8" stroke-linecap="round"/>' +
+        // Phase 2: Metaphase
+        '<rect x="106" y="48" width="84" height="96" rx="42" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.8"/>' +
+        '<line x1="148" y1="54" x2="148" y2="138" stroke="#bfdbfe" stroke-width="1.2" stroke-dasharray="4 3"/>' +
+        '<rect x="132" y="82" width="32" height="11" rx="4" fill="#3b82f6" opacity=".7"/>' +
+        '<rect x="132" y="99" width="32" height="11" rx="4" fill="#3b82f6" opacity=".7"/>' +
+        // Phase 3: Anaphase
+        '<rect x="206" y="48" width="84" height="96" rx="42" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.8"/>' +
+        '<path d="M224 76 Q236 68 236 84 Q236 96 224 91" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.5"/>' +
+        '<path d="M270 76 Q258 68 258 84 Q258 96 270 91" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.5"/>' +
+        '<path d="M224 120 Q236 114 236 126 Q236 136 224 132" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.5"/>' +
+        '<path d="M270 120 Q258 114 258 126 Q258 136 270 132" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.5"/>' +
+        // Phase 4: Telophase — two daughter cells
+        '<ellipse cx="350" cy="78" rx="28" ry="28" fill="#d1fae5" stroke="#10b981" stroke-width="1.8"/>' +
+        '<ellipse cx="398" cy="78" rx="28" ry="28" fill="#d1fae5" stroke="#10b981" stroke-width="1.8"/>' +
+        '<ellipse cx="350" cy="136" rx="28" ry="28" fill="none" stroke="#10b981" stroke-width="1.2" stroke-dasharray="4 3"/>' +
+        '<ellipse cx="398" cy="136" rx="28" ry="28" fill="none" stroke="#10b981" stroke-width="1.2" stroke-dasharray="4 3"/>' +
+        '<circle cx="350" cy="78" r="9" fill="#a7f3d0" stroke="#10b981" stroke-width="1.2"/>' +
+        '<circle cx="398" cy="78" r="9" fill="#a7f3d0" stroke="#10b981" stroke-width="1.2"/>' +
+        // Daughter cells label — 10px below lowest element (136+28=164, +10=174)
+        '<text x="374" y="176" style="' + LT + '" fill="#374151" text-anchor="middle">2 daughter cells</text>' +
+        // Phase arrows
+        '<path d="M94 96 L104 96" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#mA)"/>' +
+        '<path d="M192 96 L204 96" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#mA)"/>' +
+        '<path d="M292 90 L304 78" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#mA)"/>' +
         '</svg>';
     }
 
-    // ── ATOM / PERIODIC TABLE ──
-    if (/atom|electron|proton|neutron|orbital|periodic|element|bohr/.test(d)) {
-      return '<svg viewBox="0 0 200 200" width="180" height="180" style="max-width:100%;font-family:DM Sans,sans-serif;">' +
-        // Nucleus
-        '<circle cx="100" cy="100" r="22" fill="#fee2e2" stroke="#ef4444" stroke-width="2"/>' +
-        '<text x="100" y="97" font-size="8" fill="#991b1b" text-anchor="middle" font-weight="700">Nucleus</text>' +
-        '<text x="100" y="108" font-size="7" fill="#991b1b" text-anchor="middle">p⁺ n⁰</text>' +
-        // Shell 1
-        '<circle cx="100" cy="100" r="42" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 2"/>' +
-        '<circle cx="142" cy="100" r="5" fill="#3b82f6"/>' +
-        '<circle cx="58" cy="100" r="5" fill="#3b82f6"/>' +
-        // Shell 2
-        '<circle cx="100" cy="100" r="68" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 2"/>' +
-        '<circle cx="168" cy="100" r="5" fill="#7c3aed"/>' +
-        '<circle cx="32" cy="100" r="5" fill="#7c3aed"/>' +
-        '<circle cx="100" cy="32" r="5" fill="#7c3aed"/>' +
-        '<circle cx="100" cy="168" r="5" fill="#7c3aed"/>' +
-        // Shell 3
-        '<circle cx="100" cy="100" r="88" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 2"/>' +
-        '<circle cx="188" cy="100" r="4" fill="#38bfa1"/>' +
-        '<circle cx="12" cy="100" r="4" fill="#38bfa1"/>' +
-        // Labels
-        '<text x="100" y="195" font-size="8" fill="#374151" text-anchor="middle">Electron Shells</text>' +
-        '</svg>';
-    }
-
-    // ── ECOSYSTEM / FOOD CHAIN ──
-    if (/food chain|food web|ecosystem|producer|consumer|decomposer|trophic/.test(d)) {
-      return '<svg viewBox="0 0 280 200" width="260" height="185" style="max-width:100%;font-family:DM Sans,sans-serif;">' +
-        // Levels
-        '<rect x="90" y="158" width="100" height="28" rx="8" fill="#d1faf0" stroke="#38bfa1" stroke-width="1.5"/>' +
-        '<text x="140" y="176" font-size="9" fill="#065f46" text-anchor="middle" font-weight="700">Producers (Plants)</text>' +
-        '<rect x="70" y="114" width="140" height="28" rx="8" fill="#dce8ff" stroke="#4a7cf6" stroke-width="1.5"/>' +
-        '<text x="140" y="132" font-size="9" fill="#2851c8" text-anchor="middle" font-weight="700">Primary Consumers</text>' +
-        '<rect x="50" y="70" width="180" height="28" rx="8" fill="#f3f0ff" stroke="#7c3aed" stroke-width="1.5"/>' +
-        '<text x="140" y="88" font-size="9" fill="#5b21b6" text-anchor="middle" font-weight="700">Secondary Consumers</text>' +
-        '<rect x="30" y="26" width="220" height="28" rx="8" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>' +
-        '<text x="140" y="44" font-size="9" fill="#991b1b" text-anchor="middle" font-weight="700">Apex Predators</text>' +
-        // Arrows
-        '<path d="M140 155 L140 145" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#arrE)"/>' +
-        '<path d="M140 111 L140 101" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#arrE)"/>' +
-        '<path d="M140 67 L140 57" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#arrE)"/>' +
-        // Energy label
-        '<text x="160" y="105" font-size="7.5" fill="#374151">Energy</text>' +
-        '<text x="160" y="113" font-size="7.5" fill="#374151">flows up</text>' +
-        '<defs><marker id="arrE" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#374151"/></marker></defs>' +
-        '</svg>';
-    }
-
-    // ── PHOTOSYNTHESIS / RESPIRATION ──
-    if (/photosynthesis|cellular respiration|chloroplast|mitochondria.*energy|atp/.test(d)) {
-      return '<svg viewBox="0 0 280 140" width="260" height="130" style="max-width:100%;font-family:DM Sans,sans-serif;">' +
-        // Leaf/chloroplast
-        '<ellipse cx="70" cy="70" rx="55" ry="45" fill="#d1faf0" stroke="#38bfa1" stroke-width="2"/>' +
-        '<text x="70" y="62" font-size="9" fill="#065f46" text-anchor="middle" font-weight="700">Chloroplast</text>' +
-        '<text x="70" y="74" font-size="8" fill="#065f46" text-anchor="middle">(Photosynthesis)</text>' +
-        // Sun input
-        '<circle cx="18" cy="18" r="14" fill="#fef08a" stroke="#f59e0b" stroke-width="1.5"/>' +
-        '<text x="18" y="22" font-size="9" fill="#b45309" text-anchor="middle">☀</text>' +
-        '<path d="M28 28 L35 40" fill="none" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrPS)"/>' +
-        // CO2 + H2O input
-        '<text x="5" y="82" font-size="8" fill="#374151">CO₂</text>' +
-        '<text x="5" y="93" font-size="8" fill="#374151">H₂O</text>' +
-        '<path d="M30 87 L40 78" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#arrPS)"/>' +
-        // Arrow to right
-        '<path d="M130 70 L160 70" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arrPS)"/>' +
-        // Glucose + O2 output
-        '<rect x="163" y="48" width="110" height="44" rx="10" fill="#fff8e0" stroke="#f59e0b" stroke-width="1.5"/>' +
-        '<text x="218" y="67" font-size="9" fill="#b45309" text-anchor="middle" font-weight="700">C₆H₁₂O₆ (Glucose)</text>' +
-        '<text x="218" y="81" font-size="9" fill="#b45309" text-anchor="middle">+ O₂ released</text>' +
-        // Equation
-        '<text x="140" y="118" font-size="8" fill="#374151" text-anchor="middle">6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂</text>' +
-        '<defs><marker id="arrPS" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#374151"/></marker></defs>' +
-        '</svg>';
-    }
-
-    // ── CIRCUIT / ELECTRICITY ──
-    if (/circuit|resistor|capacitor|voltage|current|ohm|series|parallel|electricity/.test(d)) {
-      return '<svg viewBox="0 0 280 160" width="260" height="148" style="max-width:100%;font-family:DM Sans,sans-serif;">' +
-        // Battery
-        '<rect x="20" y="60" width="30" height="40" rx="4" fill="#fef08a" stroke="#f59e0b" stroke-width="2"/>' +
-        '<text x="35" y="84" font-size="8" fill="#b45309" text-anchor="middle" font-weight="700">+</text>' +
-        '<text x="35" y="94" font-size="8" fill="#b45309" text-anchor="middle">—</text>' +
-        '<text x="35" y="117" font-size="8" fill="#374151" text-anchor="middle">Battery</text>' +
-        // Wire top
-        '<line x1="50" y1="68" x2="240" y2="68" stroke="#374151" stroke-width="2.5"/>' +
-        // Wire bottom
-        '<line x1="50" y1="92" x2="240" y2="92" stroke="#374151" stroke-width="2.5"/>' +
-        // Resistor 1 (top wire)
-        '<rect x="90" y="61" width="40" height="14" rx="3" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>' +
-        '<text x="110" y="72" font-size="7.5" fill="#991b1b" text-anchor="middle">R₁</text>' +
-        '<text x="110" y="55" font-size="7.5" fill="#374151" text-anchor="middle">Resistor</text>' +
-        // Resistor 2 (top wire)
-        '<rect x="155" y="61" width="40" height="14" rx="3" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>' +
-        '<text x="175" y="72" font-size="7.5" fill="#991b1b" text-anchor="middle">R₂</text>' +
-        // Bulb (right side)
-        '<circle cx="248" cy="80" r="12" fill="#fef9c3" stroke="#f59e0b" stroke-width="2"/>' +
-        '<text x="248" y="84" font-size="9" fill="#b45309" text-anchor="middle">L</text>' +
-        // Close circuit (right side)
-        '<line x1="240" y1="68" x2="260" y2="68" stroke="#374151" stroke-width="2.5"/>' +
-        '<line x1="260" y1="68" x2="260" y2="92" stroke="#374151" stroke-width="2.5"/>' +
-        '<line x1="260" y1="92" x2="240" y2="92" stroke="#374151" stroke-width="2.5"/>' +
-        // Voltage label
-        '<text x="35" y="138" font-size="8" fill="#3b82f6" text-anchor="middle">V (Voltage)</text>' +
-        // Current arrow
-        '<path d="M60 75 L80 75" fill="none" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrC)"/>' +
-        '<text x="65" y="70" font-size="7" fill="#3b82f6">I →</text>' +
-        '<defs><marker id="arrC" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#3b82f6"/></marker></defs>' +
-        '</svg>';
-    }
-
-    // ── PLATE TECTONICS / GEOGRAPHY ──
-    if (/plate tectonic|fault|earthquake|volcano|continental|crust|mantle|convergent|divergent/.test(d)) {
-      return '<svg viewBox="0 0 300 180" width="280" height="165" style="max-width:100%;font-family:DM Sans,sans-serif;">' +
-        // Earth layers cross-section
-        '<path d="M10 170 Q10 40 150 20 Q290 40 290 170 Z" fill="#fff8e0" stroke="#f59e0b" stroke-width="1.5"/>' +
-        // Mantle
-        '<path d="M30 170 Q30 70 150 50 Q270 70 270 170 Z" fill="#fee2e2" stroke="#ef4444" stroke-width="1"/>' +
-        '<text x="150" y="135" font-size="9" fill="#991b1b" text-anchor="middle" font-weight="700">Mantle</text>' +
-        '<text x="150" y="147" font-size="7.5" fill="#991b1b" text-anchor="middle">(hot, semi-solid)</text>' +
-        // Outer core
-        '<path d="M70 170 Q70 100 150 88 Q230 100 230 170 Z" fill="#fde68a" stroke="#f59e0b" stroke-width="1"/>' +
-        '<text x="150" y="170" font-size="8" fill="#92400e" text-anchor="middle">Outer Core</text>' +
-        // Crust (top thin layer)
-        '<path d="M10 170 Q10 40 150 20 Q290 40 290 170 L270 170 Q270 55 150 35 Q30 55 30 170 Z" fill="#d1faf0" stroke="#38bfa1" stroke-width="1.5"/>' +
-        '<text x="150" y="38" font-size="8" fill="#065f46" text-anchor="middle" font-weight="700">Crust (5-70km)</text>' +
-        // Fault line
-        '<line x1="150" y1="20" x2="150" y2="88" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5 3"/>' +
-        '<text x="165" y="55" font-size="7.5" fill="#5b21b6">Fault</text>' +
-        // Plate arrows
-        '<path d="M60 45 L100 45" fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrP)"/>' +
-        '<path d="M240 45 L200 45" fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrP)"/>' +
-        '<text x="75" y="38" font-size="7.5" fill="#1d4ed8">Plate →</text>' +
-        '<text x="225" y="38" font-size="7.5" fill="#1d4ed8">← Plate</text>' +
-        '<defs><marker id="arrP" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#3b82f6"/></marker></defs>' +
-        '</svg>';
-    }
-
-    // ── MEMORY / PSYCHOLOGY (without brain regions) ──
+    // ── MEMORY MODEL ─────────────────────────────────────────────────────────
     if (/memory|encoding|storage|retrieval|short.term|long.term|working memory|forgetting/.test(d)) {
-      return '<svg viewBox="0 0 300 160" width="280" height="148" style="max-width:100%;font-family:DM Sans,sans-serif;">' +
-        // Sensory
-        '<rect x="8" y="55" width="55" height="50" rx="8" fill="#fce4ec" stroke="#e91e63" stroke-width="1.5"/>' +
-        '<text x="35" y="77" font-size="8" fill="#880e4f" text-anchor="middle" font-weight="700">Sensory</text>' +
-        '<text x="35" y="89" font-size="8" fill="#880e4f" text-anchor="middle">Memory</text>' +
-        '<text x="35" y="101" font-size="7" fill="#880e4f" text-anchor="middle">(0.5-3 sec)</text>' +
-        // Arrow 1
-        '<path d="M65 80 L85 80" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arrMem)"/>' +
-        '<text x="75" y="74" font-size="7" fill="#374151" text-anchor="middle">Attn.</text>' +
-        // STM
-        '<rect x="88" y="45" width="65" height="70" rx="8" fill="#e3f2fd" stroke="#3b82f6" stroke-width="1.5"/>' +
-        '<text x="120" y="72" font-size="8" fill="#1d4ed8" text-anchor="middle" font-weight="700">Short-Term</text>' +
-        '<text x="120" y="84" font-size="8" fill="#1d4ed8" text-anchor="middle">Memory</text>' +
-        '<text x="120" y="96" font-size="7" fill="#1d4ed8" text-anchor="middle">(~7 items)</text>' +
-        '<text x="120" y="108" font-size="7" fill="#1d4ed8" text-anchor="middle">(20-30 sec)</text>' +
-        // Arrow 2
-        '<path d="M155 80 L175 80" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#arrMem)"/>' +
-        '<text x="165" y="74" font-size="7" fill="#374151" text-anchor="middle">Encod.</text>' +
-        // LTM
-        '<rect x="178" y="35" width="115" height="90" rx="8" fill="#d1faf0" stroke="#38bfa1" stroke-width="1.5"/>' +
-        '<text x="235" y="70" font-size="9" fill="#065f46" text-anchor="middle" font-weight="700">Long-Term</text>' +
-        '<text x="235" y="82" font-size="9" fill="#065f46" text-anchor="middle">Memory</text>' +
-        '<text x="235" y="94" font-size="7.5" fill="#065f46" text-anchor="middle">Explicit | Implicit</text>' +
-        '<text x="235" y="106" font-size="7" fill="#065f46" text-anchor="middle">Unlimited capacity</text>' +
-        // Retrieval arrow back
-        '<path d="M178 100 L155 100" fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="4 2" marker-end="url(#arrMem2)"/>' +
-        '<text x="165" y="113" font-size="7" fill="#5b21b6" text-anchor="middle">Retrieval</text>' +
-        // Forgetting
-        '<path d="M120 115 L120 140" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3 2"/>' +
-        '<text x="120" y="152" font-size="7.5" fill="#dc2626" text-anchor="middle">Forgetting (decay)</text>' +
+      return '<svg viewBox="0 0 460 185" width="100%" style="max-width:520px;display:block;margin:0 auto;' + LF + '">' +
         '<defs>' +
-        '<marker id="arrMem" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#374151"/></marker>' +
-        '<marker id="arrMem2" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#7c3aed"/></marker>' +
+        '<marker id="mF" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#6366f1"/></marker>' +
+        '<marker id="mG" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#94a3b8"/></marker>' +
         '</defs>' +
+        // Stimulus box
+        '<rect x="8" y="70" width="68" height="50" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>' +
+        '<text x="42" y="92" style="' + LT + 'font-weight:700;" fill="#374151" text-anchor="middle">Stimulus</text>' +
+        '<text x="42" y="106" style="' + LT + '" fill="#64748b" text-anchor="middle">(sight/sound)</text>' +
+        // Arrow + "attention" label — label sits 8px above arrow, not on it
+        '<path d="M76 95 L102 95" fill="none" stroke="#6366f1" stroke-width="1.8" marker-end="url(#mF)"/>' +
+        '<text x="89" y="88" style="' + LT + '" fill="#4338ca" text-anchor="middle">attention</text>' +
+        // Sensory memory
+        '<rect x="104" y="58" width="76" height="74" rx="10" fill="#fce7f3" stroke="#ec4899" stroke-width="1.8"/>' +
+        '<text x="142" y="82" style="' + LT + 'font-weight:700;" fill="#9d174d" text-anchor="middle">Sensory</text>' +
+        '<text x="142" y="96" style="' + LT + 'font-weight:700;" fill="#be185d" text-anchor="middle">Memory</text>' +
+        '<text x="142" y="110" style="' + LT + '" fill="#be185d" text-anchor="middle">0.5–3 sec</text>' +
+        '<text x="142" y="122" style="' + LT + '" fill="#be185d" text-anchor="middle">unlimited</text>' +
+        // "forgotten" from sensory — arrow exits bottom with 6px gap, label 4px below arrow
+        '<path d="M142 132 L142 158" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#mG)"/>' +
+        '<text x="142" y="170" style="' + LT + '" fill="#94a3b8" text-anchor="middle">forgotten</text>' +
+        // STM arrow + label
+        '<path d="M180 95 L214 95" fill="none" stroke="#6366f1" stroke-width="1.8" marker-end="url(#mF)"/>' +
+        '<text x="197" y="88" style="' + LT + '" fill="#4338ca" text-anchor="middle">encoding</text>' +
+        // Short-term memory
+        '<rect x="216" y="48" width="92" height="94" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.8"/>' +
+        '<text x="262" y="76" style="' + LT + 'font-weight:700;" fill="#1e40af" text-anchor="middle">Short-term</text>' +
+        '<text x="262" y="90" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">Memory</text>' +
+        '<text x="262" y="106" style="' + LT + '" fill="#3b82f6" text-anchor="middle">~7 items</text>' +
+        '<text x="262" y="120" style="' + LT + '" fill="#3b82f6" text-anchor="middle">15–30 sec</text>' +
+        // Decay from STM
+        '<path d="M262 142 L262 158" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#mG)"/>' +
+        '<text x="262" y="170" style="' + LT + '" fill="#94a3b8" text-anchor="middle">decay</text>' +
+        // LTM encoding arrow
+        '<path d="M308 95 L344 95" fill="none" stroke="#6366f1" stroke-width="1.8" marker-end="url(#mF)"/>' +
+        '<text x="326" y="88" style="' + LT + '" fill="#4338ca" text-anchor="middle">encoding</text>' +
+        // Long-term memory
+        '<rect x="346" y="36" width="108" height="118" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.8"/>' +
+        '<text x="400" y="62" style="' + LT + 'font-weight:700;" fill="#14532d" text-anchor="middle">Long-term</text>' +
+        '<text x="400" y="76" style="' + LT + 'font-weight:700;" fill="#16a34a" text-anchor="middle">Memory</text>' +
+        '<text x="400" y="94" style="' + LT + '" fill="#15803d" text-anchor="middle">Unlimited size</text>' +
+        '<text x="400" y="108" style="' + LT + '" fill="#15803d" text-anchor="middle">Days–Lifetime</text>' +
+        '<text x="400" y="122" style="' + LT + '" fill="#15803d" text-anchor="middle">Explicit | Implicit</text>' +
+        // Retrieval arrow — runs BELOW boxes to avoid crossing through them
+        '<path d="M346 148 L262 148" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 2" marker-end="url(#mG)"/>' +
+        '<text x="304" y="162" style="' + LT + '" fill="#d97706" text-anchor="middle">retrieval</text>' +
         '</svg>';
     }
 
-    return null; // no matching diagram — fall through to text callout
+    // ── FOOD CHAIN / ECOSYSTEM ────────────────────────────────────────────────
+    if (/food chain|food web|ecosystem|producer|consumer|decomposer|trophic/.test(d)) {
+      return '<svg viewBox="0 0 290 300" width="100%" style="max-width:330px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs><marker id="eA" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#374151"/></marker></defs>' +
+        // Level 4 — Apex (narrowest, top)
+        '<rect x="88" y="20" width="116" height="44" rx="10" fill="#fecaca" stroke="#ef4444" stroke-width="1.5"/>' +
+        '<text x="146" y="40" style="' + LT + 'font-weight:700;" fill="#991b1b" text-anchor="middle">Apex Predators</text>' +
+        '<text x="146" y="56" style="' + LT + '" fill="#ef4444" text-anchor="middle">e.g. lions, sharks</text>' +
+        // Level 3 — Secondary Consumer
+        '<rect x="54" y="88" width="184" height="44" rx="10" fill="#f3e8ff" stroke="#9333ea" stroke-width="1.5"/>' +
+        '<text x="146" y="108" style="' + LT + 'font-weight:700;" fill="#6b21a8" text-anchor="middle">Secondary Consumers</text>' +
+        '<text x="146" y="124" style="' + LT + '" fill="#9333ea" text-anchor="middle">e.g. foxes, snakes</text>' +
+        // Level 2 — Primary Consumer
+        '<rect x="24" y="156" width="244" height="44" rx="10" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5"/>' +
+        '<text x="146" y="176" style="' + LT + 'font-weight:700;" fill="#1e40af" text-anchor="middle">Primary Consumers</text>' +
+        '<text x="146" y="192" style="' + LT + '" fill="#3b82f6" text-anchor="middle">e.g. rabbits, insects</text>' +
+        // Level 1 — Producers (widest, bottom)
+        '<rect x="8" y="224" width="276" height="44" rx="10" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>' +
+        '<text x="146" y="244" style="' + LT + 'font-weight:700;" fill="#14532d" text-anchor="middle">Producers (Plants)</text>' +
+        '<text x="146" y="260" style="' + LT + '" fill="#16a34a" text-anchor="middle">convert sunlight to energy</text>' +
+        // Upward energy arrows — between boxes, 8px gaps at each end, not touching borders
+        '<path d="M146 222 L146 202" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#eA)"/>' +
+        '<path d="M146 154 L146 134" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#eA)"/>' +
+        '<path d="M146 86 L146 66" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#eA)"/>' +
+        // Energy label — in the gap between levels, clearly separated
+        '<text x="162" y="147" style="' + LT + '" fill="#374151">energy</text>' +
+        '</svg>';
+    }
+
+    // ── ATOM ─────────────────────────────────────────────────────────────────
+    if (/atom|electron|proton|neutron|orbital|periodic|element|bohr/.test(d)) {
+      return '<svg viewBox="0 0 290 290" width="100%" style="max-width:330px;display:block;margin:0 auto;' + LF + '">' +
+        // Orbital paths — subtle rings
+        '<circle cx="145" cy="145" r="48" fill="none" stroke="#e2e8f0" stroke-width="1.2"/>' +
+        '<circle cx="145" cy="145" r="82" fill="none" stroke="#e2e8f0" stroke-width="1.2"/>' +
+        '<circle cx="145" cy="145" r="116" fill="none" stroke="#e2e8f0" stroke-width="1.2"/>' +
+        // Nucleus
+        '<circle cx="145" cy="145" r="25" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>' +
+        // Proton circles inside nucleus — not touching nucleus border
+        '<circle cx="138" cy="140" r="7" fill="#fecaca" stroke="#ef4444" stroke-width="1"/>' +
+        '<circle cx="152" cy="140" r="7" fill="#fecaca" stroke="#ef4444" stroke-width="1"/>' +
+        '<circle cx="138" cy="152" r="7" fill="#d1d5db" stroke="#6b7280" stroke-width="1"/>' +
+        '<circle cx="152" cy="152" r="7" fill="#d1d5db" stroke="#6b7280" stroke-width="1"/>' +
+        // Nucleus label — 12px below nucleus bottom (145+25+12=182)
+        '<text x="145" y="184" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">Nucleus (p⁺ + n⁰)</text>' +
+        // Shell 1 electrons
+        '<circle cx="193" cy="145" r="8" fill="#bfdbfe" stroke="#3b82f6" stroke-width="1.5"/>' +
+        '<text x="193" y="149" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">e⁻</text>' +
+        '<circle cx="97" cy="145" r="8" fill="#bfdbfe" stroke="#3b82f6" stroke-width="1.5"/>' +
+        '<text x="97" y="149" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">e⁻</text>' +
+        // Shell 1 label — leader from orbit ring, offset outward 14px from circle
+        '<line x1="201" y1="138" x2="226" y2="115" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="2 2"/>' +
+        '<text x="228" y="112" style="' + LT + '" fill="#374151">Shell 1</text>' +
+        // Shell 2 electrons
+        '<circle cx="227" cy="145" r="8" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>' +
+        '<text x="227" y="149" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e⁻</text>' +
+        '<circle cx="63" cy="145" r="8" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>' +
+        '<text x="63" y="149" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e⁻</text>' +
+        '<circle cx="145" cy="63" r="8" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>' +
+        '<text x="145" y="67" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e⁻</text>' +
+        '<circle cx="145" cy="227" r="8" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>' +
+        '<text x="145" y="231" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e⁻</text>' +
+        // Shell 2 label
+        '<line x1="234" y1="140" x2="254" y2="122" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="2 2"/>' +
+        '<text x="256" y="120" style="' + LT + '" fill="#374151">Shell 2</text>' +
+        // Shell 3 electrons (outer)
+        '<circle cx="261" cy="145" r="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>' +
+        '<text x="261" y="149" style="' + LT + 'font-weight:700;" fill="#713f12" text-anchor="middle">e⁻</text>' +
+        '<circle cx="29" cy="145" r="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>' +
+        '<text x="29" y="149" style="' + LT + 'font-weight:700;" fill="#713f12" text-anchor="middle">e⁻</text>' +
+        // Shell 3 label
+        '<line x1="268" y1="140" x2="272" y2="118" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="2 2"/>' +
+        '<text x="274" y="116" style="' + LT + '" fill="#374151">Shell 3</text>' +
+        '</svg>';
+    }
+
+    // ── PHOTOSYNTHESIS ────────────────────────────────────────────────────────
+    if (/photosynthesis|chloroplast|glucose/.test(d)) {
+      return '<svg viewBox="0 0 400 200" width="100%" style="max-width:460px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs><marker id="pA" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#374151"/></marker></defs>' +
+        // Sun — top-left, clear of all labels
+        '<circle cx="46" cy="38" r="28" fill="#fef08a" stroke="#f59e0b" stroke-width="2"/>' +
+        '<text x="46" y="30" style="font-size:16px;" fill="#d97706" text-anchor="middle">☀</text>' +
+        '<text x="46" y="72" style="' + LT + 'font-weight:600;" fill="#92400e" text-anchor="middle">Light</text>' +
+        '<text x="46" y="82" style="' + LT + '" fill="#92400e" text-anchor="middle">energy</text>' +
+        // Arrow sun → leaf
+        '<path d="M70 48 L108 72" fill="none" stroke="#f59e0b" stroke-width="1.8" marker-end="url(#pA)"/>' +
+        // Leaf (chloroplast) body
+        '<ellipse cx="172" cy="100" rx="64" ry="82" fill="#d1fae5" stroke="#16a34a" stroke-width="2" transform="rotate(-15 172 100)"/>' +
+        // Label inside leaf — vertically centered, offset from leaf outline
+        '<text x="172" y="92" style="' + LS + 'font-weight:700;" fill="#14532d" text-anchor="middle">Chloroplast</text>' +
+        '<text x="172" y="106" style="' + LT + '" fill="#15803d" text-anchor="middle">light reactions</text>' +
+        '<text x="172" y="118" style="' + LT + '" fill="#15803d" text-anchor="middle">Calvin cycle</text>' +
+        // CO2 input label — left side, 14px from leaf edge
+        '<text x="54" y="116" style="' + LS + 'font-weight:700;" fill="#374151">CO₂</text>' +
+        '<text x="54" y="128" style="' + LT + '" fill="#64748b">(from air)</text>' +
+        '<path d="M82 120 L112 114" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#pA)"/>' +
+        // H2O input
+        '<text x="54" y="152" style="' + LS + 'font-weight:700;" fill="#3b82f6">H₂O</text>' +
+        '<text x="54" y="164" style="' + LT + '" fill="#3b82f6">(from roots)</text>' +
+        '<path d="M80 156 L112 140" fill="none" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#pA)"/>' +
+        // Output arrow — exits right side of leaf
+        '<path d="M236 96 L278 84" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#pA)"/>' +
+        // Output box — 8px gap from arrow end
+        '<rect x="280" y="56" width="114" height="80" rx="10" fill="#fefce8" stroke="#f59e0b" stroke-width="1.5"/>' +
+        '<text x="337" y="78" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">Outputs</text>' +
+        '<text x="337" y="96" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">Glucose (C₆H₁₂O₆)</text>' +
+        '<text x="337" y="110" style="' + LT + '" fill="#374151" text-anchor="middle">stored energy</text>' +
+        '<text x="337" y="124" style="' + LT + 'font-weight:700;" fill="#0284c7" text-anchor="middle">O₂ released</text>' +
+        // Equation bar — 14px below all content
+        '<rect x="40" y="182" width="320" height="16" rx="6" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="0.8"/>' +
+        '<text x="200" y="193" style="' + LT + '" fill="#374151" text-anchor="middle">6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂</text>' +
+        '</svg>';
+    }
+
+    // ── PLATE TECTONICS ───────────────────────────────────────────────────────
+    if (/plate tectonic|fault|earthquake|volcano|continental|crust|mantle|convergent|divergent/.test(d)) {
+      return '<svg viewBox="0 0 380 220" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs><marker id="pT" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#3b82f6"/></marker></defs>' +
+        // Inner core
+        '<rect x="78" y="172" width="224" height="38" rx="6" fill="#fecaca" stroke="#ef4444" stroke-width="1.2"/>' +
+        '<text x="190" y="195" style="' + LT + 'font-weight:700;" fill="#991b1b" text-anchor="middle">Inner core (solid iron, ~5000°C)</text>' +
+        // Outer core
+        '<rect x="46" y="134" width="288" height="42" rx="6" fill="#fed7aa" stroke="#f97316" stroke-width="1.2"/>' +
+        '<text x="190" y="159" style="' + LT + 'font-weight:700;" fill="#9a3412" text-anchor="middle">Outer core (liquid iron)</text>' +
+        // Mantle
+        '<rect x="14" y="82" width="352" height="56" rx="6" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>' +
+        '<text x="190" y="106" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">Mantle (semi-solid, 2900 km thick)</text>' +
+        '<text x="190" y="120" style="' + LT + '" fill="#b45309" text-anchor="middle">convection currents drive plate movement</text>' +
+        // Left plate (crust)
+        '<path d="M0 80 L172 44 L172 82 L14 82 Z" fill="#d1fae5" stroke="#16a34a" stroke-width="1.5"/>' +
+        // Right plate (crust)
+        '<path d="M380 80 L208 44 L208 82 L366 82 Z" fill="#d1fae5" stroke="#16a34a" stroke-width="1.5"/>' +
+        // Fault gap at top
+        '<path d="M172 44 L190 8 L208 44" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>' +
+        // Fault label — 8px above the triangle apex, not on any line
+        '<text x="190" y="5" style="' + LT + 'font-weight:700;" fill="#dc2626" text-anchor="middle">Fault zone</text>' +
+        // Crust labels inside each plate, clear of edges (min 8px from any border)
+        '<text x="80" y="68" style="' + LT + 'font-weight:600;" fill="#065f46" text-anchor="middle">Oceanic crust</text>' +
+        '<text x="300" y="68" style="' + LT + 'font-weight:600;" fill="#065f46" text-anchor="middle">Continental crust</text>' +
+        // Plate motion arrows — outside the crust shapes, 6px above top edge of crust
+        '<path d="M42 56 L150 46" fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#pT)"/>' +
+        '<path d="M338 56 L230 46" fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#pT)"/>' +
+        // Motion labels — 10px above arrows
+        '<text x="96" y="42" style="' + LT + '" fill="#1d4ed8" text-anchor="middle">plate →</text>' +
+        '<text x="284" y="42" style="' + LT + '" fill="#1d4ed8" text-anchor="middle">← plate</text>' +
+        '</svg>';
+    }
+
+    return null; // no match
   }
+
 
   function formatContent(content) {
     if (!content) return '';
