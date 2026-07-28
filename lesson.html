@@ -535,8 +535,6 @@
 </head>
 <body>
 
-</div>
-
 <nav>
   <a href="https://studyflow-ten-vert.vercel.app/dashboard.html" class="logo">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
@@ -2235,8 +2233,17 @@
   function getScienceDiagram(questionText) {
     var t = (questionText || '').toLowerCase();
 
-    // ── CELL (biology) ──
-    if (/cell|membrane|nucleus|mitochondria|organelle|cytoplasm|ribosome|chloroplast|vacuole/.test(t)) {
+    // ── PSYCHOLOGY / NEUROSCIENCE GUARD ──
+    // Brain/psych questions frequently contain "nucleus" (nucleus accumbens), "cell"
+    // (nerve cell), etc. Those must NOT fall through to the cell/atom diagrams below.
+    // If the question is about the brain or behavior, show no science diagram here —
+    // the dedicated brain diagram in generateDiagramSVG handles lesson-level visuals.
+    if (/brain|cortex|cortical|neuron|neural|nerve|lobe|amygdala|hippocamp|cerebr|prefrontal|synap|psycholog|behavior|behaviour|gage|phineas/.test(t)) {
+      return '';
+    }
+
+    // ── CELL (biology) ── require a genuinely cell-specific term, not bare "nucleus"
+    if (/\bcell\b|membrane|mitochondria|organelle|cytoplasm|ribosome|chloroplast|vacuole/.test(t)) {
       return '<div style="text-align:center;margin:.75rem 0;">' +
         '<svg viewBox="0 0 200 140" width="180" height="126" style="max-width:100%;">' +
         // Cell membrane
@@ -2255,8 +2262,9 @@
         '</svg></div>';
     }
 
-    // ── ATOM (chemistry) ──
-    if (/atom|electron|proton|neutron|nucleus|orbital|element|periodic|ion|bond|molecule/.test(t)) {
+    // ── ATOM (chemistry) ── 'nucleus' removed: too ambiguous (biology/neuro also use it).
+    // Atomic nucleus questions will still match via atom/electron/proton/neutron/orbital.
+    if (/\batom\b|electron|proton|neutron|orbital|periodic table|\bion\b|covalent|molecule/.test(t)) {
       return '<div style="text-align:center;margin:.75rem 0;">' +
         '<svg viewBox="0 0 160 160" width="130" height="130" style="max-width:100%;">' +
         // Nucleus
