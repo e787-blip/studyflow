@@ -4300,6 +4300,86 @@
     return vlen(s) < 1e-6 ? { x: -u.y, y: u.x } : vnorm(s);
   }
 
+  /* ── polar coordinates — for arcs, sectors, and angle sweeps ────────────── */
+  function polarPt(cx, cy, r, deg) {
+    var rad = deg * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+  /** SVG arc path (stroke only) from startDeg to endDeg around (cx,cy) at radius r. */
+  function arcPath(cx, cy, r, startDeg, endDeg) {
+    var p0 = polarPt(cx, cy, r, startDeg), p1 = polarPt(cx, cy, r, endDeg);
+    var large = Math.abs(endDeg - startDeg) > 180 ? 1 : 0;
+    return 'M' + r1(p0.x) + ' ' + r1(p0.y) + ' A' + r1(r) + ' ' + r1(r) + ' 0 ' + large + ' 1 ' + r1(p1.x) + ' ' + r1(p1.y);
+  }
+  /** Filled pie-sector path (center + arc) — for shaded angle/sector diagrams. */
+  function sectorPath(cx, cy, r, startDeg, endDeg) {
+    var p0 = polarPt(cx, cy, r, startDeg), p1 = polarPt(cx, cy, r, endDeg);
+    var large = Math.abs(endDeg - startDeg) > 180 ? 1 : 0;
+    return 'M' + r1(cx) + ' ' + r1(cy) + ' L' + r1(p0.x) + ' ' + r1(p0.y) +
+      ' A' + r1(r) + ' ' + r1(r) + ' 0 ' + large + ' 1 ' + r1(p1.x) + ' ' + r1(p1.y) + ' Z';
+  }
+  /** Pull an explicit degree value out of lesson text, e.g. "60 degrees" or "45°". */
+  function extractDegrees(text) {
+    var m = str(text).match(/(\d{1,3})\s*(?:°|deg\b|degrees)/i);
+    if (!m) return null;
+    var v = parseInt(m[1], 10);
+    return (v > 0 && v < 360) ? v : null;
+  }
+
+  /* ── icon glyphs — small inline SVG symbols used inside nodes instead of
+     plain bullet dots. Paths are hand-drawn on a 24x24 grid, then translated
+     and scaled to the requested size/position. Keep new glyphs minimal
+     (a handful of path/circle elements) so they stay crisp at ~16-20px. */
+  var ICONS = {
+    atom:  '<circle cx="12" cy="12" r="1.7" fill="{c}"/>' +
+           '<ellipse cx="12" cy="12" rx="10" ry="4.2" fill="none" stroke="{c}" stroke-width="1.6"/>' +
+           '<ellipse cx="12" cy="12" rx="10" ry="4.2" fill="none" stroke="{c}" stroke-width="1.6" transform="rotate(60 12 12)"/>' +
+           '<ellipse cx="12" cy="12" rx="10" ry="4.2" fill="none" stroke="{c}" stroke-width="1.6" transform="rotate(120 12 12)"/>',
+    gear:  '<circle cx="12" cy="12" r="3.4" fill="none" stroke="{c}" stroke-width="1.8"/>' +
+           '<path d="M12 2v3M12 19v3M22 12h-3M5 12H2M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1M18.4 18.4l-2.1-2.1M7.7 7.7 5.6 5.6" ' +
+           'stroke="{c}" stroke-width="1.8" stroke-linecap="round"/>',
+    arrow: '<line x1="3" y1="12" x2="17" y2="12" stroke="{c}" stroke-width="2.2" stroke-linecap="round"/>' +
+           '<path d="M12 6l6 6-6 6" fill="none" stroke="{c}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+    leaf:  '<path d="M20 4C10 4 4 10 4 18c0 1 .8 2 2 2 8 0 14-6 14-16 0-.6-.4-1-1-1z" fill="{c}" fill-opacity=".22" stroke="{c}" stroke-width="1.6" stroke-linejoin="round"/>' +
+           '<path d="M6 18C10 14 14 10 19 5" stroke="{c}" stroke-width="1.4" stroke-linecap="round"/>',
+    flask: '<path d="M9 3h6M10 3v6l-5 9c-.6 1.2.2 2.5 1.6 2.5h10.8c1.4 0 2.2-1.3 1.6-2.5L14 9V3" fill="none" stroke="{c}" stroke-width="1.7" stroke-linejoin="round"/>' +
+           '<path d="M7.5 15h9" stroke="{c}" stroke-width="1.4"/>',
+    book:  '<path d="M4 5.5C4 4.7 4.7 4 5.5 4H12v16H5.5A1.5 1.5 0 0 1 4 18.5z" fill="{c}" fill-opacity=".18" stroke="{c}" stroke-width="1.6" stroke-linejoin="round"/>' +
+           '<path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H12v16h6.5a1.5 1.5 0 0 0 1.5-1.5z" fill="none" stroke="{c}" stroke-width="1.6" stroke-linejoin="round"/>',
+    globe: '<circle cx="12" cy="12" r="9" fill="none" stroke="{c}" stroke-width="1.7"/>' +
+           '<ellipse cx="12" cy="12" rx="4" ry="9" fill="none" stroke="{c}" stroke-width="1.4"/>' +
+           '<path d="M3 12h18M4.5 7h15M4.5 17h15" stroke="{c}" stroke-width="1.2"/>',
+    brain: '<path d="M9 4a3 3 0 0 0-3 3v1a3 3 0 0 0-1 5.6A3 3 0 0 0 8 18h1zM15 4a3 3 0 0 1 3 3v1a3 3 0 0 1 1 5.6A3 3 0 0 1 16 18h-1z" ' +
+           'fill="{c}" fill-opacity=".2" stroke="{c}" stroke-width="1.4" stroke-linejoin="round"/>',
+    calc:  '<rect x="5" y="3" width="14" height="18" rx="2" fill="none" stroke="{c}" stroke-width="1.6"/>' +
+           '<rect x="7" y="5.5" width="10" height="4" fill="{c}" fill-opacity=".2" stroke="{c}" stroke-width="1.2"/>' +
+           '<circle cx="8.5" cy="14" r="1" fill="{c}"/><circle cx="12" cy="14" r="1" fill="{c}"/><circle cx="15.5" cy="14" r="1" fill="{c}"/>' +
+           '<circle cx="8.5" cy="17.5" r="1" fill="{c}"/><circle cx="12" cy="17.5" r="1" fill="{c}"/><circle cx="15.5" cy="17.5" r="1" fill="{c}"/>',
+    bulb:  '<path d="M9 18h6M10 21h4" stroke="{c}" stroke-width="1.6" stroke-linecap="round"/>' +
+           '<path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" fill="{c}" fill-opacity=".2" stroke="{c}" stroke-width="1.6" stroke-linejoin="round"/>'
+  };
+  function iconGlyph(name, cx, cy, size, color, delayMs) {
+    var raw = ICONS[name] || ICONS.bulb;
+    var s = num(size, 18) / 24;
+    var tf = 'translate(' + r1(cx - 12 * s) + ',' + r1(cy - 12 * s) + ') scale(' + s.toFixed(3) + ')';
+    return '<g transform="' + tf + '" class="sfwb-icon-pop" style="animation-delay:' + num(delayMs, 0) + 'ms">' +
+      raw.replace(/\{c\}/g, color) + '</g>';
+  }
+  /** Chooses a contextually relevant icon from a short label/phrase. */
+  function pickIcon(text) {
+    var t = str(text).toLowerCase();
+    if (/atom|electron|molecule|element|chemical bond/.test(t)) return 'atom';
+    if (/process|mechanism|system|engine|gear|automat/.test(t)) return 'gear';
+    if (/cause|effect|lead(s)? to|result|flow|next|then|arrow/.test(t)) return 'arrow';
+    if (/plant|ecosystem|organism|photosynth|biolog|species/.test(t)) return 'leaf';
+    if (/chemistry|reaction|compound|acid|base\b/.test(t)) return 'flask';
+    if (/literat|history|author|novel|chapter|text\b/.test(t)) return 'book';
+    if (/geograph|climate|country|continent|map\b/.test(t)) return 'globe';
+    if (/psycholog|brain|memory|cognit|behavior|behaviour/.test(t)) return 'brain';
+    if (/math|equation|number|calculat|formula|algebra/.test(t)) return 'calc';
+    return 'bulb';
+  }
+
   /**
    * Uniform scale ONLY — a single factor for both axes. This is what keeps
    * right angles at exactly 90 degrees. There is deliberately no upper clamp:
@@ -4479,7 +4559,8 @@
     var verts = [[A, B, C], [B, C, A], [C, A, B]];
     var d = 'M' + r1(A.x) + ' ' + r1(A.y) + ' L' + r1(B.x) + ' ' + r1(B.y) +
             ' L' + r1(C.x) + ' ' + r1(C.y) + ' Z';
-    var o = '<path d="' + d + '" fill="' + SERIES[0] + '" fill-opacity=".10" class="sfwb-fade"/>' +
+    var o = '<path d="' + d + '" fill="' + SERIES[0] + '" fill-opacity=".14" filter="url(#sfwbShadow)" class="sfwb-fade"/>' +
+            '<path d="' + d + '" fill="url(#sfwbGlass)" class="sfwb-fade"/>' +
             '<path d="' + d + '" fill="none" stroke="' + LINE + '" stroke-width="2.8" ' +
             'stroke-linejoin="round" class="sfwb-draw"/>';
     var i;
@@ -4518,6 +4599,57 @@
     return o;
   };
 
+  /**
+   * Proportional angle/sector diagram — circles, central angles, arcs, sectors.
+   * Draws an actual circle, an exact-degree sector fill, radius lines, and the
+   * arc stroke itself, rather than falling back to a generic labelled box.
+   */
+  V.arc = function (s) {
+    var r = Math.max(46, Math.min(118, num(s.radius, 104)));
+    var start = num(s.startAngle, -90);      // -90 = pointing up, matches a clock's 12
+    var sweep = Math.max(1, Math.min(359, num(s.sweepDegrees, 90)));
+    var end = start + sweep;
+    var p0 = polarPt(CX, CY, r, start), p1 = polarPt(CX, CY, r, end);
+
+    var o = '<circle cx="' + CX + '" cy="' + CY + '" r="' + r1(r) + '" fill="none" stroke="' + SOFT +
+            '" stroke-width="1.6" stroke-dasharray="3 4" class="sfwb-fade"/>' +
+            '<path d="' + sectorPath(CX, CY, r, start, end) + '" fill="url(#sfwbSectorGrad)" filter="url(#sfwbShadow)" ' +
+            'class="sfwb-fade" style="animation-delay:100ms"/>' +
+            '<line x1="' + CX + '" y1="' + CY + '" x2="' + r1(p0.x) + '" y2="' + r1(p0.y) + '" stroke="' +
+            SERIES[0] + '" stroke-width="2.6" stroke-linecap="round" class="sfwb-draw"/>' +
+            '<line x1="' + CX + '" y1="' + CY + '" x2="' + r1(p1.x) + '" y2="' + r1(p1.y) + '" stroke="' +
+            SERIES[0] + '" stroke-width="2.6" stroke-linecap="round" class="sfwb-draw" style="animation-delay:110ms"/>' +
+            '<path d="' + arcPath(CX, CY, r, start, end) + '" fill="none" stroke="' + BRAND +
+            '" stroke-width="3.4" stroke-linecap="round" class="sfwb-draw" style="animation-delay:220ms"/>' +
+            '<circle cx="' + CX + '" cy="' + CY + '" r="4" fill="' + LINE + '" class="sfwb-fade"/>';
+
+    // Degree label at the sector's angular midpoint, pulled in from the arc so
+    // it never sits on top of the stroke.
+    var mid = start + sweep / 2, labelR = r * 0.56;
+    var lp = polarPt(CX, CY, labelR, mid);
+    o += mathTxt(lp.x, lp.y + 5, Math.round(sweep) + '\u00b0',
+      { size: 17, weight: 800, fill: BRAND, cls: 'sfwb-fade', delay: d2(2) });
+
+    // Optional radius label along one of the two radius lines.
+    if (s.radiusLabel) {
+      var rm = vmid({ x: CX, y: CY }, p0);
+      var rmSafe = clampSafe({ x: rm.x - 10, y: rm.y - 8 });
+      o += mathTxt(rmSafe.x, rmSafe.y, trunc(s.radiusLabel, 8),
+        { size: 13.5, weight: 700, fill: SERIES[0], cls: 'sfwb-fade', delay: d2(3) });
+    }
+    // Optional vertex/endpoint labels (e.g. A, B, center O).
+    var epLabels = list(s.pointLabels);
+    if (epLabels[0]) o += txt(clampSafe(vadd(p0, vmul(vnorm(vsub(p0, { x: CX, y: CY })), 16))).x,
+      clampSafe(vadd(p0, vmul(vnorm(vsub(p0, { x: CX, y: CY })), 16))).y + 4, trunc(epLabels[0], 3),
+      { size: 14, weight: 700, fill: LINE, cls: 'sfwb-fade', delay: d2(4) });
+    if (epLabels[1]) o += txt(clampSafe(vadd(p1, vmul(vnorm(vsub(p1, { x: CX, y: CY })), 16))).x,
+      clampSafe(vadd(p1, vmul(vnorm(vsub(p1, { x: CX, y: CY })), 16))).y + 4, trunc(epLabels[1], 3),
+      { size: 14, weight: 700, fill: LINE, cls: 'sfwb-fade', delay: d2(4) });
+
+    if (s.label) o += caption(s.label);
+    return o;
+  };
+
   V.vector = function (s) {
     var O = pt(s.origin, 152, CY + 72);
     var data = list(s.vectors).slice(0, 3);
@@ -4531,6 +4663,13 @@
             '" stroke="' + SOFT + '" stroke-width="1.9" class="sfwb-fade"/>' +
             '<path d="M' + r1(O.x) + ' ' + (SAFE.y0 + 8) + ' L' + r1(O.x) + ' ' + (SAFE.y1 - 8) +
             '" stroke="' + SOFT + '" stroke-width="1.9" class="sfwb-fade"/>';
+    // Tick marks every 30px along both axes — reads as a real coordinate grid
+    // rather than two bare lines.
+    var tk;
+    for (tk = O.x; tk <= SAFE.x1 - 10; tk += 30) o += '<line x1="' + r1(tk) + '" y1="' + (O.y - 4) + '" x2="' + r1(tk) + '" y2="' + (O.y + 4) + '" stroke="' + SOFT + '" stroke-width="1.4" class="sfwb-fade"/>';
+    for (tk = O.x; tk >= SAFE.x0 + 10; tk -= 30) o += '<line x1="' + r1(tk) + '" y1="' + (O.y - 4) + '" x2="' + r1(tk) + '" y2="' + (O.y + 4) + '" stroke="' + SOFT + '" stroke-width="1.4" class="sfwb-fade"/>';
+    for (tk = O.y; tk <= SAFE.y1 - 8; tk += 30) o += '<line x1="' + (O.x - 4) + '" y1="' + r1(tk) + '" x2="' + (O.x + 4) + '" y2="' + r1(tk) + '" stroke="' + SOFT + '" stroke-width="1.4" class="sfwb-fade"/>';
+    for (tk = O.y; tk >= SAFE.y0 + 8; tk -= 30) o += '<line x1="' + (O.x - 4) + '" y1="' + r1(tk) + '" x2="' + (O.x + 4) + '" y2="' + r1(tk) + '" stroke="' + SOFT + '" stroke-width="1.4" class="sfwb-fade"/>';
     for (i = 0; i < data.length; i++) {
       var tip = { x: O.x + num(data[i].dx), y: O.y + num(data[i].dy) };
       if (vlen(vsub(tip, O)) < 2) continue;
@@ -4551,6 +4690,12 @@
       if (on) {
         o += '<circle cx="' + r1(tip.x) + '" cy="' + r1(tip.y) + '" r="11" fill="' + BRAND +
              '" class="sfwb-pulse"/>';
+        if (data[i].magnitude) {
+          var magPos = clampSafe(vadd(tip, { x: dir.x >= 0 ? 14 : -14, y: 16 }));
+          o += txt(magPos.x, magPos.y, '|' + trunc(data[i].label, 4) + '| = ' + trunc(data[i].magnitude, 12),
+            { size: 12.5, weight: 600, fill: LINE, anchor: dir.x >= 0 ? 'start' : 'end',
+              cls: 'sfwb-fade', delay: d2(i + 1) });
+        }
       }
       o += mathTxt(lp.x, lp.y + 4, trunc(data[i].label, 10),
         { size: 15, weight: 800, fill: col, cls: 'sfwb-fade', delay: d2(i) });
@@ -4591,8 +4736,12 @@
            '<rect x="' + r1(x) + '" y="' + (CY - 48) + '" width="' + r1(bw) + '" height="96" rx="18" fill="' +
            c + '" fill-opacity=".12"/>' +
            '<rect x="' + r1(x) + '" y="' + (CY - 48) + '" width="' + r1(bw) + '" height="96" rx="18" fill="none" stroke="' +
-           c + '" stroke-width="2.2"/></g>';
-      o += wrapTxt(items[i], x + bw / 2, CY, bw - 18, c, 14.5, i);
+           c + '" stroke-width="2.2"/></g>' +
+           // Icon badge instead of a bare text-only card — anchored to the box's top edge.
+           '<circle cx="' + r1(x + bw / 2) + '" cy="' + (CY - 48) + '" r="16" fill="var(--white,#fff)" stroke="' +
+           c + '" stroke-width="2" class="sfwb-fade" style="animation-delay:' + d1(i) + 'ms"/>' +
+           iconGlyph(pickIcon(items[i]), x + bw / 2, CY - 48, 18, c, PHASE.label + i * 70 + 40);
+      o += wrapTxt(items[i], x + bw / 2, CY + 14, bw - 18, c, 14, i);
       if (i < n - 1) {
         o += '<path d="M' + r1(x + bw + 3) + ' ' + CY + ' L' + r1(x + bw + gap - 5) + ' ' + CY +
              '" stroke="' + LINE + '" stroke-width="2.5" marker-end="url(#sfwbArrowOff)" ' +
@@ -4638,7 +4787,8 @@
       { lx: SAFE.x1 - 6, ly: CY + 92, ax: CX + 64, ay: CY + 32, left: false }
     ];
     var o = '<ellipse cx="' + CX + '" cy="' + CY + '" rx="78" ry="60" fill="' + SERIES[0] +
-            '" fill-opacity=".14" class="sfwb-glow"/>' +
+            '" fill-opacity=".14" filter="url(#sfwbShadow)" class="sfwb-glow"/>' +
+            '<ellipse cx="' + CX + '" cy="' + CY + '" rx="78" ry="60" fill="url(#sfwbGlass)" class="sfwb-fade"/>' +
             '<ellipse cx="' + CX + '" cy="' + CY + '" rx="78" ry="60" fill="none" stroke="' + SERIES[0] +
             '" stroke-width="2.5" class="sfwb-draw"/>' +
             wrapTxt(trunc(s.center || 'Core', 18), CX, CY + 4, 138, INK, 16, 0);
@@ -4648,9 +4798,11 @@
       o += '<g class="sfwb-fade" style="animation-delay:' + d2(i + 1) + 'ms">' +
            '<path d="M' + p.ax + ' ' + p.ay + ' L' + kx + ' ' + p.ly + '" stroke="' + c +
            '" stroke-width="2" stroke-linecap="round" opacity=".6"/>' +
-           '<circle cx="' + kx + '" cy="' + p.ly + '" r="4.5" fill="' + c + '"/>' +
+           '<circle cx="' + kx + '" cy="' + p.ly + '" r="12" fill="var(--white,#fff)" stroke="' + c + '" stroke-width="1.8"/></g>' +
+           iconGlyph(pickIcon(items[i]), kx, p.ly, 15, c, PHASE.label + i * 70 + 60) +
            txt(p.lx, p.ly + 4, trunc(items[i], 16),
-             { size: 14.5, weight: 600, fill: LINE, anchor: p.left ? 'start' : 'end' }) + '</g>';
+             { size: 14.5, weight: 600, fill: LINE, anchor: p.left ? 'start' : 'end',
+               cls: 'sfwb-fade', delay: d2(i + 1) });
     }
     return o;
   };
@@ -4768,7 +4920,8 @@
       { x: SAFE.x0 + 52, y: CY + 96 }, { x: SAFE.x1 - 52, y: CY + 96 }
     ];
     var o = '<rect x="' + (CX - 122) + '" y="' + (CY - 38) + '" width="244" height="76" rx="20" fill="' +
-            SERIES[0] + '" fill-opacity=".14" class="sfwb-glow"/>' +
+            SERIES[0] + '" fill-opacity=".14" filter="url(#sfwbShadow)" class="sfwb-glow"/>' +
+            '<rect x="' + (CX - 122) + '" y="' + (CY - 38) + '" width="244" height="76" rx="20" fill="url(#sfwbGlass)" class="sfwb-fade"/>' +
             '<rect x="' + (CX - 122) + '" y="' + (CY - 38) + '" width="244" height="76" rx="20" fill="none" stroke="' +
             SERIES[0] + '" stroke-width="2.5" class="sfwb-draw"/>' +
             wrapTxt(trunc(s.center || s.text || 'Key idea', 22), CX, CY + 4, 224, INK, 16, 0);
@@ -4787,8 +4940,10 @@
       o += '<g class="sfwb-fade" style="animation-delay:' + d2(i) + 'ms">' +
            '<path d="M' + fx + ' ' + fy + ' L' + r1(p.x) + ' ' + r1(p.y) + '" stroke="' + c +
            '" stroke-width="1.9" opacity=".45"/>' +
-           '<circle cx="' + r1(p.x) + '" cy="' + r1(p.y) + '" r="5.6" fill="' + c + '"/>' +
-           txt(lp.x, lp.y, trunc(items[i], 15), { size: 13.5, weight: 600, fill: LINE }) + '</g>';
+           '<circle cx="' + r1(p.x) + '" cy="' + r1(p.y) + '" r="11" fill="var(--white,#fff)" stroke="' + c + '" stroke-width="1.7"/></g>' +
+           iconGlyph(pickIcon(items[i]), p.x, p.y, 14, c, PHASE.label + i * 70 + 40) +
+           txt(lp.x, lp.y, trunc(items[i], 15),
+             { size: 13.5, weight: 600, fill: LINE, cls: 'sfwb-fade', delay: d2(i) });
     }
     return o;
   };
@@ -4799,6 +4954,11 @@
     var t = (str(step.title) + ' ' + str(step.body)).toLowerCase();
     var eq = str(step.body).match(/[-+]?[\dxyA-Za-z().^]+\s*=\s*[^.,;]{1,22}/);
 
+    if (/\bcircle\b|\bsector\b|\barc\b|\bradius\b|\bdiameter\b|central angle|inscribed angle|circumference/.test(t)
+        && !/triangle|polygon|quadrilateral/.test(t)) {
+      var sweep = extractDegrees(t) || (/semicircle/.test(t) ? 180 : (/quarter circle|quadrant/.test(t) ? 90 : 90));
+      return { type: 'arc', sweepDegrees: sweep, radiusLabel: /radius/.test(t) ? 'r' : '', label: trunc(step.title, 50) };
+    }
     if (/triangle|angle|degree|vertex|hypotenuse|polygon|perimeter/.test(t))
       return { type: 'geometry', vertexNames: ['A', 'B', 'C'], sideLabels: ['c', 'a', 'b'], angleLabels: [] };
     if (/vector|velocity|force|acceleration|momentum|newton/.test(t))
@@ -4835,6 +4995,14 @@
       'orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="' + LINE + '"/></marker>' +
       '<marker id="sfwbArrowOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" ' +
       'orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="' + BRAND + '"/></marker>' +
+      '<filter id="sfwbShadow" x="-30%" y="-30%" width="160%" height="160%">' +
+      '<feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#1a1d2e" flood-opacity=".18"/></filter>' +
+      '<radialGradient id="sfwbSectorGrad" cx="50%" cy="50%" r="75%">' +
+      '<stop offset="0%" stop-color="' + BRAND + '" stop-opacity=".38"/>' +
+      '<stop offset="100%" stop-color="' + BRAND + '" stop-opacity=".06"/></radialGradient>' +
+      '<linearGradient id="sfwbGlass" x1="0%" y1="0%" x2="0%" y2="100%">' +
+      '<stop offset="0%" stop-color="#ffffff" stop-opacity=".32"/>' +
+      '<stop offset="100%" stop-color="#ffffff" stop-opacity="0"/></linearGradient>' +
       '</defs>' + body + '</svg>';
   }
 
@@ -5068,8 +5236,11 @@
       '.sfwb-glow{animation:sfwbGlow 2.2s ease-in-out infinite}' +
       '@keyframes sfwbPulse{0%,100%{opacity:.30}50%{opacity:.08}}' +
       '.sfwb-pulse{animation:sfwbPulse 2.2s ease-in-out infinite}' +
+      /* phase 2b: icon glyphs pop in between the structural draw and the text fade */
+      '@keyframes sfwbIconPop{0%{opacity:0;transform:scale(0)}70%{transform:scale(1.12)}100%{opacity:1;transform:scale(1)}}' +
+      '.sfwb-icon-pop{animation:sfwbIconPop 320ms cubic-bezier(.34,1.56,.64,1) both;transform-box:fill-box;transform-origin:center}' +
       '@media (prefers-reduced-motion: reduce){' +
-        '.sfwb-draw,.sfwb-fade,.sfwb-dialogue,.sfwb-panel,.sfwb-bar,.sfwb-spin,.sfwb-glow,.sfwb-pulse{' +
+        '.sfwb-draw,.sfwb-fade,.sfwb-dialogue,.sfwb-panel,.sfwb-bar,.sfwb-spin,.sfwb-glow,.sfwb-pulse,.sfwb-icon-pop{' +
         'animation:none !important;stroke-dashoffset:0 !important;opacity:1 !important;transform:none !important}}';
     var el = doc.createElement('style');
     el.id = STYLE_ID;
