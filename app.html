@@ -1283,6 +1283,92 @@
     return 'general';
   }
 
+  // ── STRONG SUBJECT AUTO-DETECTION ──
+  // Reads the notes and works out the SPECIFIC topic (e.g. "Geometry", not "Math").
+  // Runs entirely locally — no API call, no extra latency, no cost.
+  // Scoring: each topic has a list of distinctive terms and a weight.
+  // Specific topics outrank broad ones, so "Geometry" beats a generic "Math" match.
+  function detectSubject(notes, typed) {
+    var text = ((typed || '') + ' ' + (notes || '')).toLowerCase();
+    if (!text.trim()) return 'General Study';
+
+    // [ label, weight, [distinctive terms] ]
+    var TOPICS = [
+      // ── MATH — specific branches ──
+      ['Geometry', 4, ['triangle','polygon','congruent','similar figures','pythagorean','hypotenuse','circumference','radius','diameter','perimeter','parallelogram','trapezoid','quadrilateral','bisector','transversal','complementary angle','supplementary angle','arc length','surface area','prism','pyramid','vertex angle','interior angle','exterior angle','isosceles','equilateral','scalene','right angle']],
+      ['Trigonometry', 4, ['sine','cosine','unit circle','radian','law of sines','law of cosines','trig identity','amplitude','csc','cot(','sec(','sin(','cos(','tan(','arcsin','arctan']],
+      ['Calculus', 4, ['derivative','integral','antiderivative','chain rule','product rule','quotient rule','related rates','riemann','dy/dx','d/dx','concavity','inflection point','limit as x','definite integral']],
+      ['Statistics & Probability', 4, ['standard deviation','probability','distribution','sample size','correlation','regression','p-value','histogram','variance','outlier','z-score','confidence interval','median','quartile','normal curve']],
+      ['Algebra', 4, ['solve for x','quadratic','polynomial','factoring','y-intercept','linear equation','inequality','logarithm','system of equations','binomial','coefficient','vertex form','foil','slope','exponent rule']],
+      ['Fractions & Arithmetic', 3, ['numerator','denominator','common denominator','improper fraction','mixed number','long division','place value','rounding','least common multiple','greatest common factor']],
+
+      // ── SCIENCE — specific branches ──
+      ['Cell Biology', 4, ['mitochondria','ribosome','cytoplasm','organelle','cell membrane','nucleus of the cell','chloroplast','vacuole','prokaryot','eukaryot','osmosis','diffusion across']],
+      ['Genetics & Heredity', 4, ['punnett','allele','genotype','phenotype','dominant trait','recessive','chromosome','dna replication','rna','codon','mutation','heredity','homozygous','heterozygous']],
+      ['Cell Division', 4, ['mitosis','meiosis','prophase','metaphase','anaphase','telophase','cytokinesis','interphase','sister chromatid']],
+      ['Evolution & Ecology', 4, ['natural selection','adaptation','ecosystem','food chain','food web','biome','species','darwin','biodiversity','predator','symbiosis','trophic']],
+      ['Chemistry', 4, ['periodic table','covalent','ionic bond','molar','stoichiometry','chemical equation','valence','oxidation','ph scale','acid and base','isotope','electron shell','atomic number']],
+      ['Physics — Motion & Forces', 4, ['velocity','acceleration','newton\'s law','momentum','friction','free body','kinematic','projectile','net force','inertia','f = ma']],
+      ['Physics — Energy & Waves', 4, ['kinetic energy','potential energy','wavelength','frequency','amplitude','refraction','conservation of energy','thermodynamic','joule','electromagnetic spectrum']],
+      ['Human Anatomy', 4, ['circulatory','respiratory','digestive system','nervous system','skeletal','muscular system','artery','alveoli','enzyme digest','homeostasis']],
+
+      // ── HISTORY — specific eras ──
+      ['American Revolution', 5, ['stamp act','boston tea party','declaration of independence','lexington','continental congress','redcoat','townshend','yorktown','loyalist','patriot']],
+      ['US Civil War', 5, ['confederac','union army','emancipation','gettysburg','secession','fort sumter','antietam','appomattox','abolitionist','missouri compromise']],
+      ['World War I', 5, ['trench warfare','archduke','treaty of versailles','allied powers','central powers','armistice','lusitania','no man\'s land']],
+      ['World War II', 5, ['pearl harbor','holocaust','d-day','blitzkrieg','normandy','hitler','axis powers','hiroshima','appeasement','stalingrad']],
+      ['Ancient Civilizations', 4, ['mesopotamia','pharaoh','hieroglyph','roman empire','ancient greece','city-state','pyramid of giza','caesar','athens','sparta']],
+      ['Civics & Government', 4, ['bill of rights','amendment','judicial branch','legislative','executive branch','checks and balances','federalism','supreme court','electoral college','constitution']],
+
+      // ── ENGLISH ──
+      ['Literary Analysis', 4, ['metaphor','simile','symbolism','foreshadow','protagonist','antagonist','theme of','imagery','irony','tone and mood','characterization','allusion']],
+      ['Grammar & Writing', 4, ['subject verb','clause','conjunction','participle','thesis statement','topic sentence','comma splice','active voice','passive voice','pronoun antecedent']],
+      ['Poetry', 4, ['stanza','rhyme scheme','meter','sonnet','iambic','free verse','alliteration','enjambment']],
+
+      // ── OTHER ──
+      ['Psychology', 4, ['classical conditioning','operant','cognitive bias','freud','piaget','pavlov','neurotransmitter','reinforcement','short-term memory','long-term memory','amygdala','hippocampus']],
+      ['Economics', 4, ['supply and demand','opportunity cost','inflation','gdp','elasticity','fiscal policy','monetary policy','market equilibrium','scarcity','marginal cost']],
+      ['Geography', 4, ['latitude','longitude','biome','tectonic','climate zone','population density','urbanization','topograph','watershed','continent']],
+      ['Computer Science', 4, ['algorithm','data structure','for loop','array','recursion','variable','boolean','function returns','big o','compiler','binary search']],
+      ['Spanish', 4, ['conjugat','ser and estar','preterite','subjunctive','el la los las','spanish verb']],
+      ['French', 4, ['french verb','passe compose','etre','avoir','le la les']]
+    ];
+
+    var best = '', bestScore = 0;
+    for (var i = 0; i < TOPICS.length; i++) {
+      var label = TOPICS[i][0], weight = TOPICS[i][1], terms = TOPICS[i][2];
+      var hits = 0;
+      for (var j = 0; j < terms.length; j++) {
+        if (text.indexOf(terms[j]) !== -1) hits++;
+      }
+      if (hits === 0) continue;
+      var score = hits * weight;
+      if (score > bestScore) { bestScore = score; best = label; }
+    }
+    // Need at least 2 distinct term hits before we trust it
+    if (best && bestScore >= 8) return best;
+
+    // Fallback 1 — an explicit heading in the notes
+    var head = (notes || '').match(/(?:^|\n)\s*(?:chapter|unit|lesson|topic|section|ch\.)\s*\d*\s*[:\-\u2013]\s*([^\n]{3,60})/i);
+    if (head && head[1]) return head[1].trim();
+
+    // Fallback 2 — a short standalone first line, which is usually the title
+    var lines = (notes || '').split('\n');
+    for (var k = 0; k < lines.length && k < 6; k++) {
+      var line = lines[k].trim();
+      if (line.length >= 4 && line.length <= 60 && !/[.!?]$/.test(line) && /[a-z]/i.test(line)) return line;
+    }
+
+    // Fallback 3 — a weak single match, better than nothing
+    if (best) return best;
+
+    // Fallback 4 — broad classification
+    var broad = { math:'Math', science:'Science', psychology:'Psychology', geography:'Geography',
+                  economics:'Economics', cs:'Computer Science', history:'History',
+                  english:'English', language:'Language', general:'General Study' };
+    return broad[classifySubject('', notes || '')] || 'General Study';
+  }
+
   // ── Per-subject strategy ──
   function getSubjectStrategy(subjectType) {
     var strategies = {
@@ -1312,7 +1398,13 @@
 
     // Classify from what user typed — no extra API call
     var subjectInput = document.getElementById('subject-input');
-    var subject = (subjectInput ? (subjectInput.value || '').trim() : '').substring(0, 80) || notes.substring(0, 50);
+    var typedSubject = (subjectInput ? (subjectInput.value || '').trim() : '').substring(0, 80);
+    var detectedSubject = detectSubject(notes, typedSubject);
+    // If the student typed something vague (or nothing), use the detected topic instead —
+    // "Geometry" produces a far tighter plan than "math".
+    var VAGUE_SUBJECT = /^(math|maths|mathematics|science|history|english|reading|writing|school|homework|study|studying|notes|test|exam|quiz|class|final|midterm|review)$/i;
+    var subject = (typedSubject && !VAGUE_SUBJECT.test(typedSubject)) ? typedSubject : detectedSubject;
+    console.log('[StudyFlow] subject typed:', typedSubject || '(none)', '| detected:', detectedSubject, '| using:', subject);
     var subjectType = classifySubject(subject, notes);
     var strategy    = getSubjectStrategy(subjectType);
     var allDays = [];
