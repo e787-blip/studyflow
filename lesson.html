@@ -4326,6 +4326,83 @@
     return (v > 0 && v < 360) ? v : null;
   }
 
+  /**
+   * Pull real (year, nearby sentence) pairs out of lesson text for history
+   * timelines — so a history step gets its ACTUAL dates instead of the
+   * generic "Earlier / Event / Later" placeholders. Matches 4-digit years
+   * (1500-2099) and "circa 1200 BCE"-style references, walks outward from
+   * each match to grab the sentence it sits in, and returns them in the
+   * order they appear (which is usually chronological in lesson prose).
+   */
+  function extractYears(text, max) {
+    max = max || 5;
+    var t = str(text);
+    var re = /\b(1[5-9]\d{2}|20\d{2})\b|\b(\d{1,4})\s*(BCE|BC|CE|AD)\b/gi;
+    var out = [], seen = {}, m;
+    while ((m = re.exec(t)) !== null && out.length < max) {
+      var year = m[1] || (m[2] + ' ' + m[3]);
+      if (seen[year]) continue;
+      seen[year] = true;
+      // grab the sentence containing this year for a short label
+      var start = t.lastIndexOf('.', m.index) + 1;
+      var end = t.indexOf('.', m.index);
+      if (end === -1) end = Math.min(t.length, m.index + 90);
+      var sentence = t.slice(start, end).replace(/\s+/g, ' ').trim();
+      // Strip a LEADING "In 1820," / "By 1820" prefix only. Never remove the
+      // year from mid-sentence — that leaves grammatically broken fragments
+      // like "By , the war began" once the year is cut out.
+      var esc = year.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      var leadRe = new RegExp('^(?:in|by|during|circa|around)?\\s*' + esc + '[,:]?\\s*', 'i');
+      var desc = sentence.replace(leadRe, '').trim();
+      if (desc.length < 4) desc = sentence; // year wasn't at the start — keep the full sentence
+      out.push({ year: year, text: desc || year });
+    }
+    return out;
+  }
+
+  /**
+   * Pull capitalized multi-word place-like phrases out of lesson text for
+   * geography maps — "Northern Africa", "Nile River", "Egypt". Heuristic, not
+   * a gazetteer: catches runs of Capitalized Words, and strips (rather than
+   * discards) a leading sentence-start word like "The" so "The Nile River"
+   * still yields the usable place name "Nile River" instead of nothing.
+   */
+  function extractPlaces(text, max) {
+    max = max || 4;
+    var t = str(text);
+    var re = /\b[A-Z][a-z]+(?:\s+(?:of|the)\s+[A-Z][a-z]+|\s+[A-Z][a-z]+)*\b/g;
+    var STOP = /^(?:The|This|That|These|Those|It|In|On|At|As|When|While|After|Before|During)\s+/;
+    var out = [], seen = {}, m;
+    while ((m = re.exec(t)) !== null && out.length < max) {
+      var phrase = m[0].trim().replace(STOP, '').trim();
+      if (phrase.length < 3 || seen[phrase]) continue;
+      seen[phrase] = true;
+      out.push(phrase);
+    }
+    return out;
+  }
+
+  /**
+   * Split lesson text on cause/effect and sequence connectors ("led to",
+   * "caused", "then", "first"...) so a flow diagram shows the ACTUAL chain of
+   * events/steps from the lesson, not the generic "Input / Process / Result"
+   * placeholder.
+   */
+  function extractClauses(text, max) {
+    max = max || 4;
+    var t = str(text);
+    var parts = t.split(/,?\s*(?:which led to|led to|leads to|caused|results? in|resulted in|therefore|so that|then\b|first,?\s|next,?\s|finally,?\s|after that)\s*/i);
+    var out = [];
+    for (var i = 0; i < parts.length && out.length < max; i++) {
+      var p = parts[i].replace(/^[.;:\s]+|[.;:\s]+$/g, '').trim();
+      // A split boundary often orphans the sentence's subject at the very end
+      // of the previous clause ("...planters. This" | "led to..."). Trim it.
+      p = p.replace(/\s+(?:This|It|That|These|Those)$/i, '').trim();
+      if (p.length >= 4) out.push(p);
+    }
+    return out;
+  }
+
   /* ── icon glyphs — small inline SVG symbols used inside nodes instead of
      plain bullet dots. Paths are hand-drawn on a 24x24 grid, then translated
      and scaled to the requested size/position. Keep new glyphs minimal
@@ -4356,7 +4433,11 @@
            '<circle cx="8.5" cy="14" r="1" fill="{c}"/><circle cx="12" cy="14" r="1" fill="{c}"/><circle cx="15.5" cy="14" r="1" fill="{c}"/>' +
            '<circle cx="8.5" cy="17.5" r="1" fill="{c}"/><circle cx="12" cy="17.5" r="1" fill="{c}"/><circle cx="15.5" cy="17.5" r="1" fill="{c}"/>',
     bulb:  '<path d="M9 18h6M10 21h4" stroke="{c}" stroke-width="1.6" stroke-linecap="round"/>' +
-           '<path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" fill="{c}" fill-opacity=".2" stroke="{c}" stroke-width="1.6" stroke-linejoin="round"/>'
+           '<path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" fill="{c}" fill-opacity=".2" stroke="{c}" stroke-width="1.6" stroke-linejoin="round"/>',
+    pin:   '<path d="M12 21s7-7.2 7-12a7 7 0 0 0-14 0c0 4.8 7 12 7 12z" fill="{c}" fill-opacity=".22" stroke="{c}" stroke-width="1.6" stroke-linejoin="round"/>' +
+           '<circle cx="12" cy="9" r="2.6" fill="{c}"/>',
+    flag:  '<path d="M5 21V4" stroke="{c}" stroke-width="1.8" stroke-linecap="round"/>' +
+           '<path d="M5 4h13l-3.2 4L18 12H5" fill="{c}" fill-opacity=".22" stroke="{c}" stroke-width="1.6" stroke-linejoin="round"/>'
   };
   function iconGlyph(name, cx, cy, size, color, delayMs) {
     var raw = ICONS[name] || ICONS.bulb;
@@ -4373,8 +4454,9 @@
     if (/cause|effect|lead(s)? to|result|flow|next|then|arrow/.test(t)) return 'arrow';
     if (/plant|ecosystem|organism|photosynth|biolog|species/.test(t)) return 'leaf';
     if (/chemistry|reaction|compound|acid|base\b/.test(t)) return 'flask';
+    if (/president|king|queen|empire|nation|war\b|treaty|revolution|colony|colonies/.test(t)) return 'flag';
     if (/literat|history|author|novel|chapter|text\b/.test(t)) return 'book';
-    if (/geograph|climate|country|continent|map\b/.test(t)) return 'globe';
+    if (/geograph|climate|country|continent|map\b|region\b/.test(t)) return 'globe';
     if (/psycholog|brain|memory|cognit|behavior|behaviour/.test(t)) return 'brain';
     if (/math|equation|number|calculat|formula|algebra/.test(t)) return 'calc';
     return 'bulb';
@@ -4807,6 +4889,60 @@
     return o;
   };
 
+  /**
+   * Region/place network — for geography and any lesson centered on WHERE
+   * things happened, not just when. No real geo-coordinates exist client-side,
+   * so this renders a stylized node network (map pins + connecting routes),
+   * which is the honest equivalent of a map without a coordinate database.
+   */
+  V.map = function (s) {
+    var placesRaw = list(s.places);
+    var places = placesRaw.map(function (p) { return (typeof p === 'string') ? { name: p } : (p || {}); }).slice(0, 6);
+    if (!places.length) places = [{ name: 'Region A' }, { name: 'Region B' }, { name: 'Region C' }];
+    var n = places.length;
+    var LAYOUTS = {
+      1: [{ x: CX, y: CY }],
+      2: [{ x: CX - 130, y: CY - 20 }, { x: CX + 130, y: CY + 20 }],
+      3: [{ x: CX - 150, y: CY - 60 }, { x: CX + 40, y: CY + 85 }, { x: CX + 150, y: CY - 50 }],
+      4: [{ x: CX - 160, y: CY - 70 }, { x: CX - 70, y: CY + 85 }, { x: CX + 90, y: CY - 85 }, { x: CX + 165, y: CY + 65 }],
+      5: [{ x: CX - 170, y: CY - 30 }, { x: CX - 90, y: CY + 90 }, { x: CX + 30, y: CY - 95 }, { x: CX + 120, y: CY + 75 }, { x: CX + 175, y: CY - 25 }],
+      6: [{ x: CX - 175, y: CY - 55 }, { x: CX - 175, y: CY + 65 }, { x: CX - 10, y: CY - 100 }, { x: CX - 10, y: CY + 100 }, { x: CX + 175, y: CY - 55 }, { x: CX + 175, y: CY + 65 }]
+    };
+    var pts = (LAYOUTS[n] || LAYOUTS[3]).map(function (p) { return clampSafe(p); });
+    var o = '', i;
+    var conns = list(s.connections);
+    if (!conns.length && n > 1) { conns = []; for (i = 0; i < n - 1; i++) conns.push({ from: i, to: i + 1 }); }
+    for (i = 0; i < conns.length; i++) {
+      var c0 = conns[i], a = pts[c0.from], b = pts[c0.to];
+      if (!a || !b) continue;
+      o += '<path d="M' + r1(a.x) + ' ' + r1(a.y) + ' L' + r1(b.x) + ' ' + r1(b.y) + '" stroke="' + LINE +
+        '" stroke-width="2" stroke-dasharray="6 4" stroke-linecap="round" opacity=".5" class="sfwb-draw" style="animation-delay:' + d1(i) + 'ms"/>';
+      if (c0.label) {
+        var mid = clampSafe(vmid(a, b));
+        o += '<rect x="' + r1(mid.x - 32) + '" y="' + r1(mid.y - 9) + '" width="64" height="17" rx="5" fill="var(--white,#fff)" stroke="' +
+          SOFT + '" stroke-width="1" class="sfwb-fade" style="animation-delay:' + d2(i) + 'ms"/>' +
+          txt(mid.x, mid.y + 4, trunc(c0.label, 11), { size: 10.5, weight: 600, fill: LINE, cls: 'sfwb-fade', delay: d2(i) });
+      }
+    }
+    for (i = 0; i < places.length; i++) {
+      var p = pts[i], col = SERIES[i % SERIES.length];
+      o += '<ellipse cx="' + r1(p.x) + '" cy="' + r1(p.y + 13) + '" rx="12" ry="4" fill="' + INK +
+        '" opacity=".1" class="sfwb-fade" style="animation-delay:' + d1(i) + 'ms"/>' +
+        iconGlyph('pin', p.x, p.y, 24, col, PHASE.label + i * 70 + 30);
+      var below = p.y <= CY;
+      var lp = clampSafe({ x: p.x, y: p.y + (below ? 30 : -20) });
+      o += txt(lp.x, lp.y, trunc(places[i].name || ('Region ' + (i + 1)), 16),
+        { size: 13, weight: 700, fill: INK, cls: 'sfwb-fade', delay: d2(i) });
+      if (places[i].note) {
+        var np = clampSafe({ x: lp.x, y: lp.y + (below ? 14 : -14) });
+        o += txt(np.x, np.y, trunc(places[i].note, 22),
+          { size: 10.5, weight: 500, fill: LINE, cls: 'sfwb-fade', delay: d2(i + 1) });
+      }
+    }
+    if (s.label) o += caption(s.label);
+    return o;
+  };
+
   V.compare = function (s) {
     var L = s.left || {}, R = s.right || {};
     var colW = (SAFE.x1 - SAFE.x0 - 24) / 2;
@@ -4971,11 +5107,29 @@
                right: { title: 'After',  items: [trunc(lesson.title, 20)] } };
     if (/\bcycle\b|\brepeat|\bloop\b|continuous|feedback/.test(t))
       return { type: 'cycle', items: ['Start', 'Change', 'Return'], label: trunc(step.title, 14) };
-    if (/\bthen\b|\bnext\b|\bfirst\b|\bfinally\b|\bstep\b|\bprocess\b|leads? to|causes?/.test(t))
+    if (/\bthen\b|\bnext\b|\bfirst\b|\bfinally\b|\bstep\b|\bprocess\b|leads? to|causes?/.test(t)) {
+      var clauses = extractClauses(step.body || '', 4);
+      if (clauses.length >= 2) return { type: 'flow', items: clauses, label: trunc(step.title, 50) };
       return { type: 'flow', items: ['Input', trunc(step.title, 13) || 'Process', 'Result'],
                label: trunc(step.title, 50) };
-    if (/\byear\b|\bcentury\b|\b1[0-9]{3}\b|\b20[0-9]{2}\b|\bbefore\b|\bafter\b|timeline/.test(t))
+    }
+    if (/\byear\b|\bcentury\b|\b1[0-9]{3}\b|\b20[0-9]{2}\b|\bbefore\b|\bafter\b|timeline|\bera\b/.test(t)) {
+      var years = extractYears(step.body || '', 5);
+      if (years.length >= 2) {
+        return {
+          type: 'timeline',
+          items: years.map(function (y) {
+            var rest = trunc(y.text, 22);
+            return rest && rest !== y.year ? (y.year + ': ' + rest) : y.year;
+          })
+        };
+      }
       return { type: 'timeline', items: ['Earlier', trunc(step.title, 13) || 'Event', 'Later'] };
+    }
+    if (/\bcontinent\b|\bregion\b|\bcountry\b|\bcountries\b|\bborder\b|\bmigrat|\btrade route\b|\bmountain range\b|\briver\b|\bcolony\b|\bcolonies\b|\bterritory\b|\bcapital\b|\bclimate zone\b|geography/.test(t)) {
+      var places = extractPlaces((step.body || '') + ' ' + (step.title || ''), 4);
+      return { type: 'map', places: places.length >= 2 ? places : ['Region A', 'Region B', 'Region C'], label: trunc(step.title, 50) };
+    }
     if (/consists? of|made up of|components?|\bparts?\b|structure|contains?/.test(t))
       return { type: 'parts', center: trunc(step.title, 16) || 'Whole', items: ['Part 1', 'Part 2'] };
 
