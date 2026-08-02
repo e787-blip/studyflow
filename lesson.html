@@ -4403,6 +4403,33 @@
     return out;
   }
 
+  /**
+   * Detect a specific element from lesson text (by name or explicit atomic
+   * number) so the atom diagram shows THAT element's real proton/electron
+   * count instead of a generic placeholder atom. Covers the ~26 elements
+   * that actually show up in school chemistry/physics lessons.
+   */
+  var ELEMENT_PROTONS = {
+    hydrogen: 1, helium: 2, lithium: 3, beryllium: 4, boron: 5, carbon: 6, nitrogen: 7, oxygen: 8,
+    fluorine: 9, neon: 10, sodium: 11, magnesium: 12, aluminum: 13, aluminium: 13, silicon: 14,
+    phosphorus: 15, sulfur: 16, sulphur: 16, chlorine: 17, argon: 18, potassium: 19, calcium: 20,
+    iron: 26, copper: 29, zinc: 30, silver: 47, gold: 79
+  };
+  function extractAtomInfo(text) {
+    var t = str(text);
+    var protons = null, element = '';
+    for (var name in ELEMENT_PROTONS) {
+      if (new RegExp('\\b' + name + '\\b', 'i').test(t)) {
+        protons = ELEMENT_PROTONS[name];
+        element = name.charAt(0).toUpperCase() + name.slice(1);
+        break;
+      }
+    }
+    var m = t.match(/atomic number\s*(?:of|is|:)?\s*(\d{1,3})/i);
+    if (m) protons = parseInt(m[1], 10);
+    return protons ? { protons: protons, element: element } : null;
+  }
+
   /* ── icon glyphs — small inline SVG symbols used inside nodes instead of
      plain bullet dots. Paths are hand-drawn on a 24x24 grid, then translated
      and scaled to the requested size/position. Keep new glyphs minimal
@@ -4437,7 +4464,9 @@
     pin:   '<path d="M12 21s7-7.2 7-12a7 7 0 0 0-14 0c0 4.8 7 12 7 12z" fill="{c}" fill-opacity=".22" stroke="{c}" stroke-width="1.6" stroke-linejoin="round"/>' +
            '<circle cx="12" cy="9" r="2.6" fill="{c}"/>',
     flag:  '<path d="M5 21V4" stroke="{c}" stroke-width="1.8" stroke-linecap="round"/>' +
-           '<path d="M5 4h13l-3.2 4L18 12H5" fill="{c}" fill-opacity=".22" stroke="{c}" stroke-width="1.6" stroke-linejoin="round"/>'
+           '<path d="M5 4h13l-3.2 4L18 12H5" fill="{c}" fill-opacity=".22" stroke="{c}" stroke-width="1.6" stroke-linejoin="round"/>',
+    person: '<circle cx="12" cy="8" r="3.4" fill="{c}" fill-opacity=".22" stroke="{c}" stroke-width="1.8"/>' +
+           '<path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" fill="{c}" fill-opacity=".18" stroke="{c}" stroke-width="1.8" stroke-linecap="round"/>'
   };
   function iconGlyph(name, cx, cy, size, color, delayMs) {
     var raw = ICONS[name] || ICONS.bulb;
@@ -4449,6 +4478,7 @@
   /** Chooses a contextually relevant icon from a short label/phrase. */
   function pickIcon(text) {
     var t = str(text).toLowerCase();
+    if (/character|protagonist|antagonist|narrator/.test(t)) return 'person';
     if (/atom|electron|molecule|element|chemical bond/.test(t)) return 'atom';
     if (/process|mechanism|system|engine|gear|automat/.test(t)) return 'gear';
     if (/cause|effect|lead(s)? to|result|flow|next|then|arrow/.test(t)) return 'arrow';
@@ -4732,6 +4762,53 @@
     return o;
   };
 
+  /**
+   * Bohr-model atom diagram — a real nucleus and concentric electron shells
+   * with electrons placed exactly on each ring (not just a decorative icon).
+   * Shell electron counts default to the standard 2/8/8/18 filling order
+   * when not supplied explicitly.
+   */
+  V.atom = function (s) {
+    var element = str(s.element);
+    var protons = Math.max(1, num(s.protons, 6));
+    var neutrons = Math.max(0, num(s.neutrons, protons));
+    var shells = list(s.shells).map(function (n) { return num(n, 0); }).filter(function (n) { return n > 0; });
+    if (!shells.length) {
+      var CAP = [2, 8, 8, 18, 18, 32], remaining = protons;
+      shells = [];
+      for (var ci = 0; ci < CAP.length && remaining > 0; ci++) {
+        var take = Math.min(CAP[ci], remaining);
+        shells.push(take);
+        remaining -= take;
+      }
+    }
+    shells = shells.slice(0, 4); // cap rings so they stay inside the fixed viewBox
+
+    var baseR = 30, gap = 30;
+    var o = '<circle cx="' + CX + '" cy="' + CY + '" r="22" fill="url(#sfwbSectorGrad)" filter="url(#sfwbShadow)" class="sfwb-fade"/>' +
+      '<circle cx="' + CX + '" cy="' + CY + '" r="22" fill="none" stroke="' + BRAND + '" stroke-width="2.2" class="sfwb-draw"/>' +
+      txt(CX, CY - 3, protons + 'p\u207a', { size: 12.5, weight: 800, fill: BRAND }) +
+      txt(CX, CY + 13, neutrons + 'n\u2070', { size: 11, weight: 700, fill: LINE });
+
+    for (var i = 0; i < shells.length; i++) {
+      var r = baseR + i * gap;
+      o += '<circle cx="' + CX + '" cy="' + CY + '" r="' + r + '" fill="none" stroke="' + SOFT +
+        '" stroke-width="1.5" stroke-dasharray="3 4" class="sfwb-draw" style="animation-delay:' + d1(i) + 'ms"/>';
+      var eCount = shells[i], col = SERIES[i % SERIES.length];
+      for (var e = 0; e < eCount; e++) {
+        var ep = polarPt(CX, CY, r, (360 / eCount) * e - 90);
+        o += '<circle cx="' + r1(ep.x) + '" cy="' + r1(ep.y) + '" r="4.2" fill="' + col +
+          '" class="sfwb-icon-pop" style="animation-delay:' + (PHASE.label + i * 70 + e * 18) + 'ms"/>';
+      }
+    }
+    var outerR = baseR + (shells.length - 1) * gap;
+    var lp = clampSafe({ x: CX, y: CY - outerR - 26 });
+    if (element) o += txt(lp.x, lp.y, trunc(element, 16),
+      { size: 15, weight: 800, fill: INK, cls: 'sfwb-fade', delay: d2(shells.length) });
+    if (s.label) o += caption(s.label);
+    return o;
+  };
+
   V.vector = function (s) {
     var O = pt(s.origin, 152, CY + 72);
     var data = list(s.vectors).slice(0, 3);
@@ -4943,6 +5020,93 @@
     return o;
   };
 
+  /**
+   * Relationship network — character webs for literature (protagonist,
+   * antagonist, allies, conflicts), but generic enough for any "how do these
+   * entities relate to each other" content. Nodes sit on a circle so edges
+   * never have to cross through the center; labeled edges show the nature
+   * of each relationship when provided.
+   */
+  V.web = function (s) {
+    var nodes = list(s.nodes).slice(0, 6);
+    if (!nodes.length) nodes = ['Character A', 'Character B', 'Character C'];
+    var n = nodes.length, R = 108;
+    var pts = [];
+    for (var i = 0; i < n; i++) pts.push(polarPt(CX, CY, R, -90 + (360 / n) * i));
+
+    var o = '', edges = list(s.edges);
+    if (!edges.length && n > 1) {
+      edges = [];
+      for (var e = 0; e < n; e++) edges.push({ from: e, to: (e + 1) % n });
+    }
+    for (var ei = 0; ei < edges.length; ei++) {
+      var ed = edges[ei], a = pts[ed.from], b = pts[ed.to];
+      if (!a || !b) continue;
+      var lineCol = SERIES[ei % SERIES.length];
+      o += '<path d="M' + r1(a.x) + ' ' + r1(a.y) + ' L' + r1(b.x) + ' ' + r1(b.y) + '" stroke="' + lineCol +
+        '" stroke-width="2" opacity=".55" class="sfwb-draw" style="animation-delay:' + d1(ei) + 'ms"/>';
+      if (ed.label) {
+        var mid = clampSafe(vmid(a, b));
+        o += '<rect x="' + r1(mid.x - 32) + '" y="' + r1(mid.y - 9) + '" width="64" height="17" rx="5" fill="var(--white,#fff)" stroke="' +
+          SOFT + '" stroke-width="1" class="sfwb-fade" style="animation-delay:' + d2(ei) + 'ms"/>' +
+          txt(mid.x, mid.y + 4, trunc(ed.label, 11), { size: 10, weight: 600, fill: LINE, cls: 'sfwb-fade', delay: d2(ei) });
+      }
+    }
+    for (var i2 = 0; i2 < n; i2++) {
+      var p = pts[i2], nodeCol = SERIES[i2 % SERIES.length];
+      o += '<circle cx="' + r1(p.x) + '" cy="' + r1(p.y) + '" r="18" fill="' + nodeCol +
+        '" fill-opacity=".16" filter="url(#sfwbShadow)" class="sfwb-fade" style="animation-delay:' + d1(i2) + 'ms"/>' +
+        iconGlyph('person', p.x, p.y, 22, nodeCol, PHASE.label + i2 * 70 + 30);
+      var below = p.y >= CY;
+      var lp = clampSafe({ x: p.x, y: p.y + (below ? 30 : -24) });
+      o += txt(lp.x, lp.y, trunc(nodes[i2], 14), { size: 12.5, weight: 700, fill: INK, cls: 'sfwb-fade', delay: d2(i2) });
+    }
+    if (s.label) o += caption(s.label);
+    return o;
+  };
+
+  /**
+   * Narrative arc — the classic Freytag's-pyramid tension curve (exposition
+   * -> rising action -> climax -> falling action -> resolution) as an actual
+   * plotted line, not a bulleted list of story terms.
+   */
+  V.arcGraph = function (s) {
+    var stages = list(s.stages);
+    if (stages.length < 3) {
+      stages = [
+        { label: 'Exposition', x: 0.05, y: 0.78 },
+        { label: 'Rising Action', x: 0.32, y: 0.5 },
+        { label: 'Climax', x: 0.55, y: 0.1 },
+        { label: 'Falling Action', x: 0.78, y: 0.55 },
+        { label: 'Resolution', x: 0.97, y: 0.8 }
+      ];
+    }
+    var x0 = SAFE.x0 + 12, x1 = SAFE.x1 - 12, y0 = SAFE.y0 + 24, y1 = SAFE.y1 - 44;
+    function toXY(st) { return { x: x0 + num(st.x, 0) * (x1 - x0), y: y0 + num(st.y, 0.5) * (y1 - y0) }; }
+    var pts = stages.map(toXY);
+
+    var d = 'M' + r1(pts[0].x) + ' ' + r1(pts[0].y), i;
+    for (i = 1; i < pts.length; i++) {
+      var p0 = pts[i - 1], p1 = pts[i], mx = (p0.x + p1.x) / 2;
+      d += ' C' + r1(mx) + ' ' + r1(p0.y) + ' ' + r1(mx) + ' ' + r1(p1.y) + ' ' + r1(p1.x) + ' ' + r1(p1.y);
+    }
+    var o = '<line x1="' + r1(x0) + '" y1="' + r1(y1) + '" x2="' + r1(x1) + '" y2="' + r1(y1) +
+      '" stroke="' + SOFT + '" stroke-width="1.6" class="sfwb-fade"/>' +
+      '<path d="' + d + '" fill="none" stroke="' + BRAND + '" stroke-width="3" stroke-linecap="round" class="sfwb-draw"/>';
+    for (i = 0; i < pts.length; i++) {
+      var col = SERIES[i % SERIES.length];
+      o += '<circle cx="' + r1(pts[i].x) + '" cy="' + r1(pts[i].y) + '" r="6" fill="' + col +
+        '" class="sfwb-icon-pop" style="animation-delay:' + (PHASE.label + i * 80) + 'ms"/>';
+      var below = pts[i].y < CY;
+      var lp = clampSafe({ x: pts[i].x, y: pts[i].y + (below ? -14 : 20) });
+      var anchor = i === 0 ? 'start' : (i === pts.length - 1 ? 'end' : 'middle');
+      o += txt(lp.x, lp.y, trunc(stages[i].label, 14),
+        { size: 11, weight: 700, fill: LINE, anchor: anchor, cls: 'sfwb-fade', delay: d2(i) });
+    }
+    if (s.label) o += caption(s.label);
+    return o;
+  };
+
   V.compare = function (s) {
     var L = s.left || {}, R = s.right || {};
     var colW = (SAFE.x1 - SAFE.x0 - 24) / 2;
@@ -5097,6 +5261,10 @@
     }
     if (/triangle|angle|degree|vertex|hypotenuse|polygon|perimeter/.test(t))
       return { type: 'geometry', vertexNames: ['A', 'B', 'C'], sideLabels: ['c', 'a', 'b'], angleLabels: [] };
+    if (/\batom\b|electron|proton|neutron|orbital|atomic number|isotope|periodic table/.test(t)) {
+      var info = extractAtomInfo(t) || { protons: 6, element: '' };
+      return { type: 'atom', protons: info.protons, element: info.element, label: trunc(step.title, 50) };
+    }
     if (/vector|velocity|force|acceleration|momentum|newton/.test(t))
       return { type: 'vector', vectors: [{ dx: 168, dy: -88, label: 'F' }], activeIndex: 0 };
     if (eq && /\d|x|y/.test(eq[0]))
@@ -5105,6 +5273,13 @@
       return { type: 'compare',
                left:  { title: 'Before', items: [trunc(step.title, 20)] },
                right: { title: 'After',  items: [trunc(lesson.title, 20)] } };
+    if (/\bclimax\b|rising action|falling action|narrative arc|plot structure|\bexposition\b|denouement|plot diagram/.test(t))
+      return { type: 'arcGraph', label: trunc(step.title, 50) };
+    if (/protagonist|antagonist|character (relationship|web|map)|rivalry|\ballies?\b|\bnarrator\b/.test(t)) {
+      var names = extractPlaces(step.body || '', 4);
+      return { type: 'web', nodes: names.length >= 2 ? names : ['Character A', 'Character B', 'Character C'],
+               label: trunc(step.title, 50) };
+    }
     if (/\bcycle\b|\brepeat|\bloop\b|continuous|feedback/.test(t))
       return { type: 'cycle', items: ['Start', 'Change', 'Return'], label: trunc(step.title, 14) };
     if (/\bthen\b|\bnext\b|\bfirst\b|\bfinally\b|\bstep\b|\bprocess\b|leads? to|causes?/.test(t)) {
@@ -5127,7 +5302,7 @@
       return { type: 'timeline', items: ['Earlier', trunc(step.title, 13) || 'Event', 'Later'] };
     }
     if (/\bcontinent\b|\bregion\b|\bcountry\b|\bcountries\b|\bborder\b|\bmigrat|\btrade route\b|\bmountain range\b|\briver\b|\bcolony\b|\bcolonies\b|\bterritory\b|\bcapital\b|\bclimate zone\b|geography/.test(t)) {
-      var places = extractPlaces((step.body || '') + ' ' + (step.title || ''), 4);
+      var places = extractPlaces(step.body || '', 4);
       return { type: 'map', places: places.length >= 2 ? places : ['Region A', 'Region B', 'Region C'], label: trunc(step.title, 50) };
     }
     if (/consists? of|made up of|components?|\bparts?\b|structure|contains?/.test(t))
