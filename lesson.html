@@ -1293,6 +1293,40 @@
         lessonBody += '</div>';
       }
 
+      // ── MISCONCEPTIONS — "you might think X, but actually Y" ──
+      // Research-backed: directly confronting a wrong belief corrects it far
+      // better than only stating the right answer, because the student has to
+      // notice the conflict with what they already believed.
+      if (day.misconceptions && day.misconceptions.length > 0) {
+        lessonBody += '<div style="margin-top:1.1rem;border-top:1px solid var(--border);padding-top:1rem;">' +
+          '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#d97706;margin-bottom:.65rem;">Common Traps</div>';
+        day.misconceptions.forEach(function(mc) {
+          if (!mc || !mc.believe || !mc.actually) return;
+          lessonBody += '<div style="margin-bottom:.7rem;padding:.75rem .9rem;background:#fff8e0;border-radius:12px;border-left:3px solid #f59e0b;">' +
+            '<div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.4rem;">' +
+            '<span style="flex-shrink:0;font-size:0.62rem;font-weight:800;letter-spacing:.06em;color:#92400e;background:rgba(245,158,11,.22);padding:.15rem .4rem;border-radius:4px;margin-top:.1rem;">MYTH</span>' +
+            '<div style="font-size:0.8rem;color:#92400e;line-height:1.5;text-decoration:line-through;text-decoration-color:rgba(146,64,14,.4);">' + mc.believe + '</div></div>' +
+            '<div style="display:flex;gap:.5rem;align-items:flex-start;">' +
+            '<span style="flex-shrink:0;font-size:0.62rem;font-weight:800;letter-spacing:.06em;color:#065f46;background:rgba(56,191,161,.22);padding:.15rem .4rem;border-radius:4px;margin-top:.1rem;">FACT</span>' +
+            '<div style="font-size:0.82rem;color:var(--ink);line-height:1.5;font-weight:600;">' + mc.actually + '</div></div>' +
+            (mc.why ? '<div style="font-size:0.74rem;color:var(--muted);margin-top:.45rem;font-style:italic;padding-left:.2rem;">Why it trips people up: ' + mc.why + '</div>' : '') +
+            '</div>';
+        });
+        lessonBody += '</div>';
+      }
+
+      // ── REAL-WORLD CASE STUDY — concrete anchor for an abstract concept ──
+      if (day.caseStudy && day.caseStudy.title && day.caseStudy.what) {
+        lessonBody += '<div style="margin-top:1.1rem;padding:.95rem 1.1rem;background:linear-gradient(135deg,#f0f7ff,#e8f4ff);border-radius:14px;border-left:4px solid var(--blue);">' +
+          '<div style="display:flex;align-items:center;gap:.45rem;margin-bottom:.4rem;">' +
+          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/></svg>' +
+          '<span style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--blue);">In the real world</span></div>' +
+          '<div style="font-size:0.88rem;font-weight:700;color:var(--ink);margin-bottom:.3rem;">' + day.caseStudy.title + '</div>' +
+          '<div style="font-size:0.82rem;color:var(--ink);line-height:1.65;">' + day.caseStudy.what + '</div>' +
+          (day.caseStudy.connection ? '<div style="font-size:0.78rem;color:#2851c8;margin-top:.5rem;line-height:1.55;"><strong>Why this matters here:</strong> ' + day.caseStudy.connection + '</div>' : '') +
+          '</div>';
+      }
+
       html = buildCard('Today\'s Lesson', day.title || '', false, lessonBody, 'Read carefully', 'Got it →', false);
     }
     else if (card.type === 'terms') {
@@ -4809,6 +4843,105 @@
     return o;
   };
 
+  /**
+   * Molecular bond diagram — real VSEPR-correct geometry for the molecules
+   * that actually appear in school chemistry, with proper single/double/triple
+   * bond rendering (parallel offset lines, not just thicker strokes).
+   * Atom positions are relative offsets from center, scaled at render time.
+   */
+  var MOLECULES = {
+    water:   { name: 'H\u2082O (bent, 104.5\u00b0)',
+               atoms: [{ el:'O', x:0, y:-0.15, r:22, c:'#ef4444' },
+                       { el:'H', x:-0.72, y:0.5, r:15, c:'#64748b' },
+                       { el:'H', x:0.72,  y:0.5, r:15, c:'#64748b' }],
+               bonds: [{ a:0, b:1, order:1 }, { a:0, b:2, order:1 }] },
+    co2:     { name: 'CO\u2082 (linear)',
+               atoms: [{ el:'O', x:-0.85, y:0, r:20, c:'#ef4444' },
+                       { el:'C', x:0,     y:0, r:22, c:'#374151' },
+                       { el:'O', x:0.85,  y:0, r:20, c:'#ef4444' }],
+               bonds: [{ a:1, b:0, order:2 }, { a:1, b:2, order:2 }] },
+    methane: { name: 'CH\u2084 (tetrahedral)',
+               atoms: [{ el:'C', x:0, y:0, r:22, c:'#374151' },
+                       { el:'H', x:0,     y:-0.8, r:14, c:'#64748b' },
+                       { el:'H', x:-0.72, y:0.42, r:14, c:'#64748b' },
+                       { el:'H', x:0.72,  y:0.42, r:14, c:'#64748b' },
+                       { el:'H', x:0,     y:0.85, r:14, c:'#64748b' }],
+               bonds: [{ a:0,b:1,order:1 },{ a:0,b:2,order:1 },{ a:0,b:3,order:1 },{ a:0,b:4,order:1 }] },
+    nitrogen:{ name: 'N\u2082 (triple bond)',
+               atoms: [{ el:'N', x:-0.45, y:0, r:21, c:'#3b82f6' },
+                       { el:'N', x:0.45,  y:0, r:21, c:'#3b82f6' }],
+               bonds: [{ a:0, b:1, order:3 }] },
+    oxygen:  { name: 'O\u2082 (double bond)',
+               atoms: [{ el:'O', x:-0.45, y:0, r:21, c:'#ef4444' },
+                       { el:'O', x:0.45,  y:0, r:21, c:'#ef4444' }],
+               bonds: [{ a:0, b:1, order:2 }] },
+    hcl:     { name: 'HCl (polar covalent)',
+               atoms: [{ el:'Cl', x:-0.4, y:0, r:24, c:'#22c55e' },
+                       { el:'H',  x:0.5,  y:0, r:15, c:'#64748b' }],
+               bonds: [{ a:0, b:1, order:1 }] }
+  };
+
+  function detectMolecule(text) {
+    var t = str(text).toLowerCase();
+    if (/\bwater\b|h2o|h\u2082o/.test(t)) return 'water';
+    if (/carbon dioxide|co2|co\u2082/.test(t)) return 'co2';
+    if (/methane|ch4|ch\u2084/.test(t)) return 'methane';
+    if (/nitrogen gas|\bn2\b|n\u2082|triple bond/.test(t)) return 'nitrogen';
+    if (/oxygen gas|\bo2\b|o\u2082|double bond/.test(t)) return 'oxygen';
+    if (/hydrochloric|\bhcl\b|polar covalent/.test(t)) return 'hcl';
+    return null;
+  }
+
+  V.molecule = function (s) {
+    var preset = s.preset && MOLECULES[s.preset] ? MOLECULES[s.preset] : null;
+    var atoms = list(s.atoms).length ? list(s.atoms) : (preset ? preset.atoms : MOLECULES.water.atoms);
+    var bonds = list(s.bonds).length ? list(s.bonds) : (preset ? preset.bonds : MOLECULES.water.bonds);
+    var name  = str(s.name) || (preset ? preset.name : MOLECULES.water.name);
+    var SCALE = 108;
+
+    function ap(a) { return { x: CX + num(a.x, 0) * SCALE, y: CY + num(a.y, 0) * SCALE }; }
+    var o = '', i;
+
+    // Bonds first so atom circles sit on top of the line ends.
+    for (i = 0; i < bonds.length; i++) {
+      var bd = bonds[i], A = atoms[bd.a], B = atoms[bd.b];
+      if (!A || !B) continue;
+      var p1 = ap(A), p2 = ap(B);
+      var order = Math.max(1, Math.min(3, num(bd.order, 1)));
+      var dir = vnorm(vsub(p2, p1));
+      var nrm = { x: -dir.y, y: dir.x };
+      // Offsets: 1 bond centered; 2 bonds at ±3.5; 3 bonds at -5,0,+5
+      var offs = order === 1 ? [0] : (order === 2 ? [-3.5, 3.5] : [-5, 0, 5]);
+      for (var k = 0; k < offs.length; k++) {
+        var sh = vmul(nrm, offs[k]);
+        o += '<line x1="' + r1(p1.x + sh.x) + '" y1="' + r1(p1.y + sh.y) +
+             '" x2="' + r1(p2.x + sh.x) + '" y2="' + r1(p2.y + sh.y) +
+             '" stroke="' + LINE + '" stroke-width="2.6" stroke-linecap="round" ' +
+             'class="sfwb-draw" style="animation-delay:' + d1(i) + 'ms"/>';
+      }
+      if (bd.label) {
+        var bm = clampSafe(vadd(vmid(p1, p2), vmul(nrm, 16)));
+        o += txt(bm.x, bm.y, trunc(bd.label, 10),
+          { size: 10.5, weight: 600, fill: LINE, cls: 'sfwb-fade', delay: d2(i) });
+      }
+    }
+    // Atoms
+    for (i = 0; i < atoms.length; i++) {
+      var at = atoms[i], p = ap(at), rad = num(at.r, 20), col = at.c || SERIES[i % SERIES.length];
+      o += '<circle cx="' + r1(p.x) + '" cy="' + r1(p.y) + '" r="' + r1(rad) + '" fill="' + col +
+        '" fill-opacity=".9" filter="url(#sfwbShadow)" class="sfwb-icon-pop" style="animation-delay:' +
+        (PHASE.label + i * 60) + 'ms"/>' +
+        '<circle cx="' + r1(p.x) + '" cy="' + r1(p.y) + '" r="' + r1(rad) + '" fill="url(#sfwbGlass)" class="sfwb-fade"/>' +
+        txt(p.x, p.y + rad * 0.32, trunc(at.el, 3),
+          { size: Math.max(11, rad * 0.75), weight: 800, fill: '#ffffff',
+            cls: 'sfwb-fade', delay: PHASE.label + i * 60 + 40 });
+    }
+    if (name) o += txt(CX, SAFE.y0 + 6, trunc(name, 30),
+      { size: 14, weight: 800, fill: INK, cls: 'sfwb-fade', delay: d2(atoms.length) });
+    if (s.label) o += caption(s.label);
+    return o;
+  };
+
   V.vector = function (s) {
     var O = pt(s.origin, 152, CY + 72);
     var data = list(s.vectors).slice(0, 3);
@@ -4972,6 +5105,94 @@
    * so this renders a stylized node network (map pins + connecting routes),
    * which is the honest equivalent of a map without a coordinate database.
    */
+  /**
+   * Cell structure diagram — a membrane-bounded cell with distinctly-shaped
+   * organelles (not uniform dots) and leader-line labels placed outside the
+   * membrane so they never sit on top of the structures they point at.
+   * Supports animal (round) and plant (rectangular, with cell wall) variants.
+   */
+  V.cell = function (s) {
+    var isPlant = /plant/i.test(str(s.cellType));
+    var organelles = list(s.organelles);
+    if (!organelles.length) {
+      organelles = isPlant
+        ? [{ name:'Nucleus', kind:'nucleus' }, { name:'Chloroplast', kind:'chloroplast' },
+           { name:'Vacuole', kind:'vacuole' }, { name:'Mitochondrion', kind:'mito' }]
+        : [{ name:'Nucleus', kind:'nucleus' }, { name:'Mitochondrion', kind:'mito' },
+           { name:'Ribosome', kind:'ribosome' }, { name:'Golgi body', kind:'golgi' }];
+    }
+    organelles = organelles.slice(0, 4);
+
+    var o = '';
+    // Membrane (and cell wall for plants)
+    if (isPlant) {
+      o += '<rect x="' + (CX - 150) + '" y="' + (CY - 100) + '" width="300" height="200" rx="14" fill="#dcfce7" ' +
+           'fill-opacity=".5" stroke="#16a34a" stroke-width="4" filter="url(#sfwbShadow)" class="sfwb-draw"/>' +
+           '<rect x="' + (CX - 141) + '" y="' + (CY - 91) + '" width="282" height="182" rx="10" fill="none" ' +
+           'stroke="#16a34a" stroke-width="1.8" stroke-dasharray="4 3" class="sfwb-fade"/>' +
+           txt(CX - 150, CY - 108, 'Cell wall', { size: 11, weight: 700, fill: '#15803d', anchor: 'start', cls: 'sfwb-fade', delay: d2(0) });
+    } else {
+      o += '<ellipse cx="' + CX + '" cy="' + CY + '" rx="150" ry="100" fill="#eef4ff" fill-opacity=".6" ' +
+           'stroke="' + BRAND + '" stroke-width="3.5" filter="url(#sfwbShadow)" class="sfwb-draw"/>' +
+           '<ellipse cx="' + CX + '" cy="' + CY + '" rx="150" ry="100" fill="url(#sfwbGlass)" class="sfwb-fade"/>' +
+           txt(CX - 152, CY - 106, 'Cell membrane', { size: 11, weight: 700, fill: BRAND, anchor: 'start', cls: 'sfwb-fade', delay: d2(0) });
+    }
+
+    // Interior positions — spread so shapes don't collide with each other
+    var SPOTS = [
+      { x: CX - 58, y: CY - 20, lx: SAFE.x0 + 4,  ly: CY - 76, left: true },
+      { x: CX + 62, y: CY - 42, lx: SAFE.x1 - 4,  ly: CY - 82, left: false },
+      { x: CX + 70, y: CY + 40, lx: SAFE.x1 - 4,  ly: CY + 96, left: false },
+      { x: CX - 66, y: CY + 46, lx: SAFE.x0 + 4,  ly: CY + 92, left: true }
+    ];
+
+    /* Each organelle gets a genuinely different silhouette, so the diagram
+       communicates structure at a glance rather than colour-coded circles. */
+    function drawOrganelle(kind, x, y, col, delay) {
+      var g = '<g class="sfwb-icon-pop" style="animation-delay:' + delay + 'ms">';
+      if (kind === 'nucleus') {
+        g += '<circle cx="' + r1(x) + '" cy="' + r1(y) + '" r="26" fill="' + col + '" fill-opacity=".3" stroke="' + col + '" stroke-width="2.2"/>' +
+             '<circle cx="' + r1(x) + '" cy="' + r1(y) + '" r="10" fill="' + col + '" fill-opacity=".75"/>';
+      } else if (kind === 'mito') {
+        g += '<ellipse cx="' + r1(x) + '" cy="' + r1(y) + '" rx="26" ry="14" fill="' + col + '" fill-opacity=".28" stroke="' + col + '" stroke-width="2"/>' +
+             '<path d="M' + r1(x-17) + ' ' + r1(y) + ' q6 -9 11 0 q6 9 11 0 q6 -9 11 0" fill="none" stroke="' + col + '" stroke-width="1.8" stroke-linecap="round"/>';
+      } else if (kind === 'chloroplast') {
+        g += '<ellipse cx="' + r1(x) + '" cy="' + r1(y) + '" rx="27" ry="16" fill="#16a34a" fill-opacity=".3" stroke="#15803d" stroke-width="2"/>' +
+             '<circle cx="' + r1(x-10) + '" cy="' + r1(y-3) + '" r="4" fill="#15803d" fill-opacity=".8"/>' +
+             '<circle cx="' + r1(x+2) + '" cy="' + r1(y+4) + '" r="4" fill="#15803d" fill-opacity=".8"/>' +
+             '<circle cx="' + r1(x+13) + '" cy="' + r1(y-4) + '" r="4" fill="#15803d" fill-opacity=".8"/>';
+      } else if (kind === 'vacuole') {
+        g += '<ellipse cx="' + r1(x) + '" cy="' + r1(y) + '" rx="30" ry="22" fill="#38bfa1" fill-opacity=".22" stroke="#0d9488" stroke-width="2" stroke-dasharray="5 3"/>';
+      } else if (kind === 'golgi') {
+        g += '<path d="M' + r1(x-22) + ' ' + r1(y-8) + ' q22 -8 44 0" fill="none" stroke="' + col + '" stroke-width="3" stroke-linecap="round"/>' +
+             '<path d="M' + r1(x-20) + ' ' + r1(y)   + ' q20 -8 40 0" fill="none" stroke="' + col + '" stroke-width="3" stroke-linecap="round"/>' +
+             '<path d="M' + r1(x-17) + ' ' + r1(y+8) + ' q17 -8 34 0" fill="none" stroke="' + col + '" stroke-width="3" stroke-linecap="round"/>';
+      } else if (kind === 'ribosome') {
+        g += '<circle cx="' + r1(x-8) + '" cy="' + r1(y-5) + '" r="5" fill="' + col + '"/>' +
+             '<circle cx="' + r1(x+6) + '" cy="' + r1(y+2) + '" r="5" fill="' + col + '"/>' +
+             '<circle cx="' + r1(x-3) + '" cy="' + r1(y+10) + '" r="5" fill="' + col + '"/>' +
+             '<circle cx="' + r1(x+14) + '" cy="' + r1(y-9) + '" r="5" fill="' + col + '"/>';
+      } else {
+        g += '<circle cx="' + r1(x) + '" cy="' + r1(y) + '" r="18" fill="' + col + '" fill-opacity=".3" stroke="' + col + '" stroke-width="2"/>';
+      }
+      return g + '</g>';
+    }
+
+    for (var i = 0; i < organelles.length; i++) {
+      var org = organelles[i], sp = SPOTS[i], col = SERIES[i % SERIES.length];
+      var kind = str(org.kind) || str(org.name).toLowerCase().replace(/[^a-z]/g, '');
+      o += drawOrganelle(kind, sp.x, sp.y, col, PHASE.label + i * 80);
+      // Leader line from organelle out to the label
+      var edgeX = sp.left ? sp.x - 30 : sp.x + 30;
+      o += '<path d="M' + r1(edgeX) + ' ' + r1(sp.y) + ' L' + r1(sp.left ? sp.lx + 62 : sp.lx - 62) + ' ' + r1(sp.ly) +
+        '" stroke="' + col + '" stroke-width="1.5" opacity=".55" stroke-dasharray="3 2" class="sfwb-fade" style="animation-delay:' + d2(i) + 'ms"/>' +
+        txt(sp.lx, sp.ly + 4, trunc(org.name || kind, 15),
+          { size: 12, weight: 700, fill: LINE, anchor: sp.left ? 'start' : 'end', cls: 'sfwb-fade', delay: d2(i) });
+    }
+    if (s.label) o += caption(s.label);
+    return o;
+  };
+
   V.map = function (s) {
     var placesRaw = list(s.places);
     var places = placesRaw.map(function (p) { return (typeof p === 'string') ? { name: p } : (p || {}); }).slice(0, 6);
@@ -5261,6 +5482,14 @@
     }
     if (/triangle|angle|degree|vertex|hypotenuse|polygon|perimeter/.test(t))
       return { type: 'geometry', vertexNames: ['A', 'B', 'C'], sideLabels: ['c', 'a', 'b'], angleLabels: [] };
+    if (/\bcell\b|organelle|nucleus|mitochondri|ribosome|cytoplasm|chloroplast|vacuole|golgi|cell membrane|cell wall/.test(t)) {
+      var isPlantCell = /plant cell|chloroplast|cell wall/.test(t);
+      return { type: 'cell', cellType: isPlantCell ? 'plant' : 'animal', label: trunc(step.title, 50) };
+    }
+    if (/molecul|covalent|ionic bond|chemical bond|\bh2o\b|\bco2\b|methane|lewis structure|vsepr|bonding/.test(t)) {
+      var mol = detectMolecule(t);
+      return { type: 'molecule', preset: mol || 'water', label: trunc(step.title, 50) };
+    }
     if (/\batom\b|electron|proton|neutron|orbital|atomic number|isotope|periodic table/.test(t)) {
       var info = extractAtomInfo(t) || { protons: 6, element: '' };
       return { type: 'atom', protons: info.protons, element: info.element, label: trunc(step.title, 50) };
@@ -5311,13 +5540,82 @@
     return { type: 'concept', center: trunc(step.title || lesson.title, 20) || 'Key idea', items: [] };
   }
 
+  /* ── §4 SECURITY: sanitization guardrail ─────────────────────────────────
+     Every generator builds markup by string concatenation from lesson data,
+     so a hostile or malformed lesson payload could in principle carry script
+     content or inline handlers through into the DOM. This strips anything
+     executable before injection. It is a whitelist on the dangerous surface
+     (script/foreignObject/event handlers/javascript: URLs), not a full
+     XML parser — the generators are trusted code, this guards their inputs. */
+  var UNSAFE_TAGS = /<\s*\/?\s*(script|foreignObject|iframe|object|embed|link|meta|style|use|image|animate|set|handler)\b[^>]*>/gi;
+  var EVENT_ATTRS = /\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
+  var JS_URLS     = /(?:href|xlink:href|src)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)/gi;
+
+  function sanitizeSVG(svg) {
+    var s = str(svg);
+    s = s.replace(UNSAFE_TAGS, '');
+    s = s.replace(EVENT_ATTRS, '');
+    s = s.replace(JS_URLS, '');
+    // Entity-encoded script payloads that would decode after injection
+    s = s.replace(/&#(?:x6a|106);?a?v?a?s?c?r?i?p?t/gi, '');
+    return s;
+  }
+
+  /* ── §4 SELF-CORRECTION: structural validator ────────────────────────────
+     Walks the tag stream and repairs the two malformations that string
+     concatenation can realistically produce: unclosed elements (a generator
+     returns early / a template misses a closer) and stray closers with no
+     matching opener. Unclosed tags are closed in correct LIFO order at the
+     end; orphan closers are dropped. Returns the repaired markup plus a list
+     of what it fixed, so problems are visible in the console instead of
+     silently producing a blank diagram. */
+  var VOID_SVG = { path:1, circle:1, ellipse:1, rect:1, line:1, polyline:1, polygon:1,
+                   stop:1, use:1, image:1, feDropShadow:1, feGaussianBlur:1, feOffset:1,
+                   feMerge:1, feMergeNode:1, feFlood:1, feComposite:1 };
+
+  function validateSVG(svg) {
+    var s = str(svg);
+    var fixes = [];
+    var stack = [], out = '', last = 0;
+    var re = /<\s*(\/?)\s*([a-zA-Z][a-zA-Z0-9]*)\b([^>]*?)(\/?)\s*>/g;
+    var m;
+    while ((m = re.exec(s)) !== null) {
+      var isClose = m[1] === '/', tag = m[2], selfClose = m[4] === '/';
+      out += s.slice(last, m.index);
+      last = m.index + m[0].length;
+      if (isClose) {
+        var idx = -1, k;
+        for (k = stack.length - 1; k >= 0; k--) { if (stack[k] === tag) { idx = k; break; } }
+        if (idx === -1) { fixes.push('dropped orphan </' + tag + '>'); continue; }
+        // Implicitly close anything left open above the match
+        while (stack.length - 1 > idx) {
+          var implicit = stack.pop();
+          out += '</' + implicit + '>';
+          fixes.push('auto-closed <' + implicit + '>');
+        }
+        stack.pop();
+        out += m[0];
+      } else {
+        if (!selfClose && !VOID_SVG[tag]) stack.push(tag);
+        out += m[0];
+      }
+    }
+    out += s.slice(last);
+    while (stack.length) {
+      var leftover = stack.pop();
+      out += '</' + leftover + '>';
+      fixes.push('auto-closed <' + leftover + '> at end');
+    }
+    return { svg: out, fixes: fixes, valid: fixes.length === 0 };
+  }
+
   function buildVisual(step, lesson) {
     var spec = step && step.visual;
     if (!spec || !spec.type || typeof V[spec.type] !== 'function') spec = inferVisual(step, lesson);
     var body;
     try { body = V[spec.type](spec); }
     catch (e) { body = V.concept({ center: trunc(step && step.title, 20) || 'Key idea', items: [] }); }
-    return '<svg viewBox="0 0 ' + VB.w + ' ' + VB.h + '" xmlns="http://www.w3.org/2000/svg" ' +
+    var svg = '<svg viewBox="0 0 ' + VB.w + ' ' + VB.h + '" xmlns="http://www.w3.org/2000/svg" ' +
       'role="img" aria-label="Diagram: ' + esc(spec.type) + '" class="sfwb-svg">' +
       '<defs>' +
       '<marker id="sfwbArrowOff" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" ' +
@@ -5333,6 +5631,16 @@
       '<stop offset="0%" stop-color="#ffffff" stop-opacity=".32"/>' +
       '<stop offset="100%" stop-color="#ffffff" stop-opacity="0"/></linearGradient>' +
       '</defs>' + body + '</svg>';
+
+    // §4 — sanitize, then structurally validate/repair before DOM injection.
+    // Any repair is logged rather than swallowed, so malformed generator output
+    // surfaces during development instead of silently rendering blank.
+    svg = sanitizeSVG(svg);
+    var checked = validateSVG(svg);
+    if (!checked.valid && global.console && global.console.warn) {
+      global.console.warn('[SFWhiteboard] auto-corrected SVG (' + spec.type + '):', checked.fixes.join(', '));
+    }
+    return checked.svg;
   }
 
   /* ── §1 dispatch ────────────────────────────────────────────────────────── */
@@ -5694,7 +6002,8 @@
       num: num, str: str, trunc: trunc, esc: esc,
       fitPoints: fitPoints, distToSegment: distToSegment, angleAt: angleAt,
       angleLabelPos: angleLabelPos, sideLabelPos: sideLabelPos,
-      inferVisual: inferVisual, buildVisual: buildVisual, V: V
+      inferVisual: inferVisual, buildVisual: buildVisual, V: V,
+      sanitizeSVG: sanitizeSVG, validateSVG: validateSVG
     }
   };
 })(typeof window !== 'undefined' ? window : this);
