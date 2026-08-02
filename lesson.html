@@ -1089,7 +1089,34 @@
     var allShown = sessionCards.map(function(c){ return c.q ? c.q.question : ''; }).filter(Boolean);
     var recentList = allShown.slice(-20).join(' | ');
 
-    var prompt = 'Generate 10 completely NEW and UNIQUE practice questions about: ' + (plan.subject || day.title) + '. Topic content: ' + (day.content || '').substring(0, 300) + '.\n\nDO NOT repeat or closely resemble any of these already-used questions: ' + recentList + '\n\nRULES:\n- Every question must cover a DIFFERENT concept or angle\n- Mix MCQ and true/false\n- Vary difficulty: some easy, some medium, some hard\n- Hints must be specific facts, not generic\n\nReturn ONLY a JSON array of 10 questions:\n[{"type":"mcq","question":"unique question?","options":["A","B","C","D"],"correctIndex":0,"hint":"specific fact","explanation":"why correct","difficulty":"Medium"},{"type":"truefalse","question":"unique statement","correct":"True","hint":"specific fact","explanation":"why","difficulty":"Easy"}]';
+    // TOPIC LOCK — stay on THIS day's exact topic, never the broad subject
+    var lockTopic   = (day.title || '').trim();
+    var lockMicro   = (day.microTopic || '').trim();
+    var lockSubject = (plan.subject || '').trim();
+    var lockTerms   = (day.keyTerms || []).map(function(t){
+      return (t && t.term) ? t.term : (typeof t === 'string' ? t : '');
+    }).filter(Boolean).join(', ');
+    var lockLine = lockTopic || lockSubject || 'the current lesson';
+
+    var prompt =
+      'TOPIC LOCK: ' + lockLine + '\n' +
+      (lockMicro   ? 'Exact scope: ' + lockMicro + '\n' : '') +
+      (lockSubject ? 'Course: ' + lockSubject + '\n' : '') +
+      (lockTerms   ? 'Vocabulary to draw from: ' + lockTerms + '\n' : '') +
+      'Lesson content:\n' + (day.content || '').substring(0, 900) + '\n\n' +
+      'Generate 10 completely NEW and UNIQUE practice questions that are ONLY about "' + lockLine + '".\n\n' +
+      'ABSOLUTE RULES - breaking any of these makes the output invalid:\n' +
+      '1. EVERY question must be about "' + lockLine + '" and nothing else.\n' +
+      '2. Do NOT introduce any other topic, unit, chapter, or branch. If the topic is geometry, do NOT write algebra, statistics, or arithmetic questions. If it is one historical event, do NOT cover a different one.\n' +
+      '3. Do NOT drift up to the broader parent subject. Stay on the exact micro-topic above.\n' +
+      '4. If you cannot think of 10 distinct questions on this topic, return fewer. NEVER go off-topic to fill the list.\n' +
+      '5. Each question must cover a DIFFERENT concept or angle within the topic.\n' +
+      '6. Do NOT repeat or closely resemble any of these already-used questions: ' + recentList + '\n' +
+      '7. Mix MCQ and true/false. Vary difficulty: some easy, some medium, some hard.\n' +
+      '8. Hints must be specific facts about this topic, not generic advice.\n\n' +
+      'FINAL CHECK: reread every question. Delete any that is not about "' + lockLine + '".\n\n' +
+      'Return ONLY a JSON array, no markdown:\n' +
+      '[{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"Medium"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"Easy"}]';
 
     fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
       method: 'POST',
@@ -1103,10 +1130,21 @@
       if (match) {
         var newQs = JSON.parse(match[0]);
         // Filter out any that are too similar to existing questions
-        var existingQs = (day.questions || []).map(function(q){ return q.question.toLowerCase(); });
+        var existingQs = (day.questions || []).map(function(q){ return (q.question || '').toLowerCase(); });
         newQs = newQs.filter(function(q) {
+          if (!q || !q.type) return false;
+          var qt = (q.question || '').trim();
+          if (qt.length < 5) return false;
+          if (/^\[.*\]$/.test(qt)) return false;
+          if (q.type === 'mcq') {
+            var opts = (q.options || []).filter(function(o){ return o && String(o).trim(); });
+            if (opts.length < 2) return false;
+            if (typeof q.correctIndex !== 'number' || q.correctIndex < 0 || q.correctIndex >= q.options.length) q.correctIndex = 0;
+          }
+          if (q.type === 'truefalse' && q.correct !== 'True' && q.correct !== 'False') return false;
+          var qtl = qt.toLowerCase();
           return !existingQs.some(function(eq) {
-            return eq.includes(q.question.toLowerCase().substring(0, 15));
+            return eq && eq.includes(qtl.substring(0, 15));
           });
         });
         questionBuffer = questionBuffer.concat(newQs);
@@ -1120,6 +1158,7 @@
   function showNextCard() {
     if (!sessionActive) return;
     currentAnswered = false;
+    fillAttempts = 0;
 
     // Clean up graph drag listeners from previous card
     if (window._graphCleanup) window._graphCleanup();
@@ -1517,10 +1556,13 @@
     return card;
   }
 
+  var fillAttempts = 0;
+  var MAX_FILL_TRIES = 3;
+
   function answerFillBtn() {
     var btn = document.getElementById('fill-btn');
     if (!btn) return;
-    answerFill(btn.dataset.answer || '', btn.dataset.explanation || '');
+    answerFill(btn.dataset.answer || '', btn.dataset.explanation || '', btn.dataset.mustBeCorrect === '1');
   }
 
   // ── INTERACTIVE COORDINATE GRAPH (math) ──
@@ -1805,6 +1847,44 @@
 
     // ── TOPIC DETECTION ──
     var topic = detectMathTopic(eq);
+
+    // ── VARIABLE FIX — the card must ask for the variable the equation actually uses.
+    // detectMathTopic hardcodes "Solve for x" / "x = ?", but the AI generates equations
+    // in y, n, t, etc. Detect the real variable from the question text first
+    // ("Solve for y" is explicit intent), then from the equation itself.
+    var solveVar = null;
+    var qm = (q.question || '').match(/solve\s+for\s+([a-z])\b/i);
+    if (qm) {
+      solveVar = qm[1].toLowerCase();
+    } else {
+      // Single letters in the equation, excluding math words (sin, sqrt, lim...)
+      var eqNoWords = eq.replace(/sin|cos|tan|csc|sec|cot|sqrt|log|ln|lim|abs|pi/gi, '').replace(/[0-9]/g, ' ');
+      var vars = eqNoWords.match(/\b[a-z]\b/gi) || [];
+      var counts = {};
+      for (var vi = 0; vi < vars.length; vi++) {
+        var v = vars[vi].toLowerCase();
+        counts[v] = (counts[v] || 0) + 1;
+      }
+      // Most frequent variable wins; prefer x on ties since it's the convention
+      var bestVar = null, bestCount = 0;
+      for (var key in counts) {
+        if (counts[key] > bestCount || (counts[key] === bestCount && key === 'x')) {
+          bestVar = key; bestCount = counts[key];
+        }
+      }
+      if (bestVar) solveVar = bestVar;
+    }
+    if (solveVar && topic.title && /solve for [a-z]$/i.test(topic.title)) {
+      topic.title = 'Solve for ' + solveVar;
+      topic.placeholder = solveVar + ' = ?';
+      if (topic.instruction) topic.instruction = topic.instruction.replace(/\bfor x\b/gi, 'for ' + solveVar);
+    }
+    // If the AI wrote its own question text (e.g. "Solve for y"), show THAT as the
+    // card title instead of the generic detector title — it is always more accurate.
+    if (q.question && q.question.trim().length > 3 && q.question.trim().length < 60) {
+      topic.title = q.question.trim();
+    }
+
     var visual = buildMathVisual(topic, eq, q);
 
     var body =
@@ -1831,7 +1911,7 @@
     setTimeout(function() {
       var btn = document.getElementById('fill-btn');
       var inp = document.getElementById('fill-input');
-      if (btn) { btn.dataset.answer = ans; btn.dataset.explanation = expl; }
+      if (btn) { btn.dataset.answer = ans; btn.dataset.explanation = expl; btn.dataset.mustBeCorrect = '1'; }
       if (inp) {
         inp.addEventListener('keydown', function(e){ if(e.key==='Enter') answerFillBtn(); });
         inp.focus();
@@ -2122,7 +2202,7 @@
     setTimeout(function() {
       var btn = document.getElementById('fill-btn');
       var inp = document.getElementById('fill-input');
-      if (btn) { btn.dataset.answer = q.answer || ''; btn.dataset.explanation = q.explanation || ''; }
+      if (btn) { btn.dataset.answer = q.answer || ''; btn.dataset.explanation = q.explanation || ''; btn.dataset.mustBeCorrect = '1'; }
       if (inp) { inp.addEventListener('keydown', function(e){ if(e.key==='Enter') answerFillBtn(); }); inp.focus(); }
     }, 60);
     return card;
@@ -2828,7 +2908,7 @@
     document.getElementById('btn-next').disabled = false;
   }
 
-  function answerFill(correct, explanation) {
+  function answerFill(correct, explanation, mustBeCorrect) {
     if (currentAnswered) return;
     var input = document.getElementById('fill-input');
     if (!input) return;
@@ -2881,6 +2961,29 @@
       }
     }
 
+    // RETRY GATE — equation/word-problem cards wait until you get it right
+    if (!isCorrect && mustBeCorrect) {
+      fillAttempts++;
+      if (fillAttempts < MAX_FILL_TRIES) {
+        var fbR = document.getElementById('feedback-box');
+        if (fbR) {
+          fbR.className = 'feedback-box show wrong-fb';
+          fbR.innerHTML = '<div class="feedback-label">✗ Not quite — try again</div>' +
+            '<div class="feedback-text">Attempt ' + fillAttempts + ' of ' + MAX_FILL_TRIES +
+            '. Check your work and enter a new answer.</div>' +
+            '<div class="feedback-growth">Tap "Show steps" if you want a nudge.</div>';
+        }
+        input.style.borderColor = 'var(--red)';
+        input.style.background  = '#fee2e2';
+        input.focus();
+        input.select();
+        flashCard(false);
+        var nbR = document.getElementById('btn-next');
+        if (nbR) nbR.disabled = true;
+        return;
+      }
+    }
+
     currentAnswered = true;
     totalAnswered++;
     input.disabled = true;
@@ -2906,6 +3009,14 @@
     }
 
     handleResult(isCorrect, explanation, null);
+    // handleResult -> showFeedback overwrites feedback-box, wiping the answer we just
+    // showed. Re-insert it at the top so the student always SEES the correct answer.
+    if (!isCorrect) {
+      var fbA = document.getElementById('feedback-box');
+      if (fbA) fbA.insertAdjacentHTML('afterbegin',
+        '<div class="feedback-text" style="margin-bottom:.45rem;">The answer is ' +
+        '<strong style="font-size:1.15em;color:#dc2626;">' + correct + '</strong></div>');
+    }
     document.getElementById('btn-next').disabled = false;
     updateStreak();
   }
