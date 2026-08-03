@@ -628,6 +628,47 @@
 </div>
 
 <script>
+
+  /* ── PER-ACCOUNT STORAGE NAMESPACE ─────────────────────────────────────
+     Every StudyFlow key used to be global to the browser, so two accounts
+     signing in on the same computer saw each other's plans, streaks, timers
+     and progress. SFStore transparently prefixes user-scoped keys with the
+     signed-in account's email. Device-level preferences (dark mode, sidebar,
+     onboarding) and shared class data stay global on purpose. */
+  var SFStore = (function () {
+    var GLOBAL_KEYS = {
+      studyflow_user: 1, studyflow_dark: 1, studyflow_onboarded: 1,
+      studyflow_sidebar_collapsed: 1, studyflow_notif_enabled: 1,
+      studyflow_notif_dismissed: 1
+    };
+    function currentUid() {
+      try {
+        var raw = window.localStorage.getItem('studyflow_user');
+        if (!raw) return '';
+        var u = JSON.parse(raw);
+        return (u && u.email) ? String(u.email).toLowerCase().trim() : '';
+      } catch (e) { return ''; }
+    }
+    function nsKey(key) {
+      if (GLOBAL_KEYS[key]) return key;
+      if (String(key).indexOf('studyflow_class_') === 0) return key; // shared with teacher
+      var id = currentUid();
+      return id ? ('sfu:' + id + '|' + key) : key;
+    }
+    return {
+      _ns: nsKey,
+      getItem: function (key) {
+        try { return window.localStorage.getItem(nsKey(key)); } catch (e) { return null; }
+      },
+      setItem: function (key, val) {
+        try { window.localStorage.setItem(nsKey(key), val); } catch (e) {}
+      },
+      removeItem: function (key) {
+        try { window.localStorage.removeItem(nsKey(key)); } catch (e) {}
+      }
+    };
+  })();
+
   var selectedGoal = '', selectedDifficulty = '', generatedPlan = '', fileContent = '';
   var fileReading = false;
 
@@ -641,7 +682,7 @@
   function loadAssignment() {
     var params = new URLSearchParams(window.location.search);
     if (params.get('from') !== 'assignment') return;
-    var a = JSON.parse(localStorage.getItem('studyflow_pending_assignment') || 'null');
+    var a = JSON.parse(SFStore.getItem('studyflow_pending_assignment') || 'null');
     if (!a || !a.notes) return;
 
     // Prefill notes and exam date
@@ -657,7 +698,7 @@
     notesEl.parentElement.insertBefore(banner, notesEl);
 
     // Clean up so a refresh doesn't re-trigger
-    localStorage.removeItem('studyflow_pending_assignment');
+    SFStore.removeItem('studyflow_pending_assignment');
     window.history.replaceState({}, '', window.location.pathname);
   }
 
@@ -694,7 +735,7 @@
 
   // ── JOIN A CLASS ──
   function initJoinClass() {
-    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
     if (user.classCode) {
       document.getElementById('join-class-closed').innerHTML =
         '<div style="font-size:0.85rem;color:#1a9e80;font-weight:600;">In class ' + user.classCode + ' — your teacher can see your progress.</div>';
@@ -713,16 +754,16 @@
       showMsg('Codes look like SF-AB12 — check with your teacher.', false);
       return;
     }
-    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
     var studentRecord = { name: user.name || 'Student', email: user.email, joinedAt: new Date().toISOString(), streak: 0, avgScore: null, lastActive: null };
 
     // Save locally
     user.classCode = code;
-    localStorage.setItem('studyflow_user', JSON.stringify(user));
-    var classData = JSON.parse(localStorage.getItem('studyflow_class_' + code) || '{"students":[]}');
+    SFStore.setItem('studyflow_user', JSON.stringify(user));
+    var classData = JSON.parse(SFStore.getItem('studyflow_class_' + code) || '{"students":[]}');
     if (!classData.students.find(function(s){ return s.email === user.email; })) {
       classData.students.push(studentRecord);
-      localStorage.setItem('studyflow_class_' + code, JSON.stringify(classData));
+      SFStore.setItem('studyflow_class_' + code, JSON.stringify(classData));
     }
 
     // Sync to Firestore so the teacher sees them from any device
@@ -737,7 +778,7 @@
       if (data.error === 'class_full') {
         // Revert the local save
         user.classCode = null;
-        localStorage.setItem('studyflow_user', JSON.stringify(user));
+        SFStore.setItem('studyflow_user', JSON.stringify(user));
         showMsg('This class is full (max 5 students). Ask your teacher to upgrade their plan.', false);
         return;
       }
@@ -755,19 +796,19 @@
 
   function toggleDark() {
     var isDark = document.body.classList.toggle('dark');
-    localStorage.setItem('studyflow_dark', isDark ? '1' : '0');
+    SFStore.setItem('studyflow_dark', isDark ? '1' : '0');
     document.getElementById('dark-icon').innerHTML = isDark
       ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
       : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
   }
-  if (localStorage.getItem('studyflow_dark') === '1') {
+  if (SFStore.getItem('studyflow_dark') === '1') {
     document.body.classList.add('dark');
     var icon = document.getElementById('dark-icon');
     if (icon) icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
   }
 
   function showOnboarding() {
-    var seen = localStorage.getItem('studyflow_onboarded');
+    var seen = SFStore.getItem('studyflow_onboarded');
     if (!seen) {
       document.getElementById('onboarding-overlay').style.display = 'flex';
     }
@@ -781,14 +822,14 @@
   }
 
   function closeOnboard() {
-    localStorage.setItem('studyflow_onboarded', '1');
+    SFStore.setItem('studyflow_onboarded', '1');
     document.getElementById('onboarding-overlay').style.display = 'none';
   }
 
   showOnboarding();
 
   // Auth guard — redirect to login if not signed in
-  if (!localStorage.getItem('studyflow_user')) {
+  if (!SFStore.getItem('studyflow_user')) {
     window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html';
   }
 
@@ -1082,7 +1123,7 @@
     clearTimeout(autosaveTimer);
     autosaveTimer = setTimeout(function() {
       try {
-        localStorage.setItem('studyflow_notes_draft', val);
+        SFStore.setItem('studyflow_notes_draft', val);
         var ind = document.getElementById('autosave-indicator');
         if (ind) {
           ind.style.opacity = '1';
@@ -1095,7 +1136,7 @@
   // Restore draft on page load
   (function restoreNotesDraft() {
     try {
-      var draft = localStorage.getItem('studyflow_notes_draft');
+      var draft = SFStore.getItem('studyflow_notes_draft');
       if (draft) {
         var ta = document.getElementById('notes-input');
         if (ta && !ta.value) {
@@ -1184,7 +1225,7 @@
   }
 
   function generatePlan() {
-    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
     var userPlan = user.tier || 'free';
     if (!selectedGoal) { alert('Please select your goal!'); return; }
     if (!selectedDifficulty) { alert('Please select a difficulty!'); return; }
@@ -1195,7 +1236,7 @@
     if (!deadline) { alert('Please enter your exam date!'); return; }
 
     // Check plan count limits
-    var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+    var allPlans = JSON.parse(SFStore.getItem('studyflow_plans') || '[]');
 
     // Migration — add createdAt to old plans that don't have it
     var migrated = false;
@@ -1206,7 +1247,7 @@
       }
       return p;
     });
-    if (migrated) localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
+    if (migrated) SFStore.setItem('studyflow_plans', JSON.stringify(allPlans));
 
     var now = new Date();
     var thisMonth = now.getFullYear() + '-' + (now.getMonth() + 1);
@@ -1387,7 +1428,7 @@
   }
 
   function startGeneration(notes, numDays, deadline, userPlan) {
-    userPlan = userPlan || (JSON.parse(localStorage.getItem('studyflow_user') || '{}').tier || 'free');
+    userPlan = userPlan || (JSON.parse(SFStore.getItem('studyflow_user') || '{}').tier || 'free');
     document.querySelectorAll('.card').forEach(function(c) { c.classList.remove('active'); });
     var loadEl = document.getElementById('loading');
     loadEl.classList.add('active');
@@ -1462,7 +1503,7 @@
     function checkpointPlan() {
       if (!allDays.length) return;
       try {
-        localStorage.setItem('studyflow_plan_checkpoint', JSON.stringify({
+        SFStore.setItem('studyflow_plan_checkpoint', JSON.stringify({
           id: Date.now(), createdAt: new Date().toISOString(),
           subject: subject, goal: selectedGoal, deadline: deadline || '',
           subjectType: subjectType, days: allDays, _partial: allDays.length < numDays
@@ -1550,6 +1591,31 @@
           if (q.type === 'bigequation' && (!q.equation || q.equation.trim().length < 1)) {
             // Promote to fill if no equation
             q.type = 'fill';
+          }
+          if (q.type === 'fill') {
+            // A fill question must be a declarative sentence with one blank —
+            // not an instruction like "Order these events ______". The model
+            // ignores this rule often enough that it has to be enforced here.
+            var INSTRUCTION_START = /^\s*(order|arrange|sort|match|list|choose|select|identify|explain|describe|compare|contrast|solve|calculate|draw|label|rank|group|classify|put|place|write|name)\b/i;
+            if (INSTRUCTION_START.test(qText)) return false;
+            // Answer must be a term/short phrase, not a sentence.
+            var ans = String(q.answer || '').trim();
+            if (!ans || ans.length > 60 || ans.split(/\s+/).length > 8) return false;
+            // Normalize any blank marker variant to the canonical ________
+            var normalized = qText
+              .replace(/_{2,}/g, '________')
+              .replace(/\[\s*blank\s*\]/gi, '________')
+              .replace(/\.{3,}/g, '________');
+            // If no blank survived but the answer appears in the sentence,
+            // convert that occurrence into the blank.
+            if (normalized.indexOf('________') === -1) {
+              var re = new RegExp(ans.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+              if (re.test(normalized)) normalized = normalized.replace(re, '________');
+              else return false; // no blank and no way to make one
+            }
+            // Needs real sentence context around the blank.
+            if (normalized.replace(/________/g, '').trim().length < 15) return false;
+            q.question = normalized;
           }
           return true;
         }
@@ -1673,12 +1739,44 @@
         '8. misconceptions: exactly 2 items, each {believe,actually,why}. These are the specific WRONG things students most often think about this exact topic. "believe" = the mistaken idea in the student\'s own words. "actually" = the correct idea. "why" = the reason the mistake is so tempting. Be concrete and specific to "' + subject + '" - never generic study advice.\n' +
         '9. caseStudy: one real-world anchor {title,what,connection}. "title" = a specific named real event, experiment, structure, person, or application. "what" = 1-2 sentences on what actually happened. "connection" = how it directly demonstrates this exact topic. Must be a REAL documented example, not hypothetical.\n' +
         questionInstructions +
+        '\nFILL-IN-THE-BLANK RULES (type "fill") - these are strict:\n' +
+        '1. The question MUST be a complete declarative SENTENCE, never an instruction or command.\n' +
+        '2. It MUST contain exactly one blank written as ________ (8 underscores).\n' +
+        '3. The blank replaces ONE specific factual term, name, number, or date that appears inside the sentence.\n' +
+        '4. The "answer" field must be exactly the term the blank replaces - a word or short phrase, never a full sentence.\n' +
+        '5. NEVER begin a fill question with an instruction verb such as Order, Arrange, Sort, Match, List, Choose, Select, Identify, Explain, Describe, Compare or Solve. Those belong to other question types.\n' +
+        '6. Enough context must remain in the sentence that exactly one answer is correct.\n' +
+        'GOOD: {"type":"fill","question":"The Eurasian trade route network connecting Chang-an to the Mediterranean was called the ________.","answer":"Silk Road"}\n' +
+        'GOOD: {"type":"fill","question":"Water boils at ________ degrees Celsius at standard atmospheric pressure.","answer":"100"}\n' +
+        'BAD (instruction, not a sentence): {"type":"fill","question":"Order these events chronologically to show the Silk Road ________"}\n' +
+        'BAD (no context, ambiguous): {"type":"fill","question":"________ is important."}\n' +
+        'BAD (answer is a whole sentence): {"type":"fill","question":"Explain the Silk Road ________","answer":"It was a trade route that connected..."}\n' +
+        '\nVISUAL (field "visual") - pick the ONE diagram type that genuinely fits this topic and fill it with REAL content from the notes. Never invent filler labels. Use exactly one of:\n' +
+        '{"type":"timeline","items":["1914: war begins","1918: armistice signed"]}  <- dates/eras\n' +
+        '{"type":"flow","items":["Tariffs rise","Southern states protest","Secession"],"label":"Cause and effect"}  <- causal chains, processes\n' +
+        '{"type":"cycle","items":["Evaporation","Condensation","Precipitation"],"label":"Water cycle"}  <- repeating loops\n' +
+        '{"type":"parts","center":"Cell","items":["Nucleus","Mitochondria","Ribosome"]}  <- whole and its components\n' +
+        '{"type":"compare","left":{"title":"Mitosis","items":["2 cells","identical"]},"right":{"title":"Meiosis","items":["4 cells","varied"]}}  <- two things contrasted\n' +
+        '{"type":"map","places":["Nile River","Egypt","Mediterranean"],"label":"Trade routes"}  <- places/regions\n' +
+        '{"type":"web","nodes":["Elizabeth","Darcy","Jane"],"edges":[{"from":0,"to":1,"label":"rivalry"}]}  <- characters/relationships\n' +
+        '{"type":"arcGraph"}  <- narrative plot structure\n' +
+        '{"type":"bars","items":[{"label":"1990","value":42},{"label":"2020","value":78}]}  <- real numeric comparisons\n' +
+        '{"type":"equation","lines":["2x + 3 = 11","2x = 8","x = 4"],"note":"Solving step by step"}  <- worked math steps\n' +
+        '{"type":"geometry","points":[{"x":0,"y":0},{"x":4,"y":0},{"x":0,"y":3}],"vertexNames":["A","B","C"],"sideLabels":["3","4","5"],"angleLabels":["90"]}  <- triangles/polygons\n' +
+        '{"type":"arc","sweepDegrees":60,"radiusLabel":"r"}  <- circles, sectors, angles\n' +
+        '{"type":"atom","protons":6,"element":"Carbon"}  <- atomic structure\n' +
+        '{"type":"molecule","preset":"water"}  <- bonding (preset: water|co2|methane|nitrogen|oxygen|hcl)\n' +
+        '{"type":"cell","cellType":"animal"}  <- cell structure (animal|plant)\n' +
+        '{"type":"vector","vectors":[{"dx":150,"dy":-80,"label":"F","magnitude":"12N"}]}  <- forces/vectors\n' +
+        '{"type":"concept","center":"Homeostasis","items":["Feedback","Balance"]}  <- fallback for abstract ideas\n' +
+        'Labels must come from the actual notes. Keep each label under 20 characters.\n' +
         '\nFINAL CHECK: Before outputting, reread every question you wrote. Verify each one is about "' + subject + '". Replace anything that is not.\n' +
         '\nOUTPUT: ONLY valid compact JSON. No markdown. Replace ALL empty strings with REAL content.\n\n' +
         '{"title":"","microTopic":"","briefing":"","content":"","steps":[],"diagram":{"type":"none","label":""},"concepts":[],' +
         '"keyTerms":[{"term":"","definition":""},{"term":"","definition":""},{"term":"","definition":""},{"term":"","definition":""}],' +
         '"misconceptions":[{"believe":"","actually":"","why":""},{"believe":"","actually":"","why":""}],' +
         '"caseStudy":{"title":"","what":"","connection":""},' +
+        '"visual":{"type":"concept","center":"","items":[]},' +
         '"duration":30,"isFinal":' + isLast + ',"completed":false,"questions":[' + questionSchema + ']}';
 
       function tryFetch() {
@@ -1724,6 +1822,34 @@
             day.caseStudy = null;
           }
           day.duration   = day.duration   || 30;
+          // Validate the AI-supplied diagram spec. If the type is unknown or
+          // the spec carries no real content, drop it so the whiteboard falls
+          // back to inferring a visual from the lesson text instead of
+          // rendering an empty or wrong diagram.
+          (function () {
+            var VALID = { timeline:1, flow:1, cycle:1, parts:1, compare:1, map:1, web:1, arcGraph:1,
+                          bars:1, equation:1, geometry:1, arc:1, atom:1, molecule:1, cell:1,
+                          vector:1, concept:1, balance:1 };
+            var v = day.visual;
+            if (!v || typeof v !== 'object' || !VALID[v.type]) { day.visual = null; return; }
+            function nonEmpty(arr) {
+              return Array.isArray(arr) && arr.filter(function (x) {
+                if (x == null) return false;
+                if (typeof x === 'string') return x.trim().length > 0;
+                if (typeof x === 'object') return Object.keys(x).length > 0;
+                return true;
+              }).length;
+            }
+            var hasContent =
+              nonEmpty(v.items) >= 2 || nonEmpty(v.places) >= 2 || nonEmpty(v.nodes) >= 2 ||
+              nonEmpty(v.lines) >= 1 || nonEmpty(v.points) === 3 || nonEmpty(v.vectors) >= 1 ||
+              (v.type === 'arcGraph') || (v.type === 'cell' && v.cellType) ||
+              (v.type === 'molecule' && v.preset) || (v.type === 'atom' && v.protons) ||
+              (v.type === 'arc' && v.sweepDegrees) ||
+              (v.type === 'compare' && v.left && v.right) ||
+              (v.type === 'concept' && v.center && String(v.center).trim().length > 1);
+            if (!hasContent) day.visual = null;
+          })();
           day.isFinal    = !!isLast;
           day.completed  = false;
           sanitizeDayQuestions(day);
@@ -1794,17 +1920,17 @@
                 days: allDays
               };
               try {
-                var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+                var allPlans = JSON.parse(SFStore.getItem('studyflow_plans') || '[]');
                 allPlans.push(newPlan);
-                localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
-                localStorage.setItem('studyflow_active_plan', newPlan.id);
-                localStorage.setItem('studyflow_plan', JSON.stringify(newPlan));
-                localStorage.removeItem('studyflow_plan_checkpoint');
+                SFStore.setItem('studyflow_plans', JSON.stringify(allPlans));
+                SFStore.setItem('studyflow_active_plan', newPlan.id);
+                SFStore.setItem('studyflow_plan', JSON.stringify(newPlan));
+                SFStore.removeItem('studyflow_plan_checkpoint');
               } catch(e) { console.error('[save]', e); }
-              localStorage.removeItem('studyflow_seconds_left');
-              localStorage.removeItem('studyflow_timer_day');
-              localStorage.removeItem('studyflow_minutes');
-              localStorage.setItem('studyflow_current_day', '0');
+              SFStore.removeItem('studyflow_seconds_left');
+              SFStore.removeItem('studyflow_timer_day');
+              SFStore.removeItem('studyflow_minutes');
+              SFStore.setItem('studyflow_current_day', '0');
               cleanupBgHandlers();
               window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html';
             }
