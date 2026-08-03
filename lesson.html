@@ -15,6 +15,7 @@
     --green: #38bfa1; --red: #ef4444; --orange: #f59e0b;
     --sans: 'DM Sans', sans-serif; --serif: 'Instrument Serif', Georgia, serif;
   }
+  .logo-ink { fill: var(--ink); }
   body { font-family: var(--sans); color: var(--ink); background: var(--soft); min-height: 100vh; }
 
   @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
@@ -548,7 +549,7 @@
       <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
       <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="#f0f4ff"/>
       <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
-        <tspan fill="var(--ink)">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
+        <tspan class="logo-ink">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
       </text>
     </svg>
   </a>
@@ -2506,7 +2507,7 @@
         var x = 20 + i * dotSpacing;
         var label = item.length > 18 ? item.substring(0, 16) + '…' : item;
         return '<circle cx="' + x + '" cy="20" r="5" fill="#4a7cf6" stroke="#fff" stroke-width="1.5"/>' +
-          '<text x="' + x + '" y="35" font-size="6.5" fill="var(--muted)" text-anchor="middle">' + (i+1) + '</text>';
+          '<text x="' + x + '" y="35" font-size="6.5" fill="#6b7280" text-anchor="middle">' + (i+1) + '</text>';
       }).join('');
       var lineX2 = 20 + (count - 1) * dotSpacing;
       timelineHtml = '<div style="margin:.5rem 0 .85rem;overflow-x:auto;">' +
@@ -4270,11 +4271,46 @@
   var SEEN_KEY = 'studyflow_seen_topics';
 
   /* Diagram palette. Brand blue stays reserved for active/interactive chrome. */
-  var SERIES = ['#a78bfa', '#2dd4bf', '#f59e0b', '#fb7185', '#c084fc'];
-  var LINE   = 'var(--muted, #6b7280)';
-  var SOFT   = 'var(--border, #e8ecf4)';
-  var INK    = 'var(--ink, #1a1d2e)';
-  var BRAND  = 'var(--blue, #4a7cf6)';
+  /* Diagram palette.
+     IMPORTANT: these must hold REAL colour values, never "var(--x)" strings.
+     var() is substituted for CSS *declarations*, not for SVG presentation
+     attributes — `fill="var(--ink)"` is an invalid attribute value, so the
+     browser discards it and falls back to the initial value (fill: black,
+     stroke: none). That silently turned diagrams into black blobs with
+     missing outlines. We therefore resolve the tokens through
+     getComputedStyle at render time, which also keeps dark mode working
+     because the values are re-read on every card. */
+  var SERIES_LIGHT = ['#1F407A', '#4F5D75', '#C8842E', '#2E7D8F', '#7A4E73'];
+  var SERIES_DARK  = ['#7FA3E0', '#AEBACE', '#E8A851', '#5FC4D8', '#C79BC0'];
+  var SERIES = SERIES_LIGHT.slice();
+  var LINE, SOFT, INK, BRAND, SANS, PANEL;
+
+  function cssToken(name, fallback) {
+    try {
+      var el = global.document && (global.document.body || global.document.documentElement);
+      if (!el || !global.getComputedStyle) return fallback;
+      var v = global.getComputedStyle(el).getPropertyValue(name);
+      v = v && v.trim();
+      return v ? v : fallback;
+    } catch (e) { return fallback; }
+  }
+  function isDarkMode() {
+    try {
+      var b = global.document && global.document.body;
+      return !!(b && (' ' + (b.className || '') + ' ').indexOf(' dark ') !== -1);
+    } catch (e) { return false; }
+  }
+  function refreshPalette() {
+    LINE  = cssToken('--muted',  '#4F5D75');
+    SOFT  = cssToken('--border', '#e8ecf4');
+    INK   = cssToken('--ink',    '#1F407A');
+    BRAND = cssToken('--blue',   '#1F407A');
+    SANS  = cssToken('--sans',   "'DM Sans', sans-serif");
+    // Quoted so it can be injected directly as an attribute value.
+    PANEL = '"' + cssToken('--white', '#ffffff') + '"';
+    SERIES = (isDarkMode() ? SERIES_DARK : SERIES_LIGHT).slice();
+  }
+  refreshPalette();
 
   var SPATIAL_CONCEPTS = [
     'geometry', 'physics', 'vectors', 'forces', 'algorithm', 'cell-structure',
@@ -4500,7 +4536,12 @@
     flag:  '<path d="M5 21V4" stroke="{c}" stroke-width="1.8" stroke-linecap="round"/>' +
            '<path d="M5 4h13l-3.2 4L18 12H5" fill="{c}" fill-opacity=".22" stroke="{c}" stroke-width="1.6" stroke-linejoin="round"/>',
     person: '<circle cx="12" cy="8" r="3.4" fill="{c}" fill-opacity=".22" stroke="{c}" stroke-width="1.8"/>' +
-           '<path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" fill="{c}" fill-opacity=".18" stroke="{c}" stroke-width="1.8" stroke-linecap="round"/>'
+           '<path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" fill="{c}" fill-opacity=".18" stroke="{c}" stroke-width="1.8" stroke-linecap="round"/>',
+    column: '<path d="M4 21h16M6 21V7M10 21V7M14 21V7M18 21V7" stroke="{c}" stroke-width="1.7" stroke-linecap="round"/>' +
+           '<path d="M3 7h18l-2-3H5z" fill="{c}" fill-opacity=".22" stroke="{c}" stroke-width="1.6" stroke-linejoin="round"/>',
+    helix:  '<path d="M8 3c0 5 8 5 8 9s-8 4-8 9" fill="none" stroke="{c}" stroke-width="1.8" stroke-linecap="round"/>' +
+           '<path d="M16 3c0 5-8 5-8 9s8 4 8 9" fill="none" stroke="{c}" stroke-width="1.8" stroke-linecap="round"/>' +
+           '<path d="M9.5 6.5h5M9.5 17.5h5M8.6 12h6.8" stroke="{c}" stroke-width="1.3" stroke-linecap="round" opacity=".75"/>'
   };
   function iconGlyph(name, cx, cy, size, color, delayMs) {
     var raw = ICONS[name] || ICONS.bulb;
@@ -4630,7 +4671,7 @@
   function txt(x, y, s, opt) {
     opt = opt || {};
     return '<text x="' + r1(x) + '" y="' + r1(y) + '" text-anchor="' + (opt.anchor || 'middle') +
-      '" font-family="var(--sans, sans-serif)" font-size="' + (opt.size || 14) +
+      '" font-family="' + SANS + '" font-size="' + (opt.size || 14) +
       '" font-weight="' + (opt.weight || 600) + '" fill="' + (opt.fill || INK) + '"' +
       (opt.cls ? ' class="' + opt.cls + '"' : '') +
       (opt.delay !== undefined ? ' style="animation-delay:' + opt.delay + 'ms"' : '') +
@@ -4653,7 +4694,7 @@
       }
     }
     return '<text x="' + r1(x) + '" y="' + r1(y) + '" text-anchor="' + (opt.anchor || 'middle') +
-      '" font-family="var(--sans, sans-serif)" font-size="' + size +
+      '" font-family="' + SANS + '" font-size="' + size +
       '" font-weight="' + (opt.weight || 700) + '" fill="' + (opt.fill || INK) + '"' +
       (opt.cls ? ' class="' + opt.cls + '"' : '') +
       (opt.delay !== undefined ? ' style="animation-delay:' + opt.delay + 'ms"' : '') +
@@ -5030,7 +5071,7 @@
            '<rect x="' + r1(x) + '" y="' + (CY - 48) + '" width="' + r1(bw) + '" height="96" rx="18" fill="none" stroke="' +
            c + '" stroke-width="2.2"/></g>' +
            // Icon badge instead of a bare text-only card — anchored to the box's top edge.
-           '<circle cx="' + r1(x + bw / 2) + '" cy="' + (CY - 48) + '" r="16" fill="var(--white,#fff)" stroke="' +
+           '<circle cx="' + r1(x + bw / 2) + '" cy="' + (CY - 48) + '" r="16" fill=' + PANEL + ' stroke="' +
            c + '" stroke-width="2" class="sfwb-fade" style="animation-delay:' + d1(i) + 'ms"/>' +
            iconGlyph(pickIcon(items[i]), x + bw / 2, CY - 48, 18, c, PHASE.label + i * 70 + 40);
       o += wrapTxt(items[i], x + bw / 2, CY + 14, bw - 18, c, 14, i);
@@ -5090,7 +5131,7 @@
       o += '<g class="sfwb-fade" style="animation-delay:' + d2(i + 1) + 'ms">' +
            '<path d="M' + p.ax + ' ' + p.ay + ' L' + kx + ' ' + p.ly + '" stroke="' + c +
            '" stroke-width="2" stroke-linecap="round" opacity=".6"/>' +
-           '<circle cx="' + kx + '" cy="' + p.ly + '" r="12" fill="var(--white,#fff)" stroke="' + c + '" stroke-width="1.8"/></g>' +
+           '<circle cx="' + kx + '" cy="' + p.ly + '" r="12" fill=' + PANEL + ' stroke="' + c + '" stroke-width="1.8"/></g>' +
            iconGlyph(pickIcon(items[i]), kx, p.ly, 15, c, PHASE.label + i * 70 + 60) +
            txt(p.lx, p.ly + 4, trunc(items[i], 16),
              { size: 14.5, weight: 600, fill: LINE, anchor: p.left ? 'start' : 'end',
@@ -5217,7 +5258,7 @@
         '" stroke-width="2" stroke-dasharray="6 4" stroke-linecap="round" opacity=".5" class="sfwb-draw" style="animation-delay:' + d1(i) + 'ms"/>';
       if (c0.label) {
         var mid = clampSafe(vmid(a, b));
-        o += '<rect x="' + r1(mid.x - 32) + '" y="' + r1(mid.y - 9) + '" width="64" height="17" rx="5" fill="var(--white,#fff)" stroke="' +
+        o += '<rect x="' + r1(mid.x - 32) + '" y="' + r1(mid.y - 9) + '" width="64" height="17" rx="5" fill=' + PANEL + ' stroke="' +
           SOFT + '" stroke-width="1" class="sfwb-fade" style="animation-delay:' + d2(i) + 'ms"/>' +
           txt(mid.x, mid.y + 4, trunc(c0.label, 11), { size: 10.5, weight: 600, fill: LINE, cls: 'sfwb-fade', delay: d2(i) });
       }
@@ -5268,7 +5309,7 @@
         '" stroke-width="2" opacity=".55" class="sfwb-draw" style="animation-delay:' + d1(ei) + 'ms"/>';
       if (ed.label) {
         var mid = clampSafe(vmid(a, b));
-        o += '<rect x="' + r1(mid.x - 32) + '" y="' + r1(mid.y - 9) + '" width="64" height="17" rx="5" fill="var(--white,#fff)" stroke="' +
+        o += '<rect x="' + r1(mid.x - 32) + '" y="' + r1(mid.y - 9) + '" width="64" height="17" rx="5" fill=' + PANEL + ' stroke="' +
           SOFT + '" stroke-width="1" class="sfwb-fade" style="animation-delay:' + d2(ei) + 'ms"/>' +
           txt(mid.x, mid.y + 4, trunc(ed.label, 11), { size: 10, weight: 600, fill: LINE, cls: 'sfwb-fade', delay: d2(ei) });
       }
@@ -5364,7 +5405,7 @@
       var x = n === 1 ? CX : x0 + i * span;
       var up = (i % 2 === 0), c = SERIES[i % SERIES.length];
       o += '<g class="sfwb-fade" style="animation-delay:' + d1(i) + 'ms">' +
-           '<circle cx="' + r1(x) + '" cy="' + CY + '" r="9.5" fill="var(--white, #fff)" stroke="' + c +
+           '<circle cx="' + r1(x) + '" cy="' + CY + '" r="9.5" fill=' + PANEL + ' stroke="' + c +
            '" stroke-width="3.2"/>' +
            '<path d="M' + r1(x) + ' ' + (up ? CY - 11 : CY + 11) + ' L' + r1(x) + ' ' +
            (up ? CY - 48 : CY + 48) + '" stroke="' + c + '" stroke-width="1.9" opacity=".55"/></g>';
@@ -5461,7 +5502,7 @@
       o += '<g class="sfwb-fade" style="animation-delay:' + d2(i) + 'ms">' +
            '<path d="M' + fx + ' ' + fy + ' L' + r1(p.x) + ' ' + r1(p.y) + '" stroke="' + c +
            '" stroke-width="1.9" opacity=".45"/>' +
-           '<circle cx="' + r1(p.x) + '" cy="' + r1(p.y) + '" r="11" fill="var(--white,#fff)" stroke="' + c + '" stroke-width="1.7"/></g>' +
+           '<circle cx="' + r1(p.x) + '" cy="' + r1(p.y) + '" r="11" fill=' + PANEL + ' stroke="' + c + '" stroke-width="1.7"/></g>' +
            iconGlyph(pickIcon(items[i]), p.x, p.y, 14, c, PHASE.label + i * 70 + 40) +
            txt(lp.x, lp.y, trunc(items[i], 15),
              { size: 13.5, weight: 600, fill: LINE, cls: 'sfwb-fade', delay: d2(i) });
@@ -5609,12 +5650,33 @@
     return { svg: out, fixes: fixes, valid: fixes.length === 0 };
   }
 
+  /**
+   * Subject badge for the canvas corner. Driven primarily by the diagram type
+   * that was actually chosen (a reliable signal, since routing already
+   * classified the content), falling back to keyword matching on the text.
+   */
+  var TYPE_SUBJECT_ICON = {
+    geometry:'calc', arc:'calc', equation:'calc', balance:'calc', bars:'calc',
+    vector:'gear', atom:'atom', molecule:'flask', cell:'helix',
+    timeline:'column', map:'globe', web:'book', arcGraph:'book',
+    flow:'arrow', cycle:'gear', parts:'gear', compare:'book', concept:'bulb'
+  };
+  function pickSubjectIcon(specType, text) {
+    return TYPE_SUBJECT_ICON[specType] || pickIcon(text);
+  }
+
   function buildVisual(step, lesson) {
+    refreshPalette(); // re-read tokens so a dark-mode toggle is reflected
     var spec = step && step.visual;
     if (!spec || !spec.type || typeof V[spec.type] !== 'function') spec = inferVisual(step, lesson);
     var body;
     try { body = V[spec.type](spec); }
     catch (e) { body = V.concept({ center: trunc(step && step.title, 20) || 'Key idea', items: [] }); }
+    // Subject badge, top-left. Kept small and inset so it clears the region
+    // every generator actually draws into (verified against all 18).
+    var badgeIcon = pickSubjectIcon(spec.type, (step && (step.title + ' ' + step.body)) || '');
+    var badge = '<circle cx="38" cy="34" r="15" fill="' + BRAND + '" fill-opacity=".10" class="sfwb-fade"/>' +
+                iconGlyph(badgeIcon, 38, 34, 19, BRAND, 40);
     var svg = '<svg viewBox="0 0 ' + VB.w + ' ' + VB.h + '" xmlns="http://www.w3.org/2000/svg" ' +
       'role="img" aria-label="Diagram: ' + esc(spec.type) + '" class="sfwb-svg">' +
       '<defs>' +
@@ -5630,7 +5692,7 @@
       '<linearGradient id="sfwbGlass" x1="0%" y1="0%" x2="0%" y2="100%">' +
       '<stop offset="0%" stop-color="#ffffff" stop-opacity=".32"/>' +
       '<stop offset="100%" stop-color="#ffffff" stop-opacity="0"/></linearGradient>' +
-      '</defs>' + body + '</svg>';
+      '</defs>' + badge + body + '</svg>';
 
     // §4 — sanitize, then structurally validate/repair before DOM injection.
     // Any repair is logged rather than swallowed, so malformed generator output
@@ -5820,7 +5882,7 @@
     var css =
       '.sfwb-svg{width:100%;height:auto;display:block}' +
       '.sfwb-stage{padding:.25rem 0}' +
-      '.sfwb-vis{background:var(--soft,#f4f6fb);border:1.5px solid var(--border,#e8ecf4);' +
+      '.sfwb-vis{background:transparent;border:none;' +
         'border-radius:18px;padding:.9rem;margin-bottom:1.1rem}' +
       '.sfwb-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem}' +
       '.sfwb-num{flex-shrink:0;width:27px;height:27px;border-radius:50%;background:var(--blue,#4a7cf6);' +
