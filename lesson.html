@@ -1583,8 +1583,14 @@
         inp.addEventListener('keydown', function(e) {
           if (e.key === 'Enter') answerFillBtn();
         });
-        // Only focus if still on this card (element exists)
-        if (document.getElementById('fill-input')) inp.focus();
+        // Wait for the card's fadeUp entrance (400ms) to finish before
+        // pulling focus, and skip the browser's scroll-into-view — focusing
+        // mid-animation is what produced the "jump" when a new card appears.
+        setTimeout(function() {
+          var stillHere = document.getElementById('fill-input');
+          if (!stillHere) return;
+          try { stillHere.focus({ preventScroll: true }); } catch (e) { stillHere.focus(); }
+        }, 380);
       }
     }, 60);
 
@@ -1949,7 +1955,11 @@
       if (btn) { btn.dataset.answer = ans; btn.dataset.explanation = expl; btn.dataset.mustBeCorrect = '1'; }
       if (inp) {
         inp.addEventListener('keydown', function(e){ if(e.key==='Enter') answerFillBtn(); });
-        inp.focus();
+        setTimeout(function() {
+          var stillHere = document.getElementById('fill-input');
+          if (!stillHere) return;
+          try { stillHere.focus({ preventScroll: true }); } catch (e) { stillHere.focus(); }
+        }, 380);
       }
       // Run any topic-specific post-render (e.g. fraction SVG animations)
       if (topic.postRender) topic.postRender();
@@ -2238,7 +2248,14 @@
       var btn = document.getElementById('fill-btn');
       var inp = document.getElementById('fill-input');
       if (btn) { btn.dataset.answer = q.answer || ''; btn.dataset.explanation = q.explanation || ''; btn.dataset.mustBeCorrect = '1'; }
-      if (inp) { inp.addEventListener('keydown', function(e){ if(e.key==='Enter') answerFillBtn(); }); inp.focus(); }
+      if (inp) {
+        inp.addEventListener('keydown', function(e){ if(e.key==='Enter') answerFillBtn(); });
+        setTimeout(function() {
+          var stillHere = document.getElementById('fill-input');
+          if (!stillHere) return;
+          try { stillHere.focus({ preventScroll: true }); } catch (e) { stillHere.focus(); }
+        }, 380);
+      }
     }, 60);
     return card;
   }
@@ -2971,11 +2988,21 @@
     }
 
     // 2. Numeric match — handles "4", "4.0", "= 4", "x=4", "4 mph", etc.
+    //    GUARDED: only extracts a number when the typed text is actually a
+    //    short numeric-style answer. Without this guard, ANY sentence that
+    //    happens to contain the right digits anywhere ("the answer is NOT
+    //    12 miles, I don't know") was being marked correct, because every
+    //    non-digit character gets stripped before comparing.
     if (!isCorrect) {
-      var valNum = parseFloat(val.replace(/[^0-9.\-]/g, ''));
-      var corNum = parseFloat(correct.replace(/[^0-9.\-]/g, ''));
-      if (!isNaN(valNum) && !isNaN(corNum) && Math.abs(valNum - corNum) < 0.001) {
-        isCorrect = true;
+      var valDigits = val.replace(/[^0-9.\-]/g, '');
+      var valIsShortNumeric = val.trim().length <= 22 &&
+        valDigits.replace(/[.\-]/g, '').length >= Math.max(1, val.replace(/\s/g, '').length * 0.3);
+      if (valIsShortNumeric) {
+        var valNum = parseFloat(valDigits);
+        var corNum = parseFloat(correct.replace(/[^0-9.\-]/g, ''));
+        if (!isNaN(valNum) && !isNaN(corNum) && Math.abs(valNum - corNum) < 0.001) {
+          isCorrect = true;
+        }
       }
     }
 
@@ -2986,11 +3013,19 @@
       }
     }
 
-    // 4. All significant words match
+    // 4. All significant words match — guarded against two false-positive
+    //    shapes discovered in testing: (a) a rambling wrong answer that just
+    //    happens to contain every correct word buried inside it, and
+    //    (b) a typed answer that explicitly NEGATES the correct answer
+    //    ("the answer is NOT 12 miles") but still contains all its words.
     if (!isCorrect) {
       var valWords = valN.split(' ').filter(function(w){ return w.length > 1; });
       var corWords = corN.split(' ').filter(function(w){ return w.length > 1; });
-      if (valWords.length > 0 && corWords.length > 0 && valWords.length >= corWords.length) {
+      var NEG_RE = /\b(not|isnt|arent|wasnt|werent|never|wrong|incorrect|none|no)\b/;
+      var hasExtraNegation = NEG_RE.test(valN) && !NEG_RE.test(corN);
+      var lengthOk = valWords.length <= Math.max(corWords.length + 4, corWords.length * 2);
+      if (valWords.length > 0 && corWords.length > 0 && valWords.length >= corWords.length &&
+          lengthOk && !hasExtraNegation) {
         var allMatch = corWords.every(function(w){ return valWords.includes(w); });
         if (allMatch) isCorrect = true;
       }
@@ -3010,8 +3045,16 @@
         }
         input.style.borderColor = 'var(--red)';
         input.style.background  = '#fee2e2';
-        input.focus();
-        input.select();
+        // Defer the refocus one tick so it happens AFTER the feedback box's
+        // height change has been laid out, and skip the browser's automatic
+        // scroll-into-view on focus. Refocusing immediately, mid-reflow, is
+        // what produces the visible "jump" on phones — the browser scrolls
+        // once for the layout change and again to keep the input visible.
+        setTimeout(function () {
+          if (document.getElementById('fill-input') !== input) return; // card moved on
+          try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
+          input.select();
+        }, 60);
         flashCard(false);
         var nbR = document.getElementById('btn-next');
         if (nbR) nbR.disabled = true;
