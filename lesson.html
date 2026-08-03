@@ -668,6 +668,47 @@
 </div>
 
 <script>
+
+  /* ── PER-ACCOUNT STORAGE NAMESPACE ─────────────────────────────────────
+     Every StudyFlow key used to be global to the browser, so two accounts
+     signing in on the same computer saw each other's plans, streaks, timers
+     and progress. SFStore transparently prefixes user-scoped keys with the
+     signed-in account's email. Device-level preferences (dark mode, sidebar,
+     onboarding) and shared class data stay global on purpose. */
+  var SFStore = (function () {
+    var GLOBAL_KEYS = {
+      studyflow_user: 1, studyflow_dark: 1, studyflow_onboarded: 1,
+      studyflow_sidebar_collapsed: 1, studyflow_notif_enabled: 1,
+      studyflow_notif_dismissed: 1
+    };
+    function currentUid() {
+      try {
+        var raw = window.localStorage.getItem('studyflow_user');
+        if (!raw) return '';
+        var u = JSON.parse(raw);
+        return (u && u.email) ? String(u.email).toLowerCase().trim() : '';
+      } catch (e) { return ''; }
+    }
+    function nsKey(key) {
+      if (GLOBAL_KEYS[key]) return key;
+      if (String(key).indexOf('studyflow_class_') === 0) return key; // shared with teacher
+      var id = currentUid();
+      return id ? ('sfu:' + id + '|' + key) : key;
+    }
+    return {
+      _ns: nsKey,
+      getItem: function (key) {
+        try { return window.localStorage.getItem(nsKey(key)); } catch (e) { return null; }
+      },
+      setItem: function (key, val) {
+        try { window.localStorage.setItem(nsKey(key), val); } catch (e) {}
+      },
+      removeItem: function (key) {
+        try { window.localStorage.removeItem(nsKey(key)); } catch (e) {}
+      }
+    };
+  })();
+
   var plan, day, dayIndex, totalMinutes;
   var cardIndex = 0;
   var correctCount = 0;
@@ -700,7 +741,7 @@
 
   function getSM2Data(q) {
     var key = 'studyflow_sm2_' + getQuestionHash(q);
-    return JSON.parse(localStorage.getItem(key) || '{"easiness":2.5,"interval":1,"repetitions":0}');
+    return JSON.parse(SFStore.getItem(key) || '{"easiness":2.5,"interval":1,"repetitions":0}');
   }
 
   function updateSM2(q, isCorrect) {
@@ -720,7 +761,7 @@
 
     data.easiness = Math.max(1.3, data.easiness + 0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02));
     data.nextReview = new Date(Date.now() + data.interval * 86400000).toISOString();
-    localStorage.setItem(key, JSON.stringify(data));
+    SFStore.setItem(key, JSON.stringify(data));
     return data;
   }
 
@@ -736,15 +777,15 @@
   /* ── INIT ── */
   function init() {
     // Auth guard
-    if (!localStorage.getItem('studyflow_user')) {
+    if (!SFStore.getItem('studyflow_user')) {
       window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html';
       return;
     }
     var sessionStartTime = Date.now();
-    var saved = localStorage.getItem('studyflow_plan');
-    dayIndex = parseInt(localStorage.getItem('studyflow_current_day') || '0');
-    totalMinutes = parseInt(localStorage.getItem('studyflow_minutes') || '30');
-    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var saved = SFStore.getItem('studyflow_plan');
+    dayIndex = parseInt(SFStore.getItem('studyflow_current_day') || '0');
+    totalMinutes = parseInt(SFStore.getItem('studyflow_minutes') || '30');
+    var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
     userPlan = user.tier || 'free';
 
     if (!saved) { window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html'; return; }
@@ -768,8 +809,8 @@
     day = JSON.parse(JSON.stringify(day)); // deep copy
 
     // Restore timer
-    var savedSeconds = localStorage.getItem('studyflow_seconds_left');
-    var savedDay = localStorage.getItem('studyflow_timer_day');
+    var savedSeconds = SFStore.getItem('studyflow_seconds_left');
+    var savedDay = SFStore.getItem('studyflow_timer_day');
     if (savedSeconds && savedDay === String(dayIndex) && parseInt(savedSeconds) > 0) {
       secondsLeft = parseInt(savedSeconds);
     } else {
@@ -786,6 +827,13 @@
 
   /* ── QUEUE ── */
   function buildQueue() {
+    // If generation stripped every question, rebuild from the day's own
+    // content BEFORE the queue is assembled, so the session has real
+    // practice cards instead of ending right after the lesson card.
+    if (!day.questions || !day.questions.length) {
+      var seeded = buildFallbackQuestions(day);
+      if (seeded.length) day.questions = seeded;
+    }
     var questions = day.questions || [];
     // Only mcq/truefalse can render correctly through the generic question card —
     // every other type has its own dedicated renderer and must be excluded here.
@@ -806,7 +854,7 @@
     if (dayIndex > 0) {
       var prevDay = plan.days[dayIndex - 1];
       var missedKey = 'studyflow_missed_day_' + (dayIndex - 1);
-      var prevMissed = JSON.parse(localStorage.getItem(missedKey) || '[]');
+      var prevMissed = JSON.parse(SFStore.getItem(missedKey) || '[]');
       if (prevMissed.length > 0) {
         sessionCards.push({ type: 'review-intro', count: Math.min(prevMissed.length, 3) });
         prevMissed.slice(0, 3).forEach(function(q) {
@@ -825,7 +873,7 @@
       var allPrevMissed = [];
       for (var d = 0; d < dayIndex; d++) {
         var mk = 'studyflow_missed_day_' + d;
-        var dm = JSON.parse(localStorage.getItem(mk) || '[]');
+        var dm = JSON.parse(SFStore.getItem(mk) || '[]');
         allPrevMissed = allPrevMissed.concat(dm);
       }
       if (allPrevMissed.length > 0) {
@@ -1047,11 +1095,88 @@
   var generatingNew = false;
   var questionBuffer = [];
 
+  /**
+   * Last-resort question builder. If a day's questions were all stripped
+   * during generation (malformed AI output), the session used to jump
+   * straight to "You've finished all the cards" after the lesson card.
+   * Instead, synthesize real practice from whatever content the day DOES
+   * have — key terms, concepts, then sentences from the lesson body.
+   */
+  function buildFallbackQuestions(d) {
+    var out = [];
+    (d.keyTerms || []).forEach(function (t) {
+      if (!t || !t.term || !t.definition) return;
+      out.push({
+        type: 'fill',
+        question: 'The term that means "' + String(t.definition).replace(/^[A-Z]/, function(c){return c.toLowerCase();}) + '" is ________.',
+        answer: t.term,
+        hint: 'It starts with "' + String(t.term).charAt(0) + '".',
+        explanation: t.term + ' — ' + t.definition,
+        difficulty: 'Easy'
+      });
+    });
+    (d.concepts || []).forEach(function (c) {
+      if (!c || !c.name || !c.definition) return;
+      out.push({
+        type: 'fill',
+        question: 'The concept described as "' + String(c.definition).slice(0, 90) + '" is called ________.',
+        answer: c.name,
+        hint: c.why ? String(c.why).slice(0, 80) : 'Review the core concepts above.',
+        explanation: c.name + ': ' + c.definition,
+        difficulty: 'Medium'
+      });
+      if (c.misconception) {
+        out.push({
+          type: 'truefalse',
+          question: String(c.misconception).slice(0, 160),
+          correct: 'False',
+          hint: 'This is a common misconception — read it carefully.',
+          explanation: 'That is a common mistake. Correctly: ' + c.definition,
+          difficulty: 'Medium'
+        });
+      }
+    });
+    (d.misconceptions || []).forEach(function (m) {
+      if (!m || !m.believe || !m.actually) return;
+      out.push({
+        type: 'truefalse',
+        question: String(m.believe).slice(0, 160),
+        correct: 'False',
+        hint: m.why ? String(m.why).slice(0, 90) : 'Think about what is actually true here.',
+        explanation: 'Actually: ' + m.actually,
+        difficulty: 'Medium'
+      });
+    });
+    return out;
+  }
+
   function getNextCard() {
     if (cardIndex < sessionCards.length) return sessionCards[cardIndex];
 
     var questions = day.questions || [];
-    if (!questions.length) return { type: 'done' };
+    if (!questions.length) {
+      // Try to rebuild from the day's own content before giving up.
+      var rebuilt = buildFallbackQuestions(day);
+      if (rebuilt.length) {
+        day.questions = rebuilt;
+        questions = rebuilt;
+        if (!generatingNew) generateMoreQuestions();
+      } else {
+        // Genuinely nothing to practice with — ask the API once, and only
+        // finish the session if that also comes back empty.
+        if (!generatingNew && !window._fallbackRequested) {
+          window._fallbackRequested = true;
+          generateMoreQuestions();
+          return { type: 'generating' };
+        }
+        if (questionBuffer.length > 0) {
+          day.questions = questionBuffer.splice(0, questionBuffer.length);
+          questions = day.questions;
+        } else {
+          return { type: 'done' };
+        }
+      }
+    }
 
     // Writing prompt every ~5th card after first pass
     if (cardIndex % 5 === 0 && cardIndex > sessionCards.length) {
@@ -1394,6 +1519,16 @@
       html = buildCard('Session Complete', 'Great work today!', false,
         '<p class="content-text" style="text-align:center;">You\'ve finished all the cards for this session. Tap below to see your results.</p>',
         '', 'See results →', false);
+    }
+    else if (card.type === 'generating') {
+      html = buildCard('Loading', 'Preparing your practice', false,
+        '<p class="content-text" style="text-align:center;">Building questions from today\'s material — this takes a few seconds.</p>' +
+        '<div style="display:flex;justify-content:center;margin-top:1rem;"><div class="mini-spinner"></div></div>',
+        '', 'Continue →', false);
+      // Auto-advance once the buffer fills, so the student isn't stuck here.
+      setTimeout(function () {
+        if (questionBuffer.length > 0 || (day.questions && day.questions.length)) showNextCard();
+      }, 2600);
     }
     else { endSession(); return; }
 
@@ -2728,7 +2863,7 @@
   // Helper: record answer into study history (used by all new types)
   function recordAnswer(isCorrect) {
     try {
-      var history = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
+      var history = JSON.parse(SFStore.getItem('studyflow_study_history') || '[]');
       // Lightweight tracking — full session save happens in endSession
     } catch(e) {}
   }
@@ -3136,14 +3271,14 @@
       // Save missed questions for next day's review
       if (wrongQ) {
         var missedKey = 'studyflow_missed_day_' + dayIndex;
-        var missed = JSON.parse(localStorage.getItem(missedKey) || '[]');
+        var missed = JSON.parse(SFStore.getItem(missedKey) || '[]');
         // Only save if not already saved and not a review card
         var alreadySaved = missed.find(function(m){ return m.question === wrongQ.question; });
         if (!alreadySaved) {
           missed.push(wrongQ);
           // Keep only hardest 5
           if (missed.length > 5) missed = missed.slice(-5);
-          localStorage.setItem(missedKey, JSON.stringify(missed));
+          SFStore.setItem(missedKey, JSON.stringify(missed));
         }
       }
 
@@ -3267,9 +3402,9 @@
 
       // Save Feynman score for analytics
       if (score) {
-        var feynmanScores = JSON.parse(localStorage.getItem('studyflow_feynman_scores') || '[]');
+        var feynmanScores = JSON.parse(SFStore.getItem('studyflow_feynman_scores') || '[]');
         feynmanScores.push({ question: question, score: score, date: new Date().toISOString() });
-        localStorage.setItem('studyflow_feynman_scores', JSON.stringify(feynmanScores));
+        SFStore.setItem('studyflow_feynman_scores', JSON.stringify(feynmanScores));
       }
     })
     .catch(function() {
@@ -3386,11 +3521,11 @@
   function startTimer() {
     var bar = document.getElementById('time-bar');
     var label = document.getElementById('time-label');
-    localStorage.setItem('studyflow_timer_day', dayIndex);
+    SFStore.setItem('studyflow_timer_day', dayIndex);
     timerInterval = setInterval(function() {
       if (!sessionActive) return;
       secondsLeft--;
-      localStorage.setItem('studyflow_seconds_left', secondsLeft);
+      SFStore.setItem('studyflow_seconds_left', secondsLeft);
       var pct = (secondsLeft / totalSeconds) * 100;
       bar.style.width = pct + '%';
       bar.className = 'time-bar-fill' + (pct < 10 ? ' critical' : (pct < 25 ? ' warning' : ''));
@@ -3399,8 +3534,8 @@
       if (secondsLeft <= 0) {
         clearInterval(timerInterval);
         sessionActive = false;
-        localStorage.removeItem('studyflow_seconds_left');
-        localStorage.removeItem('studyflow_timer_day');
+        SFStore.removeItem('studyflow_seconds_left');
+        SFStore.removeItem('studyflow_timer_day');
         endSession();
       }
     }, 1000);
@@ -3485,8 +3620,8 @@
   function endSession() {
     clearInterval(timerInterval);
     sessionActive = false;
-    localStorage.removeItem('studyflow_seconds_left');
-    localStorage.removeItem('studyflow_timer_day');
+    SFStore.removeItem('studyflow_seconds_left');
+    SFStore.removeItem('studyflow_timer_day');
 
     document.getElementById('session-card').style.display = 'none';
     document.querySelector('.end-btn').style.display = 'none';
@@ -3500,10 +3635,10 @@
     var timeStudied = Math.max(1, Math.round((totalSeconds - secondsLeft) / 60));
 
     // Calculate streak for end screen
-    var studyHistory = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
+    var studyHistory = JSON.parse(SFStore.getItem('studyflow_study_history') || '[]');
     var today = new Date().toDateString();
     if (!studyHistory.includes(today)) studyHistory.push(today);
-    localStorage.setItem('studyflow_study_history', JSON.stringify(studyHistory));
+    SFStore.setItem('studyflow_study_history', JSON.stringify(studyHistory));
     studyHistory.sort(function(a,b){ return new Date(b) - new Date(a); });
     var streak = 0;
     for (var si = 0; si < studyHistory.length; si++) {
@@ -3585,16 +3720,16 @@
     document.getElementById('results-wrap').classList.add('show');
     plan.days[dayIndex].completed = true;
     plan.days[dayIndex].score = pct;
-    localStorage.setItem('studyflow_plan', JSON.stringify(plan));
+    SFStore.setItem('studyflow_plan', JSON.stringify(plan));
 
     // TEACHER DATA SYNC — update student stats in Firestore for cross-device access
-    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
     if (user.classCode) {
       var classKey = 'studyflow_class_' + user.classCode;
-      var classData = JSON.parse(localStorage.getItem(classKey) || '{"students":[]}');
+      var classData = JSON.parse(SFStore.getItem(classKey) || '{"students":[]}');
       var student = classData.students.find(function(s){ return s.email === user.email; });
       if (student) {
-        var history = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
+        var history = JSON.parse(SFStore.getItem('studyflow_study_history') || '[]');
         // Count consecutive days ending today — NOT history.length which counts all-time
         var sortedHistory = history.slice().sort(function(a,b){ return new Date(b) - new Date(a); });
         var streak = 0;
@@ -3612,7 +3747,7 @@
         student.timeStudied = (student.timeStudied || 0) + Math.round((Date.now() - sessionStartTime) / 1000);
         student.subject = plan.subject || '';
         student.lastActive = new Date().toDateString();
-        localStorage.setItem(classKey, JSON.stringify(classData));
+        SFStore.setItem(classKey, JSON.stringify(classData));
 
         // Sync to Firestore for cross-device access
         fetch('https://studyflow-ten-vert.vercel.app/api/class', {
@@ -3631,9 +3766,9 @@
     // TIER 3: Save study time for parent sleep report
     var now = new Date();
     var timeStr = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-    var studyTimes = JSON.parse(localStorage.getItem('studyflow_study_times') || '{}');
+    var studyTimes = JSON.parse(SFStore.getItem('studyflow_study_times') || '{}');
     studyTimes[now.toDateString()] = timeStr;
-    localStorage.setItem('studyflow_study_times', JSON.stringify(studyTimes));
+    SFStore.setItem('studyflow_study_times', JSON.stringify(studyTimes));
   }
 
   function buildWrongItem(item) {
@@ -3654,14 +3789,14 @@
     // Mark current day as completed so dashboard advances to the next day
     plan.days[dayIndex].completed = true;
     if (!day.isFinal && dayIndex < plan.days.length - 1) {
-      localStorage.setItem('studyflow_current_day', dayIndex + 1);
+      SFStore.setItem('studyflow_current_day', dayIndex + 1);
     }
     // Save updated plan back so completed flag persists
-    localStorage.setItem('studyflow_plan', JSON.stringify(plan));
+    SFStore.setItem('studyflow_plan', JSON.stringify(plan));
     // Also update in the plans array
-    var allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+    var allPlans = JSON.parse(SFStore.getItem('studyflow_plans') || '[]');
     var idx = allPlans.findIndex(function(p){ return String(p.id) === String(plan.id); });
-    if (idx >= 0) { allPlans[idx] = plan; localStorage.setItem('studyflow_plans', JSON.stringify(allPlans)); }
+    if (idx >= 0) { allPlans[idx] = plan; SFStore.setItem('studyflow_plans', JSON.stringify(allPlans)); }
     window.location.href = 'dashboard.html';
   }
 
@@ -4184,10 +4319,10 @@
 
   function toggleDark() {
     var isDark = document.body.classList.toggle('dark');
-    localStorage.setItem('studyflow_dark', isDark ? '1' : '0');
+    SFStore.setItem('studyflow_dark', isDark ? '1' : '0');
     document.getElementById('dark-icon').innerHTML = isDark ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>' : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
   }
-  if (localStorage.getItem('studyflow_dark') === '1') {
+  if (SFStore.getItem('studyflow_dark') === '1') {
     document.body.classList.add('dark');
     var di = document.getElementById('dark-icon');
     if (di) di.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
@@ -4196,7 +4331,7 @@
   
 
   // ── KEYBOARD SHORTCUTS ──
-  var flaggedQuestions = JSON.parse(localStorage.getItem('studyflow_flagged') || '[]');
+  var flaggedQuestions = JSON.parse(SFStore.getItem('studyflow_flagged') || '[]');
 
   document.addEventListener('keydown', function(e) {
     // Don't intercept when typing in inputs
@@ -4242,7 +4377,7 @@
     } else {
       flaggedQuestions.push(questionText);
     }
-    localStorage.setItem('studyflow_flagged', JSON.stringify(flaggedQuestions));
+    SFStore.setItem('studyflow_flagged', JSON.stringify(flaggedQuestions));
     // Update button state
     var btn = document.querySelector('.btn-flag');
     if (btn) {
@@ -5771,7 +5906,7 @@
   /* ── topic-seen persistence (matches the studyflow_* key convention) ────── */
   function readSeen() {
     try {
-      var raw = global.localStorage ? global.localStorage.getItem(SEEN_KEY) : null;
+      var raw = global.localStorage ? global.SFStore.getItem(SEEN_KEY) : null;
       var o = raw ? JSON.parse(raw) : {};
       return (o && typeof o === 'object') ? o : {};
     } catch (e) { return {}; }
@@ -5785,7 +5920,7 @@
     try {
       var o = readSeen();
       o[String(key)] = 1;
-      if (global.localStorage) global.localStorage.setItem(SEEN_KEY, JSON.stringify(o));
+      if (global.localStorage) global.SFStore.setItem(SEEN_KEY, JSON.stringify(o));
     } catch (e) { /* storage full or blocked — non-fatal */ }
   }
 
@@ -5867,6 +6002,17 @@
         why:    '',
         visual: { type: 'concept', center: trunc(day.title || 'Key idea', 20), items: [] }
       });
+    }
+    /* The plan generator now emits a real diagram spec per day (day.visual)
+       built from the actual lesson content. Attach it to the first step that
+       doesn't already carry its own, so the whiteboard renders generated data
+       rather than a diagram inferred from keyword matching. */
+    if (day.visual && typeof day.visual === 'object' && day.visual.type) {
+      var attached = false;
+      for (var vi = 0; vi < steps.length && !attached; vi++) {
+        if (!steps[vi].visual) { steps[vi].visual = day.visual; attached = true; }
+      }
+      if (!attached && steps.length) steps[0].visual = day.visual;
     }
     return {
       title:    str(day.title) || 'Today\'s concept',
