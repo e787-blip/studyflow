@@ -842,6 +842,47 @@
 </div>
 
 <script>
+
+  /* ── PER-ACCOUNT STORAGE NAMESPACE ─────────────────────────────────────
+     Every StudyFlow key used to be global to the browser, so two accounts
+     signing in on the same computer saw each other's plans, streaks, timers
+     and progress. SFStore transparently prefixes user-scoped keys with the
+     signed-in account's email. Device-level preferences (dark mode, sidebar,
+     onboarding) and shared class data stay global on purpose. */
+  var SFStore = (function () {
+    var GLOBAL_KEYS = {
+      studyflow_user: 1, studyflow_dark: 1, studyflow_onboarded: 1,
+      studyflow_sidebar_collapsed: 1, studyflow_notif_enabled: 1,
+      studyflow_notif_dismissed: 1
+    };
+    function currentUid() {
+      try {
+        var raw = window.localStorage.getItem('studyflow_user');
+        if (!raw) return '';
+        var u = JSON.parse(raw);
+        return (u && u.email) ? String(u.email).toLowerCase().trim() : '';
+      } catch (e) { return ''; }
+    }
+    function nsKey(key) {
+      if (GLOBAL_KEYS[key]) return key;
+      if (String(key).indexOf('studyflow_class_') === 0) return key; // shared with teacher
+      var id = currentUid();
+      return id ? ('sfu:' + id + '|' + key) : key;
+    }
+    return {
+      _ns: nsKey,
+      getItem: function (key) {
+        try { return window.localStorage.getItem(nsKey(key)); } catch (e) { return null; }
+      },
+      setItem: function (key, val) {
+        try { window.localStorage.setItem(nsKey(key), val); } catch (e) {}
+      },
+      removeItem: function (key) {
+        try { window.localStorage.removeItem(nsKey(key)); } catch (e) {}
+      }
+    };
+  })();
+
   var plan = null;
   var allPlans = [];
   var currentDayIndex = 0;
@@ -855,7 +896,7 @@
 
   function loadPlan() {
     // Auth guard
-    if (!localStorage.getItem('studyflow_user')) {
+    if (!SFStore.getItem('studyflow_user')) {
       window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html';
       return;
     }
@@ -864,9 +905,9 @@
     var params = new URLSearchParams(window.location.search);
     var upgraded = params.get('upgraded');
     if (upgraded) {
-      var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+      var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
       user.tier = upgraded;
-      localStorage.setItem('studyflow_user', JSON.stringify(user));
+      SFStore.setItem('studyflow_user', JSON.stringify(user));
       window.history.replaceState({}, '', window.location.pathname);
       // Show welcome message
       var banner = document.createElement('div');
@@ -877,18 +918,18 @@
     }
 
     // Load all plans
-    allPlans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
+    allPlans = JSON.parse(SFStore.getItem('studyflow_plans') || '[]');
 
     // Migrate old single plan if exists
-    var oldPlan = localStorage.getItem('studyflow_plan');
+    var oldPlan = SFStore.getItem('studyflow_plan');
     if (oldPlan && allPlans.length === 0) {
       try {
         var p = JSON.parse(oldPlan);
         p.id = p.id || Date.now();
         p.createdAt = p.createdAt || new Date().toISOString();
         allPlans.push(p);
-        localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
-        localStorage.setItem('studyflow_active_plan', p.id);
+        SFStore.setItem('studyflow_plans', JSON.stringify(allPlans));
+        SFStore.setItem('studyflow_active_plan', p.id);
       } catch(e) {}
     }
 
@@ -898,9 +939,9 @@
     }
 
     // Load active plan
-    var activeId = localStorage.getItem('studyflow_active_plan');
+    var activeId = SFStore.getItem('studyflow_active_plan');
     plan = allPlans.find(function(p){ return String(p.id) === String(activeId); }) || allPlans[allPlans.length - 1];
-    localStorage.setItem('studyflow_plan', JSON.stringify(plan));
+    SFStore.setItem('studyflow_plan', JSON.stringify(plan));
 
     document.getElementById('plan-view').style.display = 'block';
     renderDashboard();
@@ -909,12 +950,12 @@
   function switchPlan(id) {
     plan = allPlans.find(function(p){ return String(p.id) === String(id); });
     if (!plan) return;
-    localStorage.setItem('studyflow_active_plan', plan.id);
-    localStorage.setItem('studyflow_plan', JSON.stringify(plan));
-    localStorage.setItem('studyflow_current_day', '0');
-    localStorage.removeItem('studyflow_seconds_left');
-    localStorage.removeItem('studyflow_timer_day');
-    localStorage.removeItem('studyflow_minutes');
+    SFStore.setItem('studyflow_active_plan', plan.id);
+    SFStore.setItem('studyflow_plan', JSON.stringify(plan));
+    SFStore.setItem('studyflow_current_day', '0');
+    SFStore.removeItem('studyflow_seconds_left');
+    SFStore.removeItem('studyflow_timer_day');
+    SFStore.removeItem('studyflow_minutes');
     currentDayIndex = 0;
     renderDashboard();
   }
@@ -936,16 +977,16 @@
   function confirmDelete() {
     if (!planToDelete) return;
     allPlans = allPlans.filter(function(p){ return String(p.id) !== String(planToDelete); });
-    localStorage.setItem('studyflow_plans', JSON.stringify(allPlans));
+    SFStore.setItem('studyflow_plans', JSON.stringify(allPlans));
     closeDeleteModal();
     if (allPlans.length === 0) {
-      localStorage.removeItem('studyflow_plan');
-      localStorage.removeItem('studyflow_active_plan');
+      SFStore.removeItem('studyflow_plan');
+      SFStore.removeItem('studyflow_active_plan');
       window.location.reload();
     } else {
       plan = allPlans[allPlans.length - 1];
-      localStorage.setItem('studyflow_active_plan', plan.id);
-      localStorage.setItem('studyflow_plan', JSON.stringify(plan));
+      SFStore.setItem('studyflow_active_plan', plan.id);
+      SFStore.setItem('studyflow_plan', JSON.stringify(plan));
       renderDashboard();
     }
   }
@@ -968,14 +1009,14 @@
     var btn = document.getElementById('sidebar-toggle-btn');
     if (!sidebar) return;
     var isCollapsed = sidebar.classList.toggle('collapsed');
-    try { localStorage.setItem('studyflow_sidebar_collapsed', isCollapsed ? '1' : '0'); } catch(e) {}
+    try { SFStore.setItem('studyflow_sidebar_collapsed', isCollapsed ? '1' : '0'); } catch(e) {}
     if (btn) btn.title = isCollapsed ? 'Expand sidebar' : 'Collapse sidebar';
   }
 
   // Restore sidebar state on load
   (function() {
     try {
-      if (localStorage.getItem('studyflow_sidebar_collapsed') === '1') {
+      if (SFStore.getItem('studyflow_sidebar_collapsed') === '1') {
         var sidebar = document.getElementById('sidebar');
         var btn = document.getElementById('sidebar-toggle-btn');
         if (sidebar) { sidebar.classList.add('collapsed'); }
@@ -986,16 +1027,16 @@
 
   function signOut() {
     // Only clear credentials — preserve plans so they survive logout/login
-    localStorage.removeItem('studyflow_user');
-    localStorage.removeItem('studyflow_seconds_left');
-    localStorage.removeItem('studyflow_timer_day');
+    SFStore.removeItem('studyflow_user');
+    SFStore.removeItem('studyflow_seconds_left');
+    SFStore.removeItem('studyflow_timer_day');
     window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html?signout=1';
   }
 
   function renderDashboard() {
     try {
     document.getElementById('greeting-time').textContent = 'Good ' + getGreeting();
-    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
     var name = user.name || user.email || 'Student';
     document.getElementById('user-name').textContent = name.split(' ')[0];
     document.getElementById('welcome-sub').textContent = 'Your ' + plan.days.length + '-day ' + (plan.subject || 'study') + ' plan is ready.';
@@ -1074,9 +1115,9 @@
 
     // ── PLAN COMPLETE CHECK ──
     if (completed === total && total > 0) {
-      var alreadyShown = localStorage.getItem('studyflow_complete_shown_' + plan.id);
+      var alreadyShown = SFStore.getItem('studyflow_complete_shown_' + plan.id);
       if (!alreadyShown) {
-        localStorage.setItem('studyflow_complete_shown_' + plan.id, '1');
+        SFStore.setItem('studyflow_complete_shown_' + plan.id, '1');
         setTimeout(function() { showPlanComplete(); }, 800);
       }
     }
@@ -1113,7 +1154,7 @@
 
   // ── EXPORT / SHARE PROGRESS ──
   function exportProgress() {
-    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
     var completed = (plan.days || []).filter(function(d){ return d.completed; }).length;
     var total = (plan.days || []).length;
     var scores = [];
@@ -1171,7 +1212,7 @@
   }
 
   function calculateStreak() {
-    var history = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
+    var history = JSON.parse(SFStore.getItem('studyflow_study_history') || '[]');
     if (!history.length) return 0;
     history.sort(function(a,b){ return new Date(b) - new Date(a); });
     var streak = 0;
@@ -1191,11 +1232,11 @@
   }
 
   function recordStudyToday() {
-    var history = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
+    var history = JSON.parse(SFStore.getItem('studyflow_study_history') || '[]');
     var today = new Date().toDateString();
     if (history.indexOf(today) === -1) {
       history.push(today);
-      localStorage.setItem('studyflow_study_history', JSON.stringify(history));
+      SFStore.setItem('studyflow_study_history', JSON.stringify(history));
     }
   }
 
@@ -1249,7 +1290,7 @@
     }
 
     // Feynman scores if any
-    var feynmanScores = JSON.parse(localStorage.getItem('studyflow_feynman_scores') || '[]');
+    var feynmanScores = JSON.parse(SFStore.getItem('studyflow_feynman_scores') || '[]');
     var feynmanHtml = '';
     if (feynmanScores.length > 0) {
       var feynmanAvg = Math.round(feynmanScores.reduce(function(a,s){ return a + s.score; }, 0) / feynmanScores.length);
@@ -1261,7 +1302,7 @@
     var dueCount = 0;
     (plan.days || []).forEach(function(d) {
       (d.questions || []).forEach(function(q) {
-        var data = JSON.parse(localStorage.getItem('studyflow_sm2_' + (function(q2){
+        var data = JSON.parse(SFStore.getItem('studyflow_sm2_' + (function(q2){
           var str = (q2.question || '').substring(0, 30);
           var hash = 0;
           for (var i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash = hash & hash; }
@@ -1278,8 +1319,8 @@
   }
 
   function checkNotificationPrompt() {
-    var dismissed = localStorage.getItem('studyflow_notif_dismissed');
-    var permitted = localStorage.getItem('studyflow_notif_enabled');
+    var dismissed = SFStore.getItem('studyflow_notif_dismissed');
+    var permitted = SFStore.getItem('studyflow_notif_enabled');
     if (!dismissed && !permitted && 'Notification' in window && Notification.permission === 'default') {
       document.getElementById('notif-banner').style.display = 'block';
     }
@@ -1288,7 +1329,7 @@
   function enableNotifications() {
     Notification.requestPermission().then(function(perm) {
       if (perm === 'granted') {
-        localStorage.setItem('studyflow_notif_enabled', '1');
+        SFStore.setItem('studyflow_notif_enabled', '1');
         scheduleStudyReminder();
         document.getElementById('notif-banner').style.display = 'none';
       } else {
@@ -1298,7 +1339,7 @@
   }
 
   function dismissNotif() {
-    localStorage.setItem('studyflow_notif_dismissed', '1');
+    SFStore.setItem('studyflow_notif_dismissed', '1');
     document.getElementById('notif-banner').style.display = 'none';
   }
 
@@ -1390,8 +1431,8 @@
   var selectedMinutes = 30;
 
   function startToday() {
-    localStorage.setItem('studyflow_current_day', currentDayIndex);
-    localStorage.setItem('studyflow_minutes', '30');
+    SFStore.setItem('studyflow_current_day', currentDayIndex);
+    SFStore.setItem('studyflow_minutes', '30');
     recordStudyToday();
     window.location.href = 'lesson.html';
   }
@@ -1404,7 +1445,7 @@
   }
 
   function daysSinceLastStudy() {
-    var history = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
+    var history = JSON.parse(SFStore.getItem('studyflow_study_history') || '[]');
     if (!history.length) return 999;
     var last = new Date(history[history.length - 1]);
     var now = new Date();
@@ -1440,8 +1481,8 @@
       btn.textContent = 'Start final exam →';
     } else {
       // Check if they started today already (session in progress)
-      var savedDay = localStorage.getItem('studyflow_current_day');
-      var secondsLeft = localStorage.getItem('studyflow_seconds_left');
+      var savedDay = SFStore.getItem('studyflow_current_day');
+      var secondsLeft = SFStore.getItem('studyflow_seconds_left');
       if (savedDay == currentDayIndex && secondsLeft && parseInt(secondsLeft) > 0) {
         btn.textContent = 'Continue lesson →';
       } else {
@@ -1455,8 +1496,8 @@
     if (custom) selectedMinutes = parseInt(custom);
     if (!selectedMinutes || selectedMinutes < 5) { alert('Please select or enter a time!'); return; }
     document.getElementById('time-modal').classList.remove('active');
-    localStorage.setItem('studyflow_current_day', currentDayIndex);
-    localStorage.setItem('studyflow_minutes', selectedMinutes);
+    SFStore.setItem('studyflow_current_day', currentDayIndex);
+    SFStore.setItem('studyflow_minutes', selectedMinutes);
     recordStudyToday();
     window.location.href = 'lesson.html';
   }
@@ -1477,7 +1518,7 @@
 
     // Build study day map — which calendar days are study days and their status
     var studyDayMap = {};
-    var studyHistory = JSON.parse(localStorage.getItem('studyflow_study_history') || '[]');
+    var studyHistory = JSON.parse(SFStore.getItem('studyflow_study_history') || '[]');
     plan.days.forEach(function(d, i) {
       var sd = new Date();
       sd.setDate(sd.getDate() + i - (plan.days.filter(function(x,j){ return j < i && x.completed; }).length === i ? 0 : 0));
@@ -1544,14 +1585,14 @@
 
   function toggleDark() {
     var isDark = document.body.classList.toggle('dark');
-    localStorage.setItem('studyflow_dark', isDark ? '1' : '0');
+    SFStore.setItem('studyflow_dark', isDark ? '1' : '0');
     var di = document.getElementById('dark-icon'); if(di) di.innerHTML = isDark ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>' : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
   }
 
   
 
   // Apply saved dark mode
-  if (localStorage.getItem('studyflow_dark') === '1') {
+  if (SFStore.getItem('studyflow_dark') === '1') {
     document.body.classList.add('dark');
     var icon = document.getElementById('dark-icon');
     if (icon) icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
@@ -1626,13 +1667,13 @@
 
   // ── TEACHER ASSIGNMENT CHECK ──
   function checkAssignment() {
-    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
     if (!user.classCode) return;
 
     var showBanner = function(a) {
       if (!a || !a.topic || !a.notes) return;
       // Don't show if student already started this assignment
-      var done = localStorage.getItem('studyflow_assignment_started_' + user.classCode);
+      var done = SFStore.getItem('studyflow_assignment_started_' + user.classCode);
       if (done === a.assignedAt) return;
       document.getElementById('assignment-topic').textContent = a.topic;
       var meta = [];
@@ -1651,31 +1692,31 @@
       .then(function(r){ return r.json(); })
       .then(function(data) {
         if (data.assignment && data.assignment.topic) {
-          localStorage.setItem('studyflow_assignment_' + user.classCode, JSON.stringify(data.assignment));
+          SFStore.setItem('studyflow_assignment_' + user.classCode, JSON.stringify(data.assignment));
           showBanner(data.assignment);
         } else {
-          showBanner(JSON.parse(localStorage.getItem('studyflow_assignment_' + user.classCode) || 'null'));
+          showBanner(JSON.parse(SFStore.getItem('studyflow_assignment_' + user.classCode) || 'null'));
         }
       })
       .catch(function() {
-        showBanner(JSON.parse(localStorage.getItem('studyflow_assignment_' + user.classCode) || 'null'));
+        showBanner(JSON.parse(SFStore.getItem('studyflow_assignment_' + user.classCode) || 'null'));
       });
   }
 
   function startAssignment() {
     var a = window._pendingAssignment;
     if (!a) return;
-    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
     // Mark started so banner doesn't reappear for this assignment
-    localStorage.setItem('studyflow_assignment_started_' + user.classCode, a.assignedAt);
+    SFStore.setItem('studyflow_assignment_started_' + user.classCode, a.assignedAt);
     // Hand off to app.html
-    localStorage.setItem('studyflow_pending_assignment', JSON.stringify(a));
+    SFStore.setItem('studyflow_pending_assignment', JSON.stringify(a));
     window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html?from=assignment';
   }
 
   // ── JOIN CLASS FROM DASHBOARD ──
   function initJoinClassButton() {
-    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
     var el = document.getElementById('join-class-sidebar');
     if (!user.classCode && el) el.style.display = 'block';
   }
@@ -1695,10 +1736,10 @@
     if (!/^SF-[A-Z0-9]{4}$/.test(code)) { showMsg('Class codes look like SF-AB12 — check with your teacher.', false); return; }
     if (name.length < 2) { showMsg('Please enter your full name.', false); return; }
 
-    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+    var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
     user.classCode = code;
     if (name) user.name = name;
-    localStorage.setItem('studyflow_user', JSON.stringify(user));
+    SFStore.setItem('studyflow_user', JSON.stringify(user));
 
     var studentRecord = { 
       name: name || user.name || 'Student', 
@@ -1711,10 +1752,10 @@
       timeStudied: 0,
       subject: ''
     };
-    var classData = JSON.parse(localStorage.getItem('studyflow_class_' + code) || '{"students":[]}');
+    var classData = JSON.parse(SFStore.getItem('studyflow_class_' + code) || '{"students":[]}');
     if (!classData.students.find(function(s){ return s.email === user.email; })) {
       classData.students.push(studentRecord);
-      localStorage.setItem('studyflow_class_' + code, JSON.stringify(classData));
+      SFStore.setItem('studyflow_class_' + code, JSON.stringify(classData));
     }
 
     showMsg('Joining...', true);
@@ -1727,7 +1768,7 @@
     .then(function(data) {
       if (data.error === 'class_full') {
         user.classCode = null;
-        localStorage.setItem('studyflow_user', JSON.stringify(user));
+        SFStore.setItem('studyflow_user', JSON.stringify(user));
         showMsg('This class is full (max 5 students on free plan). Ask your teacher to upgrade.', false);
         return;
       }
