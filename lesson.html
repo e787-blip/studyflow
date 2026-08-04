@@ -1375,7 +1375,7 @@
 
       // Auto-inject diagram if day.diagram specifies a type
       if (day.diagram && day.diagram.type && day.diagram.type !== 'none') {
-        var diagramSvg = generateDiagramSVG(day.diagram.label || day.diagram.type);
+        var diagramSvg = generateDiagramSVG(day.diagram);
         if (diagramSvg) {
           lessonBody += '<div style="text-align:center;margin-bottom:1rem;padding:.75rem;background:var(--soft);border-radius:14px;">' +
             diagramSvg +
@@ -1773,11 +1773,11 @@
     for (var j = min; j <= max; j++) {
       if (j === 0) continue;
       // X-axis numbers
-      grid += '<text x="' + toSvgX(j) + '" y="' + (ay + 13) + '" text-anchor="middle" font-size="9" fill="#94a3b8" font-family="sans-serif">' + j + '</text>';
+      grid += '<text x="' + toSvgX(j) + '" y="' + (ay + 13) + '" text-anchor="middle" font-size="9" fill="#94a3b8" font-family="DM Sans, sans-serif">' + j + '</text>';
       // Y-axis numbers  
-      grid += '<text x="' + (ax - 5) + '" y="' + (toSvgY(j) + 3) + '" text-anchor="end" font-size="9" fill="#94a3b8" font-family="sans-serif">' + j + '</text>';
+      grid += '<text x="' + (ax - 5) + '" y="' + (toSvgY(j) + 3) + '" text-anchor="end" font-size="9" fill="#94a3b8" font-family="DM Sans, sans-serif">' + j + '</text>';
     }
-    grid += '<text x="' + (ax - 5) + '" y="' + (ay + 13) + '" text-anchor="end" font-size="9" fill="#94a3b8" font-family="sans-serif">0</text>';
+    grid += '<text x="' + (ax - 5) + '" y="' + (ay + 13) + '" text-anchor="end" font-size="9" fill="#94a3b8" font-family="DM Sans, sans-serif">0</text>';
 
     // ── ARROWHEAD MARKER ──
     var defs = '<defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#7c3aed"/></marker>' +
@@ -2560,7 +2560,7 @@
         '<text x="65" y="30" font-size="8" fill="#ef4444" font-weight="700">Amplitude</text>' +
         // Wavelength arrow
         '<line x1="10" y1="75" x2="110" y2="75" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arr3)"/>' +
-        '<text x="60" y="85" font-size="8" fill="#7c3aed" text-anchor="middle" font-weight="700">Wavelength (λ)</text>' +
+        '<text x="60" y="85" font-size="8" fill="#7c3aed" text-anchor="middle" font-weight="700">Wavelength</text>' +
         '</svg></div>';
     }
 
@@ -3816,8 +3816,928 @@
     return (str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
   }
 
-  // ── DIAGRAM GENERATOR — produces real SVG from [DIAGRAM: description] tags ──
-  function generateDiagramSVG(desc) {
+  /* ══════════════════════════════════════════════════════════════════════════
+     SFDiagramKit — shared typography, overlap protection, and topic-driven
+     diagram generation for StudyFlow lesson visuals.
+
+     Three jobs:
+       1. FONT    — one font constant every SVG label in the app uses.
+       2. polish  — a post-processor that measures every <text> in a finished
+                    SVG, expands the viewBox so nothing is clipped, and nudges
+                    labels apart so no word ever lands on another word.
+       3. forSpec / forTopic — build a real diagram for ANY topic, from either
+                    a structured spec or a plain description string.
+
+     Written in ES5 to match the rest of lesson.html.
+     ══════════════════════════════════════════════════════════════════════════ */
+  var SFDiagramKit = (function () {
+    'use strict';
+
+    /* ── §1 typography ─────────────────────────────────────────────────────── */
+
+    var FONT = "'DM Sans', system-ui, sans-serif";
+
+    /* Advance widths in em units, approximating DM Sans. Used only for layout
+       and collision maths, so "close enough" beats "exact" — every consumer
+       adds padding on top. Anything unlisted falls back to AVG. */
+    /* Exact DM Sans advance widths in em, extracted from the shipping font
+       (unitsPerEm 1000) rather than estimated. Characters outside this set
+       fall back to AVG, the font's mean alphanumeric advance. */
+    var AVG = 0.5646;
+    var W = {
+      /* punctuation and symbols */
+      ' ': 0.266, '!': 0.250, '"': 0.291, '#': 0.804, '$': 0.580,
+      '%': 0.786, '&': 0.734, '\'': 0.159, '(': 0.373, ')': 0.373,
+      '*': 0.480, '+': 0.550, ',': 0.182, '-': 0.541, '.': 0.198,
+      '/': 0.392, ':': 0.202, ';': 0.227, '<': 0.550, '=': 0.550,
+      '>': 0.550, '?': 0.524, '@': 1.005, '[': 0.314, '\\': 0.392,
+      ']': 0.314, '^': 0.622, '_': 0.660, '`': 0.213, '{': 0.427,
+      '|': 0.234, '}': 0.427, '~': 0.550, '\u2013': 0.669, '\u2014': 0.873,
+      '\u2018': 0.210, '\u2019': 0.210, '\u201c': 0.367, '\u201d': 0.367, '\u2026': 0.566,
+      '\u2191': 0.857, '\u2193': 0.857, '\u00b0': 0.343, '\u00d7': 0.550, '\u00f7': 0.550,
+      '\u00b1': 0.550,
+      /* digits */
+      '0': 0.684, '1': 0.312, '2': 0.576, '3': 0.591, '4': 0.607,
+      '5': 0.610, '6': 0.628, '7': 0.534, '8': 0.608, '9': 0.628,
+      '\u00b9': 0.204, '\u00b2': 0.330, '\u00b3': 0.330,
+      /* lowercase */
+      'a': 0.544, 'b': 0.626, 'c': 0.572, 'd': 0.627, 'e': 0.568,
+      'f': 0.340, 'g': 0.558, 'h': 0.575, 'i': 0.240, 'j': 0.243,
+      'k': 0.504, 'l': 0.223, 'm': 0.891, 'n': 0.574, 'o': 0.593,
+      'p': 0.626, 'q': 0.627, 'r': 0.370, 's': 0.502, 't': 0.392,
+      'u': 0.573, 'v': 0.527, 'w': 0.763, 'x': 0.496, 'y': 0.556,
+      'z': 0.458, '\u00b5': 0.584,
+      /* uppercase */
+      'A': 0.664, 'B': 0.603, 'C': 0.717, 'D': 0.688, 'E': 0.565,
+      'F': 0.535, 'G': 0.758, 'H': 0.681, 'I': 0.234, 'J': 0.501,
+      'K': 0.584, 'L': 0.527, 'M': 0.841, 'N': 0.691, 'O': 0.774,
+      'P': 0.580, 'Q': 0.774, 'R': 0.594, 'S': 0.580, 'T': 0.561,
+      'U': 0.655, 'V': 0.669, 'W': 0.968, 'X': 0.603, 'Y': 0.580,
+      'Z': 0.541
+  
+    };
+
+    /* Weight factors are the font's measured 700/400 and 500/400 advance
+       ratios. SAFETY is a small cushion for hinting and for the fallback
+       face a browser paints with before DM Sans finishes loading. */
+    var BOLD_RATIO = 1.0602;
+    var MED_RATIO  = 1.0189;
+    var SAFETY = 1.04;
+
+    function measure(s, size, weight) {
+      s = String(s == null ? '' : s);
+      size = Number(size) || 12;
+      var total = 0, i, c;
+      for (i = 0; i < s.length; i++) {
+        c = s.charAt(i);
+        total += (W[c] === undefined ? AVG : W[c]);
+      }
+      var w = Number(weight) || 400;
+      var wf = w >= 700 ? BOLD_RATIO : (w >= 500 ? MED_RATIO : 1);
+      return total * size * wf * SAFETY;
+    }
+
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function unesc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+    }
+
+    function r1(n) { return Math.round(Number(n) * 10) / 10; }
+
+    /* Greedy word wrap to a pixel width. Returns an array of lines. */
+    function wrap(s, maxW, size, weight, maxLines) {
+      s = String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+      maxLines = maxLines || 3;
+      if (!s) return [''];
+      var words = s.split(' '), lines = [], cur = '', i, trial;
+      for (i = 0; i < words.length; i++) {
+        trial = cur ? cur + ' ' + words[i] : words[i];
+        if (cur && measure(trial, size, weight) > maxW) {
+          lines.push(cur);
+          cur = words[i];
+          if (lines.length === maxLines) break;
+        } else {
+          cur = trial;
+        }
+      }
+      if (cur && lines.length < maxLines) lines.push(cur);
+      if (!lines.length) lines = [s];
+      /* Anything still too wide gets cut, but visibly — a silently clipped label
+         reads as a complete (and wrong) one. */
+      for (i = 0; i < lines.length; i++) {
+        if (measure(lines[i], size, weight) <= maxW) continue;
+        while (lines[i].length > 1 && measure(lines[i] + '\u2026', size, weight) > maxW) {
+          lines[i] = lines[i].slice(0, -1);
+        }
+        lines[i] = lines[i].replace(/[\s,;:]+$/, '') + '\u2026';
+      }
+      return lines;
+    }
+
+    function widestLine(lines, size, weight) {
+      var m = 0, i, w;
+      for (i = 0; i < lines.length; i++) {
+        w = measure(lines[i], size, weight);
+        if (w > m) m = w;
+      }
+      return m;
+    }
+
+    /* ── §2 polish: clipping + overlap protection ──────────────────────────── */
+
+    /* Ranges of the string we must not touch (inside <defs>), because text in a
+       marker/gradient definition is not laid out in canvas coordinates. */
+    function defsRanges(svg) {
+      var out = [], re = /<defs\b[\s\S]*?<\/defs>/gi, m;
+      while ((m = re.exec(svg)) !== null) out.push([m.index, m.index + m[0].length]);
+      return out;
+    }
+
+    function inRanges(pos, ranges) {
+      for (var i = 0; i < ranges.length; i++) {
+        if (pos >= ranges[i][0] && pos < ranges[i][1]) return true;
+      }
+      return false;
+    }
+
+    function attr(tag, name) {
+      var m = tag.match(new RegExp('\\b' + name + '\\s*=\\s*"([^"]*)"'));
+      return m ? m[1] : null;
+    }
+
+    function styleProp(tag, prop) {
+      var st = attr(tag, 'style');
+      if (!st) return null;
+      var m = st.match(new RegExp(prop + '\\s*:\\s*([^;]+)'));
+      return m ? m[1].trim() : null;
+    }
+
+    /* Pull every laid-out <text> out of an SVG string with its measured box. */
+    function collectText(svg) {
+      var skip = defsRanges(svg);
+      var re = /<text\b([^>]*)>([\s\S]*?)<\/text>/gi;
+      var out = [], m;
+      while ((m = re.exec(svg)) !== null) {
+        if (inRanges(m.index, skip)) continue;
+        var open = '<text' + m[1] + '>';
+        var x = parseFloat(attr(open, 'x'));
+        var y = parseFloat(attr(open, 'y'));
+        if (!isFinite(x) || !isFinite(y)) continue;      // positioned some other way
+        if (/\btransform\s*=/.test(open)) continue;      // rotated/translated — leave alone
+
+        var fsAttr = attr(open, 'font-size');
+        var fsStyle = styleProp(open, 'font-size');
+        var size = parseFloat(fsAttr !== null ? fsAttr : (fsStyle || '')) || 12;
+
+        var fwAttr = attr(open, 'font-weight');
+        var fwStyle = styleProp(open, 'font-weight');
+        var weight = parseFloat(fwAttr !== null ? fwAttr : (fwStyle || '')) || 400;
+
+        var anchor = attr(open, 'text-anchor') || styleProp(open, 'text-anchor') || 'start';
+        var content = unesc(m[2].replace(/<[^>]*>/g, ''));
+
+        var tw = measure(content, size, weight);
+        var x0 = anchor === 'middle' ? x - tw / 2 : (anchor === 'end' ? x - tw : x);
+
+        out.push({
+          start: m.index,
+          end: m.index + m[0].length,
+          openLen: open.length,
+          x: x, y: y, size: size, weight: weight, anchor: anchor,
+          text: content,
+          w: tw,
+          x0: x0, x1: x0 + tw,
+          y0: y - size * 0.78,        // cap height above baseline
+          y1: y + size * 0.24,        // descender below baseline
+          dx: 0, dy: 0
+        });
+      }
+      return out;
+    }
+
+    function overlaps(a, b, pad) {
+      pad = pad || 0;
+      return !(a.x1 + pad <= b.x0 || b.x1 + pad <= a.x0 ||
+               a.y1 + pad <= b.y0 || b.y1 + pad <= a.y0);
+    }
+
+    /* Fraction of the smaller box that the intersection covers. */
+    function overlapRatio(a, b) {
+      var ix = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+      var iy = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+      if (ix <= 0 || iy <= 0) return 0;
+      var inter = ix * iy;
+      var areaA = Math.max(1, (a.x1 - a.x0) * (a.y1 - a.y0));
+      var areaB = Math.max(1, (b.x1 - b.x0) * (b.y1 - b.y0));
+      return inter / Math.min(areaA, areaB);
+    }
+
+    function shift(t, dx, dy) {
+      t.dx += dx; t.dy += dy;
+      t.x += dx; t.x0 += dx; t.x1 += dx;
+      t.y += dy; t.y0 += dy; t.y1 += dy;
+    }
+
+    /* Separate colliding labels. The less prominent of a pair (smaller, then
+       lighter, then later in document order) is the one that yields, so titles
+       and headings keep the position the designer chose for them. */
+    function separate(items, pad, fixes) {
+      var GAP = pad === undefined ? 2 : pad;
+      var passes, i, j, a, b, moved = false;
+      for (passes = 0; passes < 6; passes++) {
+        var any = false;
+        for (i = 0; i < items.length; i++) {
+          for (j = i + 1; j < items.length; j++) {
+            a = items[i]; b = items[j];
+            if (!overlaps(a, b, GAP)) continue;
+            if (overlapRatio(a, b) < 0.10) continue;   // grazing — not worth churn
+
+            /* Decide which one yields. */
+            var yielder = b, anchorEl = a;
+            if (a.size < b.size) { yielder = a; anchorEl = b; }
+            else if (a.size === b.size && a.weight < b.weight) { yielder = a; anchorEl = b; }
+
+            /* Minimal vertical push that clears the anchor, in whichever
+               direction is shorter. Vertical only: horizontal moves would
+               detach a label from the leader line pointing at it. */
+            var up = anchorEl.y0 - GAP - yielder.y1;      // negative → move up
+            var down = anchorEl.y1 + GAP - yielder.y0;    // positive → move down
+            var move = Math.abs(up) <= Math.abs(down) ? up : down;
+            if (!isFinite(move) || move === 0) move = -(yielder.size + GAP);
+            shift(yielder, 0, move);
+            any = true; moved = true;
+          }
+        }
+        if (!any) break;
+      }
+      if (moved && fixes) fixes.push('separated overlapping labels');
+      return moved;
+    }
+
+    /* Grow the viewBox so no label is clipped. Using a negative origin means we
+       never have to move existing artwork to make room. */
+    function fitViewBox(svg, items, fixes) {
+      var m = svg.match(/viewBox\s*=\s*"\s*([-\d.]+)[,\s]+([-\d.]+)[,\s]+([-\d.]+)[,\s]+([-\d.]+)\s*"/i);
+      if (!m) return svg;
+      var vx = parseFloat(m[1]), vy = parseFloat(m[2]);
+      var vw = parseFloat(m[3]), vh = parseFloat(m[4]);
+      var minX = vx, minY = vy, maxX = vx + vw, maxY = vy + vh;
+      var PAD = 3, i, t;
+      for (i = 0; i < items.length; i++) {
+        t = items[i];
+        if (t.x0 - PAD < minX) minX = t.x0 - PAD;
+        if (t.y0 - PAD < minY) minY = t.y0 - PAD;
+        if (t.x1 + PAD > maxX) maxX = t.x1 + PAD;
+        if (t.y1 + PAD > maxY) maxY = t.y1 + PAD;
+      }
+      minX = Math.floor(minX); minY = Math.floor(minY);
+      maxX = Math.ceil(maxX); maxY = Math.ceil(maxY);
+      if (minX === vx && minY === vy && maxX === vx + vw && maxY === vy + vh) return svg;
+      if (fixes) fixes.push('expanded viewBox to uncrop labels');
+      var nvb = minX + ' ' + minY + ' ' + (maxX - minX) + ' ' + (maxY - minY);
+      return svg.replace(m[0], 'viewBox="' + nvb + '"');
+    }
+
+    /* Rewrite the x/y of any label that moved. Done back-to-front so earlier
+       match offsets stay valid. */
+    function applyShifts(svg, items) {
+      var moved = [], i;
+      for (i = 0; i < items.length; i++) {
+        if (items[i].dx || items[i].dy) moved.push(items[i]);
+      }
+      if (!moved.length) return svg;
+      moved.sort(function (a, b) { return b.start - a.start; });
+      for (i = 0; i < moved.length; i++) {
+        var t = moved[i];
+        var open = svg.slice(t.start, t.start + t.openLen);
+        var fixed = open
+          .replace(/\bx\s*=\s*"[^"]*"/, 'x="' + r1(t.x) + '"')
+          .replace(/\by\s*=\s*"[^"]*"/, 'y="' + r1(t.y) + '"');
+        svg = svg.slice(0, t.start) + fixed + svg.slice(t.start + t.openLen);
+      }
+      return svg;
+    }
+
+    /* Guarantee the root <svg> carries the shared font, so no label can inherit
+       a different family from its surroundings. */
+    function enforceFont(svg) {
+      var m = svg.match(/^\s*<svg\b([^>]*)>/i);
+      if (!m) return svg;
+      var open = m[0], attrs = m[1];
+      if (/font-family/i.test(attrs)) return svg;
+      var st = attr('<svg' + attrs + '>', 'style');
+      var next;
+      if (st === null) {
+        next = '<svg' + attrs + ' style="font-family:' + FONT + ';">';
+      } else {
+        next = open.replace(/style\s*=\s*"([^"]*)"/i,
+          'style="font-family:' + FONT + ';$1"');
+      }
+      return svg.replace(open, next);
+    }
+
+    /**
+     * Run a finished SVG through the guardrails: one font, nothing clipped,
+     * no label sitting on another label. Safe to call on any SVG string.
+     */
+    function polish(svg, opts) {
+      if (!svg || typeof svg !== 'string') return svg;
+      opts = opts || {};
+      var fixes = [];
+      var out = enforceFont(svg);
+
+      var items = collectText(out);
+      if (items.length) {
+        separate(items, opts.gap === undefined ? 2 : opts.gap, fixes);
+        out = applyShifts(out, items);
+        /* Re-collect after the rewrite so viewBox maths uses final positions. */
+        out = fitViewBox(out, collectText(out), fixes);
+      }
+
+      if (fixes.length && opts.warn && typeof console !== 'undefined' && console.warn) {
+        console.warn('[SFDiagramKit] ' + (opts.name || 'diagram') + ': ' + fixes.join(', '));
+      }
+      return out;
+    }
+
+    /* ── §3 drawing primitives ─────────────────────────────────────────────── */
+
+    var PAL = [
+      { s: '#4a7cf6', f: '#eaf1ff', t: '#1e40af' },
+      { s: '#38bfa1', f: '#e6faf5', t: '#065f46' },
+      { s: '#7c3aed', f: '#f3ebff', t: '#5b21b6' },
+      { s: '#f59e0b', f: '#fff5e5', t: '#92400e' },
+      { s: '#ec4899', f: '#fdeaf4', t: '#9d174d' },
+      { s: '#0891b2', f: '#e5f7fb', t: '#155e75' },
+      { s: '#ef4444', f: '#fdecec', t: '#991b1b' }
+    ];
+    function pal(i) { return PAL[((i % PAL.length) + PAL.length) % PAL.length]; }
+
+    var INK = '#1a1d2e', MUTED = '#6b7280', RULE = '#cbd5e1';
+    var TITLE_SIZE = 13, NODE_SIZE = 11, SUB_SIZE = 9;
+
+    function T(x, y, s, o) {
+      o = o || {};
+      return '<text x="' + r1(x) + '" y="' + r1(y) + '" text-anchor="' + (o.anchor || 'middle') +
+        '" font-size="' + (o.size || NODE_SIZE) + '" font-weight="' + (o.weight || 600) +
+        '" fill="' + (o.fill || INK) + '">' + esc(s) + '</text>';
+    }
+
+    function multiT(cx, cy, lines, o) {
+      o = o || {};
+      var size = o.size || NODE_SIZE, lh = size * 1.32;
+      var y0 = cy - (lines.length - 1) * lh / 2 + size * 0.35;
+      var out = '', i;
+      for (i = 0; i < lines.length; i++) {
+        out += T(cx, y0 + i * lh, lines[i], o);
+      }
+      return out;
+    }
+
+    function roundRect(x, y, w, h, r, c, sw) {
+      return '<rect x="' + r1(x) + '" y="' + r1(y) + '" width="' + r1(w) + '" height="' + r1(h) +
+        '" rx="' + (r === undefined ? 9 : r) + '" fill="' + c.f + '" stroke="' + c.s +
+        '" stroke-width="' + (sw || 1.8) + '"/>';
+    }
+
+    function arrowDefs() {
+      return '<defs>' +
+        '<marker id="sfdkArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">' +
+        '<path d="M0 0 L10 5 L0 10 z" fill="' + MUTED + '"/></marker>' +
+        '</defs>';
+    }
+
+    function arrow(x1, y1, x2, y2) {
+      return '<line x1="' + r1(x1) + '" y1="' + r1(y1) + '" x2="' + r1(x2) + '" y2="' + r1(y2) +
+        '" stroke="' + MUTED + '" stroke-width="1.8" stroke-linecap="round" marker-end="url(#sfdkArrow)"/>';
+    }
+
+    function open(w, h) {
+      return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + Math.round(w) + ' ' + Math.round(h) +
+        '" width="100%" style="font-family:' + FONT + ';max-width:' + Math.round(Math.min(w * 1.15, 560)) +
+        'px;display:block;margin:0 auto;">' + arrowDefs();
+    }
+
+    function titleBlock(title, w) {
+      if (!title) return { svg: '', h: 6 };
+      var lines = wrap(title, w - 24, TITLE_SIZE, 700, 2);
+      var h = 10 + lines.length * TITLE_SIZE * 1.3;
+      return { svg: multiT(w / 2, 10 + (lines.length - 1) * TITLE_SIZE * 0.66, lines,
+        { size: TITLE_SIZE, weight: 700, fill: INK }), h: h };
+    }
+
+    /* ── §4 archetype builders ─────────────────────────────────────────────── */
+
+    var MARGIN = 14;
+
+    /* Sequential process: horizontal when it fits, vertical when it doesn't. */
+    function buildFlow(title, items) {
+      var n = items.length, i;
+      var padX = 12, minW = 70, maxNodeW = 150;
+      var boxes = [], lines, tw, bw;
+      for (i = 0; i < n; i++) {
+        lines = wrap(items[i], maxNodeW - padX * 2, NODE_SIZE, 700, 3);
+        tw = widestLine(lines, NODE_SIZE, 700);
+        bw = Math.max(minW, Math.min(maxNodeW, tw + padX * 2));
+        boxes.push({ lines: lines, w: bw });
+      }
+
+      var gap = 30, total = 0;
+      for (i = 0; i < n; i++) total += boxes[i].w;
+      total += gap * (n - 1);
+
+      var horizontal = (n <= 4) && (total + MARGIN * 2 <= 620);
+
+      if (horizontal) {
+        var maxLines = 1;
+        for (i = 0; i < n; i++) maxLines = Math.max(maxLines, boxes[i].lines.length);
+        var bh = Math.max(42, 18 + maxLines * NODE_SIZE * 1.32);
+        var w = total + MARGIN * 2;
+        var tb = titleBlock(title, w);
+        var top = tb.h + 6;
+        var h = top + bh + MARGIN;
+        var svg = open(w, h) + tb.svg;
+        var x = MARGIN;
+        for (i = 0; i < n; i++) {
+          var c = pal(i);
+          svg += roundRect(x, top, boxes[i].w, bh, 9, c);
+          svg += multiT(x + boxes[i].w / 2, top + bh / 2, boxes[i].lines,
+            { size: NODE_SIZE, weight: 700, fill: c.t });
+          if (i < n - 1) svg += arrow(x + boxes[i].w + 5, top + bh / 2, x + boxes[i].w + gap - 5, top + bh / 2);
+          x += boxes[i].w + gap;
+        }
+        return svg + '</svg>';
+      }
+
+      /* Vertical stack — always fits, reads well on a phone. */
+      var bwv = 0;
+      for (i = 0; i < n; i++) bwv = Math.max(bwv, boxes[i].w);
+      bwv = Math.max(bwv, 170);
+      /* Let a long heading widen the card rather than spill past its edge. */
+      if (title) bwv = Math.max(bwv, Math.min(320, measure(title, TITLE_SIZE, 700) / 2 + 40));
+      var wv = bwv + MARGIN * 2;
+      var tbv = titleBlock(title, wv);
+      var vgap = 26, y = tbv.h + 6;
+      var hs = [];
+      for (i = 0; i < n; i++) {
+        var ln = wrap(items[i], bwv - 28, NODE_SIZE, 700, 3);
+        boxes[i].lines = ln;
+        hs.push(Math.max(36, 16 + ln.length * NODE_SIZE * 1.32));
+      }
+      var hv = y;
+      for (i = 0; i < n; i++) hv += hs[i] + (i < n - 1 ? vgap : 0);
+      hv += MARGIN;
+      var out = open(wv, hv) + tbv.svg;
+      for (i = 0; i < n; i++) {
+        var cc = pal(i);
+        out += roundRect(MARGIN, y, bwv, hs[i], 9, cc);
+        out += multiT(MARGIN + bwv / 2, y + hs[i] / 2, boxes[i].lines,
+          { size: NODE_SIZE, weight: 700, fill: cc.t });
+        if (i < n - 1) out += arrow(wv / 2, y + hs[i] + 4, wv / 2, y + hs[i] + vgap - 4);
+        y += hs[i] + vgap;
+      }
+      return out + '</svg>';
+    }
+
+    /* Repeating loop: nodes on a ring, arrows curving between them. */
+    function buildCycle(title, items) {
+      var n = items.length, i;
+      if (n < 3) return buildFlow(title, items);   // a ring of two is just an arrow
+      var padX = 11, maxNodeW = 128;
+      var boxes = [], sum = 0;
+      for (i = 0; i < n; i++) {
+        var ln = wrap(items[i], maxNodeW - padX * 2, NODE_SIZE, 700, 2);
+        var bw = Math.max(58, Math.min(maxNodeW, widestLine(ln, NODE_SIZE, 700) + padX * 2));
+        var bh = Math.max(30, 12 + ln.length * NODE_SIZE * 1.32);
+        boxes.push({ lines: ln, w: bw, h: bh });
+        sum += bw;
+      }
+      var maxW = 0, maxH = 0;
+      for (i = 0; i < n; i++) { maxW = Math.max(maxW, boxes[i].w); maxH = Math.max(maxH, boxes[i].h); }
+
+      /* Ring big enough that no two boxes can touch. Two constraints matter:
+         the whole circumference must hold every box, and the chord between two
+         neighbours must exceed the widest box (the binding case at the bottom
+         of the ring, where neighbours sit side by side). */
+      var chordNeed = Math.max(maxW, maxH) + 26;
+      var sinStep = Math.sin(Math.PI / Math.max(2, n));
+      var cosHalf = Math.max(0.25, Math.cos(Math.PI / Math.max(2, n)));
+      var ARC_CLEAR = 34;   // room the connector arc needs inside the ring
+      var R = Math.max(
+        88,
+        (sum + n * 28) / (2 * Math.PI),
+        chordNeed / (2 * Math.max(0.18, sinStep)),
+        (ARC_CLEAR + maxH / 2 + 14) / cosHalf
+      );
+      /* Lay the ring out around (0,0) first, measure what it actually occupies,
+         then size the canvas to that — a square based on R alone would leave a
+         band of dead space above and below, where the boxes are narrowest. */
+      var minX = 0, minY = 0, maxX = 0, maxY = 0, ang;
+      for (i = 0; i < n; i++) {
+        ang = -Math.PI / 2 + i * 2 * Math.PI / n;
+        var px = R * Math.cos(ang), py = R * Math.sin(ang);
+        minX = Math.min(minX, px - boxes[i].w / 2); maxX = Math.max(maxX, px + boxes[i].w / 2);
+        minY = Math.min(minY, py - boxes[i].h / 2); maxY = Math.max(maxY, py + boxes[i].h / 2);
+      }
+      var wC = (maxX - minX) + MARGIN * 2;
+      var tb = titleBlock(title, wC);
+      var cx = -minX + MARGIN, cy = tb.h + (-minY) + MARGIN;
+      var h = tb.h + (maxY - minY) + MARGIN * 2;
+      var svg = open(wC, h) + tb.svg;
+
+      /* The arc is tightest where it passes between two neighbours, so clear it
+         against the box edge measured along that midpoint direction — not
+         against R, which would leave it running underneath the boxes. */
+      var Rin = Math.max(26, R * cosHalf - maxH / 2 - 14);
+      var pts = [], a;
+      for (i = 0; i < n; i++) {
+        a = -Math.PI / 2 + i * 2 * Math.PI / n;
+        pts.push({ a: a, x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) });
+      }
+      /* Arcs first, so boxes paint over their ends. */
+      if (n > 1) {
+        var step = 2 * Math.PI / n, padA = Math.min(step * 0.34, 0.50);
+        for (i = 0; i < n; i++) {
+          var a0 = pts[i].a + padA, a1 = pts[(i + 1) % n].a - padA;
+          if (a1 < a0) a1 += 2 * Math.PI;
+          var sx = cx + Rin * Math.cos(a0), sy = cy + Rin * Math.sin(a0);
+          var ex = cx + Rin * Math.cos(a1), ey = cy + Rin * Math.sin(a1);
+          svg += '<path d="M' + r1(sx) + ' ' + r1(sy) + ' A' + r1(Rin) + ' ' + r1(Rin) +
+            ' 0 0 1 ' + r1(ex) + ' ' + r1(ey) + '" fill="none" stroke="' + MUTED +
+            '" stroke-width="1.6" marker-end="url(#sfdkArrow)"/>';
+        }
+      }
+      for (i = 0; i < n; i++) {
+        var c = pal(i), b = boxes[i];
+        svg += roundRect(pts[i].x - b.w / 2, pts[i].y - b.h / 2, b.w, b.h, 8, c);
+        svg += multiT(pts[i].x, pts[i].y, b.lines, { size: NODE_SIZE, weight: 700, fill: c.t });
+      }
+      return svg + '</svg>';
+    }
+
+    /* Ranked levels, widest at the base. */
+    function buildHierarchy(title, items) {
+      var n = items.length, i;
+      var w = 380, inner = w - MARGIN * 2;
+      var tb = titleBlock(title, w);
+      var rows = [], gap = 10, y = tb.h + 6;
+      for (i = 0; i < n; i++) {
+        var frac = n === 1 ? 1 : 0.48 + 0.52 * (i / (n - 1));   // narrow at top
+        var bw = inner * frac;
+        var ln = wrap(items[i], bw - 20, NODE_SIZE, 700, 2);
+        var bh = Math.max(34, 14 + ln.length * NODE_SIZE * 1.32);
+        rows.push({ lines: ln, w: bw, h: bh });
+      }
+      var h = y;
+      for (i = 0; i < n; i++) h += rows[i].h + (i < n - 1 ? gap : 0);
+      h += MARGIN;
+      var svg = open(w, h) + tb.svg;
+      for (i = 0; i < n; i++) {
+        var c = pal(i), b = rows[i], x = (w - b.w) / 2;
+        svg += roundRect(x, y, b.w, b.h, 8, c);
+        svg += multiT(w / 2, y + b.h / 2, b.lines, { size: NODE_SIZE, weight: 700, fill: c.t });
+        y += b.h + gap;
+      }
+      return svg + '</svg>';
+    }
+
+    /* Two things contrasted, side by side. */
+    function buildCompare(title, left, right) {
+      var colW = 178, gap = 22, w = colW * 2 + gap + MARGIN * 2;
+      var tb = titleBlock(title, w);
+      var top = tb.h + 6;
+      var cols = [left, right], i, j;
+      var HSZ = NODE_SIZE + 1, rowH = 24, maxRows = 0, headLines = [], headMax = 1;
+      for (i = 0; i < 2; i++) {
+        maxRows = Math.max(maxRows, cols[i].items.length);
+        headLines.push(wrap(cols[i].title, colW - 20, HSZ, 700, 2));
+        headMax = Math.max(headMax, headLines[i].length);
+      }
+      /* Header band sized to the taller of the two headings, so both columns
+         keep the same divider line and a long subject name still fits. */
+      var headH = 14 + headMax * HSZ * 1.32;
+      var bodyH = Math.max(1, maxRows) * rowH + 12;
+      var h = top + headH + bodyH + MARGIN;
+      var svg = open(w, h) + tb.svg;
+      for (i = 0; i < 2; i++) {
+        var c = pal(i === 0 ? 0 : 3);
+        var x = MARGIN + i * (colW + gap);
+        svg += '<rect x="' + r1(x) + '" y="' + top + '" width="' + colW + '" height="' + r1(headH + bodyH) +
+          '" rx="10" fill="' + c.f + '" stroke="' + c.s + '" stroke-width="1.8"/>';
+        svg += '<line x1="' + r1(x) + '" y1="' + r1(top + headH) + '" x2="' + r1(x + colW) +
+          '" y2="' + r1(top + headH) + '" stroke="' + c.s + '" stroke-width="1.2" stroke-opacity=".5"/>';
+        svg += multiT(x + colW / 2, top + headH / 2, headLines[i], { size: HSZ, weight: 700, fill: c.t });
+        for (j = 0; j < cols[i].items.length; j++) {
+          var il = wrap(cols[i].items[j], colW - 26, SUB_SIZE + 1, 500, 1);
+          svg += '<circle cx="' + r1(x + 14) + '" cy="' + r1(top + headH + 14 + j * rowH - 3) +
+            '" r="2.6" fill="' + c.s + '"/>';
+          svg += T(x + 24, top + headH + 14 + j * rowH, il[0],
+            { size: SUB_SIZE + 1, weight: 500, fill: INK, anchor: 'start' });
+        }
+      }
+      return svg + '</svg>';
+    }
+
+    /* Ordered events on an axis, alternating sides so labels never collide. */
+    function buildTimeline(title, items) {
+      var n = items.length, i;
+      var slot = 122, w = Math.max(340, MARGIN * 2 + slot * n);
+      var tb = titleBlock(title, w);
+      var SZ = SUB_SIZE + 1, STEM = 22;
+
+      /* Measure every marker first so the canvas is exactly as tall as needed. */
+      var marks = [], aboveMax = 0, belowMax = 0;
+      for (i = 0; i < n; i++) {
+        var ln = wrap(items[i], slot - 26, SZ, 700, 3);
+        var bh = 12 + ln.length * SZ * 1.32;
+        var bw = Math.max(56, widestLine(ln, SZ, 700) + 22);
+        var above = i % 2 === 0;
+        marks.push({ lines: ln, w: bw, h: bh, above: above });
+        if (above) aboveMax = Math.max(aboveMax, bh);
+        else belowMax = Math.max(belowMax, bh);
+      }
+
+      var axisY = tb.h + 8 + aboveMax + STEM;
+      var h = axisY + STEM + belowMax + MARGIN;
+      var svg = open(w, h) + tb.svg;
+      svg += '<line x1="' + MARGIN + '" y1="' + r1(axisY) + '" x2="' + r1(w - MARGIN) +
+        '" y2="' + r1(axisY) + '" stroke="' + RULE + '" stroke-width="2.5" stroke-linecap="round"/>';
+
+      for (i = 0; i < n; i++) {
+        var c = pal(i), m = marks[i];
+        var x = MARGIN + slot * (i + 0.5);
+        var by = m.above ? axisY - STEM - m.h : axisY + STEM;
+        svg += '<line x1="' + r1(x) + '" y1="' + r1(m.above ? by + m.h : axisY + 5) +
+          '" x2="' + r1(x) + '" y2="' + r1(m.above ? axisY - 5 : by) +
+          '" stroke="' + c.s + '" stroke-width="1.3" stroke-dasharray="3 2"/>';
+        svg += roundRect(x - m.w / 2, by, m.w, m.h, 7, c, 1.5);
+        svg += multiT(x, by + m.h / 2, m.lines, { size: SZ, weight: 700, fill: c.t });
+        svg += '<circle cx="' + r1(x) + '" cy="' + r1(axisY) + '" r="4.5" fill="#fff" stroke="' +
+          c.s + '" stroke-width="2.5"/>';
+      }
+      return svg + '</svg>';
+    }
+
+    /* A whole and its named components. */
+    function buildParts(title, center, items) {
+      var n = items.length, i;
+      var colW = 132, w = 430;
+      var tb = titleBlock(title, w);
+      var top = tb.h + 8;
+      var perSide = Math.ceil(n / 2);
+      var rowH = 40;
+      var bodyH = Math.max(120, perSide * rowH + 16);
+      var h = top + bodyH + MARGIN;
+      var cx = w / 2, cy = top + bodyH / 2;
+      var svg = open(w, h) + tb.svg;
+
+      var cl = wrap(center, 104, NODE_SIZE + 1, 700, 2);
+      var rx = Math.max(56, widestLine(cl, NODE_SIZE + 1, 700) / 2 + 18);
+      var ry = Math.max(40, bodyH / 2 - 14);
+      svg += '<ellipse cx="' + r1(cx) + '" cy="' + r1(cy) + '" rx="' + r1(rx) + '" ry="' + r1(ry) +
+        '" fill="#eef2f9" stroke="' + INK + '" stroke-width="2" stroke-opacity=".55"/>';
+      svg += multiT(cx, cy, cl, { size: NODE_SIZE + 1, weight: 700, fill: INK });
+
+      for (i = 0; i < n; i++) {
+        var c = pal(i);
+        var isLeft = i % 2 === 0;
+        var idx = Math.floor(i / 2);
+        var count = isLeft ? perSide : n - perSide;
+        var ln = wrap(items[i], colW - 22, SUB_SIZE + 1, 700, 2);
+        var bh = Math.max(28, 12 + ln.length * (SUB_SIZE + 1) * 1.32);
+        var by = cy - (count * rowH - rowH) / 2 + idx * rowH - bh / 2;
+        var bw = Math.max(70, widestLine(ln, SUB_SIZE + 1, 700) + 22);
+        var bx = isLeft ? MARGIN : w - MARGIN - bw;
+
+        /* Aim the leader at the point on the ellipse level with this label, so
+           the lines fan out instead of all stacking on one spot. */
+        var ty = by + bh / 2;
+        var dyN = Math.max(-1, Math.min(1, (ty - cy) / ry));
+        var ex = cx + (isLeft ? -1 : 1) * rx * Math.sqrt(Math.max(0, 1 - dyN * dyN));
+        var ey = cy + dyN * ry;
+        svg += '<line x1="' + r1(isLeft ? bx + bw : bx) + '" y1="' + r1(ty) +
+          '" x2="' + r1(ex) + '" y2="' + r1(ey) +
+          '" stroke="' + c.s + '" stroke-width="1.2" stroke-dasharray="3 2"/>';
+        svg += roundRect(bx, by, bw, bh, 7, c, 1.5);
+        svg += multiT(bx + bw / 2, by + bh / 2, ln, { size: SUB_SIZE + 1, weight: 700, fill: c.t });
+      }
+      return svg + '</svg>';
+    }
+
+    /* Fallback: a central idea with related terms radiating out. */
+    function buildConcept(title, center, items) {
+      var n = items.length, i;
+      var size = 340, cx = size / 2;
+      var tb = titleBlock(title, size);
+      var cy = tb.h + size / 2;
+      var h = tb.h + size;
+      var svg = open(size, h) + tb.svg;
+      var R = 118;
+      var cl = wrap(center, 96, NODE_SIZE + 1, 700, 2);
+      for (i = 0; i < n; i++) {
+        var a = -Math.PI / 2 + i * 2 * Math.PI / n;
+        var x = cx + R * Math.cos(a), y = cy + R * Math.sin(a);
+        svg += '<line x1="' + r1(cx) + '" y1="' + r1(cy) + '" x2="' + r1(x) + '" y2="' + r1(y) +
+          '" stroke="' + RULE + '" stroke-width="1.4"/>';
+      }
+      for (i = 0; i < n; i++) {
+        var c = pal(i);
+        var aa = -Math.PI / 2 + i * 2 * Math.PI / n;
+        var xx = cx + R * Math.cos(aa), yy = cy + R * Math.sin(aa);
+        var ln = wrap(items[i], 104, SUB_SIZE + 1, 700, 2);
+        var bw = Math.max(56, widestLine(ln, SUB_SIZE + 1, 700) + 16);
+        var bh = Math.max(26, 11 + ln.length * (SUB_SIZE + 1) * 1.32);
+        svg += roundRect(xx - bw / 2, yy - bh / 2, bw, bh, 7, c, 1.5);
+        svg += multiT(xx, yy, ln, { size: SUB_SIZE + 1, weight: 700, fill: c.t });
+      }
+      var crx = Math.max(46, widestLine(cl, NODE_SIZE + 1, 700) / 2 + 16);
+      svg += '<ellipse cx="' + r1(cx) + '" cy="' + r1(cy) + '" rx="' + r1(crx) +
+        '" ry="30" fill="#fff" stroke="' + INK + '" stroke-width="2"/>';
+      svg += multiT(cx, cy, cl, { size: NODE_SIZE + 1, weight: 700, fill: INK });
+      return svg + '</svg>';
+    }
+
+    /* ── §5 topic understanding ────────────────────────────────────────────── */
+
+    var STOP = { the:1, a:1, an:1, of:1, and:1, or:1, to:1, in:1, on:1, for:1, with:1,
+                 how:1, why:1, what:1, its:1, their:1, this:1, that:1, is:1, are:1,
+                 diagram:1, showing:1, show:1, illustration:1, chart:1, graph:1 };
+
+    function clean(s) {
+      return String(s == null ? '' : s).replace(/\s+/g, ' ').replace(/^[\s\-–—:;,.]+|[\s\-–—:;,.]+$/g, '').trim();
+    }
+
+    function titleCase(s) {
+      s = clean(s);
+      return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+    }
+
+    /* Split the descriptive half of a tag into node labels. */
+    function extractItems(desc) {
+      var body = String(desc || '');
+      var ci = body.indexOf(':');
+      if (ci > -1) body = body.slice(ci + 1);
+      var parts = body.split(/\s*(?:,|;|\||\u2192|->|=>|\bthen\b|\bvs\.?\b|\bversus\b|\bleads? to\b|\bfollowed by\b)\s*/i);
+      var out = [], i, p, seen = {};
+      for (i = 0; i < parts.length; i++) {
+        p = clean(parts[i]);
+        if (!p) continue;
+        if (p.length < 2) continue;
+        if (STOP[p.toLowerCase()]) continue;
+        if (seen[p.toLowerCase()]) continue;
+        seen[p.toLowerCase()] = 1;
+        if (p.length > 46) p = p.slice(0, 44).replace(/\s\S*$/, '') + '\u2026';
+        out.push(titleCase(p));
+        if (out.length === 7) break;
+      }
+      return out;
+    }
+
+    /* Only the text before a colon is a heading. Without a colon the whole tag
+       is the item list, and using it as a title would just repeat the diagram
+       back at the reader. */
+    function topicOf(desc) {
+      var s = String(desc || '');
+      var ci = s.indexOf(':');
+      if (ci === -1) return '';
+      return titleCase(clean(s.slice(0, ci)));
+    }
+
+    /* "Parts of a volcano" -> "Volcano", so the hub isn't a copy of the title. */
+    function subjectOf(title) {
+      var s = clean(title).replace(
+        /^(?:the\s+)?(?:main\s+)?(?:parts|structure|anatomy|components|regions|layers|sections|elements)\s+of\s+(?:the\s+|a\s+|an\s+)?/i,
+        '');
+      s = clean(s);
+      return s ? titleCase(s) : titleCase(title);
+    }
+
+    function classify(desc) {
+      var d = String(desc || '').toLowerCase();
+      if (/\bvs\.?\b|\bversus\b|\bcompar|\bcontrast|difference between|\bdiffer\b/.test(d)) return 'compare';
+      if (/\bcycle\b|\bloop\b|recurring|circular|feedback|renew|\brotation\b|\bseasons\b/.test(d)) return 'cycle';
+      if (/timeline|chronolog|\bera\b|\bhistory\b|\bdates?\b|\bcentury\b|\bperiod\b|\b1[0-9]{3}\b|\b20[0-9]{2}\b/.test(d)) return 'timeline';
+      if (/hierarch|pyramid|\btiers?\b|\blevels?\b|classification|taxonom|\branks?\b|\border of\b/.test(d)) return 'hierarchy';
+      if (/\bparts?\b|structure|anatomy|components|\blabell?ed\b|made up of|consists? of|\bregions?\b/.test(d)) return 'parts';
+      if (/\bsteps?\b|\bstages?\b|\bprocess\b|\bsequence\b|\bprocedure\b|\bpathway\b|\bchain\b|how .* works|\bcauses?\b|\beffects?\b|\bresults? in\b/.test(d)) return 'flow';
+      return '';
+    }
+
+    /**
+     * Build a diagram from a structured spec — the shape the lesson generator
+     * emits when a topic has no hand-drawn template.
+     *   { layout, title, items:[], center, left:{title,items}, right:{...} }
+     */
+    function fromSpec(spec) {
+      if (!spec || typeof spec !== 'object') return null;
+      var layout = String(spec.layout || spec.type || '').toLowerCase();
+      var title = clean(spec.title || spec.label || '');
+      var items = [], i;
+      var raw = spec.items || spec.steps || spec.parts || [];
+      for (i = 0; i < raw.length; i++) {
+        var v = clean(typeof raw[i] === 'string' ? raw[i] : (raw[i] && (raw[i].label || raw[i].name)) || '');
+        if (v) items.push(v.length > 46 ? v.slice(0, 44).replace(/\s\S*$/, '') + '\u2026' : v);
+        if (items.length === 7) break;
+      }
+
+      if (layout === 'compare' && spec.left && spec.right) {
+        var norm = function (side) {
+          var it = [], j, arr = side.items || [];
+          for (j = 0; j < arr.length && j < 5; j++) {
+            var t = clean(arr[j]);
+            if (t) it.push(t.length > 30 ? t.slice(0, 28) + '\u2026' : t);
+          }
+          return { title: clean(side.title || side.label || '\u2014'), items: it };
+        };
+        return buildCompare(title, norm(spec.left), norm(spec.right));
+      }
+
+      if (items.length < 2) return null;
+
+      switch (layout) {
+        case 'cycle':      return buildCycle(title, items);
+        case 'timeline':   return buildTimeline(title, items);
+        case 'hierarchy':
+        case 'pyramid':    return buildHierarchy(title, items);
+        case 'parts':      return buildParts(title, clean(spec.center || title || 'Whole'), items);
+        case 'concept':
+        case 'web':        return buildConcept(title, clean(spec.center || title || 'Idea'), items);
+        case 'flow':
+        case 'process':
+        case 'steps':      return buildFlow(title, items);
+        default:           return buildFlow(title, items);
+      }
+    }
+
+    /**
+     * Build a diagram straight from a free-text description, for any topic —
+     * e.g. "Stages of the French Revolution: Estates-General, Bastille, Terror".
+     * Returns null when there isn't enough structure to draw something honest.
+     */
+    function forTopic(desc) {
+      var items = extractItems(desc);
+      var title = topicOf(desc);
+      if (items.length < 2) return null;
+
+      var kind = classify(desc);
+      if (kind === 'compare') {
+        /* Split on the actual "vs" so each trait stays on the side it was
+           written on. Guessing the attribution instead would let the diagram
+           state something the notes never said — worse than a sparse column. */
+        var halves = String(desc).split(/\s+(?:vs\.?|versus)\s+/i);
+        if (halves.length >= 2) {
+          var L = extractItems(halves[0]);
+          var Rt = extractItems(halves.slice(1).join(' '));
+          if (L.length && Rt.length) {
+            return buildCompare(title,
+              { title: L[0], items: L.slice(1, 6) },
+              { title: Rt[0], items: Rt.slice(1, 6) });
+          }
+        }
+        if (items.length >= 2) {
+          return buildCompare(title,
+            { title: items[0], items: [] },
+            { title: items[1], items: items.slice(2, 7) });
+        }
+      }
+      switch (kind) {
+        case 'cycle':     return buildCycle(title, items);
+        case 'timeline':  return buildTimeline(title, items);
+        case 'hierarchy': return buildHierarchy(title, items);
+        case 'parts':     return buildParts(title, subjectOf(title || desc), items);
+        case 'flow':      return buildFlow(title, items);
+        default:          return buildFlow(title, items);
+      }
+    }
+
+    return {
+      FONT: FONT,
+      measure: measure,
+      wrap: wrap,
+      polish: polish,
+      fromSpec: fromSpec,
+      forTopic: forTopic,
+      classify: classify,
+      extractItems: extractItems,
+      _build: {
+        flow: buildFlow, cycle: buildCycle, hierarchy: buildHierarchy,
+        compare: buildCompare, timeline: buildTimeline, parts: buildParts,
+        concept: buildConcept
+      }
+    };
+  })();
+
+  // ── CURATED DIAGRAMS — hand-drawn templates for common science topics ──
+  // Returns null when the topic has no template; generateDiagramSVG() below
+  // then falls back to building one from the topic itself.
+  function curatedDiagramSVG(desc) {
     var d = desc.toLowerCase();
     // Shared style constants — consistent across all diagrams
     var LF = "font-family:'DM Sans',sans-serif;";
@@ -3908,9 +4828,11 @@
         // Terminal label — right of the terminal buttons, vertically centered
         '<text x="434" y="91" style="' + LT + 'font-weight:600;" fill="#065f46">Axon</text>' +
         '<text x="434" y="103" style="' + LT + 'font-weight:600;" fill="#065f46">terminals</text>' +
-        // Signal arrow — above axon, 10px gap between text and arrow
-        '<path d="M218 82 L372 82" fill="none" stroke="#6366f1" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#nArr)"/>' +
-        '<text x="295" y="72" style="' + LT + '" fill="#6366f1" text-anchor="middle">electrical signal →</text>' +
+        // Signal arrow — raised clear of the "Axon" label at y=78, which sits
+        // 13px above the axon line. Arrow at 64 leaves 7px above that label's
+        // cap height; its own caption clears the arrow by a further 8px.
+        '<path d="M218 64 L372 64" fill="none" stroke="#6366f1" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#nArr)"/>' +
+        '<text x="295" y="54" style="' + LT + '" fill="#6366f1" text-anchor="middle">electrical signal</text>' +
         '</svg>';
     }
 
@@ -3972,7 +4894,9 @@
         '<text x="66" y="165" style="' + LT + 'font-weight:600;" fill="#075985" text-anchor="middle">Ocean / Lake</text>' +
         // Sun — clear of all labels, top-right corner with 8px inset
         '<circle cx="344" cy="30" r="24" fill="#fef08a" stroke="#f59e0b" stroke-width="2"/>' +
-        '<text x="344" y="24" style="font-size:14px;" fill="#d97706" text-anchor="middle">☀</text>' +
+        // Sun drawn as geometry; DM Sans has no U+2600 glyph.
+        '<circle cx="344" cy="30" r="6" fill="#d97706"/>' +
+        '<line x1="352.0" y1="30.0" x2="356.5" y2="30.0" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/><line x1="349.7" y1="35.7" x2="352.8" y2="38.8" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/><line x1="344.0" y1="38.0" x2="344.0" y2="42.5" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/><line x1="338.3" y1="35.7" x2="335.2" y2="38.8" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/><line x1="336.0" y1="30.0" x2="331.5" y2="30.0" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/><line x1="338.3" y1="24.3" x2="335.2" y2="21.2" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/><line x1="344.0" y1="22.0" x2="344.0" y2="17.5" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/><line x1="349.7" y1="24.3" x2="352.8" y2="21.2" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/>' +
         '<text x="344" y="60" style="' + LT + '" fill="#92400e" text-anchor="middle">Solar energy</text>' +
         // Cloud
         '<ellipse cx="188" cy="52" rx="46" ry="24" fill="white" stroke="#cbd5e1" stroke-width="1.5"/>' +
@@ -4096,7 +5020,7 @@
 
     // ── MEMORY MODEL ─────────────────────────────────────────────────────────
     if (/memory|encoding|storage|retrieval|short.term|long.term|working memory|forgetting/.test(d)) {
-      return '<svg viewBox="0 0 460 185" width="100%" style="max-width:520px;display:block;margin:0 auto;' + LF + '">' +
+      return '<svg viewBox="0 0 498 185" width="100%" style="max-width:560px;display:block;margin:0 auto;' + LF + '">' +
         '<defs>' +
         '<marker id="mF" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#6366f1"/></marker>' +
         '<marker id="mG" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#94a3b8"/></marker>' +
@@ -4105,43 +5029,45 @@
         '<rect x="8" y="70" width="68" height="50" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>' +
         '<text x="42" y="92" style="' + LT + 'font-weight:700;" fill="#374151" text-anchor="middle">Stimulus</text>' +
         '<text x="42" y="106" style="' + LT + '" fill="#64748b" text-anchor="middle">(sight/sound)</text>' +
-        // Arrow + "attention" label — label sits 8px above arrow, not on it
-        '<path d="M76 95 L102 95" fill="none" stroke="#6366f1" stroke-width="1.8" marker-end="url(#mF)"/>' +
-        '<text x="89" y="88" style="' + LT + '" fill="#4338ca" text-anchor="middle">attention</text>' +
+        // Arrow + "attention" label. The gaps between boxes are 46px, set from
+        // the widest transition word ("attention" is ~36px at 8px type) plus
+        // clearance, so a label can never sit on top of a neighbouring box.
+        '<path d="M76 95 L120 95" fill="none" stroke="#6366f1" stroke-width="1.8" marker-end="url(#mF)"/>' +
+        '<text x="99" y="88" style="' + LT + '" fill="#4338ca" text-anchor="middle">attention</text>' +
         // Sensory memory
-        '<rect x="104" y="58" width="76" height="74" rx="10" fill="#fce7f3" stroke="#ec4899" stroke-width="1.8"/>' +
-        '<text x="142" y="82" style="' + LT + 'font-weight:700;" fill="#9d174d" text-anchor="middle">Sensory</text>' +
-        '<text x="142" y="96" style="' + LT + 'font-weight:700;" fill="#be185d" text-anchor="middle">Memory</text>' +
-        '<text x="142" y="110" style="' + LT + '" fill="#be185d" text-anchor="middle">0.5–3 sec</text>' +
-        '<text x="142" y="122" style="' + LT + '" fill="#be185d" text-anchor="middle">unlimited</text>' +
+        '<rect x="122" y="58" width="76" height="74" rx="10" fill="#fce7f3" stroke="#ec4899" stroke-width="1.8"/>' +
+        '<text x="160" y="82" style="' + LT + 'font-weight:700;" fill="#9d174d" text-anchor="middle">Sensory</text>' +
+        '<text x="160" y="96" style="' + LT + 'font-weight:700;" fill="#be185d" text-anchor="middle">Memory</text>' +
+        '<text x="160" y="110" style="' + LT + '" fill="#be185d" text-anchor="middle">0.5–3 sec</text>' +
+        '<text x="160" y="122" style="' + LT + '" fill="#be185d" text-anchor="middle">unlimited</text>' +
         // "forgotten" from sensory — arrow exits bottom with 6px gap, label 4px below arrow
-        '<path d="M142 132 L142 158" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#mG)"/>' +
-        '<text x="142" y="170" style="' + LT + '" fill="#94a3b8" text-anchor="middle">forgotten</text>' +
+        '<path d="M160 132 L160 158" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#mG)"/>' +
+        '<text x="160" y="170" style="' + LT + '" fill="#94a3b8" text-anchor="middle">forgotten</text>' +
         // STM arrow + label
-        '<path d="M180 95 L214 95" fill="none" stroke="#6366f1" stroke-width="1.8" marker-end="url(#mF)"/>' +
-        '<text x="197" y="88" style="' + LT + '" fill="#4338ca" text-anchor="middle">encoding</text>' +
+        '<path d="M198 95 L242 95" fill="none" stroke="#6366f1" stroke-width="1.8" marker-end="url(#mF)"/>' +
+        '<text x="221" y="88" style="' + LT + '" fill="#4338ca" text-anchor="middle">encoding</text>' +
         // Short-term memory
-        '<rect x="216" y="48" width="92" height="94" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.8"/>' +
-        '<text x="262" y="76" style="' + LT + 'font-weight:700;" fill="#1e40af" text-anchor="middle">Short-term</text>' +
-        '<text x="262" y="90" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">Memory</text>' +
-        '<text x="262" y="106" style="' + LT + '" fill="#3b82f6" text-anchor="middle">~7 items</text>' +
-        '<text x="262" y="120" style="' + LT + '" fill="#3b82f6" text-anchor="middle">15–30 sec</text>' +
+        '<rect x="244" y="48" width="92" height="94" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.8"/>' +
+        '<text x="290" y="76" style="' + LT + 'font-weight:700;" fill="#1e40af" text-anchor="middle">Short-term</text>' +
+        '<text x="290" y="90" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">Memory</text>' +
+        '<text x="290" y="106" style="' + LT + '" fill="#3b82f6" text-anchor="middle">~7 items</text>' +
+        '<text x="290" y="120" style="' + LT + '" fill="#3b82f6" text-anchor="middle">15–30 sec</text>' +
         // Decay from STM
-        '<path d="M262 142 L262 158" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#mG)"/>' +
-        '<text x="262" y="170" style="' + LT + '" fill="#94a3b8" text-anchor="middle">decay</text>' +
+        '<path d="M290 142 L290 158" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#mG)"/>' +
+        '<text x="290" y="170" style="' + LT + '" fill="#94a3b8" text-anchor="middle">decay</text>' +
         // LTM encoding arrow
-        '<path d="M308 95 L344 95" fill="none" stroke="#6366f1" stroke-width="1.8" marker-end="url(#mF)"/>' +
-        '<text x="326" y="88" style="' + LT + '" fill="#4338ca" text-anchor="middle">encoding</text>' +
+        '<path d="M336 95 L380 95" fill="none" stroke="#6366f1" stroke-width="1.8" marker-end="url(#mF)"/>' +
+        '<text x="359" y="88" style="' + LT + '" fill="#4338ca" text-anchor="middle">encoding</text>' +
         // Long-term memory
-        '<rect x="346" y="36" width="108" height="118" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.8"/>' +
-        '<text x="400" y="62" style="' + LT + 'font-weight:700;" fill="#14532d" text-anchor="middle">Long-term</text>' +
-        '<text x="400" y="76" style="' + LT + 'font-weight:700;" fill="#16a34a" text-anchor="middle">Memory</text>' +
-        '<text x="400" y="94" style="' + LT + '" fill="#15803d" text-anchor="middle">Unlimited size</text>' +
-        '<text x="400" y="108" style="' + LT + '" fill="#15803d" text-anchor="middle">Days–Lifetime</text>' +
-        '<text x="400" y="122" style="' + LT + '" fill="#15803d" text-anchor="middle">Explicit | Implicit</text>' +
+        '<rect x="382" y="36" width="108" height="118" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.8"/>' +
+        '<text x="436" y="62" style="' + LT + 'font-weight:700;" fill="#14532d" text-anchor="middle">Long-term</text>' +
+        '<text x="436" y="76" style="' + LT + 'font-weight:700;" fill="#16a34a" text-anchor="middle">Memory</text>' +
+        '<text x="436" y="94" style="' + LT + '" fill="#15803d" text-anchor="middle">Unlimited size</text>' +
+        '<text x="436" y="108" style="' + LT + '" fill="#15803d" text-anchor="middle">Days–Lifetime</text>' +
+        '<text x="436" y="122" style="' + LT + '" fill="#15803d" text-anchor="middle">Explicit | Implicit</text>' +
         // Retrieval arrow — runs BELOW boxes to avoid crossing through them
-        '<path d="M346 148 L262 148" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 2" marker-end="url(#mG)"/>' +
-        '<text x="304" y="162" style="' + LT + '" fill="#d97706" text-anchor="middle">retrieval</text>' +
+        '<path d="M382 148 L290 148" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 2" marker-end="url(#mG)"/>' +
+        '<text x="336" y="162" style="' + LT + '" fill="#d97706" text-anchor="middle">retrieval</text>' +
         '</svg>';
     }
 
@@ -4189,35 +5115,38 @@
         '<circle cx="138" cy="152" r="7" fill="#d1d5db" stroke="#6b7280" stroke-width="1"/>' +
         '<circle cx="152" cy="152" r="7" fill="#d1d5db" stroke="#6b7280" stroke-width="1"/>' +
         // Nucleus label — 12px below nucleus bottom (145+25+12=182)
-        '<text x="145" y="184" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">Nucleus (p⁺ + n⁰)</text>' +
+        '<text x="145" y="184" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">Nucleus (p+ + n0)</text>' +
         // Shell 1 electrons
         '<circle cx="193" cy="145" r="8" fill="#bfdbfe" stroke="#3b82f6" stroke-width="1.5"/>' +
-        '<text x="193" y="149" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">e⁻</text>' +
+        '<text x="193" y="149" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">e−</text>' +
         '<circle cx="97" cy="145" r="8" fill="#bfdbfe" stroke="#3b82f6" stroke-width="1.5"/>' +
-        '<text x="97" y="149" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">e⁻</text>' +
-        // Shell 1 label — leader from orbit ring, offset outward 14px from circle
-        '<line x1="201" y1="138" x2="226" y2="115" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="2 2"/>' +
-        '<text x="228" y="112" style="' + LT + '" fill="#374151">Shell 1</text>' +
+        '<text x="97" y="149" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">e−</text>' +
+        // Shell 1 label. All three shell labels are placed on the same 45°
+        // diagonal, each in the gap just outside its own ring. Because the
+        // rings are 34px apart, the labels inherit that separation instead of
+        // bunching into one wedge and overlapping each other.
+        '<line x1="176" y1="114" x2="183" y2="107" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="2 2"/>' +
+        '<text x="186" y="108" style="' + LT + '" fill="#374151">Shell 1</text>' +
         // Shell 2 electrons
         '<circle cx="227" cy="145" r="8" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>' +
-        '<text x="227" y="149" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e⁻</text>' +
+        '<text x="227" y="149" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e−</text>' +
         '<circle cx="63" cy="145" r="8" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>' +
-        '<text x="63" y="149" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e⁻</text>' +
+        '<text x="63" y="149" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e−</text>' +
         '<circle cx="145" cy="63" r="8" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>' +
-        '<text x="145" y="67" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e⁻</text>' +
+        '<text x="145" y="67" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e−</text>' +
         '<circle cx="145" cy="227" r="8" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>' +
-        '<text x="145" y="231" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e⁻</text>' +
+        '<text x="145" y="231" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e−</text>' +
         // Shell 2 label
-        '<line x1="234" y1="140" x2="254" y2="122" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="2 2"/>' +
-        '<text x="256" y="120" style="' + LT + '" fill="#374151">Shell 2</text>' +
+        '<line x1="200" y1="90" x2="207" y2="83" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="2 2"/>' +
+        '<text x="210" y="84" style="' + LT + '" fill="#374151">Shell 2</text>' +
         // Shell 3 electrons (outer)
         '<circle cx="261" cy="145" r="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>' +
-        '<text x="261" y="149" style="' + LT + 'font-weight:700;" fill="#713f12" text-anchor="middle">e⁻</text>' +
+        '<text x="261" y="149" style="' + LT + 'font-weight:700;" fill="#713f12" text-anchor="middle">e−</text>' +
         '<circle cx="29" cy="145" r="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>' +
-        '<text x="29" y="149" style="' + LT + 'font-weight:700;" fill="#713f12" text-anchor="middle">e⁻</text>' +
+        '<text x="29" y="149" style="' + LT + 'font-weight:700;" fill="#713f12" text-anchor="middle">e−</text>' +
         // Shell 3 label
-        '<line x1="268" y1="140" x2="272" y2="118" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="2 2"/>' +
-        '<text x="274" y="116" style="' + LT + '" fill="#374151">Shell 3</text>' +
+        '<line x1="224" y1="66" x2="231" y2="59" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="2 2"/>' +
+        '<text x="234" y="60" style="' + LT + '" fill="#374151">Shell 3</text>' +
         '</svg>';
     }
 
@@ -4227,7 +5156,10 @@
         '<defs><marker id="pA" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#374151"/></marker></defs>' +
         // Sun — top-left, clear of all labels
         '<circle cx="46" cy="38" r="28" fill="#fef08a" stroke="#f59e0b" stroke-width="2"/>' +
-        '<text x="46" y="30" style="font-size:16px;" fill="#d97706" text-anchor="middle">☀</text>' +
+        // Sun drawn as geometry rather than the U+2600 glyph, which DM Sans
+        // does not contain.
+        '<circle cx="46" cy="34" r="7" fill="#d97706"/>' +
+        '<line x1="55.0" y1="34.0" x2="60.0" y2="34.0" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/><line x1="52.4" y1="40.4" x2="55.9" y2="43.9" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/><line x1="46.0" y1="43.0" x2="46.0" y2="48.0" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/><line x1="39.6" y1="40.4" x2="36.1" y2="43.9" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/><line x1="37.0" y1="34.0" x2="32.0" y2="34.0" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/><line x1="39.6" y1="27.6" x2="36.1" y2="24.1" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/><line x1="46.0" y1="25.0" x2="46.0" y2="20.0" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/><line x1="52.4" y1="27.6" x2="55.9" y2="24.1" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/>' +
         '<text x="46" y="72" style="' + LT + 'font-weight:600;" fill="#92400e" text-anchor="middle">Light</text>' +
         '<text x="46" y="82" style="' + LT + '" fill="#92400e" text-anchor="middle">energy</text>' +
         // Arrow sun → leaf
@@ -4239,11 +5171,11 @@
         '<text x="172" y="106" style="' + LT + '" fill="#15803d" text-anchor="middle">light reactions</text>' +
         '<text x="172" y="118" style="' + LT + '" fill="#15803d" text-anchor="middle">Calvin cycle</text>' +
         // CO2 input label — left side, 14px from leaf edge
-        '<text x="54" y="116" style="' + LS + 'font-weight:700;" fill="#374151">CO₂</text>' +
+        '<text x="54" y="116" style="' + LS + 'font-weight:700;" fill="#374151">CO2</text>' +
         '<text x="54" y="128" style="' + LT + '" fill="#64748b">(from air)</text>' +
         '<path d="M82 120 L112 114" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#pA)"/>' +
         // H2O input
-        '<text x="54" y="152" style="' + LS + 'font-weight:700;" fill="#3b82f6">H₂O</text>' +
+        '<text x="54" y="152" style="' + LS + 'font-weight:700;" fill="#3b82f6">H2O</text>' +
         '<text x="54" y="164" style="' + LT + '" fill="#3b82f6">(from roots)</text>' +
         '<path d="M80 156 L112 140" fill="none" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#pA)"/>' +
         // Output arrow — exits right side of leaf
@@ -4251,18 +5183,22 @@
         // Output box — 8px gap from arrow end
         '<rect x="280" y="56" width="114" height="80" rx="10" fill="#fefce8" stroke="#f59e0b" stroke-width="1.5"/>' +
         '<text x="337" y="78" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">Outputs</text>' +
-        '<text x="337" y="96" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">Glucose (C₆H₁₂O₆)</text>' +
+        '<text x="337" y="96" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">Glucose (C6H12O6)</text>' +
         '<text x="337" y="110" style="' + LT + '" fill="#374151" text-anchor="middle">stored energy</text>' +
-        '<text x="337" y="124" style="' + LT + 'font-weight:700;" fill="#0284c7" text-anchor="middle">O₂ released</text>' +
+        '<text x="337" y="124" style="' + LT + 'font-weight:700;" fill="#0284c7" text-anchor="middle">O2 released</text>' +
         // Equation bar — 14px below all content
         '<rect x="40" y="182" width="320" height="16" rx="6" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="0.8"/>' +
-        '<text x="200" y="193" style="' + LT + '" fill="#374151" text-anchor="middle">6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂</text>' +
+        '<text x="193" y="193" style="' + LT + '" fill="#374151" text-anchor="end">6CO2 + 6H2O + light</text>' +
+        // Reaction arrow drawn as geometry: DM Sans has no arrow glyph, and
+        // borrowing one from a fallback face would break the equation's type.
+        '<path d="M196 190 L206 190" fill="none" stroke="#374151" stroke-width="1" marker-end="url(#pA)"/>' +
+        '<text x="210" y="193" style="' + LT + '" fill="#374151" text-anchor="start">C6H12O6 + 6O2</text>' +
         '</svg>';
     }
 
     // ── PLATE TECTONICS ───────────────────────────────────────────────────────
     if (/plate tectonic|fault|earthquake|volcano|continental|crust|mantle|convergent|divergent/.test(d)) {
-      return '<svg viewBox="0 0 380 220" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
+      return '<svg viewBox="0 -16 380 236" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
         '<defs><marker id="pT" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#3b82f6"/></marker></defs>' +
         // Inner core
         '<rect x="78" y="172" width="224" height="38" rx="6" fill="#fecaca" stroke="#ef4444" stroke-width="1.2"/>' +
@@ -4280,8 +5216,9 @@
         '<path d="M380 80 L208 44 L208 82 L366 82 Z" fill="#d1fae5" stroke="#16a34a" stroke-width="1.5"/>' +
         // Fault gap at top
         '<path d="M172 44 L190 8 L208 44" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>' +
-        // Fault label — 8px above the triangle apex, not on any line
-        '<text x="190" y="5" style="' + LT + 'font-weight:700;" fill="#dc2626" text-anchor="middle">Fault zone</text>' +
+        // Fault label — sits in the headroom above the canvas origin, 6px clear
+        // of the triangle apex at y=8. The viewBox starts at -16 to hold it.
+        '<text x="190" y="0" style="' + LT + 'font-weight:700;" fill="#dc2626" text-anchor="middle">Fault zone</text>' +
         // Crust labels inside each plate, clear of edges (min 8px from any border)
         '<text x="80" y="68" style="' + LT + 'font-weight:600;" fill="#065f46" text-anchor="middle">Oceanic crust</text>' +
         '<text x="300" y="68" style="' + LT + 'font-weight:600;" fill="#065f46" text-anchor="middle">Continental crust</text>' +
@@ -4289,12 +5226,59 @@
         '<path d="M42 56 L150 46" fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#pT)"/>' +
         '<path d="M338 56 L230 46" fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#pT)"/>' +
         // Motion labels — 10px above arrows
-        '<text x="96" y="42" style="' + LT + '" fill="#1d4ed8" text-anchor="middle">plate →</text>' +
-        '<text x="284" y="42" style="' + LT + '" fill="#1d4ed8" text-anchor="middle">← plate</text>' +
+        '<text x="96" y="42" style="' + LT + '" fill="#1d4ed8" text-anchor="middle">plate</text>' +
+        '<text x="284" y="42" style="' + LT + '" fill="#1d4ed8" text-anchor="middle">plate</text>' +
         '</svg>';
     }
 
     return null; // no match
+  }
+
+  /* ── DIAGRAM DISPATCH ────────────────────────────────────────────
+     Accepts either a plain description string (legacy callers) or the
+     structured `diagram` object a generated lesson carries. Order of
+     preference:
+       1. a hand-drawn template, when the topic matches one;
+       2. a structured spec from the lesson generator, drawn by the kit;
+       3. a diagram inferred from the description text itself.
+     Whatever wins is run through SFDiagramKit.polish, which enforces one font,
+     uncrops the viewBox, and pushes apart any labels that would collide.
+     Returns null only when there is genuinely nothing to draw, so the caller
+     can fall back to its text callout. */
+  function generateDiagramSVG(input) {
+    var spec = null, desc = '';
+    if (input && typeof input === 'object') {
+      spec = input;
+      desc = String(spec.label || spec.title || spec.type || '');
+    } else {
+      desc = String(input == null ? '' : input);
+    }
+
+    /* When the lesson explicitly hands over a structured spec, trust it and
+       skip keyword matching entirely. Otherwise a custom diagram whose title
+       merely contains a trigger word ("elements of the plot", "cell phone
+       adoption") would be answered with an unrelated science template. */
+    var explicit = !!(spec && (spec.layout ||
+                    String(spec.type || '').toLowerCase() === 'custom'));
+
+    var svg = null;
+    try {
+      if (!explicit && desc) svg = curatedDiagramSVG(desc);
+      if (!svg && spec) svg = SFDiagramKit.fromSpec(spec);
+      if (!svg && desc) svg = SFDiagramKit.forTopic(desc);
+    } catch (e) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[diagram] generation failed for "' + desc + '":', e);
+      }
+      svg = null;
+    }
+    if (!svg) return null;
+
+    try {
+      return SFDiagramKit.polish(svg, { name: desc, warn: true });
+    } catch (e) {
+      return svg; // never let the guardrail itself lose a working diagram
+    }
   }
 
 
@@ -5221,7 +6205,7 @@
     var n = lines.length, y0 = CY - ((n - 1) * 46) / 2, o = '', i;
     for (i = 0; i < n; i++) {
       var last = (i === n - 1), y = y0 + i * 46;
-      o += '<text x="' + CX + '" y="' + r1(y) + '" text-anchor="middle" font-family="Georgia, serif" ' +
+      o += '<text x="' + CX + '" y="' + r1(y) + '" text-anchor="middle" font-family="' + SANS + '" ' +
            'font-size="' + (last ? 31 : 26) + '" font-weight="700" fill="' +
            (last ? SERIES[1] : INK) + '" class="sfwb-fade" style="animation-delay:' + d2(i) + 'ms">' +
            esc(trunc(lines[i], 28)) + '</text>';
@@ -5638,7 +6622,7 @@
       SERIES[0] + '" fill-opacity=".14"/>' +
       '<rect x="' + (CX - 186) + '" y="' + (CY - 40) + '" width="132" height="54" rx="14" fill="none" stroke="' +
       SERIES[0] + '" stroke-width="2.2"/>' +
-      '<text x="' + (CX - 120) + '" y="' + (CY - 4) + '" text-anchor="middle" font-family="Georgia, serif" ' +
+      '<text x="' + (CX - 120) + '" y="' + (CY - 4) + '" text-anchor="middle" font-family="' + SANS + '" ' +
       'font-size="20" font-weight="700" fill="' + INK + '">' + esc(trunc(s.left || '?', 13)) + '</text></g>' +
       '<g class="sfwb-fade" style="animation-delay:' + d2(1) + 'ms">' +
       '<path d="M' + (CX + 132) + ' ' + (CY - 74) + ' L' + (CX + 132) + ' ' + (CY - 40) +
@@ -5647,7 +6631,7 @@
       SERIES[1] + '" fill-opacity=".14"/>' +
       '<rect x="' + (CX + 54) + '" y="' + (CY - 40) + '" width="132" height="54" rx="14" fill="none" stroke="' +
       SERIES[1] + '" stroke-width="2.2"/>' +
-      '<text x="' + (CX + 120) + '" y="' + (CY - 4) + '" text-anchor="middle" font-family="Georgia, serif" ' +
+      '<text x="' + (CX + 120) + '" y="' + (CY - 4) + '" text-anchor="middle" font-family="' + SANS + '" ' +
       'font-size="20" font-weight="700" fill="' + INK + '">' + esc(trunc(s.right || '?', 13)) + '</text></g></g>';
     if (s.label) o += caption(s.label);
     return o;
