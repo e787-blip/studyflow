@@ -1310,10 +1310,64 @@
   }
 
   // ── Subject classification — pure local, no API call ──
+  /* Coerce anything to a searchable string. Notes arrive from file upload, OCR
+     and paste, so null, numbers and arrays all turn up in practice; the old
+     code called .substring straight on the argument and threw. */
+  function subjText(v) {
+    if (v == null) return '';
+    if (typeof v === 'string') return v;
+    if (Object.prototype.toString.call(v) === '[object Array]') {
+      var parts = [], i;
+      for (i = 0; i < v.length; i++) if (typeof v[i] === 'string') parts.push(v[i]);
+      return parts.join(' ');
+    }
+    /* Anything else - an object, a boolean, a number - is not notes. Coercing
+       it with String() produced subjects like "[object Object]" and "true". */
+    return '';
+  }
+
+  /* Reject a candidate subject that is really a scrap of the student's own
+     prose. Without this, "Notes", "I need to study for my test tomorrow" and
+     "asdkjfh qwerty zzz" were all accepted verbatim as the lesson subject. */
+  function isUsableSubjectPhrase(v) {
+    var t = subjText(v).replace(/\s+/g, ' ').trim();
+    if (t.length < 3 || t.length > 60) return false;
+
+    var words = t.split(' ');
+    if (words.length > 8) return false;                    // a sentence, not a topic
+
+    // First person or an intention verb means the student is talking, not naming.
+    if (/\b(i|we|my|me|our|us|you|your)\b/i.test(t)) return false;
+    if (/\b(need|needs|have|has|got|gotta|learn|learned|learnt|did|doing|going|gonna|wanna|want|should|must|remember|forgot|idk|dunno)\b/i.test(t)) return false;
+
+    // Pure admin words carry no topic.
+    var META = /^(notes?|study|studying|homework|hw|test|exam|quiz|final|finals|midterm|review|class|school|today|tomorrow|chapter|unit|lesson|topic|section|page|assignment|worksheet|lecture|stuff|things?|misc|untitled|document|new|draft)$/i;
+    var contentful = 0, k;
+    for (k = 0; k < words.length; k++) {
+      if (!META.test(words[k].replace(/[^a-z0-9']/gi, ''))) contentful++;
+    }
+    if (contentful === 0) return false;
+
+    // Gibberish: a real topic word has a vowel and no long consonant run.
+    var wordlike = 0;
+    for (k = 0; k < words.length; k++) {
+      var w = words[k].replace(/[^a-z']/gi, '');
+      if (!w) { wordlike++; continue; }                     // numerals, fine
+      if (!/[aeiouy]/i.test(w)) continue;
+      if (/[bcdfghjklmnpqrstvwxz]{5,}/i.test(w)) continue;
+      wordlike++;
+    }
+    if (wordlike < Math.ceil(words.length * 0.7)) return false;
+
+    return true;
+  }
+
   function classifySubject(subjectName, notes) {
-    var text = (subjectName + ' ' + notes.substring(0, 600)).toLowerCase();
+    /* Scan well past the first 600 characters: a student's notes often open
+       with a date and a heading before any subject term appears. */
+    var text = (subjText(subjectName) + ' ' + subjText(notes).substring(0, 4000)).toLowerCase();
     if (/\bmath\b|algebra|calculus|geometry|trigonometry|\bequation\b|derivative|integral|polynomial|fraction|statistics|probability|\btheorem\b|\bslope\b|\blinear\b|quadratic|arithmetic|logarithm|matrix|vector/.test(text)) return 'math';
-    if (/biology|chemistry|physics|science|cell|mitosis|meiosis|atom|molecule|element|compound|reaction|force|energy|evolution|genetics|ecosystem|periodic|dna|rna|organ|tissue|photosynthesis|thermodynamics/.test(text)) return 'science';
+    if (/biology|chemistry|physics|science|\bcell\b|\bcells\b|mitosis|meiosis|atom|molecule|element|compound|reaction|force|energy|evolution|genetics|ecosystem|periodic|dna|rna|organ|tissue|photosynthesis|thermodynamics/.test(text)) return 'science';
     if (/psychology|psych|neuroscience|brain|cognition|behavior|freud|piaget|pavlov|memory|perception|emotion|mental|therapy|disorder|consciousness|neuron|synapse|cognitive|developmental/.test(text)) return 'psychology';
     if (/geography|continent|country|region|capital|climate|biome|latitude|longitude|river|mountain|ocean|population|migration|urbanization|demography|geopolitics|physical geography/.test(text)) return 'geography';
     if (/economics|econ|supply|demand|market|inflation|gdp|trade|currency|fiscal|monetary|microeconomics|macroeconomics|opportunity cost|marginal|elasticity|recession|budget|tariff/.test(text)) return 'economics';
@@ -1330,7 +1384,9 @@
   // Scoring: each topic has a list of distinctive terms and a weight.
   // Specific topics outrank broad ones, so "Geometry" beats a generic "Math" match.
   function detectSubject(notes, typed) {
-    var text = ((typed || '') + ' ' + (notes || '')).toLowerCase();
+    notes = subjText(notes);
+    typed = subjText(typed);
+    var text = (typed + ' ' + notes).toLowerCase();
     if (!text.trim()) return 'General Study';
 
     // [ label, weight, [distinctive terms] ]
@@ -1389,25 +1445,33 @@
     // Need at least 2 distinct term hits before we trust it
     if (best && bestScore >= 8) return best;
 
-    // Fallback 1 — an explicit heading in the notes
-    var head = (notes || '').match(/(?:^|\n)\s*(?:chapter|unit|lesson|topic|section|ch\.)\s*\d*\s*[:\-\u2013]\s*([^\n]{3,60})/i);
-    if (head && head[1]) return head[1].trim();
+    // Fallback 1 — an explicit heading, provided it is actually a topic name
+    var head = notes.match(/(?:^|\n)\s*(?:chapter|unit|lesson|topic|section|ch\.)\s*\d*\s*[:\-\u2013]\s*([^\n]{3,60})/i);
+    if (head && head[1] && isUsableSubjectPhrase(head[1])) return head[1].trim();
 
-    // Fallback 2 — a short standalone first line, which is usually the title
-    var lines = (notes || '').split('\n');
-    for (var k = 0; k < lines.length && k < 6; k++) {
-      var line = lines[k].trim();
-      if (line.length >= 4 && line.length <= 60 && !/[.!?]$/.test(line) && /[a-z]/i.test(line)) return line;
-    }
+    // Fallback 2 — a single strong term still beats a broad guess
+    if (best && bestScore >= 4) return best;
 
-    // Fallback 3 — a weak single match, better than nothing
-    if (best) return best;
-
-    // Fallback 4 — broad classification
+    /* Fallback 3 — broad classification. This now runs BEFORE the raw first
+       line. Previously the line grab came first, so notes beginning "ok so
+       today we learned about the cell" were titled with that whole sentence
+       even though the text classified cleanly as science. */
     var broad = { math:'Math', science:'Science', psychology:'Psychology', geography:'Geography',
                   economics:'Economics', cs:'Computer Science', history:'History',
-                  english:'English', language:'Language', general:'General Study' };
-    return broad[classifySubject('', notes || '')] || 'General Study';
+                  english:'English', language:'Language' };
+    var cls = broad[classifySubject('', notes)];
+    if (cls) return cls;
+
+    // Fallback 4 — a short standalone first line, if it reads like a title
+    var lines = notes.split('\n');
+    for (var k = 0; k < lines.length && k < 6; k++) {
+      var line = lines[k].trim().replace(/[.!?,;:]+$/, '');
+      if (!/[.!?]/.test(lines[k].trim().slice(0, -1)) && isUsableSubjectPhrase(line)) return line;
+    }
+
+    // Fallback 5 — anything at all, rather than a misleading label
+    if (best) return best;
+    return 'General Study';
   }
 
   // ── Per-subject strategy ──
@@ -1444,7 +1508,12 @@
     // If the student typed something vague (or nothing), use the detected topic instead —
     // "Geometry" produces a far tighter plan than "math".
     var VAGUE_SUBJECT = /^(math|maths|mathematics|science|history|english|reading|writing|school|homework|study|studying|notes|test|exam|quiz|class|final|midterm|review)$/i;
-    var subject = (typedSubject && !VAGUE_SUBJECT.test(typedSubject)) ? typedSubject : detectedSubject;
+    /* A typed subject wins only if it is specific AND reads like a topic —
+       "idk", "stuff" and "my test tomorrow" get dropped in favour of what the
+       notes themselves say. */
+    var typedOk = typedSubject && !VAGUE_SUBJECT.test(typedSubject) &&
+                  isUsableSubjectPhrase(typedSubject);
+    var subject = typedOk ? typedSubject : detectedSubject;
     console.log('[StudyFlow] subject typed:', typedSubject || '(none)', '| detected:', detectedSubject, '| using:', subject);
     var subjectType = classifySubject(subject, notes);
     var strategy    = getSubjectStrategy(subjectType);
