@@ -834,7 +834,10 @@
       var seeded = buildFallbackQuestions(day);
       if (seeded.length) day.questions = seeded;
     }
-    var questions = day.questions || [];
+    // Repair every answer key before the queue is built, so a model that
+    // emitted correctIndex as a string or True/False as a boolean cannot cause
+    // a correct choice to be graded wrong further down.
+    var questions = normalizeQuestions(day.questions || []);
     // Only mcq/truefalse can render correctly through the generic question card —
     // every other type has its own dedicated renderer and must be excluded here.
     var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1 };
@@ -1158,7 +1161,7 @@
       // Try to rebuild from the day's own content before giving up.
       var rebuilt = buildFallbackQuestions(day);
       if (rebuilt.length) {
-        day.questions = rebuilt;
+        day.questions = normalizeQuestions(rebuilt);
         questions = rebuilt;
         if (!generatingNew) generateMoreQuestions();
       } else {
@@ -1170,7 +1173,7 @@
           return { type: 'generating' };
         }
         if (questionBuffer.length > 0) {
-          day.questions = questionBuffer.splice(0, questionBuffer.length);
+          day.questions = normalizeQuestions(questionBuffer.splice(0, questionBuffer.length));
           questions = day.questions;
         } else {
           return { type: 'done' };
@@ -1265,9 +1268,10 @@
           if (q.type === 'mcq') {
             var opts = (q.options || []).filter(function(o){ return o && String(o).trim(); });
             if (opts.length < 2) return false;
-            if (typeof q.correctIndex !== 'number' || q.correctIndex < 0 || q.correctIndex >= q.options.length) q.correctIndex = 0;
+            normalizeQuestion(q);   // coerces string/letter/text answer keys
           }
-          if (q.type === 'truefalse' && q.correct !== 'True' && q.correct !== 'False') return false;
+          if (q.type === 'truefalse') { normalizeQuestion(q);
+            if (q.correct !== 'True' && q.correct !== 'False') return false; }
           var qtl = qt.toLowerCase();
           return !existingQs.some(function(eq) {
             return eq && eq.includes(qtl.substring(0, 15));
@@ -3812,6 +3816,69 @@
     }
   }
 
+  /* ── ANSWER-KEY NORMALIZATION ──────────────────────────────────────────────
+     The lesson JSON comes from a language model, which does not always honour
+     the schema's types: correctIndex arrives as the string "2" as readily as
+     the number 2, and True/False arrives as a boolean or in lower case. Every
+     grading path then compares with ===, so a type mismatch silently reset the
+     answer key to option A and marked the genuinely correct choice wrong.
+
+     Normalizing once, at ingest, keeps the fix in a single place instead of
+     scattering coercions across the render and grading functions. */
+  function normalizeQuestion(q) {
+    if (!q || typeof q !== 'object') return q;
+
+    // correctIndex -> a real integer that indexes into options
+    if (q.correctIndex !== undefined && q.correctIndex !== null) {
+      var ci = q.correctIndex;
+      if (typeof ci === 'string') ci = ci.trim();
+      var n = typeof ci === 'number' ? ci : parseInt(ci, 10);
+      q.correctIndex = isNaN(n) ? undefined : n;
+    }
+    // A letter answer ("B") is also common when the model ignores the schema.
+    if (q.correctIndex === undefined && typeof q.correctLetter === 'string') {
+      var L = q.correctLetter.trim().toUpperCase().charCodeAt(0) - 65;
+      if (L >= 0 && L < 26) q.correctIndex = L;
+    }
+    // Some responses give the answer text rather than its position.
+    if (q.correctIndex === undefined && typeof q.answer === 'string' &&
+        Object.prototype.toString.call(q.options) === '[object Array]') {
+      for (var i = 0; i < q.options.length; i++) {
+        if (String(q.options[i]).trim().toLowerCase() === q.answer.trim().toLowerCase()) {
+          q.correctIndex = i;
+          break;
+        }
+      }
+    }
+    // Only clamp once every recovery route has been tried, so a valid key is
+    // never thrown away in favour of the option-A default.
+    if (Object.prototype.toString.call(q.options) === '[object Array]' && q.options.length) {
+      if (typeof q.correctIndex !== 'number' || isNaN(q.correctIndex) ||
+          q.correctIndex < 0 || q.correctIndex >= q.options.length) {
+        q.correctIndex = 0;
+        q._answerKeyRecovered = true;   // visible in diagnostics, not to the learner
+      }
+    }
+
+    // True/False -> exactly 'True' or 'False'
+    if (q.correct !== undefined && q.correct !== null && q.type === 'truefalse') {
+      var c = q.correct;
+      if (typeof c === 'boolean') q.correct = c ? 'True' : 'False';
+      else {
+        var cs = String(c).trim().toLowerCase();
+        if (cs === 'true' || cs === 't' || cs === 'yes') q.correct = 'True';
+        else if (cs === 'false' || cs === 'f' || cs === 'no') q.correct = 'False';
+      }
+    }
+    return q;
+  }
+
+  function normalizeQuestions(list) {
+    if (Object.prototype.toString.call(list) !== '[object Array]') return list;
+    for (var i = 0; i < list.length; i++) normalizeQuestion(list[i]);
+    return list;
+  }
+
   function esc(str) {
     return (str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
   }
@@ -5933,6 +6000,37 @@
       if (names[i]) o += txt(vp.x, vp.y + 4, trunc(names[i], 3),
         { size: 15, weight: 700, fill: LINE, cls: 'sfwb-fade', delay: d2(i) });
     }
+    /* Side labels are positional, so a spec that lists them in a different
+       order than the points draws an impossible figure - a right triangle with
+       the hypotenuse marked shorter than a leg. When every label is numeric we
+       can settle it from the geometry itself: rank the drawn edges by length,
+       rank the numbers, and pair them off. A label set that is already
+       consistent is unchanged; only a mismatched one moves. Labels containing
+       letters or units are left exactly where the spec put them, since those
+       carry intent the drawing cannot infer. */
+    (function alignNumericSideLabels() {
+      var vals = [], k;
+      for (k = 0; k < edges.length; k++) {
+        if (!sides[k]) return;                       // incomplete set, leave alone
+        var t = String(sides[k]).trim();
+        if (!/^[0-9]+(\.[0-9]+)?$/.test(t)) return;  // not purely numeric
+        vals.push(parseFloat(t));
+      }
+      if (vals.length !== edges.length) return;
+      var lens = [];
+      for (k = 0; k < edges.length; k++) {
+        lens.push({ i: k, len: vlen(vsub(edges[k][1], edges[k][0])) });
+      }
+      var byLen = lens.slice().sort(function (a, b) { return a.len - b.len; });
+      var byVal = vals.slice().sort(function (a, b) { return a - b; });
+      var already = true;
+      for (k = 0; k < byLen.length; k++) {
+        if (vals[byLen[k].i] !== byVal[k]) { already = false; break; }
+      }
+      if (already) return;
+      for (k = 0; k < byLen.length; k++) sides[byLen[k].i] = String(byVal[k]);
+    })();
+
     for (i = 0; i < edges.length; i++) {
       if (!sides[i]) continue;
       var sp = sideLabelPos(edges[i][0], edges[i][1], G, edges, SIDE_BUFFER);
@@ -6316,7 +6414,13 @@
    */
   V.cell = function (s) {
     var isPlant = /plant/i.test(str(s.cellType));
-    var organelles = list(s.organelles);
+    /* Organelles may arrive as plain strings ("Nucleus") rather than
+       {name, kind} objects. Without this, org.name was undefined and the
+       diagram drew leader lines pointing at blank labels. */
+    var organelles = list(s.organelles).map(function (o) {
+      return (typeof o === 'string') ? { name: o, kind: o.toLowerCase().replace(/[^a-z]/g, '') }
+                                     : (o || {});
+    });
     if (!organelles.length) {
       organelles = isPlant
         ? [{ name:'Nucleus', kind:'nucleus' }, { name:'Chloroplast', kind:'chloroplast' },
@@ -6411,13 +6515,52 @@
     };
     var pts = (LAYOUTS[n] || LAYOUTS[3]).map(function (p) { return clampSafe(p); });
     var o = '', i;
+
+    /* Cartographic frame. There is no coordinate database client-side, so this
+       deliberately does NOT draw invented coastlines - a made-up landmass in a
+       study tool would teach false geography. Instead it supplies the things
+       that make a diagram read as a map and are true regardless of region: a
+       bounded plate, a graticule, and a compass. The result is an honest
+       schematic route map rather than pins floating in white space. */
+    var mx0 = SAFE.x0 + 2, my0 = SAFE.y0 + 16, mx1 = SAFE.x1 - 2, my1 = SAFE.y1 - 20;
+    o += '<rect x="' + r1(mx0) + '" y="' + r1(my0) + '" width="' + r1(mx1 - mx0) +
+         '" height="' + r1(my1 - my0) + '" rx="10" fill="#f7fafc" stroke="' + SOFT +
+         '" stroke-width="1.6" class="sfwb-fade"/>';
+    var gx, gy;
+    for (gx = 1; gx < 6; gx++) {
+      var lx = mx0 + (mx1 - mx0) * gx / 6;
+      o += '<line x1="' + r1(lx) + '" y1="' + r1(my0) + '" x2="' + r1(lx) + '" y2="' + r1(my1) +
+           '" stroke="' + SOFT + '" stroke-width="0.8" opacity=".55" class="sfwb-fade"/>';
+    }
+    for (gy = 1; gy < 4; gy++) {
+      var ly = my0 + (my1 - my0) * gy / 4;
+      o += '<line x1="' + r1(mx0) + '" y1="' + r1(ly) + '" x2="' + r1(mx1) + '" y2="' + r1(ly) +
+           '" stroke="' + SOFT + '" stroke-width="0.8" opacity=".55" class="sfwb-fade"/>';
+    }
+    // Compass, top-right inside the plate.
+    var kx = mx1 - 20, ky = my0 + 20;
+    o += '<g class="sfwb-fade" style="animation-delay:' + d2(1) + 'ms">' +
+         '<circle cx="' + r1(kx) + '" cy="' + r1(ky) + '" r="12" fill=' + PANEL +
+         ' stroke="' + SOFT + '" stroke-width="1.2"/>' +
+         '<path d="M' + r1(kx) + ' ' + r1(ky - 9) + ' L' + r1(kx - 4) + ' ' + r1(ky + 2) +
+         ' L' + r1(kx) + ' ' + r1(ky - 1) + ' L' + r1(kx + 4) + ' ' + r1(ky + 2) + ' Z" fill="' +
+         BRAND + '"/>' +
+         '<text x="' + r1(kx) + '" y="' + r1(ky + 10) + '" text-anchor="middle" font-family="' +
+         SANS + '" font-size="7" font-weight="700" fill="' + LINE + '">N</text></g>';
+
     var conns = list(s.connections);
     if (!conns.length && n > 1) { conns = []; for (i = 0; i < n - 1; i++) conns.push({ from: i, to: i + 1 }); }
     for (i = 0; i < conns.length; i++) {
       var c0 = conns[i], a = pts[c0.from], b = pts[c0.to];
       if (!a || !b) continue;
-      o += '<path d="M' + r1(a.x) + ' ' + r1(a.y) + ' L' + r1(b.x) + ' ' + r1(b.y) + '" stroke="' + LINE +
-        '" stroke-width="2" stroke-dasharray="6 4" stroke-linecap="round" opacity=".5" class="sfwb-draw" style="animation-delay:' + d1(i) + 'ms"/>';
+      /* Pull each end back to the edge of the pin it serves, so the arrowhead
+         points at the marker rather than being drawn underneath it. */
+      var dirAB = vnorm(vsub(b, a));
+      a = vadd(a, vmul(dirAB, 13));
+      b = vsub(b, vmul(dirAB, 19));
+      o += '<path d="M' + r1(a.x) + ' ' + r1(a.y) + ' L' + r1(b.x) + ' ' + r1(b.y) + '" stroke="' + BRAND +
+        '" stroke-width="2.2" stroke-dasharray="7 4" stroke-linecap="round" opacity=".7" ' +
+        'marker-end="url(#sfwbArrowOn)" class="sfwb-draw" style="animation-delay:' + d1(i) + 'ms"/>';
       if (c0.label) {
         var mid = clampSafe(vmid(a, b));
         o += '<rect x="' + r1(mid.x - 32) + '" y="' + r1(mid.y - 9) + '" width="64" height="17" rx="5" fill=' + PANEL + ' stroke="' +
@@ -6431,8 +6574,15 @@
         '" opacity=".1" class="sfwb-fade" style="animation-delay:' + d1(i) + 'ms"/>' +
         iconGlyph('pin', p.x, p.y, 24, col, PHASE.label + i * 70 + 30);
       var below = p.y <= CY;
-      var lp = clampSafe({ x: p.x, y: p.y + (below ? 30 : -20) });
-      o += txt(lp.x, lp.y, trunc(places[i].name || ('Region ' + (i + 1)), 16),
+      var lp = clampSafe({ x: p.x, y: p.y + (below ? 32 : -22) });
+      /* Cartographic label plate: place names routinely cross route lines and
+         graticule, and a plain glyph on top of them is hard to read. */
+      var nameT = trunc(places[i].name || ('Region ' + (i + 1)), 16);
+      var plateW = nameT.length * 7.0 + 14;
+      o += '<rect x="' + r1(lp.x - plateW / 2) + '" y="' + r1(lp.y - 11) + '" width="' + r1(plateW) +
+        '" height="16" rx="5" fill=' + PANEL + ' opacity=".92" class="sfwb-fade" ' +
+        'style="animation-delay:' + d2(i) + 'ms"/>' +
+        txt(lp.x, lp.y, nameT,
         { size: 13, weight: 700, fill: INK, cls: 'sfwb-fade', delay: d2(i) });
       if (places[i].note) {
         var np = clampSafe({ x: lp.x, y: lp.y + (below ? 14 : -14) });
@@ -6571,8 +6721,13 @@
            '" stroke-width="3.2"/>' +
            '<path d="M' + r1(x) + ' ' + (up ? CY - 11 : CY + 11) + ' L' + r1(x) + ' ' +
            (up ? CY - 48 : CY + 48) + '" stroke="' + c + '" stroke-width="1.9" opacity=".55"/></g>';
-      o += txt(x, up ? CY - 60 : CY + 66, trunc(items[i], 14),
-        { size: 13.5, weight: 600, fill: LINE, cls: 'sfwb-fade', delay: d2(i) });
+      /* Wrap rather than truncate: "1914: war begins" was being cut to
+         "1914: war beg...". The label centre is also pulled inside the safe
+         area, because a centred label on the first or last tick used to hang
+         off the edge of the canvas. */
+      var slotW = Math.max(74, Math.min(132, (SAFE.x1 - SAFE.x0) / Math.max(n, 1) - 6));
+      var lxT = Math.max(SAFE.x0 + slotW / 2, Math.min(SAFE.x1 - slotW / 2, x));
+      o += wrapTxt(items[i], lxT, up ? CY - 62 : CY + 64, slotW, LINE, 12.5, i);
     }
     if (s.label) o += caption(s.label);
     return o;
