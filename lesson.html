@@ -6960,23 +6960,26 @@
 
   V.concept = function (s) {
     var items = list(s.items).slice(0, 4);
+    /* The top row prints its labels ABOVE the node, so it sits lower than the
+       bottom row - otherwise the first label runs into the subject badge
+       drawn at (38, 34). */
     var spots = [
-      { x: SAFE.x0 + 52, y: CY - 96 }, { x: SAFE.x1 - 52, y: CY - 96 },
-      { x: SAFE.x0 + 52, y: CY + 96 }, { x: SAFE.x1 - 52, y: CY + 96 }
+      { x: SAFE.x0 + 62, y: CY - 84 }, { x: SAFE.x1 - 62, y: CY - 84 },
+      { x: SAFE.x0 + 62, y: CY + 92 }, { x: SAFE.x1 - 62, y: CY + 92 }
     ];
     var o = '<rect x="' + (CX - 122) + '" y="' + (CY - 38) + '" width="244" height="76" rx="20" fill="' +
             SERIES[0] + '" fill-opacity=".14" filter="url(#sfwbShadow)" class="sfwb-glow"/>' +
             '<rect x="' + (CX - 122) + '" y="' + (CY - 38) + '" width="244" height="76" rx="20" fill="url(#sfwbGlass)" class="sfwb-fade"/>' +
             '<rect x="' + (CX - 122) + '" y="' + (CY - 38) + '" width="244" height="76" rx="20" fill="none" stroke="' +
             SERIES[0] + '" stroke-width="2.5" class="sfwb-draw"/>' +
-            wrapTxt(trunc(s.center || s.text || 'Key idea', 22), CX, CY + 4, 224, INK, 16, 0);
+            wrapTxt(trunc(s.center || s.text || 'Key idea', 46), CX, CY - 4, 224, INK, 16, 0);
     var i;
     if (!items.length) {
-      for (i = 0; i < 3; i++) {
-        o += '<circle cx="' + (CX - 60 + i * 60) + '" cy="' + (CY + 82) + '" r="5" fill="' + SERIES[0] +
-             '" opacity=".45" class="sfwb-fade" style="animation-delay:' + d2(i) + 'ms"/>';
-      }
-      return o;
+      /* A lone card with three grey dots underneath is not a diagram - it is a
+         loading state that shipped. Rather than decorate an empty visual, tell
+         the caller there is nothing to draw so it can infer real content
+         instead; buildVisual treats null as "try again with inferVisual". */
+      return null;
     }
     for (i = 0; i < items.length; i++) {
       var p = spots[i], c = SERIES[(i + 1) % SERIES.length];
@@ -7061,7 +7064,26 @@
     if (/consists? of|made up of|components?|\bparts?\b|structure|contains?/.test(t))
       return { type: 'parts', center: trunc(step.title, 16) || 'Whole', items: ['Part 1', 'Part 2'] };
 
-    return { type: 'concept', center: trunc(step.title || lesson.title, 20) || 'Key idea', items: [] };
+    /* Last resort. Build a real concept map out of the step's own vocabulary
+       rather than an empty card: an itemless concept is what produced the
+       "box with three dots" that shipped on every walkthrough. */
+    /* "What the question asked" and "The correct answer" are walkthrough UI
+       headings, not topics, so they must not become the centre of the map. */
+    var META_TITLE = /^(what the question asked|the correct answer|why|walkthrough|step \d+|review|recap|summary)$/i;
+    var rawTitle = str(step.title);
+    var fallbackCenter = trunc(
+      (META_TITLE.test(rawTitle.replace(/^\s+|\s+$/g, ''))
+        ? (str(lesson.title) || rawTitle)
+        : (rawTitle || str(lesson.title))), 46) || 'Key idea';
+    var fallbackItems = keyTerms(str(step.body) || str(step.title), 4);
+    if (fallbackItems.length >= 2) {
+      return { type: 'concept', center: fallbackCenter, items: fallbackItems };
+    }
+    /* Not even two usable terms - a short clause chain still beats a blank. */
+    var cl = extractClauses(str(step.body), 3);
+    if (cl.length >= 2) return { type: 'flow', items: cl, label: trunc(step.title, 50) };
+    return { type: 'concept', center: fallbackCenter,
+             items: fallbackItems.length ? fallbackItems : [] };
   }
 
   /* ── §4 SECURITY: sanitization guardrail ─────────────────────────────────
@@ -7154,7 +7176,23 @@
     if (!spec || !spec.type || typeof V[spec.type] !== 'function') spec = inferVisual(step, lesson);
     var body;
     try { body = V[spec.type](spec); }
-    catch (e) { body = V.concept({ center: trunc(step && step.title, 20) || 'Key idea', items: [] }); }
+    catch (e) { body = null; }
+
+    /* A generator returns null when the spec carries nothing worth drawing.
+       Fall back to inferring a visual from the step's own words, which is what
+       should have happened in the first place; only if that also comes back
+       empty do we give up, and then we draw nothing rather than a decorated
+       blank. */
+    if (!body) {
+      try {
+        var alt = inferVisual(step, lesson);
+        if (alt && alt.type && typeof V[alt.type] === 'function' && alt.type !== spec.type) {
+          body = V[alt.type](alt);
+          if (body) spec = alt;
+        }
+      } catch (e2) { body = body || null; }
+    }
+    if (!body) return '';
     // Subject badge, top-left. Kept small and inset so it clears the region
     // every generator actually draws into (verified against all 18).
     var badgeIcon = pickSubjectIcon(spec.type, (step && (step.title + ' ' + step.body)) || '');
@@ -7327,6 +7365,33 @@
     };
   }
 
+  /* Pull the most topic-bearing words out of a sentence, for use as the spokes
+     of a concept map. Deliberately simple: drop stopwords and short words,
+     prefer capitalised terms and longer nouns, keep original casing. */
+  var KT_STOP = (' the a an and or but of to in on for with from by as at is are was were be been ' +
+    'being it its this that these those he she they them his her their we our you your i me my ' +
+    'not no than then so if when while which who whom whose what where why how all any both each ' +
+    'more most other some such only own same too very can will just should now had has have do ' +
+    'does did done also into over under about after before between during because').split(' ');
+  function keyTerms(source, n) {
+    var words = str(source).replace(/[^A-Za-z0-9'\- ]/g, ' ').split(/\s+/);
+    var seen = {}, scored = [], i, w, lw;
+    for (i = 0; i < words.length; i++) {
+      w = words[i]; if (!w) continue;
+      lw = w.toLowerCase();
+      if (lw.length < 4) continue;
+      if (KT_STOP.indexOf(lw) !== -1) continue;
+      if (seen[lw]) continue;
+      seen[lw] = 1;
+      var score = lw.length + (/^[A-Z]/.test(w) ? 4 : 0);
+      scored.push({ w: w, s: score });
+    }
+    scored.sort(function (a, b) { return b.s - a.s; });
+    var out = [];
+    for (i = 0; i < scored.length && out.length < (n || 3); i++) out.push(trunc(scored[i].w, 18));
+    return out;
+  }
+
   /** Build a walkthrough from a question the learner just missed. */
   function fromWrongAnswer(q, day) {
     q = q || {}; day = day || {};
@@ -7335,7 +7400,10 @@
       title: 'What the question asked',
       body:  str(q.question) || 'Let\'s look at this again.',
       why:   '',
-      visual: { type: 'concept', center: trunc(day.title || 'This concept', 20), items: [] }
+      /* Leave the visual unset so buildVisual infers one from the question
+         itself. Hardcoding an empty concept here is what produced a truncated
+         box with three dots under it on every single walkthrough. */
+      visual: null
     });
     var correct = str(q.answer);
     if (!correct && list(q.options).length && typeof q.correctIndex === 'number') {
@@ -7347,7 +7415,13 @@
         title: 'The correct answer',
         body:  correct,
         why:   str(q.explanation),
-        visual: { type: 'equation', lines: [trunc(correct, 26)], note: 'The answer' }
+        /* An equation card suits "x = 4"; it looks wrong wrapped around a
+           sentence. Prose answers get a concept card with the explanation's
+           key terms around them instead. */
+        visual: (/[=+\-\u00d7\u00f7]|^\s*-?[\d.]+\s*$/.test(correct) && correct.length <= 26)
+          ? { type: 'equation', lines: [trunc(correct, 26)], note: 'The answer' }
+          : { type: 'concept', center: trunc(correct, 46),
+              items: keyTerms(str(q.explanation) || str(q.question), 3) }
       });
     } else if (q.explanation) {
       steps.push({ title: 'Why', body: str(q.explanation), why: '', visual: null });
