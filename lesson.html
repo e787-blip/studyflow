@@ -1248,6 +1248,11 @@
         if (questionBuffer.length > 0) {
           day.questions = normalizeQuestions(questionBuffer.splice(0, questionBuffer.length));
           questions = day.questions;
+        } else if (generatingNew) {
+          /* Still waiting on the API. Showing "no more questions" here was
+             wrong and alarming: the questions arrived moments later, and a
+             second tap revealed them. Stay on the loading card instead. */
+          return { type: 'generating' };
         } else {
           return { type: 'done' };
         }
@@ -1453,6 +1458,12 @@
 
     var card = getNextCard();
     cardIndex++;
+    /* Remember the card actually on screen. sessionCards holds only the
+       pre-built cards; questions served from the buffer or picked at random
+       never enter it, so anything reading sessionCards[cardIndex - 1] saw the
+       wrong card (or undefined) and the walkthrough was built from a stub. */
+    window.currentCard = card;
+    if (card && card.q) window.currentQuestion = card.q;
 
     try {
       renderCard(card);
@@ -1683,17 +1694,58 @@
         '<p class="content-text" style="text-align:center;">Building questions from today\'s material — this takes a few seconds.</p>' +
         '<div style="display:flex;justify-content:center;margin-top:1rem;"><div class="mini-spinner"></div></div>',
         '', 'Continue →', false);
-      /* Auto-advance once the buffer fills, so the student isn't stuck here.
-         The timer is stored and re-checked before it fires: previously it was
-         armed on the loading card and never cancelled, so 2.6s later it fired
-         on whatever card had since been rendered and skipped that question. */
-      var armedAt = cardIndex;
-      autoAdvanceTimer = setTimeout(function () {
-        autoAdvanceTimer = null;
-        if (cardIndex !== armedAt) return;                 // learner already moved on
-        if (currentCardType !== 'generating') return;      // no longer the loading card
-        if (questionBuffer.length > 0 || (day.questions && day.questions.length)) showNextCard();
-      }, 2600);
+      /* Poll until the questions actually arrive.
+
+         This used to be a single setTimeout at 2.6s: if the API had not
+         responded by then it did nothing and the learner sat on the spinner
+         indefinitely, which is what "it says a few seconds but never loads"
+         was. Now it re-checks on an interval, advances the moment questions
+         exist, and gives up honestly after a ceiling rather than spinning
+         forever. It stops itself as soon as the card changes. */
+      (function pollForQuestions() {
+        var armedAt = cardIndex;
+        var waited = 0, STEP = 600, CEILING = 45000;
+
+        function ready() {
+          return questionBuffer.length > 0 ||
+                 (day.questions && day.questions.length > 0);
+        }
+
+        function tick() {
+          autoAdvanceTimer = null;
+          if (!sessionActive) return;
+          if (cardIndex !== armedAt) return;              // learner moved on
+          if (currentCardType !== 'generating') return;   // no longer this card
+
+          if (ready()) { showNextCard(); return; }
+
+          waited += STEP;
+
+          /* Generation finished but produced nothing, or we have waited long
+             enough. Say so plainly instead of leaving a spinner running. */
+          if (!generatingNew && waited > 3000) { stall('empty'); return; }
+          if (waited >= CEILING) { stall('slow'); return; }
+
+          autoAdvanceTimer = setTimeout(tick, STEP);
+        }
+
+        function stall(why) {
+          var body = document.querySelector('#session-card .card-body');
+          if (body) {
+            body.innerHTML =
+              '<p class="content-text" style="text-align:center;">' +
+              (why === 'slow'
+                ? 'This is taking longer than usual. Your connection may be slow.'
+                : 'We could not build questions from today\'s material.') +
+              '</p><p class="content-text" style="text-align:center;font-size:.85rem;' +
+              'color:var(--muted);margin-top:.4rem;">Tap Continue to try again.</p>';
+          }
+          /* Allow another attempt on the next tap. */
+          window._fallbackRequested = false;
+        }
+
+        autoAdvanceTimer = setTimeout(tick, STEP);
+      }());
     }
     else { endSession(); return; }
 
@@ -5603,8 +5655,12 @@
       }
     }
 
-    // Enter / Space → Next card (only when btn-next is enabled)
-    if (key === 'Enter' || key === ' ') {
+    /* Space advances. Enter is deliberately NOT handled here: handleEnterKey
+       owns it (capture phase) so that Enter submits an unanswered card before
+       it advances an answered one. Both handlers firing meant a single Enter
+       clicked Next twice, rendering one card and instantly replacing it —
+       which read as a flash and a skipped question. */
+    if (key === ' ') {
       e.preventDefault();
       var nextBtn = document.getElementById('btn-next');
       if (nextBtn && !nextBtn.disabled) nextBtn.click();
@@ -7707,8 +7763,12 @@ var SFBoard = (function () {
     var idx = g('cardIndex');
     if (!cards || typeof idx !== 'number') return;
 
-    /* handleResult reads the just-answered question the same way. */
-    var q = cards[idx - 1] ? cards[idx - 1].q : null;
+    /* Prefer the card actually on screen. Falling back to sessionCards only
+       helps for pre-built cards; every buffered or randomly picked question is
+       absent from that array, which is why the walkthrough used to receive a
+       contentless stub and quietly do nothing. */
+    var q = w.currentQuestion || null;
+    if (!q && cards[idx - 1]) q = cards[idx - 1].q;
     if (!q) q = { question: 'This question', explanation: explanation };
     if (!q.explanation && explanation) q.explanation = explanation;
 
