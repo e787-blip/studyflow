@@ -1341,6 +1341,10 @@
     if (/\b(need|needs|have|has|got|gotta|learn|learned|learnt|did|doing|going|gonna|wanna|want|should|must|remember|forgot|idk|dunno)\b/i.test(t)) return false;
 
     // Pure admin words carry no topic.
+    /* Serialisation artefacts reach this function when an upload or paste
+       produced an object rather than text; "[object Object]" is a bug leaking
+       into the UI, not a subject. */
+    if (/^\[object \w+\]$/i.test(t) || /^(null|undefined|nan|true|false)$/i.test(t)) return false;
     var META = /^(notes?|study|studying|homework|hw|test|exam|quiz|final|finals|midterm|review|class|school|today|tomorrow|chapter|unit|lesson|topic|section|page|assignment|worksheet|lecture|stuff|things?|misc|untitled|document|new|draft)$/i;
     var contentful = 0, k;
     for (k = 0; k < words.length; k++) {
@@ -1362,20 +1366,132 @@
     return true;
   }
 
+  /* ── SUBJECT CLASSIFICATION ────────────────────────────────────────────────
+     Scored, not first-match. The old version returned the first category whose
+     regex hit anywhere in the notes, which produced two failure modes:
+
+       1. No word boundaries. "r-evolution" matched "evolution", so notes on
+          the French Revolution were classified as science.
+       2. One generic word outvoted a whole passage. "regions" appearing once
+          in a Silk Road passage classified it as geography.
+
+     Now every category accumulates a score across all its terms. Terms are
+     weighted: a word that only ever appears in one field (mitosis, iambic)
+     counts far more than one shared across fields (energy, market, region).
+     Highest total wins, and a category needs a real margin before it beats
+     the others - otherwise we fall back to 'general' rather than guessing. */
+
+  /* weight 3 = decisive, 2 = strong, 1 = weak/shared */
+  var SUBJECT_TERMS = {
+    math: [[3, ['algebra', 'calculus', 'trigonometry', 'derivative', 'integral',
+                'polynomial', 'logarithm', 'quadratic', 'theorem', 'pythagorean',
+                'factorise', 'factorize', 'differentiate']],
+           [2, ['geometry', 'equation', 'fraction', 'arithmetic', 'matrix',
+                'coefficient', 'exponent', 'numerator', 'denominator', 'slope']],
+           [1, ['math', 'maths', 'statistics', 'probability', 'linear', 'vector', 'angle']]],
+
+    science: [[3, ['photosynthesis', 'mitosis', 'meiosis', 'chloroplast', 'thermodynamics',
+                   'covalent', 'ionic bond', 'periodic table', 'enzyme', 'ribosome',
+                   'mitochondria', 'osmosis', 'electron transport',
+                   'natural selection', 'adaptation', 'chromosome', 'allele',
+                   'kinetic energy', 'potential energy']],
+              [2, ['biology', 'chemistry', 'physics', 'molecule', 'atom', 'genetics',
+                   'ecosystem', 'organism', 'organisms', 'species', 'dna', 'rna',
+                   'acceleration', 'velocity', 'newton', 'catalyst', 'respiration',
+                   'traits', 'reproduce']],
+              [1, ['science', 'cell', 'element', 'compound', 'reaction', 'force',
+                   'energy', 'organ', 'tissue', 'evolution']]],
+
+    psychology: [[3, ['pavlov', 'piaget', 'freud', 'classical conditioning',
+                      'operant conditioning', 'cognitive dissonance', 'neurotransmitter',
+                      'attachment theory', 'schema']],
+                 [2, ['psychology', 'neuroscience', 'cognition', 'cognitive', 'synapse',
+                      'neuron', 'perception', 'reinforcement', 'developmental']],
+                 [2, ['encoding', 'retrieval', 'consolidation', 'working memory',
+                      'long-term memory', 'short-term memory', 'sensory memory',
+                      'recall', 'stimulus']],
+                 [1, ['brain', 'behaviour', 'behavior', 'memory', 'emotion', 'mental',
+                      'therapy', 'disorder', 'consciousness']]],
+
+    geography: [[3, ['latitude', 'longitude', 'biome', 'tectonic', 'demography',
+                     'meander', 'erosion', 'precipitation', 'sediment']],
+                [2, ['geography', 'continent', 'climate', 'monsoon', 'glacier',
+                     'watershed', 'landform']],
+                [1, ['country', 'region', 'capital', 'river', 'mountain', 'ocean',
+                     'population', 'migration', 'urbanization', 'urbanisation']]],
+
+    economics: [[3, ['opportunity cost', 'elasticity', 'marginal utility', 'gdp',
+                     'monetary policy', 'fiscal policy', 'macroeconomics',
+                     'microeconomics', 'equilibrium price', 'supply and demand']],
+                [2, ['economics', 'inflation', 'recession', 'tariff', 'subsidy',
+                     'currency', 'monopoly', 'deficit']],
+                [1, ['supply', 'demand', 'market', 'trade', 'budget', 'price', 'cost']]],
+
+    cs: [[3, ['algorithm', 'recursion', 'data structure', 'big o', 'boolean',
+              'compiler', 'javascript', 'python', 'sql', 'linked list', 'hash table']],
+         [2, ['programming', 'computer science', 'array', 'variable', 'binary',
+              'database', 'operating system', 'debug', 'syntax error']],
+         [1, ['code', 'function', 'loop', 'network', 'sorting']]],
+
+    history: [[3, ['revolution', 'treaty', 'dynasty', 'colonialism', 'renaissance',
+                   'industrial revolution', 'factories', 'black death',
+                   'reformation', 'imperialism', 'armistice', 'abolition',
+                   'constitution', 'parliament', 'monarchy', 'feudal']],
+              [2, ['history', 'empire', 'civilization', 'civilisation', 'medieval',
+                   'ancient', 'war', 'battle', 'historian', 'colony', 'emperor',
+                   'silk road', 'trade route', 'caravan', 'merchant', 'crusade',
+                   'pharaoh', 'samurai', 'conquest']],
+              [1, ['century', 'political', 'president', 'government', 'democracy',
+                   'civics', 'social studies']]],
+
+    english: [[3, ['iambic', 'metaphor', 'simile', 'alliteration', 'protagonist',
+                   'shakespeare', 'sonnet', 'rhetoric', 'personification',
+                   'foreshadowing', 'literary device']],
+              [2, ['literature', 'poetry', 'poem', 'novel', 'narrative', 'prose',
+                   'symbolism', 'stanza', 'thesis statement']],
+              [1, ['english', 'author', 'character', 'theme', 'grammar', 'essay',
+                   'writing', 'vocabulary', 'syntax']]],
+
+    language: [[3, ['conjugate', 'conjugation', 'preterite', 'subjunctive',
+                    'declension', 'gendered noun']],
+               [2, ['spanish', 'french', 'german', 'japanese', 'chinese', 'korean',
+                    'arabic', 'latin', 'italian', 'portuguese', 'pronunciation']],
+               [1, ['language', 'verb', 'noun', 'translate', 'tense', 'accent']]]
+  };
+
   function classifySubject(subjectName, notes) {
-    /* Scan well past the first 600 characters: a student's notes often open
-       with a date and a heading before any subject term appears. */
-    var text = (subjText(subjectName) + ' ' + subjText(notes).substring(0, 4000)).toLowerCase();
-    if (/\bmath\b|algebra|calculus|geometry|trigonometry|\bequation\b|derivative|integral|polynomial|fraction|statistics|probability|\btheorem\b|\bslope\b|\blinear\b|quadratic|arithmetic|logarithm|matrix|vector/.test(text)) return 'math';
-    if (/biology|chemistry|physics|science|\bcell\b|\bcells\b|mitosis|meiosis|atom|molecule|element|compound|reaction|force|energy|evolution|genetics|ecosystem|periodic|dna|rna|organ|tissue|photosynthesis|thermodynamics/.test(text)) return 'science';
-    if (/psychology|psych|neuroscience|brain|cognition|behavior|freud|piaget|pavlov|memory|perception|emotion|mental|therapy|disorder|consciousness|neuron|synapse|cognitive|developmental/.test(text)) return 'psychology';
-    if (/geography|continent|country|region|capital|climate|biome|latitude|longitude|river|mountain|ocean|population|migration|urbanization|demography|geopolitics|physical geography/.test(text)) return 'geography';
-    if (/economics|econ|supply|demand|market|inflation|gdp|trade|currency|fiscal|monetary|microeconomics|macroeconomics|opportunity cost|marginal|elasticity|recession|budget|tariff/.test(text)) return 'economics';
-    if (/computer science|programming|algorithm|code|function|variable|loop|array|data structure|binary|sorting|recursion|python|javascript|java|html|css|database|network|operating system/.test(text)) return 'cs';
-    if (/history|war|revolution|empire|civilization|century|ancient|medieval|political|president|government|democracy|colonialism|treaty|battle|historian|social studies|civics|constitution/.test(text)) return 'history';
-    if (/literature|english|novel|poem|poetry|author|character|theme|metaphor|grammar|essay|writing|shakespeare|vocabulary|syntax|literary|fiction|rhetoric|prose|narrative|symbolism/.test(text)) return 'english';
-    if (/spanish|french|german|japanese|chinese|korean|arabic|latin|italian|portuguese|\blanguage\b|verb|noun|conjugate|translate|pronunciation|tense|accent/.test(text)) return 'language';
-    return 'general';
+    /* The typed subject is a deliberate signal, so it counts for more than a
+       word that happens to appear in the notes. */
+    var head = subjText(subjectName).toLowerCase();
+    var body = subjText(notes).substring(0, 4000).toLowerCase();
+    if (!head && !body) return 'general';
+
+    var scores = {}, best = 'general', bestScore = 0, second = 0;
+
+    for (var cat in SUBJECT_TERMS) {
+      var total = 0, groups = SUBJECT_TERMS[cat], gi, ti;
+      for (gi = 0; gi < groups.length; gi++) {
+        var weight = groups[gi][0], terms = groups[gi][1];
+        for (ti = 0; ti < terms.length; ti++) {
+          var term = terms[ti];
+          /* Word boundaries stop "revolution" scoring as "evolution" and
+             "market" scoring inside "supermarket". */
+          var re = new RegExp('(^|[^a-z])' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+                              '([^a-z]|$)', 'g');
+          if (re.test(body)) total += weight;
+          if (head && re.test(head)) total += weight * 2;   // typed subject counts double
+        }
+      }
+      scores[cat] = total;
+      if (total > bestScore) { second = bestScore; bestScore = total; best = cat; }
+      else if (total > second) { second = total; }
+    }
+
+    /* Require a real signal and a clear margin. A single weak term, or two
+       categories neck and neck, is not enough to commit to a subject. */
+    if (bestScore < 2) return 'general';
+    if (bestScore - second < 1) return 'general';
+    return best;
   }
 
   // ── STRONG SUBJECT AUTO-DETECTION ──
@@ -1475,6 +1591,37 @@
   }
 
   // ── Per-subject strategy ──
+  /* What a good question looks like in each subject, and what a bad one looks
+     like. Without this the model defaults to the same generic "which of the
+     following best describes..." for every field, which is why maths days were
+     arriving without a single thing to calculate and language days without a
+     single sentence to translate. */
+  var SUBJECT_QUESTION_GUIDE = {
+    math: 'ASK: problems with a number or expression to actually work out, using the same ' +
+          'methods the notes demonstrate. Show working in the explanation. ' +
+          'AVOID: asking for definitions of terms instead of using them.',
+    science: 'ASK: what happens and why - cause, mechanism, and what changes if a condition ' +
+             'changes. Use the exact process names from the notes. ' +
+             'AVOID: pure vocabulary recall with no mechanism attached.',
+    psychology: 'ASK: apply a named theory, effect or study to a short concrete scenario. ' +
+                'AVOID: asking who discovered something, which tests trivia rather than understanding.',
+    geography: 'ASK: how a physical or human process produces an observed pattern, and where. ' +
+               'AVOID: capital-city trivia unless the notes are about capitals.',
+    economics: 'ASK: what happens to price, quantity or incentives when one thing changes, ' +
+               'and why. Direction of movement matters more than a number. ' +
+               'AVOID: definition-only questions with no change to reason about.',
+    cs: 'ASK: trace what code or an algorithm does with a given input, or compare two ' +
+        'approaches on cost. AVOID: syntax trivia that a reference would answer.',
+    history: 'ASK: causes, consequences, motives and sequence. Connect an event to what it ' +
+             'produced. AVOID: bare date recall unless the notes stress the chronology.',
+    english: 'ASK: what a device or choice achieves in a specific passage, and how the reader ' +
+             'is affected. AVOID: naming a device with no text attached to it.',
+    language: 'ASK: produce or correct a real sentence - conjugate, translate, fix the error. ' +
+              'AVOID: asking about grammar terminology in the abstract.',
+    general: 'ASK: the central claims of the notes and how they connect to each other. ' +
+             'AVOID: questions needing knowledge the notes do not contain.'
+  };
+
   function getSubjectStrategy(subjectType) {
     var strategies = {
       math:        { label: 'Math',                  feynmanPrompt: 'Explain this concept and give a worked example.' },
@@ -1488,7 +1635,9 @@
       language:    { label: 'Language',              feynmanPrompt: 'Explain this grammar rule with two example sentences.' },
       general:     { label: 'General',               feynmanPrompt: 'Explain this concept in your own words.' }
     };
-    return strategies[subjectType] || strategies.general;
+    var picked = strategies[subjectType] || strategies.general;
+    picked.questionGuide = SUBJECT_QUESTION_GUIDE[subjectType] || SUBJECT_QUESTION_GUIDE.general;
+    return picked;
   }
 
   function startGeneration(notes, numDays, deadline, userPlan) {
@@ -1788,17 +1937,36 @@
       }
 
       var prompt =
-        'You are a world-class instructional designer. Generate a hyper-specific study day JSON for a ' + (strategy.label||'General') + ' student.\n\n' +
+        'You are a careful teacher preparing a study day for a ' + (strategy.label||'General') + ' student.\n' +
+        'Your job is to test what the notes actually say, at the level the notes are written.\n\n' +
         'SUBJECT: ' + subject + '\nSTUDENT NOTES:\n' + notesForPrompt + '\n\n' +
         'Day ' + dayNum + ' of ' + totalDays + '. Difficulty: ' + difficulty + '. Goal: ' + selectedGoal + '.\n' +
-        (isLast ? 'FINAL DAY \u2014 maximum depth, hardest questions.\n' : '') +
+        (isLast ? 'FINAL DAY \u2014 pull the whole topic together and test it as a connected whole. '
+          + 'Harder means requiring more of the notes at once, NOT material beyond them.\n' : '') +
         '\nTOPIC LOCK (highest priority - this overrides every other instruction):\n' +
         'Every part of this day - the title, content, concepts, keyTerms, and EVERY SINGLE question - must be strictly about "' + subject + '" as described in the student notes above.\n' +
         'Do NOT introduce any other topic, unit, chapter, or branch of the subject. If the subject is geometry, do NOT produce algebra, statistics, or arithmetic content. If it is one historical event, do NOT cover a different event.\n' +
         'Do NOT drift up to a broader parent subject. If the notes only cover part of the subject, stay strictly inside that part.\n' +
-        'If you run out of distinct material, go DEEPER on the same topic - never sideways to a new one.\n' +
+        'If you run out of distinct material, test the SAME material in a different way - ask it as a\n' +
+        'true/false, or a fill-in-the-blank, or applied to a fresh example. Do NOT reach for more advanced\n' +
+        'material to fill space, and do NOT go sideways to a new topic.\n' +
+
+        '\nSTAY AT THE LEVEL OF THE NOTES (this is where generated questions most often go wrong):\n' +
+        '- Every question must be answerable by someone who has read ONLY the notes above. If answering\n' +
+        '  needs a fact, formula or term that is not in the notes, the question is wrong - rewrite it.\n' +
+        '- Match the depth of the notes. Introductory notes get recall and understanding questions.\n' +
+        '  Do not invent graduate-level analysis on top of a page of basic definitions.\n' +
+        '- Prefer the plain reading. If the notes say the Silk Road carried silk and ideas, ask about that -\n' +
+        '  do not pivot to monetary policy in Tang China because it is more sophisticated.\n' +
+        '- No trick questions, no questions that hinge on a word the notes never used, and no questions\n' +
+        '  whose answer depends on outside reading.\n' +
+        '- Every explanation must point back to something the notes actually state.\n' +
+
+        '\nWHAT A GOOD QUESTION LOOKS LIKE FOR THIS SUBJECT:\n' +
+        (strategy.questionGuide || '') + '\n' +
         '\nRULES:\n' +
-        '1. title: Hyper-specific micro-topic within "' + subject + '" (e.g. "Missouri Compromise: Causes & Sectional Tensions" not "History").\n' +
+        '1. title: The specific thing these notes are about, in the notes\u2019 own vocabulary\n' +
+        '   (e.g. "The Missouri Compromise" not "History", and not a narrower sub-topic the notes never mention).\n' +
         '2. microTopic: domain > subdomain > micro-concept in one sentence.\n' +
         '3. content: 3-4 sentences explaining WHY, not just WHAT.\n' +
         '4. steps: Procedural topics: 3-5 steps each {step,action,why}. Conceptual: [].\n' +
