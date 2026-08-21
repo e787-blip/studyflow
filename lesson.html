@@ -251,7 +251,19 @@
     color:var(--ink); cursor:pointer; text-align:left; transition:all .2s;
     display:flex; align-items:center; gap:.7rem;
   }
-  .q-option:hover:not(:disabled) { border-color:var(--blue); background:var(--blue-light); color:var(--blue); }
+  /* Lift on hover, press on tap. Ported from the demo builds: the small
+     vertical travel is what makes an option feel like a physical control
+     rather than a coloured rectangle. Transitions name their properties so
+     hovering does not also animate the correct/wrong colour change. */
+  .q-option {
+    transition:border-color .18s ease, background .18s ease, color .18s ease,
+               transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s ease;
+  }
+  .q-option:hover:not(:disabled) { border-color:var(--blue); background:var(--blue-light);
+    color:var(--blue); transform:translateY(-2px);
+    box-shadow:0 4px 14px rgba(74,124,246,.14); }
+  .q-option:active:not(:disabled) { transform:translateY(0) scale(.99); box-shadow:none; }
+  .q-option:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
   .q-option.selected { border-color:var(--blue); background:var(--blue); color:#fff; }
   .q-option.correct { border-color:var(--green); background:#d1faf0; color:#1a9e80; }
   .q-option.wrong { border-color:var(--red); background:#fee2e2; color:#dc2626; }
@@ -561,7 +573,39 @@
   h1,h2,h3 { font-family:var(--serif); letter-spacing:-0.02em; }
   body, p, span, div, button, input, textarea, select, label { font-family:var(--sans); }
 
-  </style>
+  
+  /* ── shared interaction feel ──────────────────────────────────────────
+     Every tappable control uses the same lift-and-press so the interface
+     behaves consistently, matching the demo builds. */
+  .tf-btn, .seq-item, .match-item, .classify-item, .hint-btn,
+  .conf-btn, .fill-submit, .btn-next, .sfwb-explain {
+    transition:border-color .18s ease, background .18s ease, color .18s ease,
+               transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s ease;
+  }
+  .tf-btn:hover:not(:disabled), .seq-item:hover, .match-item:hover:not(:disabled),
+  .classify-item:hover, .hint-btn:hover, .conf-btn:hover,
+  .fill-submit:hover:not(:disabled), .btn-next:hover:not(:disabled) {
+    transform:translateY(-2px);
+  }
+  .tf-btn:active:not(:disabled), .seq-item:active, .match-item:active:not(:disabled),
+  .classify-item:active, .hint-btn:active, .conf-btn:active,
+  .fill-submit:active:not(:disabled), .btn-next:active:not(:disabled) {
+    transform:translateY(0) scale(.98);
+  }
+  .btn-next:hover:not(:disabled) { box-shadow:0 6px 18px rgba(74,124,246,.26); }
+  .fill-input { transition:border-color .18s ease, box-shadow .18s ease; }
+  .fill-input:focus { box-shadow:0 0 0 3px rgba(74,124,246,.14); }
+
+  /* Reduced motion: keep every colour cue, drop the travel. */
+  @media (prefers-reduced-motion:reduce) {
+    .q-option, .tf-btn, .seq-item, .match-item, .classify-item, .hint-btn,
+    .conf-btn, .fill-submit, .btn-next, .sfwb-explain { transition:none; }
+    .q-option:hover:not(:disabled), .tf-btn:hover:not(:disabled),
+    .seq-item:hover, .match-item:hover:not(:disabled), .classify-item:hover,
+    .hint-btn:hover, .conf-btn:hover, .fill-submit:hover:not(:disabled),
+    .btn-next:hover:not(:disabled) { transform:none; box-shadow:none; }
+  }
+</style>
 </head>
 <body>
 
@@ -937,9 +981,11 @@
     // a correct choice to be graded wrong further down.
     var questions = normalizeQuestions(day.questions || []);
 
-    /* Card one is the whiteboard. */
-    var opening = buildOpeningBoard();
-    if (opening) sessionCards.push(opening);
+    /* The whiteboard is built here but queued later - see below. Placing it at
+       card one meant it ran BEFORE the pre-test, which defeats the pre-test:
+       that exists to probe what the learner already knows, and showing them
+       the topic overview first hands them the answers. */
+    var openingBoard = buildOpeningBoard();
     // Only mcq/truefalse can render correctly through the generic question card —
     // every other type has its own dedicated renderer and must be excluded here.
     var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1 };
@@ -970,6 +1016,13 @@
     }
 
     sessionCards.push({ type: 'welcome' });
+
+    /* The whiteboard goes directly before the teaching card, every session.
+       It is the procedure the lesson then walks through: what the topic rests
+       on, where learners trip, and where it shows up. Sitting here it primes
+       the lesson instead of pre-empting the pre-test. */
+    if (openingBoard) sessionCards.push(openingBoard);
+
     if (day.content) sessionCards.push({ type: 'lesson' });
     if (dayIndex === 0 && day.keyTerms && day.keyTerms.length) sessionCards.push({ type: 'terms' });
 
@@ -2521,92 +2574,139 @@
   }
 
   // ── WORD PROBLEM ──
+  /* ── WORD PROBLEM VISUAL AID ──────────────────────────────────────────────
+     Rewritten. The previous version guessed, and guessed badly:
+
+       - It triggered on a single loose word. "time", "rate", "car", "run",
+         "travel" or "cost" appearing anywhere fired a maths table, so history
+         and science questions were given a Distance = Rate x Time grid full of
+         question marks.
+       - It assumed the operation. Any two numbers became "Amount 1 + Amount 2
+         = Total", even when the problem was subtraction or a comparison.
+       - It grabbed the first numbers it found, which were often a year or a
+         quantity belonging to a different sentence.
+       - Worst of all it computed d = r * t and printed the result, handing the
+         learner the answer to the question it was supposed to scaffold.
+
+     The rule now: draw an aid only when the quantities are found WITH their
+     units and the relationship is unambiguous. Never compute the unknown.
+     When the evidence is not there, render nothing - a clean scenario beats an
+     invented diagram that says something false. */
+
+  function wpNumberWithUnit(text, unitRe) {
+    var re = new RegExp('(\\d+(?:\\.\\d+)?)\\s*(' + unitRe + ')', 'i');
+    var m = String(text).match(re);
+    return m ? { value: m[1], unit: m[2] } : null;
+  }
+
+  function wpCell(label, value, accent) {
+    return '<div style="padding:.6rem .85rem;border:1.5px solid ' +
+      (accent ? '#4a7cf6' : 'var(--border)') + ';border-radius:10px;background:' +
+      (accent ? '#eef4ff' : 'var(--soft)') + ';text-align:center;min-width:78px;">' +
+      '<div style="font-size:.62rem;font-weight:700;letter-spacing:.07em;' +
+      'text-transform:uppercase;color:var(--muted);margin-bottom:.15rem;">' + label + '</div>' +
+      '<div style="font-size:1rem;font-weight:700;color:' +
+      (accent ? '#2851c8' : 'var(--ink)') + ';">' + value + '</div></div>';
+  }
+
+  function wpRow(parts) {
+    return '<div style="display:flex;align-items:center;justify-content:center;' +
+      'gap:.6rem;margin:.8rem 0;flex-wrap:wrap;">' + parts.join('') + '</div>';
+  }
+
+  function wpOp(sym) {
+    return '<div style="font-size:1.15rem;color:var(--muted);font-weight:700;">' + sym + '</div>';
+  }
+
+  function buildWordProblemAid(scenario) {
+    var text = String(scenario || '');
+    var s = text.toLowerCase();
+
+    /* A question must look like a calculation before any maths aid appears.
+       Without this gate a history scenario mentioning "trade routes" and
+       "hours" was handed an arithmetic table. */
+    var hasNumber = /\d/.test(text);
+    var asksToCompute = /\b(how (?:much|many|far|long|fast)|what is the (?:total|area|perimeter|cost|speed|rate|distance)|calculate|find the|solve for|work out)\b/i.test(text);
+    if (!hasNumber || !asksToCompute) return '';
+
+    /* ── Distance / rate / time ────────────────────────────────────────────
+       Requires an explicit speed unit AND an explicit time unit. Both are
+       shown as given; the unknown is left blank for the learner to find. */
+    var rate = wpNumberWithUnit(text, 'mph|km/h|kph|miles per hour|kilometres per hour|kilometers per hour|m/s');
+    var time = wpNumberWithUnit(text, 'hours?|hrs?|minutes?|mins?|seconds?|secs?');
+    if (rate && time && /\b(distance|how far|travel|speed|journey)\b/i.test(s)) {
+      return wpRow([
+        wpCell('Rate', rate.value + ' ' + rate.unit, false),
+        wpOp('\u00d7'),
+        wpCell('Time', time.value + ' ' + time.unit, false),
+        wpOp('='),
+        wpCell('Distance', '?', true)
+      ]);
+    }
+
+    /* ── Percentage ────────────────────────────────────────────────────────
+       Requires a literal % and an amount it is taken "of". */
+    var pct = text.match(/(\d+(?:\.\d+)?)\s*%/);
+    var base = text.match(/of\s*\$?\s*(\d+(?:\.\d+)?)/i);
+    if (pct && base) {
+      return wpRow([
+        wpCell('Percent', pct[1] + '%', false),
+        wpOp('of'),
+        wpCell('Amount', base[1], false),
+        wpOp('='),
+        wpCell('Result', '?', true)
+      ]);
+    }
+
+    /* ── Rectangle area / perimeter ────────────────────────────────────────
+       Requires BOTH named dimensions. A single number is not a rectangle. */
+    var len = text.match(/length\s*(?:of|is|=|:)?\s*(\d+(?:\.\d+)?)/i);
+    var wid = text.match(/width\s*(?:of|is|=|:)?\s*(\d+(?:\.\d+)?)/i);
+    if (len && wid && /\b(area|perimeter|rectangle|rectangular)\b/i.test(s)) {
+      return '<div style="text-align:center;margin:.85rem 0;">' +
+        '<svg viewBox="0 0 180 118" width="180" height="118" role="img" ' +
+        'aria-label="Rectangle with the given length and width">' +
+        '<rect x="26" y="24" width="128" height="66" fill="#eef4ff" stroke="#4a7cf6" ' +
+        'stroke-width="2" rx="6"/>' +
+        '<text x="90" y="16" text-anchor="middle" font-size="11" font-weight="700" ' +
+        'fill="#2851c8" font-family="var(--sans)">' + len[1] + '</text>' +
+        '<text x="16" y="61" text-anchor="middle" font-size="11" font-weight="700" ' +
+        'fill="#2851c8" font-family="var(--sans)">' + wid[1] + '</text>' +
+        '<text x="90" y="108" text-anchor="middle" font-size="10.5" fill="var(--muted)" ' +
+        'font-family="var(--sans)">dimensions as given</text>' +
+        '</svg></div>';
+    }
+
+    /* ── Circle ────────────────────────────────────────────────────────────
+       Requires the radius or diameter to be named explicitly. */
+    var rad = text.match(/radius\s*(?:of|is|=|:)?\s*(\d+(?:\.\d+)?)/i);
+    var dia = text.match(/diameter\s*(?:of|is|=|:)?\s*(\d+(?:\.\d+)?)/i);
+    if ((rad || dia) && /\b(area|circumference|circle)\b/i.test(s)) {
+      var isR = !!rad, val = isR ? rad[1] : dia[1];
+      return '<div style="text-align:center;margin:.85rem 0;">' +
+        '<svg viewBox="0 0 140 130" width="132" height="122" role="img" ' +
+        'aria-label="Circle with the given ' + (isR ? 'radius' : 'diameter') + '">' +
+        '<circle cx="70" cy="62" r="46" fill="#eef4ff" stroke="#4a7cf6" stroke-width="2"/>' +
+        (isR
+          ? '<line x1="70" y1="62" x2="116" y2="62" stroke="#2851c8" stroke-width="1.6" stroke-dasharray="4 3"/>'
+          : '<line x1="24" y1="62" x2="116" y2="62" stroke="#2851c8" stroke-width="1.6" stroke-dasharray="4 3"/>') +
+        '<circle cx="70" cy="62" r="3" fill="#4a7cf6"/>' +
+        '<text x="' + (isR ? 93 : 70) + '" y="' + (isR ? 55 : 52) +
+        '" text-anchor="middle" font-size="11" font-weight="700" fill="#2851c8" ' +
+        'font-family="var(--sans)">' + (isR ? 'r' : 'd') + ' = ' + val + '</text>' +
+        '<text x="70" y="122" text-anchor="middle" font-size="10.5" fill="var(--muted)" ' +
+        'font-family="var(--sans)">as given</text>' +
+        '</svg></div>';
+    }
+
+    /* Nothing could be established with confidence. Show no aid rather than an
+       invented one. */
+    return '';
+  }
+
   function renderWordProblem(q) {
     var scenario = q.scenario || q.question || '';
-    var s = scenario.toLowerCase();
-
-    // ── Detect problem type and build visual aid ──
-    var visual = '';
-    var CELL = 'padding:.6rem .8rem;border:1.5px solid var(--border);border-radius:8px;background:var(--soft);text-align:center;min-width:70px;';
-    var LABEL = 'font-size:0.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:.2rem;';
-    var VAL = 'font-size:1rem;font-weight:700;color:var(--ink);font-family:\'Georgia\',serif;';
-
-    if (/speed|mph|kph|km\/h|hour|distance|travel|train|car|walk|run|rate|time/.test(s)) {
-      // Distance = Rate × Time table
-      var rMatch = scenario.match(/(\d+(?:\.\d+)?)\s*(?:mph|kph|km\/h|miles per hour|km per hour)/i);
-      var tMatch = scenario.match(/(\d+(?:\.\d+)?)\s*hour/i);
-      var r = rMatch ? rMatch[1] : '?'; var t = tMatch ? tMatch[1] : '?';
-      var d = (rMatch && tMatch) ? String(parseFloat(r) * parseFloat(t)) : '?';
-      visual = '<div style="margin:.75rem 0;overflow-x:auto;">' +
-        '<table style="border-collapse:collapse;width:100%;font-family:var(--sans);font-size:0.82rem;">' +
-        '<tr style="background:#eef4ff;"><th style="padding:.5rem .75rem;border:1.5px solid var(--border);color:#4a7cf6;font-weight:700;">Distance</th>' +
-        '<th style="padding:.5rem .75rem;border:1.5px solid var(--border);color:#4a7cf6;font-weight:700;">=</th>' +
-        '<th style="padding:.5rem .75rem;border:1.5px solid var(--border);color:#4a7cf6;font-weight:700;">Rate</th>' +
-        '<th style="padding:.5rem .75rem;border:1.5px solid var(--border);color:#4a7cf6;font-weight:700;">×</th>' +
-        '<th style="padding:.5rem .75rem;border:1.5px solid var(--border);color:#4a7cf6;font-weight:700;">Time</th></tr>' +
-        '<tr><td style="padding:.5rem .75rem;border:1.5px solid var(--border);text-align:center;font-weight:700;color:#7c3aed;font-family:Georgia,serif;">' + (d !== '?' ? d : '?') + '</td>' +
-        '<td style="padding:.5rem .75rem;border:1.5px solid var(--border);text-align:center;color:var(--muted);">=</td>' +
-        '<td style="padding:.5rem .75rem;border:1.5px solid var(--border);text-align:center;font-weight:600;">' + r + '</td>' +
-        '<td style="padding:.5rem .75rem;border:1.5px solid var(--border);text-align:center;color:var(--muted);">×</td>' +
-        '<td style="padding:.5rem .75rem;border:1.5px solid var(--border);text-align:center;font-weight:600;">' + t + '</td></tr>' +
-        '</table></div>';
-
-    } else if (/percent|%|discount|tax|tip|sale|markup|interest/.test(s)) {
-      // Proportion / percentage setup
-      var numMatch = scenario.match(/(\d+(?:\.\d+)?)\s*%/);
-      var totalMatch = scenario.match(/of\s+\$?(\d+(?:\.\d+)?)/i) || scenario.match(/\$?(\d+(?:\.\d+)?)/);
-      var pct = numMatch ? numMatch[1] : '?'; var total = totalMatch ? totalMatch[1] : '?';
-      visual = '<div style="display:flex;align-items:center;justify-content:center;gap:.75rem;margin:.75rem 0;flex-wrap:wrap;">' +
-        '<div style="' + CELL + '"><div style="' + LABEL + '">Percent</div><div style="' + VAL + '">' + pct + '%</div></div>' +
-        '<div style="font-size:1.2rem;color:var(--muted);">of</div>' +
-        '<div style="' + CELL + '"><div style="' + LABEL + '">Total</div><div style="' + VAL + '">' + (total !== '?' ? '$'+total : '?') + '</div></div>' +
-        '<div style="font-size:1.2rem;color:var(--muted);">=</div>' +
-        '<div style="' + CELL + 'border-color:#7c3aed;background:#f3f0ff;"><div style="' + LABEL + 'color:#7c3aed;">Answer</div><div style="' + VAL + 'color:#7c3aed;">?</div></div>' +
-        '</div>';
-
-    } else if (/area|perimeter|rectangle|square|triangle|circle|length|width|radius|diameter/.test(s)) {
-      // Geometry diagram
-      var shape = /circle|radius|diameter/.test(s) ? 'circle' : /triangle/.test(s) ? 'triangle' : 'rectangle';
-      var lMatch = scenario.match(/length(?:\s+of)?\s*(?:is|=|:)?\s*(\d+)/i) || scenario.match(/l\s*=\s*(\d+)/i);
-      var wMatch = scenario.match(/width(?:\s+of)?\s*(?:is|=|:)?\s*(\d+)/i) || scenario.match(/w\s*=\s*(\d+)/i);
-      var rMatchG = scenario.match(/radius(?:\s+of)?\s*(?:is|=|:)?\s*(\d+)/i) || scenario.match(/r\s*=\s*(\d+)/i);
-      var l = lMatch ? lMatch[1] : '?'; var w = wMatch ? wMatch[1] : '?'; var r2 = rMatchG ? rMatchG[1] : '?';
-      if (shape === 'circle') {
-        visual = '<div style="text-align:center;margin:.75rem 0;">' +
-          '<svg viewBox="0 0 120 120" width="100" height="100" style="overflow:visible;">' +
-          '<circle cx="60" cy="60" r="45" fill="#eef4ff" stroke="#4a7cf6" stroke-width="2"/>' +
-          '<line x1="60" y1="60" x2="105" y2="60" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="4 2"/>' +
-          '<text x="82" y="55" font-size="10" fill="#7c3aed" font-weight="700" text-anchor="middle">r=' + r2 + '</text>' +
-          '<circle cx="60" cy="60" r="3" fill="#4a7cf6"/>' +
-          '</svg></div>';
-      } else if (shape === 'rectangle') {
-        visual = '<div style="text-align:center;margin:.75rem 0;">' +
-          '<svg viewBox="0 0 140 90" width="140" height="90">' +
-          '<rect x="10" y="10" width="120" height="70" fill="#eef4ff" stroke="#4a7cf6" stroke-width="2" rx="4"/>' +
-          '<text x="70" y="56" font-size="10" fill="#7c3aed" font-weight="700" text-anchor="middle">l=' + l + ', w=' + w + '</text>' +
-          '</svg></div>';
-      } else {
-        visual = '<div style="text-align:center;margin:.75rem 0;">' +
-          '<svg viewBox="0 0 120 100" width="110" height="90">' +
-          '<polygon points="60,10 110,90 10,90" fill="#eef4ff" stroke="#4a7cf6" stroke-width="2"/>' +
-          '<text x="60" y="65" font-size="10" fill="#7c3aed" font-weight="700" text-anchor="middle">Find area</text>' +
-          '</svg></div>';
-      }
-
-    } else if (/total|sum|add|bought|spent|paid|cost|price|each|per|combined/.test(s)) {
-      // Number line for simple addition/totals
-      var nums = scenario.match(/\d+(?:\.\d+)?/g) || [];
-      if (nums.length >= 2) {
-        var a2 = parseFloat(nums[0]); var b2 = parseFloat(nums[1]);
-        visual = '<div style="display:flex;align-items:center;gap:.5rem;margin:.75rem 0;flex-wrap:wrap;">' +
-          '<div style="' + CELL + '"><div style="' + LABEL + '">Amount 1</div><div style="' + VAL + '">' + nums[0] + '</div></div>' +
-          '<div style="font-size:1.4rem;color:var(--muted);font-weight:700;">+</div>' +
-          '<div style="' + CELL + '"><div style="' + LABEL + '">Amount 2</div><div style="' + VAL + '">' + nums[1] + '</div></div>' +
-          '<div style="font-size:1.4rem;color:var(--muted);font-weight:700;">=</div>' +
-          '<div style="' + CELL + 'border-color:#7c3aed;background:#f3f0ff;"><div style="' + LABEL + 'color:#7c3aed;">Total</div><div style="' + VAL + 'color:#7c3aed;">?</div></div>' +
-          '</div>';
-      }
-    }
+    var visual = buildWordProblemAid(scenario);
 
     var body = '<div class="q-meta"><span class="q-type-label" style="background:#fff8ed;color:#d97706;">Word Problem</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
@@ -6436,36 +6536,91 @@ var SFBoard = (function () {
   /* EQUATION — worked steps, one line per beat, with optional reasons. */
   Scene.equation = function (spec) {
     var raw = spec.lines || spec.items || spec.steps;
-    var items = pairs(raw, 6);
+    var items = pairs(raw, 8);
     if (items.length < 1) return null;
-    var n = items.length, i;
+    var n = items.length, i, k;
 
-    var w = 520, rowH = 54;
-    var h = PAD * 2 + n * rowH;
-    var o = '';
+    /* Organised as a worked solution rather than a loose stack:
+
+         [n]  |  equation, left-aligned on a shared column
+              |  reason for this step, in the same column beneath
+
+       A step number anchors each line, a rule runs down the left so the eye
+       tracks the sequence, and every equation starts at the same x so the
+       algebra lines up the way it would on paper. The previous version put
+       the reason on the right edge, which pulled the eye away from the maths
+       and broke down entirely when the reason was long. */
+
+    var W2 = 560;
+    var NUM_X = PAD + 15;            // centre of the step badge
+    var COL_X = PAD + 44;            // shared left edge for equations and reasons
+    var TEXT_W = W2 - COL_X - PAD;
+    var EQ = TITLE + 3, RE = SMALL + 0.5;
+
+    var rows = [], y = PAD;
     for (i = 0; i < n; i++) {
-      var y = PAD + i * rowH, t = tone(i), inner = '';
-      var lineL = wrap(items[i].a, w - PAD * 2 - 180, TITLE + 3, 700, 1);
-      var noteL = items[i].b ? wrap(items[i].b, 168, SMALL, 400, 2) : [];
-      var last = (i === n - 1);
-      if (last) {
-        inner += '<rect x="' + PAD + '" y="' + r1(y + 4) + '" width="' + r1(w - PAD * 2) +
-          '" height="' + r1(rowH - 12) + '" rx="12" fill="' + ACCENT_SOFT + '"/>';
+      var eqL = wrap(items[i].a, TEXT_W, EQ, 700, 2);
+      var reL = items[i].b ? wrap(items[i].b, TEXT_W, RE, 400, 2) : [];
+      var hh = 14 + eqL.length * EQ * 1.28 + (reL.length ? 6 + reL.length * RE * 1.4 : 0);
+      hh = Math.max(hh, 46);
+      rows.push({ eq: eqL, re: reL, h: hh, y: y });
+      y += hh + 10;
+    }
+    var h = y - 10 + PAD;
+
+    var o = '';
+    /* Spine: one continuous rule behind the step badges. Drawn on beat 0 so it
+       is present from the start and the steps appear along it. */
+    if (n > 1) {
+      o += g(0, '<line x1="' + r1(NUM_X) + '" y1="' + r1(rows[0].y + 20) +
+        '" x2="' + r1(NUM_X) + '" y2="' + r1(rows[n - 1].y + rows[n - 1].h - 18) +
+        '" stroke="' + RULE + '" stroke-width="1.6" stroke-linecap="round"/>');
+    }
+
+    /* Highlight the line that carries the result, not simply the final row.
+       A trailing "Check it" beat is guidance, not the answer, and colouring it
+       gold told the eye the wrong thing. */
+    var resultIdx = -1;
+    for (i = n - 1; i >= 0; i--) {
+      if (items[i].a.indexOf('=') !== -1) { resultIdx = i; break; }
+    }
+
+    for (i = 0; i < n; i++) {
+      var r = rows[i], t = tone(i), last = (i === resultIdx);
+      var inner = '';
+
+      /* Highlight the final line: it is the result. */
+      if (last && resultIdx > 0) {
+        inner += '<rect x="' + r1(PAD + 30) + '" y="' + r1(r.y) + '" width="' +
+          r1(W2 - PAD - (PAD + 30)) + '" height="' + r1(r.h) +
+          '" rx="12" fill="' + ACCENT_SOFT + '"/>';
       }
-      inner += text(PAD + 22, y + rowH / 2 + 6, lineL[0],
-        { anchor: 'start', size: TITLE + 3, weight: 700, fill: last ? ACCENT : INK });
-      var k;
-      for (k = 0; k < noteL.length; k++) {
-        inner += text(w - PAD - 8, y + rowH / 2 - (noteL.length - 1) * 6 + k * 13 + 3, noteL[k],
-          { anchor: 'end', size: SMALL, weight: 400, fill: MUTED });
+
+      /* Step badge. The steps are one sequence, not six unrelated categories,
+         so the badges stay a single neutral colour. Cycling the palette put a
+         gold badge on step 3 that competed with the gold result highlight and
+         made the eye look in the wrong place. */
+      inner += '<circle cx="' + r1(NUM_X) + '" cy="' + r1(r.y + 20) +
+        '" r="12" fill="#FFFFFF" stroke="' + (last ? ACCENT : NAVY) +
+        '" stroke-width="1.6"/>';
+      inner += text(NUM_X, r.y + 24, String(i + 1),
+        { size: SMALL + 1, weight: 700, fill: last ? '#8A5E15' : NAVY });
+
+      /* Equation, then the reason directly beneath it in the same column. */
+      var ty = r.y + 14 + EQ * 0.72;
+      for (k = 0; k < r.eq.length; k++) {
+        inner += text(COL_X, ty + k * EQ * 1.28, r.eq[k],
+          { anchor: 'start', size: EQ, weight: 700, fill: last ? ACCENT : INK });
       }
-      if (i < n - 1) {
-        inner += '<line x1="' + (PAD + 10) + '" y1="' + r1(y + rowH - 6) + '" x2="' + (PAD + 10) +
-          '" y2="' + r1(y + rowH + 2) + '" stroke="' + RULE + '" stroke-width="1.2"/>';
+      var ry = ty + r.eq.length * EQ * 1.28 + 2;
+      for (k = 0; k < r.re.length; k++) {
+        inner += text(COL_X, ry + k * RE * 1.4, r.re[k],
+          { anchor: 'start', size: RE, weight: 400, fill: MUTED });
       }
+
       o += g(i + 1, inner);
     }
-    return { svg: svgOpen(w, h) + o + '</svg>', beats: n, w: w, h: h };
+    return { svg: svgOpen(W2, h) + o + '</svg>', beats: n, w: W2, h: h };
   };
 
   /* HERO — the opening whiteboard.
@@ -7469,6 +7624,44 @@ var SFBoard = (function () {
   /* Build an equation scene from a question whose working was never supplied
      explicitly, which is the usual case. Pairs each derived equation line with
      the operation that produced it. */
+  /* Name the operation that turns one line into the next, from the words the
+     explanation used. "Add 7 to both sides to get 3x = 21" -> "Add 7 to both
+     sides". Falls back to a positional label when the prose does not say. */
+  function operationFor(ops, index) {
+    var raw = ops[index];
+    if (!raw) return '';
+    /* Drop the "to get <equation>" tail: the equation is already the next
+       line, so repeating it inside the caption is noise. */
+    var t = clean(raw)
+      .replace(/\s*(?:to get|giving|which gives|so that|leaving|resulting in)\b.*$/i, '')
+      .replace(/[.,;:]+$/, '');
+    return clean(t);
+  }
+
+  /* What the problem is asking for, so the walkthrough can open by naming the
+     goal instead of dropping the learner straight into algebra. */
+  function goalOf(q) {
+    var t = str(q.question);
+    var m = t.match(/\b(?:solve for|find|what is|calculate|determine|evaluate)\s+([^.?,]{1,42})/i);
+    if (m) {
+      /* Stop at the colon or the equation itself: "Solve for x: 5x + 12 = 47"
+         should yield "x", not the whole restated problem. */
+      var g2 = clean(m[1]).split(/[:=]/)[0];
+      g2 = clean(g2).replace(/[.?]+$/, '');
+      if (g2 && g2.length <= 40) return g2;
+    }
+    var v = t.match(/\bfor\s+([a-z])\b/i);
+    if (v) return 'the value of ' + v[1];
+    return '';
+  }
+
+  /* Build an equation scene from a question whose working was never supplied
+     explicitly, which is the usual case.
+
+     The walkthrough opens by naming what is being solved, steps through each
+     derived line with the operation that produced it, and closes by stating
+     the result plainly. A three-line dump of algebra is technically correct
+     but teaches less than the same lines with the reasoning attached. */
   function derivedWorking(q, correct) {
     var fromQ = equationLines(q.question);
     var fromE = equationLines(q.explanation);
@@ -7480,13 +7673,9 @@ var SFBoard = (function () {
       if (!k2 || seen[k2]) return;
       seen[k2] = 1; lines.push(k2);
     }
-    /* Start from the equation as posed, then the lines the explanation derives,
-       then the answer itself. */
     for (i = 0; i < fromQ.length; i++) push(fromQ[i]);
     for (i = 0; i < fromE.length; i++) push(fromE[i]);
-    /* Append the answer only when it reads as a final line of working.
-       A bare "6" or a prose answer is not a step, and tacking it on made the
-       last beat look like a stray fragment. */
+
     var ans = clean(correct).replace(/[.,;:]+$/, '');
     if (ans && ans.length <= 30 && ans.indexOf('=') !== -1 && !/_{2,}/.test(ans)) {
       push(ans);
@@ -7494,15 +7683,43 @@ var SFBoard = (function () {
 
     if (lines.length < 2) return null;
 
-    var items = [], LABELS = ['Start', 'Then', 'Next', 'Then', 'Result'];
-    for (i = 0; i < lines.length; i++) {
-      items.push({
-        label: lines[i],
-        detail: i === 0 ? 'the equation as given'
-                        : (ops[i - 1] || LABELS[Math.min(i, LABELS.length - 1)])
-      });
+    var items = [];
+
+    /* Opening beat: what we are solving for. */
+    var goal = goalOf(q);
+    if (goal) {
+      items.push({ label: 'Goal', detail: 'Find ' + goal + '.' });
     }
-    return items;
+
+    var STEP_WORD = ['Start from the equation as given',
+                     'Apply the same operation to both sides',
+                     'Simplify',
+                     'Continue',
+                     'Almost there'];
+    for (i = 0; i < lines.length; i++) {
+      var detail;
+      if (i === 0) {
+        detail = 'the equation as given';
+      } else {
+        detail = operationFor(ops, i - 1) || STEP_WORD[Math.min(i, STEP_WORD.length - 1)];
+      }
+      items.push({ label: lines[i], detail: detail });
+    }
+
+    /* Closing beat: state the result in words, and how to check it. */
+    var last = lines[lines.length - 1];
+    if (/=/.test(last)) {
+      var halves = last.split('=');
+      var lhs = clean(halves[0]), rhs = clean(halves[1]);
+      if (lhs && rhs && lhs.length <= 12) {
+        items.push({
+          label: 'Check it',
+          detail: 'Substitute ' + lhs + ' = ' + rhs + ' back into the original equation \u2014 both sides should match.'
+        });
+      }
+    }
+
+    return items.length >= 2 ? items : null;
   }
 
   /* A walkthrough shaped by what the question actually asked. A sequence
