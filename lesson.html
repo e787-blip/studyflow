@@ -13,7 +13,7 @@
     --ink: #1a1d2e; --muted: #6b7280; --soft: #f4f6fb;
     --blue: #4a7cf6; --blue-light: #dce8ff; --white: #fff; --border: #e8ecf4;
     --green: #38bfa1; --red: #ef4444; --orange: #f59e0b;
-    --sans: 'DM Sans', sans-serif; --serif: 'Instrument Serif', Georgia, serif;
+    --sans: 'DM Sans', system-ui, -apple-system, sans-serif; --serif: 'Instrument Serif', Georgia, serif;
   }
   .logo-ink { fill: var(--ink); }
   body { font-family: var(--sans); color: var(--ink); background: var(--soft); min-height: 100vh; }
@@ -548,7 +548,7 @@
       <rect x="17" y="21" width="8" height="2" rx="1" fill="#3567e0" opacity="0.7"/>
       <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
       <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="#f0f4ff"/>
-      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
+      <text x="48" y="28" font-family="DM Sans, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
         <tspan class="logo-ink">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
       </text>
     </svg>
@@ -820,12 +820,81 @@
 
     if (userPlan === 'vip') document.getElementById('chat-fab').classList.add('show');
 
+    /* A finished day is finished. Without this the same lesson could be
+       re-taken indefinitely, inflating the streak and letting a learner
+       re-answer questions they have already been graded on. */
+    if (alreadyDone()) { showAlreadyDone(); return; }
     buildQueue();
     startTimer();
     showNextCard();
   }
 
   /* ── QUEUE ── */
+  function alreadyDone() {
+    try {
+      if (day && day.completed) return true;
+      if (plan && plan.days && plan.days[dayIndex] && plan.days[dayIndex].completed) return true;
+    } catch (e) { /* fall through: better to allow the lesson than to block it */ }
+    return false;
+  }
+
+  function allDaysDone() {
+    try {
+      if (!plan || !plan.days || !plan.days.length) return false;
+      for (var i = 0; i < plan.days.length; i++) {
+        if (!plan.days[i].completed) return false;
+      }
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* Shown instead of the session when the day is already complete. */
+  function showAlreadyDone() {
+    sessionActive = false;
+    var sc = document.getElementById('session-card');
+    if (!sc) return;
+
+    var everything = allDaysDone();
+    var tick = '<svg width="56" height="56" viewBox="0 0 56 56" fill="none" ' +
+      'aria-hidden="true" style="display:block;margin:0 auto 18px;">' +
+      '<circle cx="28" cy="28" r="25" fill="#ECFDF5" stroke="#10B981" stroke-width="2.5"/>' +
+      '<path d="M17 28.5 L24.5 36 L39 21" fill="none" stroke="#10B981" stroke-width="3.4" ' +
+      'stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    var head = everything ? 'All lessons finished!' : 'Today\u2019s lesson is done';
+    var sub = everything
+      ? 'You have completed every day in this plan. Nothing left to grind \u2014 come back when you add a new one.'
+      : 'You already worked through this one. Re-answering questions you have been graded on would not teach you much; come back tomorrow for the next day.';
+
+    var btns = '<button class="btn-next" style="margin-top:18px" ' +
+      'onclick="window.location.href=\'dashboard.html\'">Back to dashboard</button>';
+
+    sc.innerHTML = '<div class="session-card">' +
+      '<div class="card-header" style="text-align:center">' + tick +
+      '<h2 style="margin:0 0 8px">' + head + '</h2></div>' +
+      '<p style="text-align:center;color:var(--gray);max-width:34rem;margin:0 auto">' +
+      sub + '</p>' +
+      '<div style="text-align:center">' + btns + '</div></div>';
+
+    var pw = document.getElementById('progress-wrap');
+    if (pw) pw.style.display = 'none';
+  }
+
+  /* Every session opens on the whiteboard: what the topic rests on, where
+     students trip, and where it shows up in the world. Built before the queue
+     so it is always card one; if the day carries nothing real to say, the card
+     is skipped rather than shown empty. */
+  function buildOpeningBoard() {
+    try {
+      if (!window.SFWhiteboard || !window.SFWhiteboard.briefFor) return null;
+      var subj = (typeof day !== 'undefined' && day && day.subject) ||
+                 (window.SFStore && window.SFStore.subject) || '';
+      var spec = window.SFWhiteboard.briefFor(day || {}, subj);
+      if (!spec) return null;
+      return { type: 'sfwb-brief', lesson: spec };
+    } catch (e) { return null; }
+  }
+
   function buildQueue() {
     // If generation stripped every question, rebuild from the day's own
     // content BEFORE the queue is assembled, so the session has real
@@ -838,6 +907,10 @@
     // emitted correctIndex as a string or True/False as a boolean cannot cause
     // a correct choice to be graded wrong further down.
     var questions = normalizeQuestions(day.questions || []);
+
+    /* Card one is the whiteboard. */
+    var opening = buildOpeningBoard();
+    if (opening) sessionCards.push(opening);
     // Only mcq/truefalse can render correctly through the generic question card —
     // every other type has its own dedicated renderer and must be excluded here.
     var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1 };
@@ -1285,8 +1358,85 @@
   }
 
   /* ── SHOW NEXT ── */
+  /* Unlock the Next button after an answer has been checked.
+     This used to be a bare document.getElementById('btn-next').disabled = false,
+     which throws if the current card has no Next button. Because the enable is
+     the LAST statement in every answer handler, a throw there aborted the
+     handler after the answer was recorded but before the learner could move
+     on - leaving them stuck on a graded question. Failing soft is the right
+     call: worst case the button stays as the markup left it. */
+  function enableNext() {
+    try {
+      var b = document.getElementById('btn-next');
+      if (b) b.disabled = false;
+      return !!b;
+    } catch (e) { return false; }
+  }
+
+  /* ── ENTER-KEY PROTOCOL ────────────────────────────────────────────────────
+     Enter is the primary control: it submits the answer, and once the answer
+     has been checked it moves to the next card. It never does both on one
+     press, so a learner can never skip past their own result.
+
+     Textareas keep Enter for newlines and take Cmd/Ctrl+Enter to submit,
+     because long-form answers need line breaks. */
+  function submitControl() {
+    /* The visible check/submit control on the current card, whatever type it is. */
+    var ids = ['fill-btn', 'seq-check-btn', 'classify-check-btn', 'write-submit',
+               'graph-check-btn', 'match-check-btn'];
+    var i, el;
+    for (i = 0; i < ids.length; i++) {
+      el = document.getElementById(ids[i]);
+      if (el && !el.disabled && el.offsetParent !== null) return el;
+    }
+    el = document.querySelector('.fill-btn:not([disabled]), .check-btn:not([disabled])');
+    return el || null;
+  }
+
+  function handleEnterKey(ev) {
+    if (!ev || ev.key !== 'Enter' || ev.shiftKey || ev.altKey) return;
+    if (!sessionActive) return;
+
+    var t = ev.target || {};
+    var tag = (t.tagName || '').toLowerCase();
+    var isTextarea = tag === 'textarea';
+    if (isTextarea && !(ev.metaKey || ev.ctrlKey)) return;   // let it wrap
+
+    /* Never hijack Enter from a real button the learner has focused. */
+    if (tag === 'button' && t.id !== 'btn-next') return;
+
+    var submit = submitControl();
+    if (submit && !currentAnswered) {
+      ev.preventDefault();
+      submit.click();
+      return;
+    }
+
+    /* Typing in an answer field must never advance the card. The fill and
+       write inputs carry their own Enter handlers; if one of those has already
+       graded the answer on this very keypress, `currentAnswered` is true by
+       the time we get here and advancing would skip the learner straight past
+       their own result. Anything typed into an input stops here. */
+    if (tag === 'input' || isTextarea) return;
+
+    var next = document.getElementById('btn-next');
+    if (next && !next.disabled) {
+      ev.preventDefault();
+      next.click();
+    }
+  }
+
+  /* Capture phase, so this runs BEFORE the per-input Enter handlers rather
+     than after them. In bubble order the input graded the answer first, this
+     handler then saw an answered card and advanced on the same press - which
+     is exactly the skip a learner hit while typing. */
+  document.addEventListener('keydown', handleEnterKey, true);
+
   function showNextCard() {
     if (!sessionActive) return;
+    /* Cancel any pending auto-advance. Without this a timer armed on an
+       earlier card fires mid-question and skips it. */
+    if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
     currentAnswered = false;
     fillAttempts = 0;
 
@@ -1322,9 +1472,13 @@
   }
 
   /* ── RENDER CARD ── */
+  var autoAdvanceTimer = null;
+  var currentCardType = '';
+
   function renderCard(card) {
     var sc = document.getElementById('session-card');
     var html = '';
+    currentCardType = (card && card.type) || '';
 
     if (card.type === 'pretest-intro') {
       html = buildCard('Quick Check', 'Before we start — test yourself!', false,
@@ -1529,8 +1683,15 @@
         '<p class="content-text" style="text-align:center;">Building questions from today\'s material — this takes a few seconds.</p>' +
         '<div style="display:flex;justify-content:center;margin-top:1rem;"><div class="mini-spinner"></div></div>',
         '', 'Continue →', false);
-      // Auto-advance once the buffer fills, so the student isn't stuck here.
-      setTimeout(function () {
+      /* Auto-advance once the buffer fills, so the student isn't stuck here.
+         The timer is stored and re-checked before it fires: previously it was
+         armed on the loading card and never cancelled, so 2.6s later it fired
+         on whatever card had since been rendered and skipped that question. */
+      var armedAt = cardIndex;
+      autoAdvanceTimer = setTimeout(function () {
+        autoAdvanceTimer = null;
+        if (cardIndex !== armedAt) return;                 // learner already moved on
+        if (currentCardType !== 'generating') return;      // no longer the loading card
         if (questionBuffer.length > 0 || (day.questions && day.questions.length)) showNextCard();
       }, 2600);
     }
@@ -1621,10 +1782,10 @@
     // TIER 2: Confidence tap — shown before answer buttons, hides after answered
     var confidenceTap = '<div class="confidence-row" id="confidence-row">' +
       '<span class="confidence-label">How confident?</span>' +
-      '<button class="conf-btn sure" onclick="setConfidence(\'sure\')">' +
+      '<button class="conf-btn sure" onclick="setConfidence(\'sure\',this)">' +
       '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
       ' Sure</button>' +
-      '<button class="conf-btn unsure" onclick="setConfidence(\'unsure\')">' +
+      '<button class="conf-btn unsure" onclick="setConfidence(\'unsure\',this)">' +
       '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
       ' Not sure</button>' +
       '</div>';
@@ -1646,10 +1807,13 @@
   }
 
   var currentConfidence = null;
-  function setConfidence(val) {
+  function setConfidence(val, el) {
     currentConfidence = val;
     document.querySelectorAll('.conf-btn').forEach(function(b){ b.classList.remove('selected'); });
-    event.target.classList.add('selected');
+    /* Was relying on the deprecated global `event`, which is absent in strict
+       contexts and would throw before the selection could be shown. */
+    var target = el || (typeof window !== 'undefined' && window.event ? window.event.target : null);
+    if (target && target.classList) target.classList.add('selected');
   }
 
   function renderFill(q) {
@@ -1938,7 +2102,7 @@
       fb.innerHTML = '<div class="feedback-label">✗ Not quite</div><div class="feedback-text">The correct y-intercept was <strong>' + gs.target + '</strong>. ' + (gs.explanation || '') + '</div>';
       flashCard(false);
     }
-    document.getElementById('btn-next').disabled = false;
+    enableNext();
     updateStats();
     updateStreak();
   }
@@ -2496,7 +2660,7 @@
       fb.innerHTML = '<div class="feedback-label">✗ Not this one</div><div class="feedback-text">' + (explanation || 'The correct step is highlighted in green.') + '</div>';
       flashCard(false);
     }
-    document.getElementById('btn-next').disabled = false;
+    enableNext();
     updateStats();
     updateStreak();
   }
@@ -2778,7 +2942,7 @@
       fb.innerHTML = '<div class="feedback-label">✗ Not quite</div><div class="feedback-text">' + (window._seqState.explanation || 'Check the correct order shown above.') + '</div>';
       flashCard(false);
     }
-    document.getElementById('btn-next').disabled = false;
+    enableNext();
     updateStats();
     updateStreak();
   }
@@ -2846,7 +3010,7 @@
         var fb = document.getElementById('feedback-box');
         fb.className = 'feedback-box show correct-fb';
         fb.innerHTML = '<div class="feedback-label">✓ All matched!</div><div class="feedback-text">' + (ms.explanation || 'Great work connecting these concepts.') + '</div>';
-        document.getElementById('btn-next').disabled = false;
+        enableNext();
         spawnConfetti();
         flashCard(true);
         updateStats();
@@ -2995,7 +3159,7 @@
       fb.innerHTML = '<div class="feedback-label">✗ Not quite</div><div class="feedback-text">Correct sorting:<br>' + correctMsg + '</div>';
       flashCard(false);
     }
-    document.getElementById('btn-next').disabled = false;
+    enableNext();
     var btn = document.getElementById('classify-check-btn');
     if (btn) btn.disabled = true;
     updateStats(); updateStreak();
@@ -3065,7 +3229,7 @@
 
     handleResult(isCorrect, explanation, btn.parentElement.children[selected]);
     showFeedback(isCorrect, explanation);
-    document.getElementById('btn-next').disabled = false;
+    enableNext();
   }
 
   function answerTF(btn, selected, correct, explanation) {
@@ -3096,7 +3260,7 @@
 
     handleResult(isCorrect, explanation, null);
     showFeedback(isCorrect, explanation);
-    document.getElementById('btn-next').disabled = false;
+    enableNext();
   }
 
   function answerFill(correct, explanation, mustBeCorrect) {
@@ -3234,7 +3398,7 @@
         '<div class="feedback-text" style="margin-bottom:.45rem;">The answer is ' +
         '<strong style="font-size:1.15em;color:#dc2626;">' + correct + '</strong></div>');
     }
-    document.getElementById('btn-next').disabled = false;
+    enableNext();
     updateStreak();
   }
 
@@ -3402,7 +3566,7 @@
         '<div class="feedback-text">' + formatted + '</div>' +
         '<div style="margin-top:1rem;padding:.75rem;background:var(--soft);border-radius:10px;font-size:0.82rem;color:var(--muted);">' +
         '<strong>Model answer:</strong> ' + modelAnswer + '</div>';
-      document.getElementById('btn-next').disabled = false;
+      enableNext();
 
       // Save Feynman score for analytics
       if (score) {
@@ -3416,7 +3580,7 @@
       var fb = document.getElementById('feedback-box');
       fb.className = 'feedback-box info-fb show';
       fb.innerHTML = '<div class="feedback-label">Feedback</div><div class="feedback-text"><strong>Model answer:</strong> ' + modelAnswer + '</div>';
-      document.getElementById('btn-next').disabled = false;
+      enableNext();
     });
   }
 
@@ -3622,6 +3786,18 @@
 
   /* ── END SESSION ── */
   function endSession() {
+    /* Persist completion here rather than only on the way to the dashboard:
+       a learner who closes the tab has still finished the lesson. */
+    try {
+      if (plan && plan.days && plan.days[dayIndex]) {
+        plan.days[dayIndex].completed = true;
+        SFStore.setItem('studyflow_plan', JSON.stringify(plan));
+        var arr = JSON.parse(SFStore.getItem('studyflow_plans') || '[]');
+        var ix = arr.findIndex(function (p) { return String(p.id) === String(plan.id); });
+        if (ix >= 0) { arr[ix] = plan; SFStore.setItem('studyflow_plans', JSON.stringify(arr)); }
+      }
+    } catch (e) { /* storage unavailable; the dashboard path still records it */ }
+
     clearInterval(timerInterval);
     sessionActive = false;
     SFStore.removeItem('studyflow_seconds_left');
@@ -3929,7 +4105,7 @@
 
     /* ── §1 typography ─────────────────────────────────────────────────────── */
 
-    var FONT = "'DM Sans', system-ui, sans-serif";
+    var FONT = "\'DM Sans\', system-ui, -apple-system, sans-serif";
 
     /* Advance widths in em units, approximating DM Sans. Used only for layout
        and collision maths, so "close enough" beats "exact" — every consumer
@@ -5589,15 +5765,29 @@ var SFBoard = (function () {
     if (!s) return [];
     maxLines = maxLines || 3;
     var words = s.split(' '), lines = [], cur = '', i, trial;
+    var dropped = false;
     for (i = 0; i < words.length; i++) {
       trial = cur ? cur + ' ' + words[i] : words[i];
       if (cur && measure(trial, size, weight) > maxW) {
         lines.push(cur); cur = words[i];
-        if (lines.length === maxLines) { cur = ''; break; }
+        if (lines.length === maxLines) { cur = ''; dropped = true; break; }
       } else cur = trial;
     }
     if (cur && lines.length < maxLines) lines.push(cur);
+    else if (cur) dropped = true;
     if (!lines.length) lines = [s];
+    /* Text cut at the line limit gets an ellipsis. Without it a sentence that
+       simply stops mid-phrase reads as a rendering fault rather than an
+       abridgement. */
+    if (dropped && lines.length) {
+      var last = lines.length - 1;
+      lines[last] = lines[last].replace(/[\s,;:.-]+$/, '');
+      while (lines[last].length > 1 &&
+             measure(lines[last] + '\u2026', size, weight) > maxW) {
+        lines[last] = lines[last].replace(/\s*\S$/, '');
+      }
+      lines[last] += '\u2026';
+    }
     for (i = 0; i < lines.length; i++) {
       if (measure(lines[i], size, weight) <= maxW) continue;
       while (lines[i].length > 1 &&
@@ -5620,18 +5810,25 @@ var SFBoard = (function () {
 
   /* ── §2 tokens ─────────────────────────────────────────────────────────── */
 
-  var INK = '#16181d', MUTED = '#6b7280', RULE = '#dfe4ec', FAINT = '#f4f6fa';
-  var ACCENT = '#2f6df6', ACCENT_SOFT = '#eaf1ff';
+  /* StudyFlow Apex palette. Three hues only: Soft Navy carries structure and
+     headings, Deep Slate carries body copy, Accent Gold marks the one thing on
+     the board that matters most. Everything else is a tint of those, so the
+     board never introduces a fourth colour. */
+  var NAVY = '#1F407A', SLATE = '#4F5D75', GOLD = '#E8A851';
+  var INK = NAVY, MUTED = SLATE, RULE = '#DCE2EC', FAINT = '#F5F7FB';
+  var ACCENT = GOLD, ACCENT_SOFT = '#FDF3E3';
 
   /* One restrained hue per index. Minimal means colour carries meaning
      (which beat am I on) rather than decoration. */
+  /* Tints of the three palette hues, cycled so consecutive beats stay
+     distinguishable without importing new colours. */
   var TONES = [
-    { line: '#2f6df6', fill: '#eef4ff', ink: '#1b47a8' },
-    { line: '#0f9d8f', fill: '#e8f7f5', ink: '#0a6b61' },
-    { line: '#7c5cd6', fill: '#f2eeff', ink: '#513a94' },
-    { line: '#d98324', fill: '#fdf2e3', ink: '#8f5410' },
-    { line: '#d4467a', fill: '#fdedf3', ink: '#932c53' },
-    { line: '#3f7f4b', fill: '#eaf5ec', ink: '#265731' }
+    { line: NAVY,      fill: '#EDF2FA', ink: NAVY },
+    { line: SLATE,     fill: '#F0F2F6', ink: '#3A465A' },
+    { line: GOLD,      fill: '#FDF3E3', ink: '#8A5E15' },
+    { line: '#2F5694', fill: '#EAF0F9', ink: '#1A3768' },
+    { line: '#66748C', fill: '#F2F4F8', ink: '#44506480'.slice(0, 7) },
+    { line: '#C99340', fill: '#FCF0DF', ink: '#7A5312' }
   ];
   function tone(i) { return TONES[((i % TONES.length) + TONES.length) % TONES.length]; }
 
@@ -5711,7 +5908,7 @@ var SFBoard = (function () {
 
   function card(x, y, w, h, t, active) {
     return '<rect class="sfb-card" x="' + r1(x) + '" y="' + r1(y) + '" width="' + r1(w) +
-      '" height="' + r1(h) + '" rx="10" fill="' + (active ? t.fill : '#fff') +
+      '" height="' + r1(h) + '" rx="12" fill="' + (active ? t.fill : '#fff') +
       '" stroke="' + t.line + '" stroke-width="1.6"/>';
   }
 
@@ -5719,6 +5916,64 @@ var SFBoard = (function () {
     return '<line x1="' + r1(x1) + '" y1="' + r1(y1) + '" x2="' + r1(x2) + '" y2="' + r1(y2) +
       '" stroke="' + (colour || RULE) + '" stroke-width="1.6" stroke-linecap="round"' +
       (dashed ? ' stroke-dasharray="4 4"' : '') + ' marker-end="url(#sfbTip)"/>';
+  }
+
+  /* Stylised subject marks. Pure paths, no raster, no <style> blocks, every
+     tag closed - the board must stay a single self-contained SVG. */
+  function subjectIcon(subject, x, y, size) {
+    var k = String(subject || '').toLowerCase();
+    var sc = (size || 46) / 46, o = '';
+    function open(inner) {
+      return '<g transform="translate(' + r1(x) + ',' + r1(y) + ') scale(' + r1(sc) + ')" ' +
+        'fill="none" stroke="' + NAVY + '" stroke-width="2.1" stroke-linecap="round" ' +
+        'stroke-linejoin="round">' + inner + '</g>';
+    }
+    if (/histor|revolution|war|ancient|rome|greek|empire|civil|constitution|government|politic/.test(k)) {
+      // Classical column
+      o = '<path d="M6 10 H40"/><path d="M9 10 V36"/><path d="M17 10 V36"/>' +
+          '<path d="M25 10 V36"/><path d="M33 10 V36"/><path d="M4 36 H42"/>' +
+          '<path d="M8 6 H38 L40 10 H6 Z" fill="' + GOLD + '" fill-opacity=".22" stroke="' + NAVY + '"/>';
+    } else if (/dna|gene|cell|biolog|organism|evolution|hered/.test(k)) {
+      // Double helix
+      o = '<path d="M14 6 C30 14 14 24 30 32 C14 36 30 40 30 42"/>' +
+          '<path d="M30 6 C14 14 30 24 14 32 C30 36 14 40 14 42"/>' +
+          '<path d="M17 13 H27"/><path d="M17 23 H27"/><path d="M17 33 H27"/>';
+    } else if (/atom|chem|physic|element|molecul|energy|force|reaction/.test(k)) {
+      // Atom
+      o = '<ellipse cx="22" cy="24" rx="17" ry="7"/>' +
+          '<ellipse cx="22" cy="24" rx="17" ry="7" transform="rotate(60 22 24)"/>' +
+          '<ellipse cx="22" cy="24" rx="17" ry="7" transform="rotate(120 22 24)"/>' +
+          '<circle cx="22" cy="24" r="3.6" fill="' + GOLD + '" stroke="' + NAVY + '"/>';
+    } else if (/math|algebra|calculus|equation|geometry|number|function|statistic/.test(k)) {
+      // Axis and curve
+      o = '<path d="M8 40 V8"/><path d="M8 40 H40"/>' +
+          '<path d="M11 35 C20 35 20 14 34 12" stroke="' + GOLD + '" stroke-width="2.2"/>' +
+          '<circle cx="34" cy="12" r="2.6" fill="' + GOLD + '" stroke="none"/>';
+    } else if (/econom|market|supply|demand|trade|business|finance/.test(k)) {
+      // Trend bars
+      o = '<path d="M8 40 H40"/><path d="M13 40 V28"/><path d="M21 40 V20"/>' +
+          '<path d="M29 40 V26"/><path d="M37 40 V13"/>' +
+          '<path d="M11 24 L21 15 L29 21 L39 9" stroke="' + GOLD + '" stroke-width="2.2"/>';
+    } else if (/english|literat|poem|novel|writing|essay|language|grammar/.test(k)) {
+      // Open book
+      o = '<path d="M6 12 C14 8 20 8 24 12 C28 8 34 8 42 12 V36 C34 32 28 32 24 36 C20 32 14 32 6 36 Z"/>' +
+          '<path d="M24 12 V36"/>';
+    } else if (/geograph|map|climate|earth|volcano|river|plate/.test(k)) {
+      // Globe
+      o = '<circle cx="24" cy="24" r="17"/><path d="M7 24 H41"/>' +
+          '<path d="M24 7 C31 13 31 35 24 41 C17 35 17 13 24 7"/>';
+    } else if (/psych|brain|memor|behavio|cognit|mind/.test(k)) {
+      // Brain
+      o = '<path d="M22 10 C15 8 9 12 10 18 C5 21 6 28 11 30 C11 37 18 40 22 36 Z"/>' +
+          '<path d="M26 10 C33 8 39 12 38 18 C43 21 42 28 37 30 C37 37 30 40 26 36 Z"/>' +
+          '<path d="M24 12 V36" stroke="' + GOLD + '"/>';
+    } else {
+      // Lightbulb — the general-study mark
+      o = '<path d="M24 8 C16 8 11 14 11 21 C11 26 14 29 16 32 H32 C34 29 37 26 37 21 C37 14 32 8 24 8 Z"/>' +
+          '<path d="M18 36 H30"/><path d="M20 40 H28"/>' +
+          '<path d="M24 18 V28" stroke="' + GOLD + '" stroke-width="2.2"/>';
+    }
+    return open(o);
   }
 
   function svgOpen(w, h) {
@@ -5764,6 +6019,32 @@ var SFBoard = (function () {
 
   /* ── §5 scenes ─────────────────────────────────────────────────────────── */
   /* Each returns { svg, beats, w, h } or null. A scene NEVER invents filler. */
+
+  /* ── GEOGRAPHY ────────────────────────────────────────────────────────────
+     Natural Earth coastlines, simplified to ~0.9 degrees and rounded to 0.1,
+     plus a gazetteer whose country positions are centroids of those same
+     polygons. About 30KB, and it buys maps that show real land instead of an
+     invented shape. */
+  var GEO_LAND = [[[-180,-84.7],[-170,-83.9],[-158.1,-85.4],[-143.1,-85],[-153.6,-83.7],[-152.9,-82],[-156.8,-81.1],[-146.4,-80.3],[-155.3,-79.1],[-158.4,-76.9],[-151.3,-77.4],[-144.9,-75.2],[-113.9,-73.7],[-100.6,-75.3],[-103.7,-72.6],[-76.2,-74],[-68.9,-73],[-67.1,-72],[-68.5,-69.7],[-67.3,-66.9],[-57.8,-63.3],[-65.7,-68],[-61.8,-70.7],[-60.8,-73.7],[-70.6,-76.6],[-77.2,-76.7],[-73.7,-77.9],[-78,-79.2],[-58.2,-83.2],[-28.6,-80.3],[-29.7,-79.3],[-35.6,-79.5],[-35.3,-78.1],[-17.5,-75.1],[-15.4,-73.1],[-6.9,-70.9],[27.1,-70.5],[33.9,-68.5],[38.6,-69.8],[54.5,-65.8],[61.4,-68],[68.9,-67.9],[69.7,-69.2],[67.8,-70.3],[69.1,-70.7],[67.9,-71.9],[69.9,-72.3],[73.9,-69.9],[88,-66.2],[95.8,-67.4],[102.8,-65.6],[106.2,-66.9],[113.6,-65.9],[119.8,-67.3],[135.1,-65.3],[137.5,-67],[145.5,-66.9],[171.2,-71.7],[163.6,-76.2],[167,-78.8],[161.8,-79.2],[159.8,-80.9],[169.4,-83.8],[180,-84.7],[-180,-84.7]],[[-122.8,49],[-127.4,50.8],[-130.5,54.3],[-130,55.9],[-135.5,59.8],[-137.5,58.9],[-141,60.3],[-141,69.7],[-136.5,68.9],[-128.1,70.5],[-108.9,67.4],[-106.1,68.8],[-101.5,67.6],[-97.7,68.6],[-96.1,67.3],[-94.2,69.1],[-96.5,70.1],[-95.2,71.9],[-87.3,67.2],[-85.5,69.9],[-82.6,69.7],[-81.3,69.2],[-81.4,67.1],[-85.8,66.6],[-94.2,60.9],[-94.7,58.9],[-92.3,57.1],[-82.3,55.1],[-79.9,51.2],[-78.6,52.6],[-79.8,54.7],[-76.5,56.5],[-78.5,58.8],[-77.3,59.9],[-78.1,62.3],[-73.8,62.4],[-69.6,61.1],[-69.3,59],[-67.7,58.2],[-64.6,60.3],[-61.8,56.3],[-57.3,54.6],[-55.7,52.1],[-60,50.2],[-66.4,50.2],[-71.1,46.8],[-65.1,49.2],[-64.5,46.2],[-61.5,45.9],[-60.5,47],[-59.8,45.9],[-65.4,43.5],[-66.2,44.5],[-64.4,45.3],[-67.1,45.1],[-69.2,47.4],[-71.5,45],[-74.9,45],[-82.4,41.7],[-82.6,45.3],[-88.4,48.3],[-94.8,49.4],[-122.8,49]],[[130.8,42.2],[131,45],[133.1,45.1],[135,48.5],[131,47.8],[125.1,53.2],[121,53.3],[117.9,49.5],[108.5,49.3],[98.9,52],[97.3,49.7],[92.2,50.8],[87.4,49.2],[83.4,51.1],[80,50.9],[76.9,54.5],[73.4,53.5],[69.1,55.4],[61.4,54],[60,52],[61.3,50.8],[50.8,51.7],[48.6,49.9],[47.6,50.5],[46.5,48.4],[49.1,46.4],[46.7,44.6],[48.6,41.8],[47.8,41.2],[36.7,45.2],[40.1,49.6],[31.8,52.1],[31.3,53.1],[32.7,53.4],[30.9,55.6],[28.2,56.2],[27.4,58.7],[29.1,60],[28.1,60.5],[31.5,62.9],[30,63.6],[29.1,66.9],[30,67.7],[28.6,69.1],[32.1,69.9],[40.3,67.9],[41.1,66.8],[40,66.3],[33.2,66.6],[37,63.9],[37.2,65.1],[39.6,64.5],[42.1,66.5],[44,66.1],[43.5,68.6],[46.3,68.2],[46.3,66.7],[53.7,68.9],[59.9,68.3],[60.6,69.9],[68.5,68.1],[66.7,71],[69.9,73],[72.8,72.2],[71.8,71.4],[73.7,68.4],[71.3,66.3],[72.4,66.2],[75.1,67.8],[73.1,71.4],[74.7,72.8],[76.4,71.2],[77.6,72.3],[81.5,71.7],[80.5,73.6],[104.4,77.7],[114.1,75.8],[109.4,74.2],[127,73.6],[131.3,70.8],[132.3,71.8],[139.9,71.5],[139.1,72.4],[140.5,72.8],[169.6,68.7],[170.5,70.1],[-180,69],[-174.3,66.3],[-169.9,66],[-173,64.3],[-178.7,66.1],[-180,65],[180,65],[177.4,64.6],[179.2,62.3],[170.3,59.9],[163.5,59.9],[162,58.2],[163.2,57.6],[162.1,54.9],[156.8,51],[155.9,56.8],[164.5,62.6],[160.1,60.5],[159.3,61.8],[156.7,61.4],[154.2,59.8],[155,59.1],[142.2,59],[135.1,54.7],[141.3,53.1],[140.1,48.4],[134.9,43.4],[130.8,42.2]],[[80.3,42.4],[80,44.9],[87.8,49.3],[91,46.9],[90.9,45.3],[95.3,44.2],[96.3,42.7],[105,41.6],[109.2,42.5],[111.8,43.7],[111.9,45.1],[119.7,46.7],[115.5,48.1],[122.2,53.4],[125.9,52.8],[127.7,49.8],[131,47.8],[135,48.5],[133.1,45.1],[131,45],[130.6,42.4],[121.1,38.9],[121.6,40.9],[117.5,38.7],[119.7,37.2],[122.4,37.5],[119.2,34.9],[121.9,31.7],[121.7,28.2],[118.7,24.5],[110.4,20.3],[105.3,23.4],[101.7,22.3],[101.8,21.2],[99.2,22.1],[97.6,23.9],[98.7,27.5],[96.1,29.5],[88.8,27.3],[78.7,31.5],[78.9,34.3],[73.7,39.4],[80.3,42.4]],[[-122.8,49],[-94.8,49.4],[-88.4,48.3],[-82.6,45.3],[-82.7,41.7],[-74.9,45],[-71.5,45],[-69.2,47.4],[-67,44.8],[-70.1,43.7],[-70,41.6],[-75.5,39.5],[-75.9,37.2],[-76.4,39.1],[-77,38.2],[-75.7,35.6],[-81.3,31.4],[-80.4,25.2],[-83.7,29.9],[-86.4,30.4],[-89.6,30.2],[-89.4,29.2],[-94.7,29.5],[-97.1,27.8],[-97.5,25.8],[-101,29.4],[-103.9,29.3],[-106.5,31.8],[-117.1,32.5],[-120.6,34.6],[-124.4,40.3],[-124.7,48.2],[-122.6,47.1],[-122.8,49]],[[-53.4,-33.8],[-53.8,-32],[-57.6,-30.2],[-53.6,-26.1],[-55.8,-22.4],[-57.9,-22.1],[-58.2,-16.3],[-60.2,-16.3],[-60.5,-13.8],[-65.4,-11.6],[-65.3,-9.8],[-70.5,-11],[-70.5,-9.5],[-72.2,-10.1],[-74,-7.5],[-72.9,-5.3],[-69.9,-4.3],[-69.8,1.7],[-65.5,0.8],[-63.4,2.2],[-64.8,4.1],[-60.7,5.2],[-59,1.3],[-52.9,2.1],[-51.3,4.2],[-50.4,-0.1],[-44.9,-1.6],[-44.6,-2.7],[-40,-2.9],[-35.6,-5.1],[-34.7,-7.3],[-38.7,-13.1],[-40.9,-21.9],[-47.6,-24.9],[-48.9,-28.7],[-53.4,-33.8]],[[126.1,-32.2],[118,-35.1],[115,-34.2],[115.8,-32.2],[113.3,-26.1],[114.2,-26.3],[113.7,-22.5],[120.9,-19.7],[125.7,-14.2],[129.6,-15],[132.4,-11.1],[136.5,-11.9],[135.5,-15],[140.2,-17.7],[142.5,-10.7],[146.4,-19],[150.7,-22.4],[153.6,-28.1],[150,-37.4],[146.3,-39],[140.6,-38],[138.2,-34.4],[136.8,-35.3],[137.8,-32.9],[136,-34.9],[131.3,-31.5],[126.1,-32.2]],[[-46.8,82.6],[-27.1,83.5],[-20.8,82.7],[-31.4,82],[-12.2,81.3],[-20,80.2],[-17.7,80.1],[-19.7,78.8],[-18.5,77],[-21.7,76.6],[-19.8,76.1],[-20.7,75.2],[-19.4,74.3],[-23.6,73.3],[-22.3,72.2],[-24.8,72.3],[-21.8,70.7],[-25.5,71.4],[-26.4,70.2],[-22.3,70.1],[-39.8,65.5],[-42.8,62.7],[-43.4,60.1],[-44.8,60],[-51.6,63.6],[-54,67.2],[-50.9,69.9],[-54.7,69.6],[-54.4,70.8],[-51.4,70.6],[-55.8,71.7],[-54.7,72.6],[-58.6,75.5],[-68.5,76.1],[-71.4,77],[-66.8,77.4],[-73.3,78],[-65.7,79.4],[-68,80.1],[-62.6,81.8],[-44.5,81.7],[-46.8,82.6]],[[87.4,49.2],[80,44.9],[80.3,42.4],[74.2,43.3],[68.6,40.7],[64.9,43.7],[62,43.5],[58.5,45.6],[55.9,45],[56,41.3],[52.5,41.8],[50.3,44.6],[53,45.3],[53,46.9],[49.1,46.4],[46.5,48.4],[47.6,50.5],[48.6,49.9],[50.8,51.7],[61.3,50.8],[60,52],[61.4,54],[69.1,55.4],[73.4,53.5],[76.9,54.5],[80,50.9],[83.4,51.1],[87.4,49.2]],[[-57.6,-30.2],[-58.5,-34.4],[-56.8,-36.9],[-59.2,-38.7],[-62.3,-38.8],[-62.7,-41],[-65.1,-41.1],[-63.5,-42.6],[-67.3,-45.6],[-65.6,-47.2],[-69.1,-50.7],[-68.2,-52.4],[-71.9,-52],[-73.4,-49.3],[-71.2,-44.8],[-72.2,-42.3],[-68.4,-24.5],[-66.3,-21.8],[-62.8,-22],[-57.8,-25.2],[-58.6,-27.1],[-55.7,-27.4],[-54.1,-25.5],[-53.6,-26.9],[-57.6,-30.2]],[[97.3,28.3],[92.7,22],[91.2,23.5],[92.4,25],[88.6,26.4],[88.9,21.7],[87,21.5],[80.3,15.9],[79.9,10.4],[77.5,8],[73.5,16],[72.6,21.4],[70.5,20.9],[68.2,23.7],[71,24.4],[69.5,26.9],[75.3,32.3],[73.7,34.3],[77.8,35.5],[78.7,31.5],[81.1,30.2],[80.1,28.8],[83.3,27.4],[88.1,26.4],[88.7,28.1],[89.7,26.7],[92,26.8],[91.7,27.8],[96.1,29.5],[97.3,28.3]],[[-141,69.7],[-141,60.3],[-137.5,58.9],[-135.5,59.8],[-130,55.9],[-130.5,54.8],[-134.1,58.1],[-139.9,59.5],[-147.1,60.9],[-151.7,59.2],[-150.6,61.3],[-158.4,56],[-164.9,54.6],[-157,58.9],[-162,58.7],[-165.3,60.5],[-165.7,62.1],[-160.8,63.8],[-160.8,64.8],[-168.1,65.7],[-161.7,66.1],[-166.2,68.9],[-156.6,71.4],[-141,69.7]],[[-8.7,27.4],[-8.7,28.8],[-1.3,32.3],[-2.2,35.2],[-1.2,35.7],[8.4,36.9],[7.5,34.1],[9.8,29.4],[9.3,26.1],[12,23.5],[3.2,19.1],[-8.7,27.4]],[[29.3,-4.5],[30.7,-8.3],[28.7,-8.5],[28.4,-11.8],[29.7,-13.3],[22.2,-11.1],[21.7,-7.3],[17.5,-8.1],[16.3,-5.9],[12.2,-5.8],[16,-3.5],[19.5,5],[29.7,4.6],[31.2,2.2],[29.3,-4.5]],[[87.8,49.3],[92.2,50.8],[97.3,49.7],[98.9,52],[108.5,49.3],[116.7,49.9],[115.7,47.7],[119.8,47],[111.9,45.1],[110.4,42.9],[105,41.6],[96.3,42.7],[95.3,44.2],[90.9,45.3],[91,46.9],[87.8,49.3]],[[-117.1,32.5],[-106.5,31.8],[-103.9,29.3],[-101.7,29.8],[-97.1,25.9],[-97.9,22.4],[-95.9,18.8],[-91.4,18.9],[-90.3,21],[-87.1,21.5],[-87.8,18.3],[-91,17.8],[-90.5,16.1],[-92.2,14.5],[-103.5,18.3],[-113.1,31.2],[-114.8,31.8],[-114.7,30.2],[-110,22.8],[-115.1,27.7],[-114.2,28.6],[-117.1,32.5]],[[35,29.4],[39.2,32.2],[47.5,29],[52,23],[55.2,22.7],[55,20],[47,16.9],[43.4,17.6],[42.8,16.3],[34.6,28.1],[35,29.4]],[[-180,-16.1],[178.7,-17],[180,-16.1],[-180,-16.1]],[[48.6,29.9],[45.4,34],[46.1,35.7],[44.1,39.4],[48.1,39.6],[49.2,37.6],[52.3,36.7],[57.3,38],[61.1,36.5],[60.9,29.8],[63.3,26.8],[61.5,25.1],[57.4,25.7],[57,27],[53.5,26.8],[50.1,30.1],[48.6,29.9]],[[24.6,8.2],[21.9,12.6],[23.9,15.6],[25,22],[36.9,22],[38.4,18],[36.9,17],[34,8.7],[32.7,12.2],[31.4,9.8],[25.1,10.3],[24.6,8.2]],[[25,22],[23.8,19.6],[15.9,23.4],[14.1,22.5],[10.3,24.4],[9.9,31.4],[11.5,33.1],[19.1,30.3],[20.9,32.7],[24.9,31.9],[25,22]],[[16.3,-28.6],[19.9,-28.5],[19.9,-24.8],[21.6,-26.7],[25.7,-25.5],[29.4,-22.1],[31.2,-22.3],[31.9,-24.4],[30.7,-26.7],[32.8,-26.7],[28.2,-32.8],[20.1,-34.8],[18.4,-34.1],[16.3,-28.6]],[[-69.9,-4.3],[-72.9,-5.3],[-74,-7.5],[-72.2,-10.1],[-70.5,-9.5],[-68.7,-12.6],[-70.4,-18.3],[-76,-14.6],[-81.4,-4.7],[-80.3,-3.4],[-80.4,-4.4],[-78.6,-4.5],[-75.1,-0.1],[-73.1,-2.3],[-70,-2.7],[-69.9,-4.3]],[[-78.8,72.4],[-68.8,70.5],[-67,69.2],[-68.8,68.7],[-61.9,66.9],[-63.9,65],[-68,66.3],[-64.7,63.4],[-68.8,63.7],[-66.2,61.9],[-74.8,64.7],[-77.7,64.2],[-77.9,65.3],[-74,65.5],[-73.3,68.1],[-79,70.2],[-88.7,70.4],[-90.2,72.2],[-85.8,73.8],[-85.8,72.5],[-82.3,73.8],[-80.8,72.1],[-78.8,72.4]],[[23.8,19.6],[23.9,15.6],[21.9,12.6],[22.9,11.1],[15.3,7.4],[13.5,14.4],[15.9,20.4],[14.9,22.9],[23.8,19.6]],[[-11.5,12.4],[-11.7,15.4],[-5.5,15.5],[-6.5,25],[4.3,19.2],[3.6,15.6],[-4,13.5],[-6,10.1],[-11.5,12.4]],[[14.9,22.9],[15.9,20.4],[13.5,14.4],[14.2,12.5],[13.1,13.6],[9,12.8],[5.4,13.9],[3.6,11.7],[1,12.9],[0.4,14.9],[3.6,15.6],[4.3,19.2],[12,23.5],[14.9,22.9]],[[12.3,-6.1],[16.3,-5.9],[17.5,-8.1],[21.7,-7.3],[22.2,-11.1],[24,-11.2],[24,-12.9],[21.9,-12.9],[23.2,-17.5],[11.7,-17.3],[13.7,-11.3],[12.3,-6.1]],[[-69.5,-11],[-65.3,-9.8],[-65.4,-11.6],[-60.5,-13.8],[-60.2,-16.3],[-58.2,-16.3],[-57.9,-20],[-61.8,-19.6],[-62.7,-22.2],[-67.8,-22.9],[-69.6,-17.6],[-69.5,-11]],[[47.8,8],[45,5],[39.6,3.4],[36.2,4.4],[33,7.8],[36.4,14.4],[37.9,15],[41.6,13.5],[41.8,11.1],[43.7,9.2],[47.8,8]],[[-17.1,21],[-12.9,21.3],[-12,25.9],[-8.7,25.9],[-8.7,27.4],[-4.9,25],[-6.5,25],[-5.5,15.5],[-12.2,14.6],[-14.6,16.6],[-16.5,16.1],[-17.1,21]],[[-91.6,81.9],[-79.3,83.1],[-61.9,82.6],[-76.9,79.3],[-75.4,78.5],[-80.6,76.2],[-89.5,76.5],[-88.3,77.9],[-85,77.5],[-88,78.4],[-85.1,79.3],[-86.9,80.3],[-81.8,80.5],[-91.6,81.9]],[[-66.9,1.3],[-69.8,1.7],[-69.9,-4.3],[-70,-2.7],[-77.4,0.4],[-79,1.7],[-77.1,3.8],[-77.5,8.5],[-71.4,12.4],[-73.3,9.2],[-72,7],[-67.3,6.1],[-66.9,1.3]],[[36.9,22],[25,22],[25.2,31.6],[34.3,31.2],[34.2,27.8],[32.3,29.8],[36.9,22]],[[44.8,37.2],[29.7,36.1],[27.6,36.7],[26.2,39.5],[33.5,42],[42.6,41.6],[44.8,39.7],[44.8,37.2]],[[11,58.9],[12.6,61.3],[11.9,63.1],[16.8,68],[20.6,69.1],[23.5,67.9],[23.9,66],[17.8,62.7],[17.1,61.3],[18.8,60.1],[15.9,56.1],[12.9,55.4],[11,58.9]],[[-69.6,-17.6],[-67,-23],[-70.5,-31.4],[-69.8,-34.2],[-72.2,-42.3],[-71.2,-44.8],[-73.4,-49.3],[-71.9,-52],[-68.6,-52.3],[-71.4,-53.9],[-74.9,-52.3],[-75.6,-48.7],[-74.1,-46.9],[-75.6,-46.6],[-72.7,-42.4],[-74.3,-43.2],[-73.6,-37.2],[-71.4,-32.4],[-69.6,-17.6]],[[77.8,35.5],[73.7,34.3],[75.3,32.3],[69.5,26.9],[71,24.4],[61.5,25.1],[63.3,26.8],[60.9,29.8],[66.3,29.9],[69.3,31.9],[71.8,36.5],[75.2,37.1],[77.8,35.5]],[[2.7,6.3],[4.4,13.7],[13.1,13.6],[14.6,12.1],[11.7,7],[9.2,6.4],[8.5,4.8],[5.9,4.3],[2.7,6.3]],[[33.9,-1],[39.2,-4.7],[39.5,-10.9],[34.6,-11.5],[29.6,-6.5],[30.4,-1.1],[33.9,-1]],[[-60.7,5.2],[-64.8,4.1],[-63.4,2.2],[-66.3,0.7],[-67.8,2.8],[-67.3,6.1],[-72,7],[-72.9,10.5],[-71.3,11.8],[-71.3,9.1],[-69.9,12.2],[-68.2,10.6],[-61.9,10.7],[-59.8,8.4],[-60.7,5.2]],[[34.6,-11.5],[40.3,-10.3],[40.8,-14.7],[34.8,-19.8],[35.5,-24.1],[32.1,-26.7],[31.2,-22.3],[32.8,-16.7],[30.2,-14.8],[33.2,-14],[35,-16.8],[34.6,-11.5]],[[31.8,52.1],[40.1,49.6],[39.7,47.9],[35,45.7],[31.7,46.7],[28.7,45.3],[30,46.4],[28.7,48.1],[22.1,48.4],[23.5,51.6],[31.8,52.1]],[[19.9,-24.8],[19.9,-28.5],[16.3,-28.6],[11.7,-17.3],[25.1,-17.6],[20.9,-18.3],[19.9,-24.8]],[[6.2,49.5],[8.1,49],[6,46.7],[7.4,43.7],[1.8,42.3],[-1.9,43.4],[-1.2,46],[-4.6,48.7],[-1.6,48.6],[-1.9,49.8],[2.5,51.1],[6.2,49.5]],[[66.5,37.4],[70.8,38.5],[71.8,36.7],[75.2,37.1],[71.3,36.1],[69.3,31.9],[66.3,29.9],[60.9,29.8],[61.2,35.6],[66.5,37.4]],[[100.1,20.4],[97.4,18.4],[99.6,11.9],[98.6,9.9],[97.2,16.9],[94.2,16],[92.3,21.5],[95.1,26.6],[97.9,28.3],[98.7,25.9],[97.6,23.9],[101.1,21.8],[100.1,20.4]],[[31.1,69.6],[18,68.6],[12.6,64.1],[11,58.9],[5.7,58.6],[5,62],[19.2,69.8],[28.2,71.2],[31.1,69.6]],[[28.6,69.1],[31.1,62.4],[28.1,60.5],[21.3,60.7],[21.5,63.2],[25.4,65.1],[23.5,67.9],[20.6,69.1],[24.7,68.6],[27.7,70.2],[28.6,69.1]],[[30.7,-8.3],[33.2,-9.7],[33.2,-14],[30.2,-14.8],[27,-17.9],[23.2,-17.5],[21.9,-12.9],[24,-12.9],[23.9,-10.9],[29.7,-13.3],[28.4,-9.2],[30.7,-8.3]],[[27.4,5.2],[22.4,4],[19.5,5],[16,2.3],[14.5,5.5],[15.3,7.4],[22.9,11.1],[27.4,5.2]],[[29.4,-22.1],[25.7,-25.5],[21.6,-26.7],[19.9,-24.8],[20.9,-18.3],[25.3,-17.7],[29.4,-22.1]],[[-2.2,35.2],[-1.3,32.3],[-8.7,28.8],[-8.8,27.1],[-11.4,26.9],[-14.8,21.5],[-17,21.4],[-14.4,26.3],[-9.6,29.9],[-8.7,33.2],[-5.9,35.8],[-2.2,35.2]],[[-106.5,73.1],[-101,70],[-102.4,68.8],[-113.3,68.5],[-117.3,70],[-112.4,70.4],[-119.4,71.6],[-115.2,73.3],[-108.2,71.7],[-108.4,73.1],[-106.5,73.1]],[[39.2,-4.7],[33.9,-1],[35,1.9],[34,4.3],[35.3,5.5],[38.1,3.6],[41.9,3.9],[41.6,-1.7],[39.2,-4.7]],[[30.8,3.5],[28,4.4],[23.9,8.6],[25.8,10.4],[31.4,9.8],[33.2,12.2],[34,8.7],[33,7.8],[35.3,5.5],[30.8,3.5]],[[49.5,-12.5],[50.4,-15.7],[47.1,-24.9],[45.4,-25.6],[43.3,-22.8],[44,-17.4],[49.5,-12.5]],[[52.5,41.8],[57.1,41.3],[58.6,42.8],[66.5,37.4],[62.2,35.3],[57.3,38],[53.9,37.2],[52.7,40],[54.7,41],[52.5,41.8]],[[-7.5,37.1],[-6.4,41.4],[-9.4,43],[3,42.5],[-2.1,36.7],[-5.4,35.9],[-7.5,37.1]],[[56,41.3],[55.9,45],[58.5,45.6],[62,43.5],[64.9,43.7],[68.3,40.7],[71,42.3],[70.4,41.5],[73.1,40.9],[67.7,39.6],[67.8,37.1],[58.6,42.8],[56,41.3]],[[14.1,53.8],[15,51.1],[12.2,50.3],[13.6,48.9],[12.9,47.5],[7.5,47.6],[8.1,49],[6,50.1],[7.1,53.7],[9.9,55],[14.1,53.8]],[[117.9,4.1],[119,0.9],[117.8,0.8],[116.1,-4],[110.2,-2.9],[109.7,2],[110.5,0.8],[113.8,1.2],[115.9,4.3],[117.9,4.1]],[[39.2,32.2],[38.8,33.4],[41,34.4],[41.3,36.4],[44.8,37.2],[46.1,35.7],[45.4,34],[48.6,29.9],[44.7,29.2],[39.2,32.2]],[[105.2,14.3],[103,14.2],[102.6,12.2],[100.1,13.4],[99.2,9.2],[102.1,6.2],[101.2,5.7],[98.1,8.3],[99.6,11.9],[97.4,18.4],[100.1,20.4],[101.1,17.5],[104.7,17.4],[105.2,14.3]],[[23.5,53.9],[24,50.7],[22.8,49],[16.2,50.4],[14.1,53],[17.6,54.9],[23.5,53.9]],[[14.5,12.9],[15.5,10],[14,9.5],[15.4,7.7],[14.5,4.7],[15.9,1.7],[9.6,2.3],[8.8,5.5],[11.7,7],[14.5,12.9]],[[41.6,-1.7],[41,2.8],[45,5],[48.9,9.5],[48.9,11.4],[51.1,12],[48.6,5.3],[41.6,-1.7]],[[141,-2.6],[141,-9.1],[137.6,-8.4],[138.7,-7.3],[137.9,-5.4],[133,-4.1],[132,-2.8],[133.7,-2.2],[130.5,-0.9],[134,-0.8],[135.5,-3.4],[137.4,-1.7],[141,-2.6]],[[52,19],[53.1,16.7],[52.2,15.6],[43.5,12.6],[43.4,17.6],[47,16.9],[52,19]],[[104.4,-1.1],[106.1,-3.1],[105.8,-5.9],[104.7,-5.9],[95.3,5.5],[97.5,5.2],[104.4,-1.1]],[[-3.1,53.4],[-6.2,56.8],[-5,58.6],[-3,58.6],[-4.1,57.6],[-2,57.7],[-3.1,56],[1.7,52.7],[0.5,50.8],[-5.2,50],[-3.4,51.4],[-5.3,52],[-4.6,53.5],[-3.1,53.4]],[[104.3,10.5],[107.5,12.3],[107.6,15.2],[102.2,22.5],[105.3,23.4],[108,21.6],[105.7,19.1],[108.9,15.3],[109.2,11.7],[105.2,8.6],[104.3,10.5]],[[-58.2,-20.2],[-57.9,-22.1],[-54.3,-24],[-55.7,-27.4],[-58.6,-27.1],[-57.8,-25.2],[-62.7,-22.2],[-61.8,-19.6],[-58.2,-20.2]],[[141.9,39.2],[140.3,35.1],[135.8,33.5],[135.1,34.6],[131,33.9],[132,33.1],[130.2,31.4],[129.4,33.3],[139.4,38.2],[140.3,41.2],[141.4,41.4],[141.9,39.2]],[[28.2,56.2],[30.9,55.6],[32.7,53.4],[31.3,53.1],[31.8,52.1],[23.5,51.6],[23.5,53.9],[28.2,56.2]],[[31.2,-22.3],[28,-21.5],[25.3,-17.7],[27,-17.9],[30.3,-15.5],[32.8,-16.7],[31.2,-22.3]],[[28.2,45.5],[29.6,45.3],[28.6,43.7],[22.9,43.8],[20.2,46.1],[23.1,48.1],[26.6,48.2],[28.2,45.5]],[[10.4,46.9],[13.8,46.5],[12.6,44.1],[18.3,39.8],[16.9,40.4],[15.7,37.9],[15.4,40],[10.2,43.9],[7.4,43.7],[6.8,46],[10.4,46.9]],[[141,-2.6],[147.6,-6.1],[147.2,-7.4],[150.7,-10.6],[144.7,-7.6],[141,-9.1],[141,-2.6]],[[55.2,22.7],[56.4,24.9],[59.8,22.3],[57.7,18.9],[53.1,16.7],[52,19],[55,20],[55.2,22.7]],[[18.5,3.5],[16,-3.5],[11.9,-5],[11.5,-2.8],[14.4,-1.3],[13.1,2.3],[15.9,1.7],[17.1,3.7],[18.5,3.5]],[[-8,10.2],[-2.8,9.6],[-2.9,5],[-7.7,4.4],[-8,10.2]],[[53.5,73.8],[61.2,76.3],[68.9,76.5],[58.5,74.3],[55.4,72.4],[57.5,70.7],[51.6,71.5],[53.5,73.8]],[[107.4,14.2],[105.2,14.3],[104,18.2],[101.1,17.5],[100.1,20.4],[101.7,22.3],[104.4,20.8],[103.9,19.3],[107.3,15.9],[107.4,14.2]],[[-5.4,10.4],[-4.3,13.2],[-1.1,15],[2.2,12.6],[0.9,11],[-2.9,11],[-2.8,9.6],[-5.4,10.4]],[[11.3,2.3],[14.3,1.2],[14.4,-1.3],[11.1,-4],[8.8,-1.1],[11.3,2.3]],[[-13.7,12.6],[-9.1,12.3],[-8.3,7.7],[-10.5,8.3],[-11.1,10],[-13.2,8.9],[-15.1,11],[-13.7,12.6]],[[-121.5,74.4],[-115.5,73.5],[-123.1,70.9],[-125.9,71.9],[-123.9,73.7],[-124.9,74.3],[-121.5,74.4]],[[0,11],[1.1,5.9],[-2.9,5],[-2.9,11],[0,11]],[[71,42.3],[74.2,43.3],[80.3,42.4],[71.8,39.3],[69.5,39.5],[73.1,40.9],[70.4,41.5],[71,42.3]],[[-14.5,66.5],[-13.6,65.1],[-18.7,63.5],[-22.8,64],[-21.8,64.4],[-24,64.9],[-22.2,65.4],[-24.3,65.6],[-14.5,66.5]],[[33.9,-1],[29.6,-1.3],[31.2,3.8],[34.5,3.6],[33.9,-1]],[[-88.1,74.4],[-97.1,76.8],[-81.1,75.7],[-80.5,74.7],[-88.1,74.4]],[[35.7,32.7],[36.7,36.8],[42.3,37.2],[41,34.4],[35.7,32.7]],[[-75.4,-0.2],[-78.6,-4.5],[-80.4,-4.4],[-80.1,0.8],[-75.4,-0.2]],[[-56.5,1.9],[-59.6,1.8],[-60,5],[-61.4,6],[-59.8,8.4],[-57.1,6],[-58,4.1],[-56.5,1.9]],[[-48.7,-78],[-43.9,-78.5],[-43.3,-80],[-54.2,-80.6],[-48.7,-78]],[[15.1,79.7],[21.5,79],[15.9,76.8],[10.4,79.7],[15.1,79.7]],[[-96,80.6],[-92.4,81.3],[-85.8,79.3],[-92.9,78.3],[-96,80.6]],[[-107.8,75.8],[-105.9,76],[-106.3,75],[-112.2,74.4],[-117.7,75.2],[-115.4,76.5],[-107.8,75.8]],[[122.9,0.9],[125.1,1.6],[124.4,0.4],[120,-0.5],[123.3,-0.6],[121.5,-1.9],[123.2,-5.3],[121,-2.6],[119.8,-5.7],[118.8,-2.8],[119.8,0.2],[122.9,0.9]],[[9.5,30.3],[7.5,34.1],[9.5,37.4],[11,37.1],[10.2,34.3],[11.5,33.1],[9.5,30.3]],[[67.8,37.1],[67.7,39.6],[70.7,41],[69.5,39.5],[73.7,39.4],[75,37.4],[71.8,36.7],[70.8,38.5],[67.8,37.1]],[[169.7,-43.6],[172.8,-40.5],[174.2,-41.3],[169.3,-46.6],[166.5,-45.9],[169.7,-43.6]],[[117.9,4.1],[115.9,4.3],[114.6,1.4],[109.8,1.3],[115.3,4.3],[116.7,6.9],[119.2,5.4],[117.9,4.1]],[[88.1,27.9],[87.2,26.4],[80.1,28.8],[81.5,30.4],[88.1,27.9]],[[-57.6,-30.2],[-53.8,-32],[-53.8,-34.4],[-58.4,-33.9],[-57.6,-30.2]],[[-16.7,13.6],[-17.6,14.7],[-14.6,16.6],[-11.5,12.4],[-16.7,12.4],[-13.8,13.5],[-16.7,13.6]],[[142.9,53.7],[144.7,49],[143.2,49.3],[143.5,46.1],[142.1,46],[141.7,53.3],[142.9,53.7]],[[22.7,44.2],[28.6,43.7],[28,42],[23,41.3],[22.7,44.2]],[[102.6,12.2],[103,14.2],[107.6,13.5],[106.2,11],[103.5,10.6],[102.6,12.2]],[[-54.5,2.3],[-56.5,1.9],[-57.6,3.3],[-57.1,6],[-54,5.8],[-54.5,2.3]],[[27.3,57.5],[28.2,56.2],[26.5,55.6],[21.1,56],[22.5,57.8],[27.3,57.5]],[[144.6,44],[145.5,43.3],[143.2,42],[140,41.6],[142,45.6],[144.6,44]],[[92.7,22],[92.4,20.7],[91.4,22.8],[89,22.1],[88.6,26.4],[92.4,25],[91.2,23.5],[92.7,22]],[[176.9,-40.1],[174.7,-41.3],[174.7,-37.4],[172.6,-34.5],[176,-37.6],[178.5,-37.7],[176.9,-40.1]],[[32.8,-9.2],[35.7,-14.6],[35,-16.8],[32.7,-13.7],[32.8,-9.2]],[[36.4,14.4],[38.4,18],[43.1,12.7],[40,14.5],[36.4,14.4]],[[23,41.3],[26.6,41.6],[22.6,40.3],[24,37.7],[22.5,36.4],[20.2,39.6],[23,41.3]],[[48.9,11.4],[47.8,8],[42.6,10.6],[48.9,11.4]],[[46.4,41.9],[50.4,40.3],[48.9,38.3],[45.6,39.9],[45,41.2],[46.4,41.9]],[[130.6,42.4],[127.5,39.8],[128.2,38.4],[124.7,38.1],[125.1,40.6],[130.6,42.4]],[[100.1,6.5],[103,5.5],[104.2,1.3],[101.4,2.8],[100.1,6.5]],[[-55.6,51.3],[-56.8,49.8],[-53.5,49.2],[-53.1,46.7],[-54.2,47.8],[-59.3,47.6],[-55.6,51.3]],[[-73.9,-71.3],[-72.1,-71.2],[-70.3,-68.9],[-68.3,-71.4],[-72.4,-72.5],[-75,-72.1],[-73.9,-71.3]],[[-9,41.9],[-6.4,41.4],[-7.9,36.8],[-9.5,38.7],[-9,41.9]],[[-8.7,27.7],[-8.7,25.9],[-12,25.9],[-12.9,21.3],[-17.1,21],[-14.8,21.5],[-11.4,26.9],[-8.7,27.7]],[[-83.1,15],[-87.3,13],[-89.4,14.4],[-87.9,15.9],[-83.1,15]],[[35.5,32.4],[38.8,33.4],[39.2,32.2],[37,31.5],[38,30.5],[36.1,29.2],[34.9,29.5],[35.5,32.4]],[[2.7,6.3],[0.8,10.5],[2.8,12.2],[3.8,10.7],[2.7,6.3]],[[-83.7,10.9],[-87.7,12.9],[-83.1,15],[-83.7,10.9]],[[93.8,81],[100.2,79.8],[95,79],[91.2,80.3],[93.8,81]],[[15,51.1],[18.9,49.5],[14.3,48.6],[12.2,50.3],[15,51.1]],[[126.2,37.7],[128.4,38.6],[129.1,35.1],[126.5,34.4],[126.2,37.7]],[[-82.3,23.2],[-74.2,20.3],[-77.8,19.9],[-81.8,22.6],[-85,21.9],[-82.3,23.2]],[[22.1,48.4],[21,46.3],[16.2,46.9],[17,48.1],[22.1,48.4]],[[51.6,24.2],[56.3,25.7],[55,22.5],[52,23],[51.6,24.2]],[[122.3,18.2],[121.7,14.3],[124,13.8],[124.1,12.5],[119.9,15.4],[120.7,18.5],[122.3,18.2]],[[-6.2,53.9],[-6.8,52.3],[-10,51.8],[-9.7,53.9],[-7.6,55.1],[-6.2,53.9]],[[-100.4,72.7],[-101.5,73.4],[-100.4,73.8],[-97.4,73.8],[-98.1,73],[-96.5,72.6],[-98.4,71.3],[-102.5,72.5],[-100.4,72.7]],[[108.5,-6.4],[115.7,-8.4],[106.5,-7.4],[105.4,-6.9],[106.1,-5.9],[108.5,-6.4]],[[18.8,45.9],[22.7,44.6],[22.5,42.5],[19.2,43.5],[18.8,45.9]],[[-83.9,65.1],[-80.1,63.7],[-87.2,63.5],[-85.9,65.7],[-83.9,65.1]],[[-92.2,14.5],[-90.5,16.1],[-91,17.8],[-89.1,17.8],[-88.2,15.7],[-89.4,14.4],[-92.2,14.5]],[[17,48.1],[14.6,46.4],[9.5,47.1],[12.9,47.5],[13.6,48.9],[17,48.1]],[[-8.4,7.7],[-7.7,4.4],[-11.4,6.8],[-10.2,8.4],[-8.4,7.7]],[[126.4,8.4],[125.4,5.6],[123.6,7.8],[121.9,7.2],[125.4,9.8],[126.4,8.4]],[[16.6,46.5],[19.4,45.2],[15.7,44.8],[18.4,42.5],[13.7,45.1],[16.6,46.5]],[[147.7,-40.8],[147.9,-43.2],[146,-43.5],[144.7,-40.7],[147.7,-40.8]],[[-51.7,4.2],[-52.9,2.1],[-54.5,2.3],[-54,5.8],[-51.7,4.2]],[[138.8,76.1],[145.1,75.6],[139,74.6],[137,75.3],[138.8,76.1]],[[-94.5,74.1],[-90.5,73.9],[-95.4,72.1],[-96,73.4],[-94.5,74.1]],[[26.5,55.6],[23.5,53.9],[21.1,56],[26.5,55.6]],[[-77.4,8.7],[-77.9,7.2],[-79.1,9],[-80.9,7.2],[-82.9,9.5],[-77.4,8.7]],[[-13.2,8.9],[-11.1,10],[-10.2,8.4],[-11.4,6.8],[-13.2,8.9]],[[-68.6,-52.6],[-68.6,-54.9],[-67,-54.9],[-68.1,-55.6],[-74.7,-52.8],[-71.1,-54.1],[-68.6,-52.6]],[[28,59.5],[27.3,57.5],[23.3,59.2],[28,59.5]],[[40,43.4],[46.6,41.2],[41.6,41.5],[40,43.4]],[[6.9,53.5],[6.2,50.8],[3.3,51.3],[6.9,53.5]],[[9.6,47.5],[9.9,46.3],[6,46.3],[6.7,47.5],[9.6,47.5]],[[18.6,42.6],[16,45.2],[19.4,44.9],[18.6,42.6]],[[9.9,55],[8.5,55],[8.1,56.5],[10.6,57.7],[9.9,55]],[[-98.5,76.7],[-98.2,75],[-102.5,75.6],[-98.5,76.7]],[[102.8,79.3],[105.1,78.3],[99.4,77.9],[102.8,79.3]],[[-66.3,-80.3],[-59.6,-80],[-60.2,-81],[-66.3,-80.3]],[[-71.7,18],[-71.6,19.9],[-68.3,18.6],[-71.7,18]],[[81.8,7.5],[80.3,6],[80.1,9.8],[81.8,7.5]],[[-82.5,9.6],[-83,8.2],[-85.9,10.9],[-82.5,9.6]],[[0.9,11],[1.1,5.9],[0,10.7],[0.9,11]]];
+  var GEO_GAZ = {"fiji":[16,-16.4],"tanzania":[34.3,-6.5],"w. sahara":[-12,24.8],"canada":[-90.7,56.4],"united states of america":[-90.4,38.3],"kazakhstan":[65.3,47.3],"uzbekistan":[65.3,41.2],"papua new guinea":[146.2,-7.8],"indonesia":[114,0.1],"argentina":[-65.1,-37],"chile":[-71.4,-38],"dem. rep. congo":[23,-3.8],"somalia":[46.8,6.4],"kenya":[37.8,1.1],"sudan":[29.3,12.8],"chad":[18,13],"haiti":[-72.7,18.8],"dominican rep.":[-70.5,18.7],"russia":[77.8,59.6],"bahamas":[-77.9,24.5],"falkland is.":[-59.6,-51.7],"norway":[18.1,66.2],"greenland":[-41,74.1],"fr. s. antarctic lands":[69.5,-49.1],"timor-leste":[125.9,-8.7],"south africa":[24.7,-28.6],"lesotho":[28.4,-29.6],"mexico":[-103.1,23.9],"uruguay":[-56.1,-32.7],"brazil":[-56.9,-9.7],"bolivia":[-64.1,-16.3],"peru":[-74.1,-7.8],"colombia":[-72.7,4.5],"panama":[-80.3,8.5],"costa rica":[-84.2,9.8],"nicaragua":[-85,13.1],"honduras":[-86.3,14.7],"el salvador":[-88.9,13.9],"guatemala":[-90.3,15.5],"belize":[-88.6,17.4],"venezuela":[-66.9,7.2],"guyana":[-58.9,4.5],"suriname":[-55.9,3.7],"france":[3.3,47],"ecuador":[-78.7,-1.6],"puerto rico":[-66.4,18.3],"jamaica":[-77.3,18.2],"cuba":[-79.7,21.7],"zimbabwe":[29.7,-18.9],"botswana":[24.5,-22.5],"namibia":[17.9,-21.6],"senegal":[-14.6,13.9],"mali":[-5.8,14.1],"mauritania":[-12.4,18.8],"benin":[2.3,9.8],"niger":[8.7,15.5],"nigeria":[8.3,9.7],"cameroon":[13.2,6.9],"togo":[0.9,8.9],"ghana":[-1,8.3],"c\u00f4te d'ivoire":[-6.3,7.9],"guinea":[-11,10.4],"guinea-bissau":[-15.2,12],"liberia":[-9.1,6.8],"sierra leone":[-11.7,8.6],"burkina faso":[-1.9,12.1],"central african rep.":[20.7,6.3],"congo":[14.9,-0.9],"gabon":[11.9,-0.3],"eq. guinea":[10.1,1.6],"zambia":[28,-12.8],"malawi":[34.1,-12.9],"mozambique":[34.9,-17.9],"eswatini":[31.4,-26.4],"angola":[17.4,-10.9],"burundi":[30,-3.2],"israel":[35.2,32.1],"lebanon":[35.9,33.8],"madagascar":[47,-18],"palestine":[35.2,31.8],"gambia":[-15.3,13.5],"tunisia":[9.8,34],"algeria":[3,29.7],"jordan":[36.7,31.1],"united arab emirates":[54.2,24.2],"qatar":[51.2,25.3],"kuwait":[47.7,29.3],"iraq":[44.4,33.4],"oman":[56.6,20.9],"vanuatu":[166.9,-15.4],"cambodia":[104.9,12.6],"thailand":[100.7,13.2],"laos":[103.7,18.3],"myanmar":[97.2,20],"vietnam":[105.9,16.7],"north korea":[127.3,39.9],"south korea":[127.5,36.7],"mongolia":[104.6,47.2],"india":[83.6,24],"bangladesh":[90.6,23.4],"bhutan":[90.6,27.5],"nepal":[84.6,28.2],"pakistan":[69.4,30.8],"afghanistan":[67.8,34.8],"tajikistan":[70.8,38.5],"kyrgyzstan":[74,41.4],"turkmenistan":[58.5,39.3],"iran":[53.3,33.3],"syria":[38,35.1],"armenia":[45.3,39.9],"sweden":[16.6,62.7],"belarus":[28.2,53.4],"ukraine":[30.5,48.7],"poland":[19.5,51.7],"austria":[13.5,47.6],"hungary":[19.2,47.5],"moldova":[28.5,47],"romania":[25.2,45.9],"lithuania":[24,55.2],"latvia":[24.9,56.9],"estonia":[25.9,58.6],"germany":[10.7,51],"bulgaria":[24.7,42.9],"greece":[23.1,39.8],"turkey":[36.8,38.4],"albania":[20.1,41.2],"croatia":[16.4,44.9],"switzerland":[8.3,46.8],"luxembourg":[6,49.8],"belgium":[4.6,50.6],"netherlands":[5.6,52.2],"portugal":[-8,39.8],"spain":[-4.5,40.2],"ireland":[-7.7,53.5],"new caledonia":[165.5,-21.2],"solomon is.":[159.1,-7.9],"new zealand":[171,-43.5],"australia":[133.2,-23.8],"sri lanka":[80.9,7.6],"china":[105.7,37.3],"taiwan":[121.1,23.9],"italy":[12.6,43.1],"denmark":[9.6,56.3],"united kingdom":[-3.1,53.9],"iceland":[-19.3,65.3],"azerbaijan":[47.4,40.4],"georgia":[43.4,42.3],"philippines":[121.8,15.4],"malaysia":[114.8,3.7],"brunei":[115,4.7],"slovenia":[15,46.1],"finland":[25.8,65.5],"slovakia":[19.4,48.8],"czechia":[15.8,49.8],"eritrea":[39.6,14.7],"japan":[136,35.7],"paraguay":[-57.6,-23.3],"yemen":[46.5,15.5],"saudi arabia":[43.6,24],"antarctica":[-3.4,-73],"n. cyprus":[33.4,35.2],"cyprus":[33.2,35],"morocco":[-9.4,28.8],"egypt":[31.6,28.1],"libya":[16.6,28.5],"ethiopia":[39.2,9],"djibouti":[42.5,11.8],"somaliland":[46.1,10.4],"uganda":[32,1.3],"rwanda":[29.9,-2],"bosnia and herz.":[17.9,44.2],"macedonia":[21.7,41.7],"serbia":[20.9,43.8],"montenegro":[19.4,42.7],"kosovo":[21,42.5],"trinidad and tobago":[-61.5,10.5],"s. sudan":[30.1,8],"london":[-0.1,51.5],"paris":[2.3,48.9],"rome":[12.5,41.9],"berlin":[13.4,52.5],"madrid":[-3.7,40.4],"moscow":[37.6,55.8],"athens":[23.7,38],"istanbul":[29,41],"cairo":[31.2,30],"jerusalem":[35.2,31.8],"baghdad":[44.4,33.3],"tehran":[51.4,35.7],"delhi":[77.2,28.6],"new delhi":[77.2,28.6],"mumbai":[72.9,19.1],"beijing":[116.4,39.9],"shanghai":[121.5,31.2],"tokyo":[139.7,35.7],"kyoto":[135.8,35],"seoul":[127,37.6],"bangkok":[100.5,13.8],"jakarta":[106.8,-6.2],"sydney":[151.2,-33.9],"melbourne":[145,-37.8],"new york":[-74,40.7],"new york city":[-74,40.7],"washington":[-77,38.9],"washington dc":[-77,38.9],"boston":[-71.1,42.4],"philadelphia":[-75.2,39.9],"chicago":[-87.6,41.9],"los angeles":[-118.2,34.1],"san francisco":[-122.4,37.8],"mexico city":[-99.1,19.4],"lima":[-77,-12],"rio de janeiro":[-43.2,-22.9],"sao paulo":[-46.6,-23.5],"buenos aires":[-58.4,-34.6],"cape town":[18.4,-33.9],"johannesburg":[28,-26.2],"nairobi":[36.8,-1.3],"lagos":[3.4,6.5],"accra":[-0.2,5.6],"timbuktu":[-3,16.8],"marrakesh":[-8,31.6],"alexandria":[29.9,31.2],"constantinople":[29,41],"venice":[12.3,45.4],"florence":[11.3,43.8],"vienna":[16.4,48.2],"amsterdam":[4.9,52.4],"lisbon":[-9.1,38.7],"dublin":[-6.3,53.3],"edinburgh":[-3.2,56],"stockholm":[18.1,59.3],"oslo":[10.7,59.9],"copenhagen":[12.6,55.7],"warsaw":[21,52.2],"prague":[14.4,50.1],"budapest":[19,47.5],"kyiv":[30.5,50.5],"kiev":[30.5,50.5],"st petersburg":[30.3,59.9],"hong kong":[114.2,22.3],"singapore":[103.8,1.4],"manila":[121,14.6],"hanoi":[105.8,21],"kabul":[69.2,34.5],"karachi":[67,24.9],"dhaka":[90.4,23.8],"toronto":[-79.4,43.7],"montreal":[-73.6,45.5],"vancouver":[-123.1,49.3],"havana":[-82.4,23.1],"mediterranean":[18,35],"mediterranean sea":[18,35],"atlantic":[-30,25],"atlantic ocean":[-30,25],"pacific":[-150,5],"pacific ocean":[-150,5],"indian ocean":[75,-15],"arctic ocean":[0,85],"southern ocean":[0,-62],"red sea":[38,20],"black sea":[34,43],"caspian sea":[50,41],"baltic sea":[19,58],"north sea":[3,56],"aegean sea":[25,38.5],"adriatic sea":[15.5,43],"caribbean":[-75,15],"caribbean sea":[-75,15],"gulf of mexico":[-90,25],"persian gulf":[51,27],"arabian sea":[63,15],"bay of bengal":[89,15],"south china sea":[114,14],"east china sea":[125,29],"sea of japan":[135,40],"english channel":[-1,50.2],"gulf of aden":[47,12],"nile":[31,26],"nile river":[31,26],"amazon":[-60,-3],"amazon river":[-60,-3],"mississippi":[-91,35],"mississippi river":[-91,35],"yangtze":[112,30.5],"yellow river":[112,36],"ganges":[85,25],"indus":[70,27],"tigris":[44,34],"euphrates":[42,34],"danube":[20,45],"rhine":[7.5,50.5],"thames":[-0.5,51.5],"volga":[46,50],"congo river":[20,-2],"niger river":[3,12],"mekong":[105,15],"jordan river":[35.6,32],"rio grande":[-102,29],"europe":[15,50],"asia":[90,40],"africa":[20,2],"north america":[-100,45],"south america":[-60,-15],"oceania":[140,-25],"middle east":[45,29],"scandinavia":[15,63],"balkans":[21,43],"mesopotamia":[44,33],"sahara":[10,23],"sahara desert":[10,23],"himalayas":[85,29],"alps":[10,46.5],"andes":[-70,-20],"rocky mountains":[-110,45],"appalachian mountains":[-80,37],"urals":[60,60],"amazon rainforest":[-62,-4],"great plains":[-100,41],"siberia":[100,62],"silk road":[70,40],"fertile crescent":[40,33],"iberia":[-4,40],"anatolia":[33,39],"levant":[36,33],"indochina":[104,15],"west indies":[-70,18],"polynesia":[-150,-15],"sicily":[14,37.5],"crete":[25,35.2],"hawaii":[-155.5,19.9],"new england":[-71.5,43.5],"california":[-119,37],"texas":[-99,31],"florida":[-81.5,28],"alaska":[-152,64],"normandy":[0,49.2],"gallipoli":[26.4,40.4],"stalingrad":[44.5,48.7],"pearl harbor":[-158,21.4],"hiroshima":[132.5,34.4],"chernobyl":[30.1,51.4],"uk":[-3.1,53.9],"great britain":[-3.1,53.9],"britain":[-3.1,53.9],"england":[-3.1,53.9],"holland":[5.6,52.2],"burma":[97.2,20],"persia":[53.3,33.3],"siam":[100.7,13.2],"ceylon":[80.9,7.6],"zaire":[23,-3.8],"ivory coast":[-6.3,7.9]};
+
+  function geoLookup(name) {
+    var k = String(name == null ? '' : name).toLowerCase()
+      .replace(/[^a-z\s'.-]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!k) return null;
+    if (GEO_GAZ[k]) return GEO_GAZ[k];
+    var stripped = k.replace(/^(the|a|an)\s+/, '')
+      .replace(/\s+(river|sea|ocean|mountains|desert|region|empire|city|basin|valley|peninsula|island|islands|strait|gulf|bay)$/, '')
+      .trim();
+    if (stripped && GEO_GAZ[stripped]) return GEO_GAZ[stripped];
+    var best = null, bestLen = 0, key;
+    for (key in GEO_GAZ) {
+      if (key.length > bestLen && key.length >= 4 && k.indexOf(key) !== -1) {
+        best = GEO_GAZ[key]; bestLen = key.length;
+      }
+    }
+    return best;
+  }
 
   var Scene = {};
   var PAD = 22;
@@ -5876,7 +6157,9 @@ var SFBoard = (function () {
     for (i = 0; i < rowsN; i++) bodyH += rowH[i];
     var h = PAD * 2 + headH + bodyH + 10;
 
-    var tl = tone(0), tr = tone(3);
+    /* Navy against gold. Two navy tints read as one column split in half,
+       which is the opposite of what a comparison should communicate. */
+    var tl = tone(0), tr = tone(2);
     var o = '';
     o += g(1,
       '<rect x="' + PAD + '" y="' + PAD + '" width="' + colW + '" height="' + r1(headH + bodyH + 10) +
@@ -5952,9 +6235,9 @@ var SFBoard = (function () {
       var t = tone(i), r = rows[i], mid = r.y + r.h / 2, inner = '';
       inner += card(spineX + 34, r.y, cardW, r.h, t, false);
       inner += '<line x1="' + (spineX + 8) + '" y1="' + r1(mid) + '" x2="' + (spineX + 34) +
-        '" y2="' + r1(mid) + '" stroke="' + t.line + '" stroke-width="1.4"/>';
+        '" y2="' + r1(mid) + '" stroke="' + t.line + '" stroke-width="1.2"/>';
       inner += '<circle cx="' + spineX + '" cy="' + r1(mid) + '" r="6.5" fill="#fff" stroke="' +
-        t.line + '" stroke-width="2.5"/>';
+        t.line + '" stroke-width="2.2"/>';
       inner += blockRight(spineX - 16, mid, r.a, { size: BODY, weight: 700, fill: t.ink });
       inner += blockLeft(spineX + 48, mid, r.b, { size: LABEL, weight: 600, fill: INK });
       o += g(i + 1, inner);
@@ -6004,7 +6287,7 @@ var SFBoard = (function () {
     var o = g(0,
       '<rect x="' + r1(cx - hubW / 2) + '" y="' + r1(cy - hubH / 2) + '" width="' + hubW +
       '" height="' + r1(hubH) + '" rx="12" fill="' + FAINT + '" stroke="' + INK +
-      '" stroke-width="1.8"/>' +
+      '" stroke-width="1.6"/>' +
       block(cx, cy, hubL, { size: LABEL + 1, weight: 700, fill: INK }));
 
     var ly = cy - leftH / 2 + 7, ry = cy - rightH / 2 + 7;
@@ -6042,7 +6325,7 @@ var SFBoard = (function () {
       var last = (i === n - 1);
       if (last) {
         inner += '<rect x="' + PAD + '" y="' + r1(y + 4) + '" width="' + r1(w - PAD * 2) +
-          '" height="' + r1(rowH - 12) + '" rx="10" fill="' + ACCENT_SOFT + '"/>';
+          '" height="' + r1(rowH - 12) + '" rx="12" fill="' + ACCENT_SOFT + '"/>';
       }
       inner += text(PAD + 22, y + rowH / 2 + 6, lineL[0],
         { anchor: 'start', size: TITLE + 3, weight: 700, fill: last ? ACCENT : INK });
@@ -6053,16 +6336,358 @@ var SFBoard = (function () {
       }
       if (i < n - 1) {
         inner += '<line x1="' + (PAD + 10) + '" y1="' + r1(y + rowH - 6) + '" x2="' + (PAD + 10) +
-          '" y2="' + r1(y + rowH + 2) + '" stroke="' + RULE + '" stroke-width="1.4"/>';
+          '" y2="' + r1(y + rowH + 2) + '" stroke="' + RULE + '" stroke-width="1.2"/>';
       }
       o += g(i + 1, inner);
     }
     return { svg: svgOpen(w, h) + o + '</svg>', beats: n, w: w, h: h };
   };
 
-  var TYPES = ['steps', 'cycle', 'compare', 'timeline', 'parts', 'equation'];
+  /* HERO — the opening whiteboard.
+
+     A dark navy field with glowing concept nodes joined by smooth curves, at a
+     fixed 800x400. Node placement is chosen from the subject, so a psychology
+     lesson gets a cortical pathway arrangement, history a trade network,
+     physics a force fan, and so on - never the same shape for every topic.
+
+     The graphic carries only the concept names. Explanations ride alongside in
+     .content-text blocks, revealed on the same beat as their node, so the
+     picture stays uncluttered and the prose stays readable. */
+
+  /* Node placements in a 0..1 unit box, chosen per subject family. */
+  function nodePattern(subject, n) {
+    var k = String(subject || '').toLowerCase();
+    var P6;
+    if (/psych|brain|memor|cognit|behavio|neuro|mind/.test(k)) {
+      // Cortical pathway: a forward arc with a lower relay.
+      P6 = [[.20, .34], [.40, .22], [.62, .27], [.80, .42], [.55, .62], [.30, .64]];
+    } else if (/histor|trade|empire|war|revolution|route|trea|trade|civil/.test(k)) {
+      // Trade network: scattered like ports on a coast.
+      P6 = [[.14, .58], [.34, .32], [.55, .52], [.74, .28], [.88, .55], [.44, .72]];
+    } else if (/physic|force|motion|energy|vector|momentum|gravit/.test(k)) {
+      // Force fan radiating from an origin.
+      P6 = [[.18, .52], [.42, .24], [.58, .38], [.68, .58], [.46, .72], [.84, .44]];
+    } else if (/chem|reaction|molecul|bond|element|compound/.test(k)) {
+      // Molecular: a centre with bonded satellites.
+      P6 = [[.50, .46], [.26, .28], [.74, .28], [.24, .66], [.76, .66], [.50, .78]];
+    } else if (/biolog|cell|gene|dna|organism|evolution|respirat|photosynth/.test(k)) {
+      // Cyclical, like a metabolic loop.
+      P6 = [[.50, .20], [.76, .34], [.78, .62], [.50, .76], [.24, .62], [.22, .34]];
+    } else if (/math|algebra|calculus|equation|geometry|function|statistic/.test(k)) {
+      // Along a rising curve.
+      P6 = [[.16, .72], [.32, .58], [.48, .46], [.64, .36], [.80, .26], [.90, .58]];
+    } else if (/econom|market|supply|demand|trade|finance|business/.test(k)) {
+      // Two crossing trends.
+      P6 = [[.18, .68], [.38, .52], [.58, .38], [.78, .26], [.38, .26], [.72, .64]];
+    } else if (/geograph|climate|earth|river|plate|volcano|map/.test(k)) {
+      P6 = [[.20, .40], [.44, .26], [.68, .38], [.84, .60], [.52, .64], [.28, .68]];
+    } else {
+      // Balanced constellation.
+      P6 = [[.20, .38], [.44, .24], [.68, .34], [.82, .58], [.50, .66], [.26, .64]];
+    }
+    n = Math.max(1, Math.min(6, n));
+
+    /* Take an evenly spaced subset rather than the first n, otherwise a
+       three-concept lesson gets three points bunched in one corner. */
+    var picked = [], i;
+    if (n === 1) picked = [P6[0]];
+    else {
+      for (i = 0; i < n; i++) {
+        picked.push(P6[Math.round(i * (P6.length - 1) / (n - 1))]);
+      }
+    }
+
+    /* Normalise the subset back out to the full unit box so the nodes always
+       use the whole field, however many there are. */
+    var minX = 1, maxX = 0, minY = 1, maxY = 0;
+    for (i = 0; i < picked.length; i++) {
+      minX = Math.min(minX, picked[i][0]); maxX = Math.max(maxX, picked[i][0]);
+      minY = Math.min(minY, picked[i][1]); maxY = Math.max(maxY, picked[i][1]);
+    }
+    var rx = (maxX - minX) || 1, ry = (maxY - minY) || 1;
+    var out = [];
+    for (i = 0; i < picked.length; i++) {
+      out.push([
+        picked.length === 1 ? 0.5 : 0.04 + (picked[i][0] - minX) / rx * 0.92,
+        picked.length === 1 ? 0.5 : 0.06 + (picked[i][1] - minY) / ry * 0.88
+      ]);
+    }
+    return out;
+  }
+
+  function glowNode(x, y, colour, r) {
+    /* Layered translucent discs rather than a blur filter: filters render
+       inconsistently across engines, and this looks identical everywhere. */
+    r = r || 9;
+    return '<circle cx="' + r1(x) + '" cy="' + r1(y) + '" r="' + r1(r * 3.1) + '" fill="' + colour + '" opacity=".08"/>' +
+           '<circle cx="' + r1(x) + '" cy="' + r1(y) + '" r="' + r1(r * 2.1) + '" fill="' + colour + '" opacity=".14"/>' +
+           '<circle cx="' + r1(x) + '" cy="' + r1(y) + '" r="' + r1(r * 1.35) + '" fill="' + colour + '" opacity=".26"/>' +
+           '<circle cx="' + r1(x) + '" cy="' + r1(y) + '" r="' + r1(r) + '" fill="' + colour + '"/>' +
+           '<circle cx="' + r1(x) + '" cy="' + r1(y) + '" r="' + r1(r * 0.42) + '" fill="#FFFFFF" opacity=".85"/>';
+  }
+
+  Scene.hero = function (spec) {
+    var topic = clean(spec.topic || spec.title || spec.center);
+    if (!topic) return null;
+
+    var concepts = pairs(spec.pillars || spec.items, 6);
+    var trap = clean(spec.trap || spec.misconception);
+    var anchor = clean(spec.anchor || spec.realWorld || spec.application);
+    if (!concepts.length && !trap && !anchor) return null;
+
+    var W2 = 800, H2 = 400;
+    var subject = clean(spec.subject) || topic;
+    var pat = nodePattern(subject, concepts.length);
+
+    /* Map the unit pattern into the drawing area, leaving room for the
+       header band and for labels near the edges. */
+    var X0 = 104, X1 = W2 - 84, Y0 = 158, Y1 = H2 - 44;
+    var pts = [], i, k;
+    for (i = 0; i < concepts.length; i++) {
+      var p = pat[i % pat.length];
+      pts.push({ x: X0 + p[0] * (X1 - X0), y: Y0 + p[1] * (Y1 - Y0) });
+    }
+
+    var o = '';
+
+    /* Backdrop: navy gradient, a faint constellation wash, no border. */
+    var defs = '<defs>' +
+      '<linearGradient id="sfbHeroBg" x1="0" y1="0" x2="1" y2="1">' +
+        '<stop offset="0" stop-color="#16305C"/>' +
+        '<stop offset="0.55" stop-color="' + NAVY + '"/>' +
+        '<stop offset="1" stop-color="#2B4E8E"/>' +
+      '</linearGradient>' +
+      '<linearGradient id="sfbHeroSheen" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="#FFFFFF" stop-opacity=".10"/>' +
+        '<stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>' +
+      '</linearGradient>' +
+      '<marker id="sfbTip" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" ' +
+      'orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#FFFFFF" fill-opacity=".5"/></marker>' +
+      '</defs>';
+
+    var bg = '<rect x="0" y="0" width="' + W2 + '" height="' + H2 + '" rx="20" fill="url(#sfbHeroBg)"/>' +
+      '<rect x="0" y="0" width="' + W2 + '" height="' + r1(H2 * 0.55) + '" rx="20" fill="url(#sfbHeroSheen)"/>';
+    // Faint drifting arcs for depth.
+    bg += '<path d="M-40 300 C 180 240, 300 360, 560 288 S 820 210, 880 250" fill="none" ' +
+      'stroke="#FFFFFF" stroke-opacity=".07" stroke-width="1.2"/>';
+    bg += '<path d="M-40 210 C 200 150, 340 250, 620 190 S 840 140, 880 170" fill="none" ' +
+      'stroke="#FFFFFF" stroke-opacity=".05" stroke-width="1.2"/>';
+
+    /* Header: subject mark in white, topic, hairline. */
+    var icon = subjectIcon(subject, 40, 34, 42)
+      .replace(new RegExp(NAVY, 'g'), '#FFFFFF')
+      .replace(new RegExp(GOLD, 'g'), GOLD);
+    var tl = wrap(topic, W2 - 240, 27, 700, 2);
+    var headTxt = '';
+    for (k = 0; k < tl.length; k++) {
+      headTxt += text(96, 52 + k * 30, tl[k],
+        { anchor: 'start', size: 27, weight: 700, fill: '#FFFFFF' });
+    }
+    var hairY = 54 + tl.length * 30;
+    headTxt += '<path d="M40 ' + hairY + ' H' + (W2 - 40) + '" stroke="#FFFFFF" ' +
+      'stroke-opacity=".18" stroke-width="1.2"/>';
+    o += g(0, bg + icon + headTxt);
+
+    /* Connectors first so nodes paint over their ends. */
+    var beat = 0, placed = [];
+    for (i = 0; i < pts.length; i++) {
+      var t = tone(i), col = i % 3 === 2 ? GOLD : '#9FC0F0';
+      var inner = '';
+      if (i > 0) {
+        var a = pts[i - 1], b = pts[i];
+        var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2 - 34;
+        inner += '<path d="M' + r1(a.x) + ' ' + r1(a.y) + ' Q' + r1(mx) + ' ' + r1(my) +
+          ' ' + r1(b.x) + ' ' + r1(b.y) + '" fill="none" stroke="#FFFFFF" stroke-opacity=".28" ' +
+          'stroke-width="1.6" stroke-linecap="round" marker-end="url(#sfbTip)"/>';
+      }
+      inner += glowNode(pts[i].x, pts[i].y, col, 9);
+
+      /* Label placement. Candidates below then above the node, stepping
+         further out each time, and each candidate is rejected if it would
+         land on a label already placed or run off the canvas. */
+      var lab = wrap(concepts[i].a, 186, 13.5, 700, 2);
+      var lw = widest(lab, 13.5, 700), lh = lab.length * 17;
+      var below = pts[i].y < (Y0 + Y1) / 2;
+      var offs = below ? [32, -32, 52, -52, 72, -72] : [-32, 32, -52, 52, -72, 72];
+      var lx = pts[i].x, anchorMode = 'middle';
+      if (lx - lw / 2 < 26) { anchorMode = 'start'; lx = Math.max(26, pts[i].x - 12); }
+      else if (lx + lw / 2 > W2 - 26) { anchorMode = 'end'; lx = Math.min(W2 - 26, pts[i].x + 12); }
+      var bx0 = anchorMode === 'start' ? lx : (anchorMode === 'end' ? lx - lw : lx - lw / 2);
+
+      var ly = null, oi, kk;
+      for (oi = 0; oi < offs.length; oi++) {
+        var tryY = offs[oi] > 0 ? pts[i].y + offs[oi] : pts[i].y + offs[oi] - (lab.length - 1) * 17;
+        var box = { x0: bx0 - 4, x1: bx0 + lw + 4, y0: tryY - 14, y1: tryY + lh - 10 };
+        if (box.y0 < hairY + 10 || box.y1 > H2 - 12) continue;
+        var clash = false;
+        for (kk = 0; kk < placed.length; kk++) {
+          var q = placed[kk];
+          if (!(box.x1 <= q.x0 || q.x1 <= box.x0 || box.y1 <= q.y0 || q.y1 <= box.y0)) {
+            clash = true; break;
+          }
+        }
+        if (!clash) { ly = tryY; placed.push(box); break; }
+      }
+      if (ly === null) {
+        ly = pts[i].y + (below ? 32 : -32);
+        placed.push({ x0: bx0 - 4, x1: bx0 + lw + 4, y0: ly - 14, y1: ly + lh - 10 });
+      }
+      for (k = 0; k < lab.length; k++) {
+        inner += text(lx, ly + k * 17, lab[k],
+          { anchor: anchorMode, size: 13.5, weight: 700, fill: '#FFFFFF' });
+      }
+      beat++;
+      o += g(beat, inner);
+    }
+
+    if (!beat && !trap && !anchor) return null;
+
+    var svg = '<svg class="sfb-svg" viewBox="0 0 ' + W2 + ' ' + H2 +
+      '" xmlns="http://www.w3.org/2000/svg" role="img" preserveAspectRatio="xMidYMid meet" ' +
+      'style="font-family:' + FONT + '">' + defs + o + '</svg>';
+
+    /* Prose lives outside the graphic, one block per beat. */
+    var html = '';
+    for (i = 0; i < concepts.length; i++) {
+      html += '<div class="content-text sfb-b" data-beat="' + (i + 1) + '">' +
+        '<p><strong>' + esc(concepts[i].a) + '</strong>' +
+        (concepts[i].b ? ' ' + esc(concepts[i].b) : '') + '</p></div>';
+    }
+    if (trap) {
+      beat++;
+      html += '<div class="content-text sfb-note is-trap sfb-b" data-beat="' + beat + '">' +
+        '<span class="sfb-tag">Common trap</span><p>' + esc(trap) + '</p></div>';
+    }
+    if (anchor) {
+      beat++;
+      html += '<div class="content-text sfb-note is-anchor sfb-b" data-beat="' + beat + '">' +
+        '<span class="sfb-tag">In the world</span><p>' + esc(anchor) + '</p></div>';
+    }
+
+    return { svg: svg, html: html, beats: beat, w: W2, h: H2 };
+  };
+
+  /* Keep the old name working for anything that already asks for it. */
+  Scene.brief = Scene.hero;
+
+  /* MAP — real coastlines, real positions.
+
+     Places are geocoded against the gazetteer and projected with an
+     equirectangular fit corrected by cos(latitude), so shapes are not stretched
+     at high latitude. If too few names resolve, the scene returns null rather
+     than drawing an invented landmass: a made-up coastline in a study tool
+     teaches false geography. */
+  Scene.map = function (spec) {
+    var items = pairs(spec.items || spec.places, 6);
+    if (items.length < 2) return null;
+
+    var coords = [], resolved = 0, i;
+    for (i = 0; i < items.length; i++) {
+      var c = geoLookup(items[i].a);
+      coords.push(c);
+      if (c) resolved++;
+    }
+    if (resolved < Math.max(2, Math.ceil(items.length * 0.6))) return null;
+
+    var W2 = 640, H2 = 400, M = 16;
+    var mx0 = M, my0 = M, mx1 = W2 - M, my1 = H2 - M;
+    var mw = mx1 - mx0, mh = my1 - my0;
+
+    var lo0 = 1e9, lo1 = -1e9, la0 = 1e9, la1 = -1e9;
+    for (i = 0; i < coords.length; i++) {
+      if (!coords[i]) continue;
+      lo0 = Math.min(lo0, coords[i][0]); lo1 = Math.max(lo1, coords[i][0]);
+      la0 = Math.min(la0, coords[i][1]); la1 = Math.max(la1, coords[i][1]);
+    }
+    var padLo = Math.max((lo1 - lo0) * 0.35, 8), padLa = Math.max((la1 - la0) * 0.35, 6);
+    lo0 -= padLo; lo1 += padLo; la0 -= padLa; la1 += padLa;
+    var kx = Math.cos(((la0 + la1) / 2) * Math.PI / 180) || 1;
+    var spanX = (lo1 - lo0) * kx, spanY = la1 - la0, want = mw / mh;
+    if (spanX / spanY > want) {
+      var addY = (spanX / want - spanY) / 2; la0 -= addY; la1 += addY;
+    } else {
+      var addX = (spanY * want - spanX) / 2 / kx; lo0 -= addX; lo1 += addX;
+    }
+    function proj(lon, lat) {
+      return { x: mx0 + (lon - lo0) / (lo1 - lo0) * mw,
+               y: my0 + (la1 - lat) / (la1 - la0) * mh };
+    }
+
+    var o = '<rect x="' + mx0 + '" y="' + my0 + '" width="' + mw + '" height="' + mh +
+      '" rx="16" fill="#F2F7FD" stroke="' + RULE + '" stroke-width="1.6"/>';
+    o += '<clipPath id="sfbMapClip"><rect x="' + mx0 + '" y="' + my0 + '" width="' + mw +
+      '" height="' + mh + '" rx="16"/></clipPath><g clip-path="url(#sfbMapClip)">';
+    var drew = 0, ri, pi;
+    for (ri = 0; ri < GEO_LAND.length && drew < 90; ri++) {
+      var ring = GEO_LAND[ri], seen = false;
+      for (pi = 0; pi < ring.length; pi += 3) {
+        if (ring[pi][0] >= lo0 - 20 && ring[pi][0] <= lo1 + 20 &&
+            ring[pi][1] >= la0 - 20 && ring[pi][1] <= la1 + 20) { seen = true; break; }
+      }
+      if (!seen) continue;
+      var d = '';
+      for (pi = 0; pi < ring.length; pi++) {
+        var pt = proj(ring[pi][0], ring[pi][1]);
+        d += (pi ? 'L' : 'M') + r1(pt.x) + ' ' + r1(pt.y);
+      }
+      o += '<path d="' + d + 'Z" fill="#E4EEDF" stroke="#B6C7AE" stroke-width="0.7"/>';
+      drew++;
+    }
+    o += '</g>';
+    var base = g(0, o);
+
+    /* Pins and routes, one beat each, with label plates that never collide. */
+    var body = '', placed = [], prev = null;
+    for (i = 0; i < items.length; i++) {
+      if (!coords[i]) continue;
+      var t = tone(i), p = proj(coords[i][0], coords[i][1]);
+      p.x = Math.max(mx0 + 16, Math.min(mx1 - 16, p.x));
+      p.y = Math.max(my0 + 22, Math.min(my1 - 26, p.y));
+      var inner = '';
+      if (prev) {
+        var dx = p.x - prev.x, dy = p.y - prev.y;
+        var len = Math.sqrt(dx * dx + dy * dy) || 1;
+        var ax = prev.x + dx / len * 13, ay = prev.y + dy / len * 13;
+        var bx = p.x - dx / len * 18, by = p.y - dy / len * 18;
+        inner += '<line x1="' + r1(ax) + '" y1="' + r1(ay) + '" x2="' + r1(bx) + '" y2="' + r1(by) +
+          '" stroke="' + ACCENT + '" stroke-width="2" stroke-dasharray="6 4" ' +
+          'stroke-linecap="round" marker-end="url(#sfbTip)"/>';
+      }
+      inner += '<path d="M' + r1(p.x) + ' ' + r1(p.y) + ' c-7 -9 -9 -12 -9 -17 a9 9 0 1 1 18 0 ' +
+        'c0 5 -2 8 -9 17 Z" fill="#FFFFFF" stroke="' + t.line + '" stroke-width="2"/>';
+      inner += '<circle cx="' + r1(p.x) + '" cy="' + r1(p.y - 17) + '" r="3.4" fill="' + t.line + '"/>';
+
+      var lab = wrap(items[i].a, 150, 12.5, 700, 1);
+      var lw = widest(lab, 12.5, 700), pw = lw + 14;
+      var cand = [p.y + 20, p.y - 34, p.y + 38, p.y - 52], ly = null, ci, kk;
+      for (ci = 0; ci < cand.length; ci++) {
+        var box = { x0: p.x - pw / 2, x1: p.x + pw / 2, y0: cand[ci] - 11, y1: cand[ci] + 6 };
+        if (box.y0 < my0 + 4 || box.y1 > my1 - 4) continue;
+        var clash = false;
+        for (kk = 0; kk < placed.length; kk++) {
+          var q = placed[kk];
+          if (!(box.x1 + 3 <= q.x0 || q.x1 + 3 <= box.x0 ||
+                box.y1 + 2 <= q.y0 || q.y1 + 2 <= box.y0)) { clash = true; break; }
+        }
+        if (!clash) { ly = cand[ci]; placed.push(box); break; }
+      }
+      if (ly === null) { ly = p.y + 20; placed.push({ x0: p.x - pw / 2, x1: p.x + pw / 2, y0: ly - 11, y1: ly + 6 }); }
+      inner += '<rect x="' + r1(p.x - pw / 2) + '" y="' + r1(ly - 11) + '" width="' + r1(pw) +
+        '" height="17" rx="8" fill="#FFFFFF" fill-opacity=".93"/>';
+      inner += text(p.x, ly, lab[0], { size: 12.5, weight: 700, fill: INK });
+      body += g(i + 1, inner);
+      prev = p;
+    }
+
+    return { svg: svgOpen(W2, H2) + base + body + '</svg>', beats: items.length, w: W2, h: H2 };
+  };
+
+  var TYPES = ['hero', 'brief', 'map', 'steps', 'cycle', 'compare', 'timeline', 'parts', 'equation'];
 
   var ALIAS = {
+    overview: 'hero', intro: 'hero', summary: 'hero', brief: 'hero',
+    whiteboard: 'hero', opening: 'hero', lesson: 'hero',
+    places: 'map', route: 'map', geography: 'map', location: 'map',
     process: 'steps', flow: 'steps', sequence: 'steps', procedure: 'steps',
     order: 'steps', causeeffect: 'steps', chain: 'steps',
     loop: 'cycle', circular: 'cycle', feedback: 'cycle',
@@ -6080,6 +6705,78 @@ var SFBoard = (function () {
     return ALIAS[t] || '';
   }
 
+  /* ── UNIVERSAL VISUAL CHOOSER ──────────────────────────────────────────────
+     For a topic nobody anticipated. Rather than failing over to a placeholder,
+     this reads the content and picks the scene the content can actually
+     support, trying the most specific fit first and degrading gracefully:
+
+       real place names        -> map
+       dates                   -> timeline
+       two named subjects      -> compare
+       equals signs / operators-> equation
+       a closed loop           -> cycle
+       a whole and its parts   -> parts
+       anything ordered        -> steps
+
+     Only if none of those can be built does it return null, and the caller
+     then draws nothing. */
+  function autoScene(spec) {
+    if (!spec || typeof spec !== 'object') return null;
+    var items = pairs(spec.items || spec.pillars || spec.steps || spec.parts, 6);
+    if (items.length < 2) return null;
+
+    var joined = '', i;
+    for (i = 0; i < items.length; i++) joined += ' ' + items[i].a + ' ' + items[i].b;
+    var blob = (clean(spec.title) + ' ' + clean(spec.topic) + ' ' + joined).toLowerCase();
+
+    function attempt(type, extra) {
+      var trial = { type: type, title: spec.title || spec.topic, items: items };
+      var key;
+      if (extra) for (key in extra) trial[key] = extra[key];
+      var built;
+      try { built = Scene[type] ? Scene[type](trial) : null; } catch (e) { built = null; }
+      return built ? trial : null;
+    }
+
+    var order = [];
+
+    /* Places: only worth trying when most labels actually geocode. */
+    var geo = 0;
+    for (i = 0; i < items.length; i++) if (geoLookup(items[i].a)) geo++;
+    if (geo >= Math.max(2, Math.ceil(items.length * 0.6))) order.push(['map', null]);
+
+    if (/\b(1[0-9]{3}|20[0-9]{2}|bce?\b|\bad\b|century|era|dynasty)\b/.test(blob)) {
+      order.push(['timeline', null]);
+    }
+    if (/[=+\u00d7\u00f7]|\bsolve\b|\bderivative\b|\bintegral\b/.test(blob)) {
+      order.push(['equation', null]);
+    }
+    if (/\bcycle\b|\bloop\b|\brepeat|\bfeedback\b|\brenew|\bcircular\b/.test(blob)) {
+      order.push(['cycle', null]);
+    }
+    if (/\bparts?\b|\bstructure\b|\banatomy\b|\bcomponents?\b|\bregions?\b|\blayers?\b/.test(blob)) {
+      order.push(['parts', { center: clean(spec.center || spec.topic || spec.title) }]);
+    }
+    if (/\bvs\.?\b|\bversus\b|\bcompared?\b|\bcontrast\b|\bdifference/.test(blob) &&
+        items.length >= 2) {
+      order.push(['compare', {
+        left:  { title: items[0].a, items: items[0].b ? [items[0].b] : [] },
+        right: { title: items[1].a, items: items[1].b ? [items[1].b] : [] }
+      }]);
+    }
+
+    /* Sensible general fallbacks, in order of how much structure they need. */
+    order.push(['steps', null]);
+    order.push(['cycle', null]);
+    order.push(['parts', { center: clean(spec.center || spec.topic || spec.title || 'Topic') }]);
+
+    for (i = 0; i < order.length; i++) {
+      var got = attempt(order[i][0], order[i][1]);
+      if (got) return got;
+    }
+    return null;
+  }
+
   /**
    * Build a scene. Returns { svg, beats, title, type } or null.
    * Null means "there is nothing worth drawing" — callers must render nothing
@@ -6088,12 +6785,25 @@ var SFBoard = (function () {
   function build(spec) {
     if (!spec || typeof spec !== 'object') return null;
     var type = resolveType(spec.type || spec.layout);
-    if (!type || !Scene[type]) return null;
-    var out;
-    try { out = Scene[type](spec); } catch (e) { out = null; }
+    var out = null;
+
+    if (type && Scene[type]) {
+      try { out = Scene[type](spec); } catch (e) { out = null; }
+    }
+    /* No usable type, or the named scene could not build from this content:
+       let the chooser find one the content does support. A rare topic still
+       gets a real diagram instead of nothing. */
+    if (!out || !out.svg || !out.beats) {
+      var alt = autoScene(spec);
+      if (alt) {
+        try { out = Scene[alt.type](alt); } catch (e2) { out = null; }
+        if (out && out.svg && out.beats) { type = alt.type; spec = alt; }
+        else out = null;
+      }
+    }
     if (!out || !out.svg || !out.beats) return null;
     return {
-      svg: out.svg, beats: out.beats, w: out.w, h: out.h,
+      svg: out.svg, html: out.html || '', beats: out.beats, w: out.w, h: out.h,
       type: type, title: clean(spec.title || spec.label)
     };
   }
@@ -6108,14 +6818,30 @@ var SFBoard = (function () {
   '.sfb-title{font-size:15px;font-weight:700;letter-spacing:-.01em;margin:0;}' +
   '.sfb-count{font-size:12px;font-weight:500;color:' + MUTED + ';margin-left:auto;' +
     'font-variant-numeric:tabular-nums;}' +
-  '.sfb-stage{border:1px solid ' + RULE + ';border-radius:14px;background:#fff;' +
-    'padding:6px 8px;overflow:hidden;}' +
+  /* The graphic sits on its own, no container chrome around it. */
+  '.whiteboard-preview{border-radius:18px;overflow:hidden;line-height:0;' +
+    'box-shadow:0 10px 30px rgba(31,64,122,.16);}' +
+  '.sfb-prose{margin-top:14px;display:flex;flex-direction:column;gap:10px;}' +
+  '.sfb-prose .content-text{margin:0;font-size:14.5px;line-height:1.55;color:' + SLATE + ';}' +
+  '.sfb-prose .content-text p{margin:0;}' +
+  '.sfb-prose .content-text strong{color:' + NAVY + ';font-weight:700;}' +
+  '.sfb-note{border-radius:12px;padding:12px 14px;}' +
+  '.sfb-note.is-trap{background:#FDF3E3;}' +
+  '.sfb-note.is-anchor{background:#EDF2FA;}' +
+  '.sfb-tag{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;' +
+    'text-transform:uppercase;margin-bottom:4px;}' +
+  '.sfb-note.is-trap .sfb-tag{color:#8A5E15;}' +
+  '.sfb-note.is-anchor .sfb-tag{color:' + NAVY + ';}' +
   '.sfb-svg{display:block;width:100%;height:auto;}' +
 
   /* Beats fade and lift into place. Anything not yet reached is hidden from
      assistive tech too, not just visually. */
-  '.sfb-b{opacity:0;transform:translateY(6px);' +
-    'transition:opacity .34s ease,transform .34s ease;}' +
+  '@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}' +
+    'to{opacity:1;transform:none;}}' +
+  '.sfb-b{opacity:0;transform:translateY(10px);' +
+    'transition:opacity .38s cubic-bezier(.22,.61,.36,1),' +
+    'transform .38s cubic-bezier(.22,.61,.36,1);}' +
+  '.sfb .sfb-b.is-in{animation:fadeUp .42s cubic-bezier(.22,.61,.36,1) both;}' +
   '.sfb-b[data-beat="0"]{opacity:1;transform:none;}' +
   '.sfb .sfb-b.is-in{opacity:1;transform:none;}' +
   '.sfb .sfb-b.is-past{opacity:.42;}' +
@@ -6189,7 +6915,8 @@ var SFBoard = (function () {
     }
 
     wrapEl.innerHTML = head +
-      '<div class="sfb-stage">' + scene.svg + '</div>' +
+      '<div class="whiteboard-preview">' + scene.svg + '</div>' +
+      (scene.html ? '<div class="sfb-prose">' + scene.html + '</div>' : '') +
       '<div class="sfb-bar">' +
         '<button type="button" class="sfb-btn" data-sfb-prev aria-label="Previous step">&#8592;<span>Back</span></button>' +
         '<div class="sfb-dots" role="tablist">' + dots + '</div>' +
@@ -6269,8 +6996,9 @@ var SFBoard = (function () {
     wrapEl.tabIndex = 0;
     wrapEl.onkeydown = function (ev) {
       if (!ev) return;
-      if (ev.key === 'ArrowRight') { go(at + 1, true); ev.preventDefault(); }
-      else if (ev.key === 'ArrowLeft') { go(at - 1, true); ev.preventDefault(); }
+      if (ev.key === 'ArrowRight' || ev.key === 'Enter') {
+        go(at + 1, true); ev.preventDefault();
+      } else if (ev.key === 'ArrowLeft') { go(at - 1, true); ev.preventDefault(); }
     };
 
     paint();
@@ -6414,6 +7142,46 @@ var SFBoard = (function () {
     return SFBoard.build(spec) ? spec : null;
   }
 
+  /** Build the opening whiteboard for a session, or null.
+      Uses whatever the lesson supplies; falls back to the day's own prose so a
+      session still opens with something real rather than a blank board. */
+  function briefFor(day, subject) {
+    day = day || {};
+    var topic = clean(day.title) || clean(subject);
+    if (!topic) return null;
+
+    var pillars = [], i;
+    var raw = list(day.pillars || day.corePillars || day.keyPoints || day.takeaways);
+    for (i = 0; i < raw.length && pillars.length < 3; i++) {
+      var p = raw[i];
+      var lab = typeof p === 'string' ? clean(p) : clean(p && (p.label || p.title || p.name));
+      var det = typeof p === 'string' ? '' : clean(p && (p.detail || p.body || p.note));
+      if (lab) pillars.push({ label: lab, detail: det });
+    }
+    /* No explicit pillars: take the lesson's own step headings, which are the
+       closest thing the content already has to structure. */
+    if (!pillars.length) {
+      var ds = list(day.steps);
+      for (i = 0; i < ds.length && pillars.length < 3; i++) {
+        var st = ds[i] || {};
+        var l2 = clean(st.step || st.title || st.label);
+        var d2 = clean(st.action || st.body || st.detail);
+        if (l2) pillars.push({ label: l2, detail: d2 });
+      }
+    }
+
+    var trap = clean(day.trap || day.misconception || day.commonMistake ||
+                     day.commonTrap || day.watchOut);
+    var anchor = clean(day.anchor || day.realWorld || day.application ||
+                       day.example || day.whyItMatters);
+
+    if (!pillars.length && !trap && !anchor) return null;
+    return {
+      type: 'brief', topic: topic, subject: clean(subject) || topic,
+      pillars: pillars, trap: trap, anchor: anchor
+    };
+  }
+
   /** Build a board spec for the day's topic, or null. */
   function fromDay(day) {
     day = day || {};
@@ -6439,7 +7207,121 @@ var SFBoard = (function () {
     return null;   // nothing real to show
   }
 
-  /** Build a board spec from a missed question, or null. */
+  /* Which options were NOT the answer, so a walkthrough can address the
+     tempting ones rather than only naming the right one. */
+  function distractors(q, correctIdx) {
+    var out = [], opts = list(q.options), i;
+    for (i = 0; i < opts.length && out.length < 2; i++) {
+      if (i === correctIdx) continue;
+      var t = clean(opts[i]);
+      if (t) out.push(t);
+    }
+    return out;
+  }
+
+  function sideOf(cat, q) {
+    var name = clean(cat && (cat.title || cat.label || cat.name) || cat);
+    var got = [], its = list(q.items), j;
+    for (j = 0; j < its.length && got.length < 5; j++) {
+      var it = its[j] || {};
+      var owner = clean(it.category || it.bin || it.answer);
+      if (owner && name && owner.toLowerCase() === name.toLowerCase()) {
+        var lbl = clean(it.text || it.label || it.name);
+        if (lbl) got.push(lbl);
+      }
+    }
+    return { title: name || '\u2014', items: got };
+  }
+
+  /* A walkthrough shaped by what the question actually asked. A sequence
+     question wants the order laid out; a sorting question wants two columns;
+     a calculation wants the working. Handing every type the same three-step
+     card is what made walkthroughs feel generic. */
+  function typedWalkthrough(q, day, correct) {
+    var type = clean(q.type).toLowerCase();
+    var title = clean(day.title) || 'Worked through';
+    var i;
+
+    if (type === 'sequence' || type === 'ordering') {
+      var seq = itemsFromSteps(list(q.items || q.correctOrder || q.sequence));
+      if (seq.length >= 2) {
+        return { type: 'steps', title: title + ' \u2014 the right order', items: seq };
+      }
+    }
+
+    if (type === 'bigequation' || type === 'wordproblem' || type === 'equation') {
+      var work = itemsFromSteps(list(q.working || q.steps || q.lines));
+      if (work.length >= 2) return { type: 'equation', title: title, items: work };
+    }
+
+    if (type === 'classify' || type === 'categorize') {
+      var cats = list(q.categories || q.bins);
+      if (cats.length === 2) {
+        var L = sideOf(cats[0], q), R = sideOf(cats[1], q);
+        if (L.items.length || R.items.length) {
+          return { type: 'compare', title: title, left: L, right: R };
+        }
+      }
+    }
+
+    if (type === 'match' || type === 'matching') {
+      var prs = list(q.pairs), pitems = [];
+      for (i = 0; i < prs.length && pitems.length < 6; i++) {
+        var p = prs[i] || {};
+        var a = clean(p.left || p.term || p.a), b = clean(p.right || p.definition || p.b);
+        if (a) pitems.push({ label: a, detail: b });
+      }
+      if (pitems.length >= 2) {
+        return { type: 'steps', title: title + ' \u2014 the pairs', items: pitems };
+      }
+    }
+
+    if (type === 'errorspot') {
+      var eit = [];
+      if (clean(q.flawed || q.wrongStep)) {
+        eit.push({ label: 'The step that fails', detail: clean(q.flawed || q.wrongStep) });
+      }
+      if (clean(q.explanation)) eit.push({ label: 'Why it fails', detail: clean(q.explanation) });
+      if (clean(q.fixed || q.correction)) {
+        eit.push({ label: 'Done correctly', detail: clean(q.fixed || q.correction) });
+      }
+      if (eit.length >= 2) return { type: 'steps', title: title, items: eit };
+    }
+
+    if (type === 'truefalse') {
+      var tf = [];
+      if (clean(q.question)) tf.push({ label: 'The claim', detail: clean(q.question) });
+      tf.push({ label: 'Verdict', detail: correct || clean(q.correct) || '\u2014' });
+      if (clean(q.explanation)) tf.push({ label: 'Why', detail: clean(q.explanation) });
+      if (tf.length >= 2) return { type: 'steps', title: title, items: tf };
+    }
+
+    if (type === 'mcq' || (!type && list(q.options).length)) {
+      var ci = typeof q.correctIndex === 'number' ? q.correctIndex : -1;
+      var m = [];
+      if (clean(q.question)) m.push({ label: 'What was asked', detail: clean(q.question) });
+      if (correct) m.push({ label: 'The answer', detail: correct });
+      if (clean(q.explanation)) m.push({ label: 'Why', detail: clean(q.explanation) });
+      var ds = distractors(q, ci);
+      if (ds.length) {
+        m.push({ label: 'Why not the others',
+                 detail: ds.join(' \u00b7 ') + ' \u2014 plausible, but not what was asked.' });
+      }
+      if (m.length >= 2) return { type: 'steps', title: title, items: m };
+    }
+
+    if (type === 'fill') {
+      var f = [];
+      if (clean(q.question)) f.push({ label: 'The sentence', detail: clean(q.question) });
+      if (correct) f.push({ label: 'The missing word', detail: correct });
+      if (clean(q.explanation)) f.push({ label: 'Why', detail: clean(q.explanation) });
+      if (f.length >= 2) return { type: 'steps', title: title, items: f };
+    }
+
+    return null;
+  }
+
+  /** Build a board spec from a question just answered, or null. */
   function fromWrongAnswer(q, day) {
     q = q || {}; day = day || {};
     var title = clean(day.title) || 'Worked through';
@@ -6450,6 +7332,10 @@ var SFBoard = (function () {
     }
     if (!correct) correct = clean(q.correct);
 
+    /* Prefer a walkthrough shaped by the question type. */
+    var typed = typedWalkthrough(q, day, correct);
+    if (typed) return typed;
+
     /* A worked calculation is a genuine equation scene. */
     var work = list(q.working || q.steps);
     if (work.length >= 2) {
@@ -6457,13 +7343,35 @@ var SFBoard = (function () {
       if (eq.length >= 2) return { type: 'equation', title: title, items: eq };
     }
 
-    /* Otherwise walk the reasoning: what was asked, what is true, why. */
+    /* Otherwise walk the reasoning: what was asked, what is true, why.
+       A long explanation is split at sentence boundaries so the learner steps
+       through it one idea at a time, rather than reading one long block. */
     var items = [];
     if (clean(q.question)) {
       items.push({ label: 'What was asked', detail: clean(q.question) });
     }
     if (correct) items.push({ label: 'The answer', detail: correct });
-    if (clean(q.explanation)) items.push({ label: 'Why', detail: clean(q.explanation) });
+
+    var why = clean(q.explanation);
+    if (why) {
+      var sentences = why.match(/[^.!?]+[.!?]*/g) || [why];
+      var kept = [], si, sen;
+      for (si = 0; si < sentences.length; si++) {
+        sen = clean(sentences[si]);
+        if (sen.length > 1) kept.push(sen);
+      }
+      /* Merge very short trailing fragments into the previous beat so a stray
+         "So it works." does not become a step of its own. */
+      var merged = [], mi;
+      for (mi = 0; mi < kept.length; mi++) {
+        if (merged.length && kept[mi].length < 28) merged[merged.length - 1] += ' ' + kept[mi];
+        else merged.push(kept[mi]);
+      }
+      var WHY_LABELS = ['Why', 'Then', 'Also', 'And so'];
+      for (mi = 0; mi < merged.length && items.length < 6; mi++) {
+        items.push({ label: WHY_LABELS[Math.min(mi, WHY_LABELS.length - 1)], detail: merged[mi] });
+      }
+    }
 
     var ds = itemsFromSteps(list(day.steps));
     for (var i = 0; i < ds.length && items.length < 6; i++) items.push(ds[i]);
@@ -6524,6 +7432,7 @@ var SFBoard = (function () {
     render: render,
     destroy: destroy,
     fromDay: fromDay,
+    briefFor: briefFor,
     fromWrongAnswer: fromWrongAnswer,
     adapt: adapt,
     hasSeenTopic: hasSeenTopic,
@@ -6699,9 +7608,27 @@ var SFBoard = (function () {
     var mount = w.document.getElementById('session-card');
 
     /* Walkthrough requested from a wrong answer. */
+    /* Opening whiteboard. Same render path as the walkthrough, so it inherits
+       the stepped reveal, the tap targets and the Next control. */
+    if (card && card.type === 'sfwb-brief' && mount) {
+      try {
+        var drewB = w.SFWhiteboard.render(mount, card.lesson, function () { w.showNextCard(); });
+        if (!drewB) { w.showNextCard(); return; }
+        scrollTop();
+        return;
+      } catch (e) {
+        if (w.console) w.console.error('[SFBoard] opening board failed', e);
+        w.showNextCard();
+        return;
+      }
+    }
+
     if (card && card.type === 'sfwb-explain' && mount) {
       try {
-        w.SFWhiteboard.render(mount, card.lesson, function () { w.showNextCard(); });
+        /* render() returns false when the spec had nothing real to draw. That
+           used to be treated as success, leaving the learner on a blank card. */
+        var drew = w.SFWhiteboard.render(mount, card.lesson, function () { w.showNextCard(); });
+        if (!drew) { w.showNextCard(); return; }
         scrollTop();
         return;
       } catch (e) {
@@ -6725,7 +7652,7 @@ var SFBoard = (function () {
         });
         if (decision.trigger) {
           var lesson = w.SFWhiteboard.fromDay(g('day') || {});
-          if (lesson && lesson.steps && lesson.steps.length) {
+          if (lesson && (lesson.items ? lesson.items.length : (lesson.left && lesson.right))) {
             w.SFWhiteboard.markTopicSeen(key);
             w.SFWhiteboard.render(mount, lesson, function () { w.showNextCard(); });
             scrollTop();
@@ -6746,8 +7673,10 @@ var SFBoard = (function () {
   w.showFeedback = function (isCorrect, explanation) {
     var out = _showFeedback.apply(this, arguments);
     try {
-      if (isCorrect) return out;
-      attachExplain(explanation);
+      /* Offered on correct answers too. Getting the right answer for a shaky
+         reason is common, and a learner who wants to check their reasoning
+         should not have to get it wrong first. */
+      attachExplain(explanation, isCorrect);
     } catch (e) {
       if (w.console) w.console.error('[SFWhiteboard] could not attach walkthrough button', e);
     }
@@ -6759,7 +7688,7 @@ var SFBoard = (function () {
    * Exposed so answer paths that write to #feedback-box directly
    * (error-spot, matching) can call it themselves.
    */
-  function attachExplain(explanation) {
+  function attachExplain(explanation, wasCorrect) {
     var fb = w.document.getElementById('feedback-box');
     if (!fb) return;
     if (fb.querySelector && fb.querySelector('.sfwb-explain')) return; // already there
@@ -6767,7 +7696,7 @@ var SFBoard = (function () {
     btn.className = 'sfwb-explain sfwb-focus';
     btn.type = 'button';
     btn.setAttribute('aria-label', 'Show a step by step walkthrough of this question');
-    btn.innerHTML = 'Show walkthrough \u2192';
+    btn.innerHTML = (wasCorrect ? 'Walk me through it' : 'Show walkthrough') + ' \u2192';
     btn.onclick = function () { w.sfwbExplain(explanation); };
     fb.appendChild(btn);
   }
@@ -6789,7 +7718,23 @@ var SFBoard = (function () {
     var lesson;
     try { lesson = w.SFWhiteboard.fromWrongAnswer(q, g('day') || {}); }
     catch (e) { return; }
-    if (!lesson || !lesson.steps || !lesson.steps.length) return;
+    /* The board builder returns a scene spec carrying `items`. This guard used
+       to look for `steps`, so it rejected every valid walkthrough and the
+       button appeared dead. Accept either shape. */
+    var hasContent = !!lesson && (
+      (lesson.items && lesson.items.length) ||
+      (lesson.steps && lesson.steps.length) ||
+      (lesson.left && lesson.right)
+    );
+    if (!hasContent) {
+      /* Tell the learner rather than failing silently. */
+      var deadBtn = w.document.querySelector('.sfwb-explain');
+      if (deadBtn) {
+        deadBtn.disabled = true;
+        deadBtn.textContent = 'No walkthrough for this one';
+      }
+      return;
+    }
 
     /* Insert as the next card, mirroring the existing spaced-repeat pattern. */
     if (idx < cards.length) cards.splice(idx, 0, { type: 'sfwb-explain', lesson: lesson });
