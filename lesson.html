@@ -628,6 +628,59 @@
     .hint-btn:hover, .conf-btn:hover, .fill-submit:hover:not(:disabled),
     .btn-next:hover:not(:disabled) { transform:none; box-shadow:none; }
   }
+
+  /* ── TOPIC PATH ───────────────────────────────────────────────────────
+     Replaces the single wrapping breadcrumb pill. That pill crammed
+     "ALGEBRA > EQUATION SOLVING AND EXPRESSION MANIPULATION > USING INVERSE
+     OPERATIONS AND THE GOLDEN RULE TO ISOLATE VARIABLES AND COMBINE LIKE
+     TERMS" onto two dense uppercase lines that nobody reads. The same
+     information is a path from the broad subject down to today's exact focus,
+     so it is drawn as one: each level a step, revealed in turn, ending on
+     what this session actually covers. */
+  @keyframes tpStepIn {
+    from { opacity:0; transform:translateY(8px); }
+    to   { opacity:1; transform:none; }
+  }
+  @keyframes tpRailGrow { from { transform:scaleY(0); } to { transform:scaleY(1); } }
+
+  .topic-path { margin:0 0 1.15rem; position:relative; }
+  .topic-path-rail {
+    position:absolute; left:11px; top:14px; bottom:14px; width:2px;
+    background:linear-gradient(180deg,var(--blue),rgba(74,124,246,.18));
+    border-radius:2px; transform-origin:top;
+    animation:tpRailGrow .5s cubic-bezier(.22,.61,.36,1) both;
+  }
+  .topic-step {
+    display:flex; align-items:flex-start; gap:.7rem; padding:.28rem 0;
+    position:relative; opacity:0;
+    animation:tpStepIn .42s cubic-bezier(.22,.61,.36,1) both;
+  }
+  .topic-step-dot {
+    flex:0 0 24px; height:24px; border-radius:50%; background:#fff;
+    border:2px solid var(--border); display:flex; align-items:center;
+    justify-content:center; font-size:.62rem; font-weight:700; color:var(--muted);
+    z-index:1; transition:border-color .25s ease, color .25s ease,
+      background .25s ease, transform .25s ease;
+  }
+  .topic-step-text {
+    font-size:.78rem; font-weight:600; color:var(--muted); line-height:1.45;
+    padding-top:.22rem; letter-spacing:.01em;
+  }
+  /* The last step is where the session actually sits, so it carries the weight. */
+  .topic-step.is-focus .topic-step-dot {
+    border-color:var(--blue); background:var(--blue); color:#fff;
+    transform:scale(1.08);
+  }
+  .topic-step.is-focus .topic-step-text {
+    color:var(--ink); font-weight:700; font-size:.86rem;
+  }
+  .topic-step-tag {
+    display:block; font-size:.6rem; font-weight:700; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--blue); margin-bottom:.1rem;
+  }
+  @media (prefers-reduced-motion:reduce) {
+    .topic-path-rail, .topic-step { animation:none; opacity:1; }
+  }
 </style>
 </head>
 <body>
@@ -1003,6 +1056,11 @@
     // emitted correctIndex as a string or True/False as a boolean cannot cause
     // a correct choice to be graded wrong further down.
     var questions = normalizeQuestions(day.questions || []);
+    /* Repair the format mix before the queue is built, so a maths day cannot
+       reach the learner as a pile of multiple choice. */
+    questions = enforceFormatMix(questions, fmStr(day.subjectType || day.subject_type ||
+                                                  (window.SFStore && SFStore.getItem('studyflow_subject_type')) || ''));
+    day.questions = questions;
 
     /* The whiteboard is built here but queued later - see below. Placing it at
        card one meant it ran BEFORE the pre-test, which defeats the pre-test:
@@ -1611,6 +1669,54 @@
   var autoAdvanceTimer = null;
   var currentCardType = '';
 
+  /* Turn "Algebra > Equation solving > Using inverse operations to isolate
+     variables" into a revealed path: broad subject first, today's exact focus
+     last. Levels arrive as a chevron-separated string; anything without
+     separators is shown as a single focus step. */
+  function buildTopicPath(microTopic, subject) {
+    var raw = (microTopic == null ? '' : String(microTopic)).trim();
+    if (!raw) return '';
+
+    var parts = raw.split(/\s*(?:\u203a|>|\u2192|\/|\|)\s*/);
+    var levels = [], i, p;
+    for (i = 0; i < parts.length; i++) {
+      p = parts[i].replace(/\s+/g, ' ').trim();
+      if (p) levels.push(p);
+    }
+    /* Lead with the broad subject when the path does not already start there,
+       so the learner can see where today's focus sits. */
+    var subj = (subject == null ? '' : String(subject)).replace(/\s+/g, ' ').trim();
+    if (subj && levels.length &&
+        levels[0].toLowerCase().indexOf(subj.toLowerCase()) === -1) {
+      levels.unshift(subj);
+    }
+    if (!levels.length) return '';
+    if (levels.length > 4) {
+      /* Keep the two broadest and the two most specific: the middle of a long
+         path is where the least information is. */
+      levels = [levels[0], levels[1], levels[levels.length - 2], levels[levels.length - 1]];
+    }
+
+    function esc2(v) {
+      return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    var html = '<div class="topic-path">' +
+      (levels.length > 1 ? '<div class="topic-path-rail"></div>' : '');
+    for (i = 0; i < levels.length; i++) {
+      var focus = (i === levels.length - 1);
+      html += '<div class="topic-step' + (focus ? ' is-focus' : '') +
+        '" style="animation-delay:' + (0.12 + i * 0.11).toFixed(2) + 's">' +
+        '<div class="topic-step-dot">' + (focus ? '\u2713' : (i + 1)) + '</div>' +
+        '<div class="topic-step-text">' +
+        (focus ? '<span class="topic-step-tag">Today</span>' : '') +
+        esc2(levels[i]) + '</div></div>';
+    }
+    return html + '</div>';
+  }
+
   function renderCard(card) {
     var sc = document.getElementById('session-card');
     var html = '';
@@ -1654,11 +1760,7 @@
     else if (card.type === 'welcome') {
       var dayLabel = dayIndex === 0 ? 'Introduction' : (day.isFinal ? 'Final Exam Day' : 'Day ' + (dayIndex + 1));
       // Micro-topic pill if available
-      var microPill = day.microTopic
-        ? '<div style="display:inline-flex;align-items:center;gap:.4rem;background:var(--blue-light);color:var(--blue);border-radius:999px;padding:.3rem .85rem;font-size:0.72rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin-bottom:1rem;">' +
-          '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>' +
-          day.microTopic + '</div><br>'
-        : '';
+      var microPill = buildTopicPath(day.microTopic, day.subject);
       html = buildCard(dayLabel, day.title || 'Day ' + (dayIndex+1), false,
         microPill + '<p class="content-text">' + (day.briefing || '') + '</p>',
         'Session: ' + totalMinutes + ' min', 'Let\'s go →', false);
@@ -4346,6 +4448,108 @@
       }
     }
     return q;
+  }
+
+  /* ── FORMAT ENFORCEMENT ───────────────────────────────────────────────────
+     The prompt states the required format mix, but a prompt is a request, not
+     a guarantee. This checks what actually arrived and repairs it, so a maths
+     day cannot reach the learner as a pile of multiple choice.
+
+     Repair, not rejection: a question carrying a solvable expression is
+     converted to the production format it should have been, because the
+     content is fine and only the wrapper is wrong. Anything that cannot be
+     converted is left alone rather than discarded - a slightly off-format
+     question beats a missing one. */
+
+  /* Subjects whose content is procedural: learners must PRODUCE answers.
+     Formats that only ask them to RECOGNISE one are demoted. */
+  /* Local helpers: str/clean exist inside the board and adapter modules, but
+     not in this scope. Defining them here keeps the enforcer self-contained. */
+  function fmStr(v) { return v == null ? '' : String(v); }
+  function fmClean(v) { return fmStr(v).replace(/\s+/g, ' ').trim(); }
+
+  var PROCEDURAL_SUBJECTS = { math: 1, cs: 1, language: 1 };
+
+  var PRODUCTION_TYPES = { bigequation: 1, wordproblem: 1, errorspot: 1,
+                           write: 1, sequence: 1 };
+  var RECOGNITION_TYPES = { mcq: 1, truefalse: 1, scenario: 1 };
+
+  /* Does this question actually contain something solvable? */
+  function carriesExpression(q) {
+    var t = fmStr(q.question) + ' ' + fmStr(q.equation) + ' ' + fmStr(q.answer) + ' ' +
+            fmStr(q.explanation);
+    if (/[0-9a-z]\s*(?:=|<=|>=)\s*[-0-9a-z(]/i.test(t)) return true;
+    return /\b(solve|simplify|evaluate|expand|factor|compute|calculate)\b/i.test(t) &&
+           /\d/.test(t);
+  }
+
+  /* Convert a recognition question that is really a calculation into the
+     production format. The stem and the correct option already contain
+     everything a bigequation needs. */
+  function toProduction(q) {
+    var answer = fmStr(q.answer);
+    if (!answer && isArrList(q.options) && typeof q.correctIndex === 'number') {
+      answer = fmStr(q.options[q.correctIndex]);
+    }
+    if (!answer) return null;
+
+    /* Pull the expression out of the stem so the learner is asked to solve it
+       rather than shown four candidate results. */
+    var stem = fmStr(q.question);
+    var m = stem.match(/([-0-9a-z(][^,.?;]{0,40}?(?:=|<=|>=)[^,.?;]{0,40})/i);
+    var converted = {
+      type: 'bigequation',
+      question: m ? 'Solve' : (stem || 'Solve'),
+      equation: m ? fmClean(m[1]) : '',
+      answer: fmClean(answer),
+      hint: fmStr(q.hint),
+      explanation: fmStr(q.explanation),
+      difficulty: fmStr(q.difficulty) || 'medium',
+      _convertedFrom: fmStr(q.type)
+    };
+    if (!converted.equation && !/\d/.test(stem)) return null;
+    if (!converted.equation) { converted.question = stem; }
+    return converted;
+  }
+
+  function isArrList(v) {
+    return Object.prototype.toString.call(v) === '[object Array]';
+  }
+
+  /**
+   * Rebalance a day's questions toward the formats its subject demands.
+   * Returns the (possibly repaired) list. Never removes questions.
+   */
+  function enforceFormatMix(list, subjectType) {
+    if (!isArrList(list) || !list.length) return list;
+    if (!PROCEDURAL_SUBJECTS[subjectType]) return list;   // declarative: leave alone
+
+    var i, production = 0;
+    for (i = 0; i < list.length; i++) {
+      if (PRODUCTION_TYPES[fmStr(list[i].type)]) production++;
+    }
+
+    /* Procedural subjects need most of the practice to be production work.
+       Half is the floor; below it the day does not teach the skill. */
+    var need = Math.ceil(list.length * 0.5) - production;
+    if (need <= 0) return list;
+
+    var converted = 0;
+    for (i = 0; i < list.length && converted < need; i++) {
+      var q = list[i];
+      if (!RECOGNITION_TYPES[fmStr(q.type)]) continue;
+      if (!carriesExpression(q)) continue;               // genuinely conceptual, leave it
+      var swap = toProduction(q);
+      if (!swap) continue;
+      list[i] = swap;
+      converted++;
+    }
+
+    if (converted && typeof console !== 'undefined' && console.info) {
+      console.info('[format] ' + subjectType + ': converted ' + converted +
+        ' recognition question(s) to production format');
+    }
+    return list;
   }
 
   function normalizeQuestions(list) {
