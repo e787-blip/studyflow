@@ -1529,8 +1529,12 @@
           var term = terms[ti];
           /* Word boundaries stop "revolution" scoring as "evolution" and
              "market" scoring inside "supermarket". */
+          /* Allow ordinary inflections. A strict word boundary meant "equations"
+             did not match "equation" and "variables" did not match "variable",
+             so whole subjects scored near zero on notes that were plainly
+             about them. */
           var re = new RegExp('(^|[^a-z])' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
-                              '([^a-z]|$)', 'g');
+                              '(?:s|es|ing|ed)?([^a-z]|$)', 'g');
           if (re.test(body)) total += weight;
           if (head && re.test(head)) total += weight * 2;   // typed subject counts double
         }
@@ -1565,7 +1569,11 @@
       ['Trigonometry', 4, ['sine','cosine','unit circle','radian','law of sines','law of cosines','trig identity','amplitude','csc','cot(','sec(','sin(','cos(','tan(','arcsin','arctan']],
       ['Calculus', 4, ['derivative','integral','antiderivative','chain rule','product rule','quotient rule','related rates','riemann','dy/dx','d/dx','concavity','inflection point','limit as x','definite integral']],
       ['Statistics & Probability', 4, ['standard deviation','probability','distribution','sample size','correlation','regression','p-value','histogram','variance','outlier','z-score','confidence interval','median','quartile','normal curve']],
-      ['Algebra', 4, ['solve for x','quadratic','polynomial','factoring','y-intercept','linear equation','inequality','logarithm','system of equations','binomial','coefficient','vertex form','foil','slope','exponent rule']],
+      /* The basic vocabulary was missing entirely: notes reading "solving
+         equations and simplifying expressions in algebra ... isolate variables"
+         scored ZERO here, while 'variable' alone scored 4 for Computer Science,
+         so an algebra lesson was labelled Computer Science. */
+      ['Algebra', 4, ['algebra','solve for x','quadratic','polynomial','factoring','y-intercept','linear equation','inequality','logarithm','system of equations','binomial','coefficient','vertex form','foil','slope','exponent rule','simplify','simplifying','expression','like terms','isolate the variable','inverse operation','both sides','distributive','substitute','solve the equation']],
       ['Fractions & Arithmetic', 3, ['numerator','denominator','common denominator','improper fraction','mixed number','long division','place value','rounding','least common multiple','greatest common factor']],
 
       // ── SCIENCE — specific branches ──
@@ -1595,7 +1603,10 @@
       ['Psychology', 4, ['classical conditioning','operant','cognitive bias','freud','piaget','pavlov','neurotransmitter','reinforcement','short-term memory','long-term memory','amygdala','hippocampus']],
       ['Economics', 4, ['supply and demand','opportunity cost','inflation','gdp','elasticity','fiscal policy','monetary policy','market equilibrium','scarcity','marginal cost']],
       ['Geography', 4, ['latitude','longitude','biome','tectonic','climate zone','population density','urbanization','topograph','watershed','continent']],
-      ['Computer Science', 4, ['algorithm','data structure','for loop','array','recursion','variable','boolean','function returns','big o','compiler','binary search']],
+      /* 'variable' removed: it is core algebra vocabulary as much as programming
+         vocabulary, and on its own it is not evidence of either. The remaining
+         terms only occur in computing. */
+      ['Computer Science', 4, ['algorithm','data structure','for loop','array','recursion','boolean','function returns','big o','compiler','binary search','linked list','hash table','pseudocode','syntax error','integer overflow']],
       ['Spanish', 4, ['conjugat','ser and estar','preterite','subjunctive','el la los las','spanish verb']],
       ['French', 4, ['french verb','passe compose','etre','avoir','le la les']]
     ];
@@ -1649,6 +1660,79 @@
      following best describes..." for every field, which is why maths days were
      arriving without a single thing to calculate and language days without a
      single sentence to translate. */
+  /* ── FORMAT MANDATE PER SUBJECT ───────────────────────────────────────────
+     Grounded in the procedural / declarative distinction. Yeo & Fazio (2019)
+     found worked examples and problem solving beat repeated testing for
+     flexible procedures (67.8% vs 50.9% problem-solving accuracy), while
+     retrieval practice wins for stable facts. Follow-up work found no
+     retrieval-practice benefit at all for mathematical word-problem solving.
+
+     So: subjects whose content is PROCEDURAL get production formats -
+     bigequation, wordproblem, errorspot, write. Subjects whose content is
+     DECLARATIVE get retrieval formats - mcq, truefalse, fill. Most subjects
+     need both, in the proportion their content actually demands. */
+  var SUBJECT_FORMAT_MANDATE = {
+    math:
+      'MATH IS PROCEDURAL. Of 9 questions: AT LEAST 5 must be "bigequation" ' +
+      '(an expression the learner actually solves, simplifies, expands or evaluates), ' +
+      'AT LEAST 1 "wordproblem", AT LEAST 1 "errorspot" (a worked solution with one ' +
+      'flawed step to find). AT MOST 2 may be mcq or truefalse combined, and those ' +
+      'two must test a concept that genuinely cannot be computed. ' +
+      'ZERO "fill" questions - asking a learner to type a remembered term teaches ' +
+      'nothing about how to solve. If you cannot write 5 solvable problems from ' +
+      'these notes, write easier problems on the same material - do not switch format.',
+
+    science:
+      'Mostly mechanism and prediction. Of 9: AT LEAST 3 "mcq" or "scenario" that ask ' +
+      'what happens and why, AT LEAST 2 "wordproblem" or "bigequation" where the notes ' +
+      'contain any quantity, formula or rate, AT LEAST 1 "classify" or "sequence" for ' +
+      'processes and categories. AT MOST 2 "fill", and only for terms the notes define ' +
+      'explicitly.',
+
+    cs:
+      'PROGRAMMING IS PROCEDURAL. Of 9: AT LEAST 3 "errorspot" (buggy code to fix) or ' +
+      '"sequence" (order the steps of an algorithm), AT LEAST 2 "write" where the learner ' +
+      'traces or produces code, AT LEAST 1 "wordproblem" on cost or complexity. ' +
+      'AT MOST 2 mcq. ZERO "fill" for syntax trivia.',
+
+    language:
+      'LANGUAGE IS PROCEDURAL. Of 9: AT LEAST 4 "fill" where the blank is a form the ' +
+      'learner must PRODUCE (conjugate, decline, agree), AT LEAST 2 "write" (translate ' +
+      'or correct a full sentence), AT LEAST 1 "errorspot" (a sentence with one grammar ' +
+      'mistake). AT MOST 2 mcq, never about grammar terminology in the abstract.',
+
+    economics:
+      'Reasoning about change. Of 9: AT LEAST 3 "scenario" or "mcq" asking what happens ' +
+      'to price, quantity or incentives when one thing changes, AT LEAST 2 "wordproblem" ' +
+      'wherever the notes carry numbers, AT LEAST 1 "classify" (which curve shifts). ' +
+      'AT MOST 2 "fill".',
+
+    history:
+      'Largely declarative, so retrieval formats are correct here. Of 9: AT LEAST 3 "mcq" ' +
+      'on causes, consequences and motives, AT LEAST 1 "sequence" (order events), ' +
+      'AT LEAST 1 "classify", AT LEAST 1 "write" (explain a cause in a sentence or two). ' +
+      'AT MOST 3 "fill", and only for names, terms or dates the notes emphasise.',
+
+    psychology:
+      'Applying named ideas. Of 9: AT LEAST 3 "scenario" applying a theory or effect to a ' +
+      'concrete situation, AT LEAST 1 "classify", AT LEAST 1 "write". AT MOST 3 "fill", ' +
+      'and never "who discovered this" trivia.',
+
+    geography:
+      'Process and pattern. Of 9: AT LEAST 3 "mcq" or "scenario" on how a process produces ' +
+      'an observed pattern, AT LEAST 1 "classify", AT LEAST 1 "sequence". Include ' +
+      '"wordproblem" wherever the notes carry figures. AT MOST 3 "fill".',
+
+    english:
+      'Effect of a choice on a reader. Of 9: AT LEAST 3 "passage" or "scenario" tied to a ' +
+      'specific quoted line, AT LEAST 2 "write" (explain what a device achieves), ' +
+      'AT LEAST 1 "sentence" or "errorspot". AT MOST 2 "fill", never bare device-naming.',
+
+    general:
+      'Of 9: AT LEAST 3 "mcq" on the central claims, AT LEAST 1 "write", AT LEAST 1 ' +
+      '"sequence" or "classify" if the notes contain any order or grouping. AT MOST 3 "fill".'
+  };
+
   var SUBJECT_QUESTION_GUIDE = {
     math: 'ASK: problems with a number or expression to actually work out, using the same ' +
           'methods the notes demonstrate. Show working in the explanation. ' +
@@ -1690,6 +1774,7 @@
     };
     var picked = strategies[subjectType] || strategies.general;
     picked.questionGuide = SUBJECT_QUESTION_GUIDE[subjectType] || SUBJECT_QUESTION_GUIDE.general;
+    picked.formatMandate = SUBJECT_FORMAT_MANDATE[subjectType] || SUBJECT_FORMAT_MANDATE.general;
     return picked;
   }
 
@@ -2015,6 +2100,14 @@
         '  whose answer depends on outside reading.\n' +
         '- Every explanation must point back to something the notes actually state.\n' +
 
+        '\n\u2550\u2550 QUESTION FORMAT IS NOT OPTIONAL \u2550\u2550\n' +
+        'Format follows the KIND of knowledge, and getting this wrong is the single\n' +
+        'most common failure. The research is settled: procedures are learned by\n' +
+        'PRODUCING answers, facts are learned by RETRIEVING them. Recognising a\n' +
+        'correct answer among four options does not build procedural skill.\n' +
+        (strategy.formatMandate || '') + '\n' +
+        'A question whose format contradicts the quota above is a defect, not a\n' +
+        'stylistic choice. Rewrite it before returning the JSON.\n' +
         '\nWHAT A GOOD QUESTION LOOKS LIKE FOR THIS SUBJECT:\n' +
         (strategy.questionGuide || '') + '\n' +
         '\nRULES:\n' +
