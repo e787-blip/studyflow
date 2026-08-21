@@ -318,6 +318,35 @@
   .hint-box.show { display:block; animation:fadeIn .3s ease; }
 
   /* FEEDBACK */
+  /* ── box sorting: instant per-item feedback ───────────────────────────
+     Ported from the demo builds. A chip animates as it lands and colours
+     immediately, so the learner sees which specific item was wrong rather
+     than only a final tally. */
+  @keyframes sfDropIn { from { opacity:0; transform:translateY(-8px) scale(.9); }
+    to { opacity:1; transform:none; } }
+  @keyframes sfPop { 0%{transform:scale(1);} 40%{transform:scale(1.12);} 100%{transform:scale(1);} }
+  @keyframes sfShake { 0%,100%{transform:translateX(0);} 18%{transform:translateX(-5px);}
+    36%{transform:translateX(4px);} 54%{transform:translateX(-3px);}
+    72%{transform:translateX(2px);} 86%{transform:translateX(-1px);} }
+  .sf-chip { display:inline-block; padding:.3rem .7rem; border-radius:999px;
+    font-size:.78rem; font-weight:600; margin:.15rem; border:1.5px solid transparent;
+    animation:sfDropIn .28s cubic-bezier(.22,.61,.36,1) both; }
+  .sf-chip.is-right { background:#ECFDF5; border-color:var(--green); color:#0A6B54;
+    animation:sfDropIn .28s cubic-bezier(.22,.61,.36,1) both, sfPop .34s ease .28s; }
+  .sf-chip.is-wrong { background:#FEF2F2; border-color:var(--red); color:#9B2C2C;
+    animation:sfDropIn .28s cubic-bezier(.22,.61,.36,1) both, sfShake .42s ease .28s; }
+  .classify-item { transition:transform .18s ease, border-color .18s ease,
+    background .18s ease; }
+  .classify-item:hover { transform:translateY(-2px); }
+  .classify-item:active { transform:translateY(0) scale(.98); }
+  .classify-bin-over { background:rgba(74,124,246,.10) !important; border-style:solid !important; }
+  .sf-nudge { margin-top:.6rem; font-size:.82rem; font-weight:600; color:var(--red);
+    animation:sfShake .42s ease; }
+  @media (prefers-reduced-motion:reduce){
+    .sf-chip, .sf-chip.is-right, .sf-chip.is-wrong, .sf-nudge { animation:none; }
+    .classify-item:hover { transform:none; }
+  }
+
   .feedback-box { margin-top:.9rem; border-radius:12px; padding:.85rem 1.1rem; display:none; animation:fadeIn .3s ease; }
   .feedback-box.show { display:block; }
   .feedback-box.correct-fb { background:#d1faf0; border:1.5px solid var(--green); }
@@ -3180,7 +3209,14 @@
       if (b.dataset.item === item) b.style.display = 'none';
     });
 
-    var chip = '<span style="display:inline-block;padding:.3rem .7rem;border-radius:999px;background:' + (cat==='A'?'rgba(74,124,246,.15)':'rgba(124,58,237,.15)') + ';color:' + (cat==='A'?'#2851c8':'#7c3aed') + ';font-size:0.78rem;font-weight:600;margin:.15rem;" data-item="' + esc(item) + '">' + item + '</span>';
+    /* Colour the chip against the answer key the moment it lands. Waiting for
+       the final Check told the learner how many they got wrong but never which
+       ones, so there was nothing to learn from. */
+    var right = (cat === 'A')
+      ? state.correctA.indexOf(item) !== -1
+      : state.correctB.indexOf(item) !== -1;
+    var chip = '<span class="sf-chip ' + (right ? 'is-right' : 'is-wrong') +
+      '" data-item="' + esc(item) + '">' + esc(item) + '</span>';
     var container = document.getElementById('classify-' + (cat==='A'?'a':'b') + '-items');
     if (container) container.insertAdjacentHTML('beforeend', chip);
     if (cat === 'A') state.bucketA.push(item); else state.bucketB.push(item);
@@ -3191,7 +3227,22 @@
     var state = window._classifyState;
     var totalItems = state.correctA.length + state.correctB.length;
     if (state.bucketA.length + state.bucketB.length < totalItems) {
-      alert('Place all items in a category first!'); return;
+      /* A modal alert stops the session dead and looks nothing like the rest
+         of the app. Nudge inline instead. */
+      var host = document.getElementById('classify-pool');
+      if (host && !document.getElementById('classify-nudge')) {
+        var note = document.createElement('div');
+        note.id = 'classify-nudge';
+        note.className = 'sf-nudge';
+        var left = totalItems - (state.bucketA.length + state.bucketB.length);
+        note.textContent = left + ' item' + (left === 1 ? '' : 's') + ' still to place.';
+        host.parentNode.insertBefore(note, host.nextSibling);
+        setTimeout(function () {
+          var n = document.getElementById('classify-nudge');
+          if (n && n.parentNode) n.parentNode.removeChild(n);
+        }, 2600);
+      }
+      return;
     }
     currentAnswered = true; totalAnswered++;
     var wrongA = state.bucketA.filter(function(i){ return state.correctA.indexOf(i) === -1; });
@@ -3576,7 +3627,18 @@
   /* ── WRITING ── */
   function submitWrite(modelAnswer, question) {
     var answer = document.getElementById('write-input').value.trim();
-    if (!answer) { alert('Please write something first!'); return; }
+    if (!answer) {
+      /* Same reasoning as the sorting nudge: a modal alert halts the session
+         and does not belong in the flow. Shake the field and say it inline. */
+      var ta = document.getElementById('write-input');
+      if (ta) {
+        void ta.offsetWidth;                       // restart the animation
+        ta.style.animation = 'sfShake .42s ease';
+        ta.focus();
+        setTimeout(function () { ta.style.animation = ''; }, 450);
+      }
+      return;
+    }
     currentAnswered = true;
     totalAnswered++;
     document.querySelector('.write-submit').style.display = 'none';
@@ -6032,6 +6094,13 @@ var SFBoard = (function () {
     return open(o);
   }
 
+  /* Marker ids are resolved document-wide, so two boards sharing "sfbTip"
+     would have the second one's arrowheads silently reference the first.
+     A per-render suffix keeps them independent. */
+  var markerSeq = 0;
+  function nextMarkerId() { markerSeq++; return 'sfbTip' + markerSeq; }
+  var MARKER = 'sfbTip';
+
   function svgOpen(w, h) {
     return '<svg class="sfb-svg" viewBox="0 0 ' + Math.round(w) + ' ' + Math.round(h) +
       '" xmlns="http://www.w3.org/2000/svg" role="img" preserveAspectRatio="xMidYMid meet" ' +
@@ -6858,8 +6927,14 @@ var SFBoard = (function () {
       }
     }
     if (!out || !out.svg || !out.beats) return null;
+    /* Rename this render's arrowhead marker so two boards on the same page
+       stay independent. Done here, at the one place every scene passes
+       through, rather than in each scene. */
+    var mid = nextMarkerId();
+    var svgOut = out.svg.split(MARKER).join(mid);
+
     return {
-      svg: out.svg, html: out.html || '', beats: out.beats, w: out.w, h: out.h,
+      svg: svgOut, html: out.html || '', beats: out.beats, w: out.w, h: out.h,
       type: type, title: clean(spec.title || spec.label)
     };
   }
@@ -6869,6 +6944,19 @@ var SFBoard = (function () {
   var STYLE_ID = 'sfb-styles';
 
   var CSS =
+  /* The walkthrough trigger. Previously unstyled, so browsers drew their
+     default chrome around it and it read as a stray text box. */
+  '.sfwb-explain{display:inline-flex;align-items:center;gap:.4rem;margin-top:.7rem;' +
+    'appearance:none;-webkit-appearance:none;background:transparent;border:0;' +
+    'padding:.2rem 0;font:inherit;font-size:.85rem;font-weight:700;' +
+    'color:' + ACCENT + ';cursor:pointer;border-bottom:2px solid transparent;' +
+    'transition:color .18s ease,border-color .18s ease,transform .18s ease;}' +
+  '.sfwb-explain:hover{border-bottom-color:' + ACCENT + ';transform:translateY(-1px);}' +
+  '.sfwb-explain:active{transform:translateY(0);}' +
+  '.sfwb-explain:focus-visible{outline:2px solid ' + ACCENT + ';outline-offset:3px;border-radius:4px;}' +
+  '.sfwb-explain:disabled{color:' + MUTED + ';cursor:default;border-bottom-color:transparent;' +
+    'transform:none;opacity:.7;}' +
+
   '.sfb{font-family:' + FONT + ';color:' + INK + ';margin:18px 0;}' +
   '.sfb-top{display:flex;align-items:baseline;gap:10px;margin:0 0 10px;}' +
   '.sfb-title{font-size:15px;font-weight:700;letter-spacing:-.01em;margin:0;}' +
@@ -6892,12 +6980,29 @@ var SFBoard = (function () {
 
   /* Beats fade and lift into place. Anything not yet reached is hidden from
      assistive tech too, not just visually. */
-  '@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}' +
+  /* One easing curve across the whole board, matching the demos: content
+     rises and settles rather than snapping in. The slight scale is what
+     makes a beat feel like it arrives instead of appearing. */
+  '@keyframes sfbFadeUp{from{opacity:0;transform:translateY(14px) scale(.985);}' +
     'to{opacity:1;transform:none;}}' +
+  '@keyframes sfbPop{0%{transform:scale(1);}40%{transform:scale(1.045);}' +
+    '100%{transform:scale(1);}}' +
+  '@keyframes sfbShake{0%,100%{transform:translateX(0);}18%{transform:translateX(-7px);}' +
+    '36%{transform:translateX(6px);}54%{transform:translateX(-4px);}' +
+    '72%{transform:translateX(3px);}86%{transform:translateX(-2px);}}' +
   '.sfb-b{opacity:0;transform:translateY(10px);' +
     'transition:opacity .38s cubic-bezier(.22,.61,.36,1),' +
     'transform .38s cubic-bezier(.22,.61,.36,1);}' +
-  '.sfb .sfb-b.is-in{animation:fadeUp .42s cubic-bezier(.22,.61,.36,1) both;}' +
+  '.sfb .sfb-b.is-in{animation:sfbFadeUp .44s cubic-bezier(.22,.61,.36,1) both;}' +
+  '.sfb .sfb-b.is-pop{animation:sfbPop .34s ease;}' +
+  '.sfb .sfb-b.is-shake{animation:sfbShake .42s ease;}' +
+  /* Stagger: each beat lands slightly after the one before, so a revealed
+     scene reads as a sequence rather than everything arriving at once. */
+  '.sfb .sfb-b.is-in[data-beat="2"]{animation-delay:.05s;}' +
+  '.sfb .sfb-b.is-in[data-beat="3"]{animation-delay:.10s;}' +
+  '.sfb .sfb-b.is-in[data-beat="4"]{animation-delay:.15s;}' +
+  '.sfb .sfb-b.is-in[data-beat="5"]{animation-delay:.20s;}' +
+  '.sfb .sfb-b.is-in[data-beat="6"]{animation-delay:.25s;}' +
   '.sfb-b[data-beat="0"]{opacity:1;transform:none;}' +
   '.sfb .sfb-b.is-in{opacity:1;transform:none;}' +
   '.sfb .sfb-b.is-past{opacity:.42;}' +
@@ -7289,6 +7394,117 @@ var SFBoard = (function () {
     return { title: name || '\u2014', items: got };
   }
 
+  /* Pull complete algebraic lines out of prose: "Add 7 to both sides to get
+     3x = 21" -> "3x = 21". Model explanations describe working in sentences,
+     so a maths walkthrough that only quoted the sentence never showed the
+     steps a learner has to follow.
+
+     Scanning is anchored on the '=' and expands outward to the natural
+     boundaries of the expression. An earlier attempt matched a fixed window
+     around the sign and truncated "14" to "1", producing equations that were
+     quietly wrong - worse than no walkthrough at all. */
+  var EQ_CHARS = /[A-Za-z0-9.\u00b2\u00b3^_+\-*\/()\[\]\s]/;
+
+  function equationLines(text) {
+    var t = str(text);
+    if (!t) return [];
+    var out = [], seen = {}, i;
+
+    for (i = 0; i < t.length; i++) {
+      var isEq = t.charAt(i) === '=' &&
+                 t.charAt(i + 1) !== '=' && t.charAt(i - 1) !== '=';
+      if (!isEq) continue;
+
+      /* Walk left to the start of the expression. */
+      var a = i - 1;
+      while (a >= 0 && EQ_CHARS.test(t.charAt(a))) a--;
+      a++;
+      /* Walk right to the end. */
+      var b = i + 1;
+      while (b < t.length && EQ_CHARS.test(t.charAt(b))) b++;
+
+      var line = clean(t.slice(a, b));
+
+      /* Trim leading prose that got swept in: keep from the last word that
+         begins the actual expression. "sides to get 3x = 21" -> "3x = 21". */
+      var m = line.match(/([A-Za-z0-9(\[][^\s]*(?:\s*[+\-*\/]\s*[^\s]+)*\s*=\s*.+)$/);
+      if (m) line = clean(m[1]);
+      /* Trim what the sentence continued with after the expression ended:
+         "3x - 7 = 14 for x." keeps only "3x - 7 = 14". */
+      line = line.replace(/\s+(?:and|then|so|which|because|to|for|where|when|if|is|are|gives?|equals?)\b.*$/i, '');
+      line = line.replace(/\s+or\b.*$/i, '');      // "x = 2 or x = 3" -> keep the first
+      line = line.replace(/[.,;:]+$/, '');
+      line = clean(line);
+
+      if (line.length < 3 || line.length > 44) continue;
+      if (line.indexOf('=') === -1) continue;
+      /* A fill-in-the-blank prompt is not a step of the working. */
+      if (/_{2,}/.test(line)) continue;
+      /* Both sides must carry something. */
+      var halves = line.split('=');
+      if (halves.length !== 2) continue;
+      if (!clean(halves[0]) || !clean(halves[1])) continue;
+      if (seen[line]) continue;
+      seen[line] = 1;
+      out.push(line);
+      if (out.length === 5) break;
+    }
+    return out;
+  }
+
+  /* Split an explanation into the operations it describes, so each becomes its
+     own beat: "Add 7 to both sides, then divide by 3" -> two steps. */
+  function operationSteps(text) {
+    var t = clean(text);
+    if (!t) return [];
+    var parts = t.split(/\s*(?:,\s*then\b|\.\s+then\b|\bthen\b|;|\.\s+)\s*/i);
+    var out = [], i, p;
+    for (i = 0; i < parts.length && out.length < 5; i++) {
+      p = clean(parts[i]).replace(/[.;,]+$/, '');
+      if (p.length >= 4) out.push(p);
+    }
+    return out;
+  }
+
+  /* Build an equation scene from a question whose working was never supplied
+     explicitly, which is the usual case. Pairs each derived equation line with
+     the operation that produced it. */
+  function derivedWorking(q, correct) {
+    var fromQ = equationLines(q.question);
+    var fromE = equationLines(q.explanation);
+    var ops = operationSteps(q.explanation);
+
+    var lines = [], seen = {}, i;
+    function push(v) {
+      var k2 = clean(v);
+      if (!k2 || seen[k2]) return;
+      seen[k2] = 1; lines.push(k2);
+    }
+    /* Start from the equation as posed, then the lines the explanation derives,
+       then the answer itself. */
+    for (i = 0; i < fromQ.length; i++) push(fromQ[i]);
+    for (i = 0; i < fromE.length; i++) push(fromE[i]);
+    /* Append the answer only when it reads as a final line of working.
+       A bare "6" or a prose answer is not a step, and tacking it on made the
+       last beat look like a stray fragment. */
+    var ans = clean(correct).replace(/[.,;:]+$/, '');
+    if (ans && ans.length <= 30 && ans.indexOf('=') !== -1 && !/_{2,}/.test(ans)) {
+      push(ans);
+    }
+
+    if (lines.length < 2) return null;
+
+    var items = [], LABELS = ['Start', 'Then', 'Next', 'Then', 'Result'];
+    for (i = 0; i < lines.length; i++) {
+      items.push({
+        label: lines[i],
+        detail: i === 0 ? 'the equation as given'
+                        : (ops[i - 1] || LABELS[Math.min(i, LABELS.length - 1)])
+      });
+    }
+    return items;
+  }
+
   /* A walkthrough shaped by what the question actually asked. A sequence
      question wants the order laid out; a sorting question wants two columns;
      a calculation wants the working. Handing every type the same three-step
@@ -7308,6 +7524,20 @@ var SFBoard = (function () {
     if (type === 'bigequation' || type === 'wordproblem' || type === 'equation') {
       var work = itemsFromSteps(list(q.working || q.steps || q.lines));
       if (work.length >= 2) return { type: 'equation', title: title, items: work };
+      var derived = derivedWorking(q, correct);
+      if (derived) return { type: 'equation', title: title, items: derived };
+    }
+
+    /* Any question that is really a calculation gets the worked steps, whatever
+       its declared type. A multiple-choice question asking to solve 3x-7=14 is
+       a maths problem wearing an MCQ costume, and showing only "the answer"
+       teaches nothing about how to get there. */
+    if (/[0-9][^a-z]*(?:=|<=|>=)|\bsolve\b|\bevaluate\b|\bsimplify\b/i.test(
+          str(q.question) + ' ' + str(q.explanation))) {
+      var auto = derivedWorking(q, correct);
+      if (auto && auto.length >= 2) {
+        return { type: 'equation', title: title, items: auto };
+      }
     }
 
     if (type === 'classify' || type === 'categorize') {
