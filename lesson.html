@@ -31,8 +31,8 @@
   @keyframes correctBounce { 0%{transform:scale(1)} 25%{transform:scale(1.12)} 50%{transform:scale(0.95)} 75%{transform:scale(1.04)} 100%{transform:scale(1)} }
   @keyframes wrongShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-10px)} 40%{transform:translateX(10px)} 60%{transform:translateX(-7px)} 80%{transform:translateX(7px)} }
   @keyframes confetti { 0%{transform:translateY(0) rotate(0deg);opacity:1} 100%{transform:translateY(-80px) rotate(720deg);opacity:0} }
-  @keyframes correctGlow { 0%{box-shadow:0 0 0 0 rgba(56,191,161,0)} 40%{box-shadow:0 0 0 12px rgba(56,191,161,.25)} 100%{box-shadow:0 0 0 0 rgba(56,191,161,0)} }
-  @keyframes wrongGlow { 0%{box-shadow:0 0 0 0 rgba(239,68,68,0)} 40%{box-shadow:0 0 0 12px rgba(239,68,68,.2)} 100%{box-shadow:0 0 0 0 rgba(239,68,68,0)} }
+  @keyframes correctGlow { 0%{opacity:0;box-shadow:0 0 0 0 rgba(56,191,161,0)} 40%{opacity:1;box-shadow:0 0 0 12px rgba(56,191,161,.25)} 100%{opacity:0;box-shadow:0 0 0 0 rgba(56,191,161,0)} }
+  @keyframes wrongGlow { 0%{opacity:0;box-shadow:0 0 0 0 rgba(239,68,68,0)} 40%{opacity:1;box-shadow:0 0 0 12px rgba(239,68,68,.2)} 100%{opacity:0;box-shadow:0 0 0 0 rgba(239,68,68,0)} }
   @keyframes progressPulse { 0%,100%{opacity:1} 50%{opacity:.6} }
   @keyframes streakPop { 0%{transform:scale(0.8);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
   @keyframes milestoneIn { 0%{transform:translateY(-20px);opacity:0} 100%{transform:none;opacity:1} }
@@ -123,8 +123,31 @@
     overflow:hidden; box-shadow:0 6px 28px rgba(74,124,246,.08);
     animation:fadeUp .4s cubic-bezier(0.16,1,.3,1) both;
   }
-  .session-card.correct-flash { border-color:var(--green); animation:correctGlow .6s ease; }
-  .session-card.wrong-flash { border-color:var(--red); animation:wrongGlow .6s ease; }
+  /* Answer feedback glow.
+
+     This used to set `animation` directly on .session-card, which already
+     carries `animation: fadeUp .4s both` for its entrance. Both rules target
+     the SAME property, so adding .correct-flash replaced the entrance
+     animation and discarded its `both` fill-mode - the card snapped back to
+     its pre-animation state - and removing the class 600ms later let fadeUp
+     REPLAY. That is what looked like the page flashing and the question
+     re-appearing, as though it had reloaded.
+
+     The glow now lives on an overlay pseudo-element, so it never touches the
+     card's own animation property and the entrance runs exactly once. */
+  .session-card { position:relative; }
+  .session-card::after {
+    content:''; position:absolute; inset:0; border-radius:inherit;
+    pointer-events:none; opacity:0;
+  }
+  .session-card.correct-flash { border-color:var(--green); }
+  .session-card.wrong-flash { border-color:var(--red); }
+  .session-card.correct-flash::after { animation:correctGlow .6s ease; }
+  .session-card.wrong-flash::after { animation:wrongGlow .6s ease; }
+  @media (prefers-reduced-motion:reduce) {
+    .session-card.correct-flash::after,
+    .session-card.wrong-flash::after { animation:none; }
+  }
   .q-option.correct-ans {
     background:#d1faf0 !important; border-color:var(--green) !important; color:#065f46 !important;
     animation:optionCorrect .4s cubic-bezier(0.34,1.56,0.64,1) both;
@@ -1495,6 +1518,7 @@
     var submit = submitControl();
     if (submit && !currentAnswered) {
       ev.preventDefault();
+      ev._sfEnterHandled = true;      // see note below
       submit.click();
       return;
     }
@@ -1509,8 +1533,27 @@
     var next = document.getElementById('btn-next');
     if (next && !next.disabled) {
       ev.preventDefault();
+      ev._sfEnterHandled = true;
       next.click();
     }
+  }
+
+  /* One physical keypress must be acted on once.
+
+     handleEnterKey runs in capture phase and clicks the submit button. The
+     per-input keydown listeners then run in bubble phase on the SAME event and
+     submit again. On the happy path the `currentAnswered` guard absorbs the
+     second call, but the retry path - a wrong answer on a question that must
+     be answered correctly - deliberately leaves `currentAnswered` false so the
+     learner can try again. There the second call grades the same answer a
+     second time: the feedback box is rewritten, flashCard() forces two reflows
+     back to back, and two refocus timers race each other. On a phone that
+     reads as the screen flashing and reloading.
+
+     Every Enter handler now checks this flag first, so whichever one acts,
+     the others stand down. */
+  function sfEnterAlreadyHandled(ev) {
+    return !!(ev && ev._sfEnterHandled);
   }
 
   /* Capture phase, so this runs BEFORE the per-input Enter handlers rather
@@ -2391,7 +2434,10 @@
       var inp = document.getElementById('fill-input');
       if (btn) { btn.dataset.answer = ans; btn.dataset.explanation = expl; btn.dataset.mustBeCorrect = '1'; }
       if (inp) {
-        inp.addEventListener('keydown', function(e){ if(e.key==='Enter') answerFillBtn(); });
+        inp.addEventListener('keydown', function(e){
+          if (e.key !== 'Enter' || sfEnterAlreadyHandled(e)) return;
+          answerFillBtn();
+        });
         setTimeout(function() {
           var stillHere = document.getElementById('fill-input');
           if (!stillHere) return;
@@ -2733,7 +2779,10 @@
       var inp = document.getElementById('fill-input');
       if (btn) { btn.dataset.answer = q.answer || ''; btn.dataset.explanation = q.explanation || ''; btn.dataset.mustBeCorrect = '1'; }
       if (inp) {
-        inp.addEventListener('keydown', function(e){ if(e.key==='Enter') answerFillBtn(); });
+        inp.addEventListener('keydown', function(e){
+          if (e.key !== 'Enter' || sfEnterAlreadyHandled(e)) return;
+          answerFillBtn();
+        });
         setTimeout(function() {
           var stillHere = document.getElementById('fill-input');
           if (!stillHere) return;
@@ -3466,8 +3515,17 @@
     enableNext();
   }
 
+  var _fillGradeLock = false;
+
   function answerFill(correct, explanation, mustBeCorrect) {
     if (currentAnswered) return;
+    /* Re-entrancy guard. The retry path leaves `currentAnswered` false on
+       purpose, so that flag alone cannot stop the same submission being graded
+       twice within one keypress. */
+    if (_fillGradeLock) return;
+    _fillGradeLock = true;
+    setTimeout(function () { _fillGradeLock = false; }, 0);
+
     var input = document.getElementById('fill-input');
     if (!input) return;
     var val = input.value.trim();
@@ -5822,7 +5880,7 @@
        it advances an answered one. Both handlers firing meant a single Enter
        clicked Next twice, rendering one card and instantly replacing it —
        which read as a flash and a skipped question. */
-    if (key === ' ') {
+    if (key === ' ' && !sfEnterAlreadyHandled(e)) {
       e.preventDefault();
       var nextBtn = document.getElementById('btn-next');
       if (nextBtn && !nextBtn.disabled) nextBtn.click();
@@ -6124,6 +6182,59 @@ var SFBoard = (function () {
     return out;
   }
 
+  /* ── VISUAL PRIMITIVES ────────────────────────────────────────────────────
+     Depth is drawn, not filtered. feDropShadow and feGaussianBlur render
+     inconsistently across engines and drop out entirely in some mobile
+     browsers, so a shadow here is a second shape offset beneath the first at
+     low opacity. It looks identical everywhere and costs nothing. */
+
+  function shadow(x, y, w, h, r) {
+    return '<rect x="' + r1(x + 1) + '" y="' + r1(y + 2.5) + '" width="' + r1(w) +
+      '" height="' + r1(h) + '" rx="' + (r === undefined ? 12 : r) +
+      '" fill="' + NAVY + '" opacity=".055"/>';
+  }
+
+  /* A card with weight: soft shadow, a barely-tinted fill so it lifts off the
+     page, and a hairline top highlight. */
+  function cardRich(x, y, w, h, t, r, emphasis) {
+    r = r === undefined ? 12 : r;
+    var o = shadow(x, y, w, h, r);
+    o += '<rect x="' + r1(x) + '" y="' + r1(y) + '" width="' + r1(w) + '" height="' + r1(h) +
+      '" rx="' + r + '" fill="' + (emphasis ? t.fill : '#FFFFFF') +
+      '" stroke="' + t.line + '" stroke-width="1.6"/>';
+    /* Top highlight: a 1px lighter line just inside the border reads as a
+       light source and stops large cards looking like flat outlines. */
+    o += '<path d="M' + r1(x + r) + ' ' + r1(y + 1) + ' H' + r1(x + w - r) +
+      '" stroke="#FFFFFF" stroke-opacity=".7" stroke-width="1.1" fill="none"/>';
+    return o;
+  }
+
+  /* A dot with a soft halo, for timeline markers and graph points. */
+  function marker(cx, cy, colour, r) {
+    r = r || 6;
+    return '<circle cx="' + r1(cx) + '" cy="' + r1(cy) + '" r="' + r1(r * 2.2) +
+      '" fill="' + colour + '" opacity=".12"/>' +
+      '<circle cx="' + r1(cx) + '" cy="' + r1(cy) + '" r="' + r1(r) +
+      '" fill="#FFFFFF" stroke="' + colour + '" stroke-width="2.4"/>' +
+      '<circle cx="' + r1(cx) + '" cy="' + r1(cy) + '" r="' + r1(r * 0.42) +
+      '" fill="' + colour + '"/>';
+  }
+
+  /* A curved leader between two points, bowing away from the midpoint. Straight
+     dashed lines converging on a hub read as a diagram of nothing; a curve
+     shows direction and keeps parallel leaders from merging visually. */
+  function leader(x1, y1, x2, y2, colour, dashed) {
+    var mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    var dx = x2 - x1, dy = y2 - y1;
+    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+    var bow = Math.min(len * 0.16, 22);
+    var cxp = mx - (dy / len) * bow, cyp = my + (dx / len) * bow;
+    return '<path d="M' + r1(x1) + ' ' + r1(y1) + ' Q' + r1(cxp) + ' ' + r1(cyp) +
+      ' ' + r1(x2) + ' ' + r1(y2) + '" fill="none" stroke="' + colour +
+      '" stroke-width="1.5" stroke-linecap="round"' +
+      (dashed ? ' stroke-dasharray="4 4"' : '') + ' opacity=".85"/>';
+  }
+
   function card(x, y, w, h, t, active) {
     return '<rect class="sfb-card" x="' + r1(x) + '" y="' + r1(y) + '" width="' + r1(w) +
       '" height="' + r1(h) + '" rx="12" fill="' + (active ? t.fill : '#fff') +
@@ -6297,9 +6408,13 @@ var SFBoard = (function () {
       var t = tone(i), r = rows[i], inner = '';
       if (i < rows.length - 1) {
         inner += '<line x1="' + (PAD + 26) + '" y1="' + r1(r.y + r.h) + '" x2="' + (PAD + 26) +
-          '" y2="' + r1(r.y + r.h + 18) + '" stroke="' + RULE + '" stroke-width="1.6"/>';
+          '" y2="' + r1(r.y + r.h + 18) + '" stroke="' + RULE + '" stroke-width="2" ' +
+          'stroke-linecap="round"/>';
       }
-      inner += card(PAD, r.y, boxW, r.h, t, false);
+      inner += cardRich(PAD, r.y, boxW, r.h, t, 12, false);
+      /* Numbered token with a halo, so the sequence reads before the text does. */
+      inner += '<circle cx="' + (PAD + 26) + '" cy="' + r1(r.y + r.h / 2) + '" r="19" fill="' +
+        t.line + '" opacity=".10"/>';
       inner += '<circle cx="' + (PAD + 26) + '" cy="' + r1(r.y + r.h / 2) + '" r="14" fill="' +
         t.fill + '" stroke="' + t.line + '" stroke-width="1.6"/>';
       inner += text(PAD + 26, r.y + r.h / 2 + 4.5, String(i + 1),
@@ -6350,7 +6465,7 @@ var SFBoard = (function () {
         r1(cy + Rin * Math.sin(a1)) + '" fill="none" stroke="' + RULE +
         '" stroke-width="1.6" marker-end="url(#sfbTip)"/>';
       var bx = cx + p.x - b.w / 2, by = cy + p.y - b.h / 2;
-      o += g(i + 1, arc + card(bx, by, b.w, b.h, t, false) +
+      o += g(i + 1, arc + cardRich(bx, by, b.w, b.h, t, 12, false) +
         block(cx + p.x, cy + p.y, b.L, { size: BODY + 1, weight: 700, fill: t.ink }));
     }
     return { svg: svgOpen(w, h) + o + '</svg>', beats: n, w: w, h: h };
@@ -6458,11 +6573,10 @@ var SFBoard = (function () {
       '" y2="' + r1(total - PAD) + '" stroke="' + RULE + '" stroke-width="2" stroke-linecap="round"/>');
     for (i = 0; i < n; i++) {
       var t = tone(i), r = rows[i], mid = r.y + r.h / 2, inner = '';
-      inner += card(spineX + 34, r.y, cardW, r.h, t, false);
+      inner += cardRich(spineX + 34, r.y, cardW, r.h, t, 12, false);
       inner += '<line x1="' + (spineX + 8) + '" y1="' + r1(mid) + '" x2="' + (spineX + 34) +
         '" y2="' + r1(mid) + '" stroke="' + t.line + '" stroke-width="1.2"/>';
-      inner += '<circle cx="' + spineX + '" cy="' + r1(mid) + '" r="6.5" fill="#fff" stroke="' +
-        t.line + '" stroke-width="2.2"/>';
+      inner += marker(spineX, mid, t.line, 6.5);
       inner += blockRight(spineX - 16, mid, r.a, { size: BODY, weight: 700, fill: t.ink });
       inner += blockLeft(spineX + 48, mid, r.b, { size: LABEL, weight: 600, fill: INK });
       o += g(i + 1, inner);
@@ -6489,7 +6603,11 @@ var SFBoard = (function () {
     if (items.length < 2 || !subject) return null;
     var n = items.length, i;
 
-    var w = 560, colW = 176, hubW = 168;
+    /* Geometry check: left column spans PAD..PAD+colW, the hub spans
+       (w-hubW)/2..(w+hubW)/2. At colW 176 / hubW 168 those ranges OVERLAPPED
+       by 2px, so the cards butted straight into the hub and the dashed leader
+       lines had nowhere to draw. These widths leave a 31px channel each side. */
+    var w = 560, colW = 152, hubW = 150;
     var perSide = Math.ceil(n / 2);
     var rows = [], hs = [];
     for (i = 0; i < n; i++) {
@@ -6507,13 +6625,20 @@ var SFBoard = (function () {
     var h2 = Math.max(colH + PAD * 2, 200);
     var cx = w / 2, cy = h2 / 2;
 
-    var hubL = wrap(subject, hubW - 26, LABEL + 1, 700, 2);
-    var hubH = Math.max(58, 22 + hubL.length * (LABEL + 1) * 1.34);
+    var hubL = wrap(subject, hubW - 30, LABEL + 1, 700, 2);
+    var hubH = Math.max(62, 26 + hubL.length * (LABEL + 1) * 1.34);
+    /* The hub is the subject of the diagram, so it is drawn as an emblem
+       rather than another card: a soft outer ring gives it visual weight and
+       stops it reading as one item among equals. */
     var o = g(0,
+      shadow(cx - hubW / 2, cy - hubH / 2, hubW, hubH, 16) +
+      '<rect x="' + r1(cx - hubW / 2 - 5) + '" y="' + r1(cy - hubH / 2 - 5) + '" width="' +
+      r1(hubW + 10) + '" height="' + r1(hubH + 10) + '" rx="20" fill="' + NAVY +
+      '" opacity=".06"/>' +
       '<rect x="' + r1(cx - hubW / 2) + '" y="' + r1(cy - hubH / 2) + '" width="' + hubW +
-      '" height="' + r1(hubH) + '" rx="12" fill="' + FAINT + '" stroke="' + INK +
-      '" stroke-width="1.6"/>' +
-      block(cx, cy, hubL, { size: LABEL + 1, weight: 700, fill: INK }));
+      '" height="' + r1(hubH) + '" rx="16" fill="' + FAINT + '" stroke="' + NAVY +
+      '" stroke-width="2"/>' +
+      block(cx, cy, hubL, { size: LABEL + 1, weight: 700, fill: NAVY }));
 
     var ly = cy - leftH / 2 + 7, ry = cy - rightH / 2 + 7;
     for (i = 0; i < n; i++) {
@@ -6523,10 +6648,9 @@ var SFBoard = (function () {
       if (isL) ly += bh + 14; else ry += bh + 14;
       var mid = by + bh / 2;
       var inner = '';
-      inner += '<line x1="' + r1(isL ? bx + colW : bx) + '" y1="' + r1(mid) + '" x2="' +
-        r1(isL ? cx - hubW / 2 : cx + hubW / 2) + '" y2="' + r1(cy) + '" stroke="' + t.line +
-        '" stroke-width="1.2" stroke-dasharray="3 3" opacity=".8"/>';
-      inner += card(bx, by, colW, bh, t, false);
+      inner += leader(isL ? bx + colW : bx, mid,
+                      isL ? cx - hubW / 2 - 6 : cx + hubW / 2 + 6, cy, t.line, true);
+      inner += cardRich(bx, by, colW, bh, t, 12, false);
       inner += stack(bx + colW / 2, mid, r.g, 'middle');
       o += g(i + 1, inner);
     }
@@ -6962,12 +7086,148 @@ var SFBoard = (function () {
     return { svg: svgOpen(W2, H2) + base + body + '</svg>', beats: items.length, w: W2, h: H2 };
   };
 
-  var TYPES = ['hero', 'brief', 'map', 'steps', 'cycle', 'compare', 'timeline', 'parts', 'equation'];
+  /* CHART — quantities compared.
+
+     Study material is full of "X rose from 12% to 47%" and a stack of labelled
+     boxes cannot show that. A bar length carries magnitude in a way text
+     cannot, so numbers get drawn to scale rather than written out. */
+  Scene.chart = function (spec) {
+    var raw = spec.items || spec.bars || spec.data;
+    if (!isArr(raw)) return null;
+
+    var bars = [], i, v;
+    for (i = 0; i < raw.length && bars.length < 7; i++) {
+      var it = raw[i];
+      var label, value, note = '';
+      if (typeof it === 'string') {
+        /* "1990: 42" or "1990 - 42%" */
+        var m = it.match(/^(.{1,28}?)\s*[:\-\u2013]\s*([\d.]+)\s*(%|[a-z]{1,6})?\s*$/i);
+        if (!m) continue;
+        label = clean(m[1]); value = parseFloat(m[2]); note = m[3] || '';
+      } else if (it && typeof it === 'object') {
+        label = clean(it.label || it.name || it.a);
+        /* Also accept the {a, b} pair shape the auto-chooser produces, where
+           the value arrives as text in `b` ("7%"). Without this every bar
+           parsed as NaN and the whole scene silently returned null. */
+        var rawVal = it.value !== undefined ? it.value
+                   : (it.amount !== undefined ? it.amount : it.b);
+        var vm = String(rawVal === undefined ? '' : rawVal)
+                 .match(/(-?[\d.]+)\s*(%|[a-zA-Z]{1,6})?/);
+        value = vm ? parseFloat(vm[1]) : NaN;
+        note = clean(it.unit || (vm && vm[2]) || '');
+      } else continue;
+      if (!label || !isFinite(value)) continue;
+      bars.push({ label: label, value: value, unit: note });
+    }
+    if (bars.length < 2) return null;
+
+    var max = 0;
+    for (i = 0; i < bars.length; i++) max = Math.max(max, bars[i].value);
+    if (max <= 0) return null;
+
+    var W2 = 560, LBL = 132, PADX = PAD, GAP = 12;
+    var rowH = 34;
+    var tb = { h: 0, svg: '' };
+    if (clean(spec.title)) {
+      var tl = wrap(clean(spec.title), W2 - PADX * 2, TITLE, 700, 2);
+      tb.h = 12 + tl.length * TITLE * 1.3;
+      tb.svg = '';
+      for (i = 0; i < tl.length; i++) {
+        tb.svg += text(PADX, 14 + i * TITLE * 1.3 + TITLE * 0.34, tl[i],
+          { anchor: 'start', size: TITLE, weight: 700, fill: INK });
+      }
+    }
+
+    var top = tb.h + 8;
+    var h = top + bars.length * (rowH + GAP) - GAP + PAD;
+    var trackX = PADX + LBL, trackW = W2 - trackX - PADX - 52;
+
+    var o = tb.svg ? g(0, tb.svg) : '';
+    for (i = 0; i < bars.length; i++) {
+      var b = bars[i], t = tone(i);
+      var y = top + i * (rowH + GAP);
+      var bw = Math.max(3, (b.value / max) * trackW);
+      var inner = '';
+      /* Track, so short bars still read as a proportion of the whole. */
+      inner += '<rect x="' + r1(trackX) + '" y="' + r1(y + 6) + '" width="' + r1(trackW) +
+        '" height="' + r1(rowH - 12) + '" rx="7" fill="' + FAINT + '"/>';
+      inner += '<rect x="' + r1(trackX) + '" y="' + r1(y + 6) + '" width="' + r1(bw) +
+        '" height="' + r1(rowH - 12) + '" rx="7" fill="' + t.fill +
+        '" stroke="' + t.line + '" stroke-width="1.6"/>';
+      inner += text(trackX - 10, y + rowH / 2 + 4, wrap(b.label, LBL - 14, BODY + 1, 600, 1)[0],
+        { anchor: 'end', size: BODY + 1, weight: 600, fill: INK });
+      inner += text(trackX + trackW + 10, y + rowH / 2 + 4,
+        String(b.value) + (b.unit || ''),
+        { anchor: 'start', size: BODY + 1, weight: 700, fill: t.ink });
+      o += g(i + 1, inner);
+    }
+    return { svg: svgOpen(W2, h) + o + '</svg>', beats: bars.length, w: W2, h: h };
+  };
+
+  /* PYRAMID — ranked tiers where the SHAPE is the point: trophic levels, needs
+     hierarchies, organisational strata. A plain list loses the narrowing that
+     carries the meaning. */
+  Scene.pyramid = function (spec) {
+    var items = pairs(spec.items || spec.levels || spec.tiers, 6);
+    if (items.length < 2) return null;
+    var n = items.length, i;
+
+    var W2 = 520, PADY = PAD;
+    var tb = { h: 0, svg: '' };
+    if (clean(spec.title)) {
+      var tl = wrap(clean(spec.title), W2 - PAD * 2, TITLE, 700, 2);
+      tb.h = 12 + tl.length * TITLE * 1.3;
+      for (i = 0; i < tl.length; i++) {
+        tb.svg += text(W2 / 2, 14 + i * TITLE * 1.3 + TITLE * 0.34, tl[i],
+          { size: TITLE, weight: 700, fill: INK });
+      }
+    }
+
+    var rows = [], y = tb.h + 10;
+    for (i = 0; i < n; i++) {
+      var lab = wrap(items[i].a, 300, BODY + 2, 700, 1);
+      var det = items[i].b ? wrap(items[i].b, 320, SMALL, 400, 1) : [];
+      var hh = det.length ? 48 : 38;
+      rows.push({ lab: lab, det: det, h: hh, y: y });
+      y += hh + 6;
+    }
+    var h = y - 6 + PADY;
+
+    /* Widths narrow toward the top: the apex is the smallest tier. */
+    var o = tb.svg ? g(0, tb.svg) : '';
+    for (i = 0; i < n; i++) {
+      var r = rows[i], t = tone(i);
+      var frac = 0.40 + 0.60 * (i / Math.max(1, n - 1));
+      var bw2 = (W2 - PAD * 2) * frac;
+      var x = (W2 - bw2) / 2;
+      var inner = '<path d="M' + r1(x + 10) + ' ' + r1(r.y) +
+        ' H' + r1(x + bw2 - 10) + ' A10 10 0 0 1 ' + r1(x + bw2) + ' ' + r1(r.y + 10) +
+        ' V' + r1(r.y + r.h - 10) + ' A10 10 0 0 1 ' + r1(x + bw2 - 10) + ' ' + r1(r.y + r.h) +
+        ' H' + r1(x + 10) + ' A10 10 0 0 1 ' + r1(x) + ' ' + r1(r.y + r.h - 10) +
+        ' V' + r1(r.y + 10) + ' A10 10 0 0 1 ' + r1(x + 10) + ' ' + r1(r.y) + ' Z" fill="' +
+        t.fill + '" stroke="' + t.line + '" stroke-width="1.6"/>';
+      var cy = r.y + r.h / 2;
+      if (r.det.length) {
+        inner += text(W2 / 2, cy - 4, r.lab[0], { size: BODY + 2, weight: 700, fill: t.ink });
+        inner += text(W2 / 2, cy + 12, r.det[0], { size: SMALL, weight: 400, fill: MUTED });
+      } else {
+        inner += text(W2 / 2, cy + 4.5, r.lab[0], { size: BODY + 2, weight: 700, fill: t.ink });
+      }
+      o += g(i + 1, inner);
+    }
+    return { svg: svgOpen(W2, h) + o + '</svg>', beats: n, w: W2, h: h };
+  };
+
+  var TYPES = ['hero', 'brief', 'map', 'chart', 'pyramid', 'steps', 'cycle', 'compare', 'timeline', 'parts', 'equation'];
 
   var ALIAS = {
     overview: 'hero', intro: 'hero', summary: 'hero', brief: 'hero',
     whiteboard: 'hero', opening: 'hero', lesson: 'hero',
     places: 'map', route: 'map', geography: 'map', location: 'map',
+    bar: 'chart', bars: 'chart', graph: 'chart', data: 'chart',
+    statistics: 'chart', comparison: 'chart',
+    trophic: 'pyramid', tiers: 'pyramid', levels: 'pyramid',
+    ranks: 'pyramid', hierarchy: 'pyramid',
     process: 'steps', flow: 'steps', sequence: 'steps', procedure: 'steps',
     order: 'steps', causeeffect: 'steps', chain: 'steps',
     loop: 'cycle', circular: 'cycle', feedback: 'cycle',
@@ -7020,12 +7280,36 @@ var SFBoard = (function () {
 
     var order = [];
 
+    /* Quantities: when most labels carry a number, a bar chart shows the
+       magnitude that a stack of boxes throws away. Checked first because
+       "1990: 42%" would otherwise be read as a timeline entry and lose the
+       value entirely. */
+    var numeric = 0;
+    for (i = 0; i < items.length; i++) {
+      if (/[:\-\u2013]\s*[\d.]+\s*(%|[a-z]{1,6})?\s*$/i.test(items[i].a) ||
+          (items[i].b && /^[\d.]+\s*(%|[a-z]{1,6})?$/i.test(clean(items[i].b)))) {
+        numeric++;
+      }
+    }
+    if (numeric >= Math.max(2, Math.ceil(items.length * 0.7))) {
+      order.push(['chart', null]);
+    }
+
+    /* Ranked tiers where the narrowing shape is the point. */
+    if (/\b(trophic|food (?:chain|pyramid)|hierarchy of needs|pyramid|tiers?|strata|ranks?)\b/.test(blob)) {
+      order.push(['pyramid', null]);
+    }
+
     /* Places: only worth trying when most labels actually geocode. */
     var geo = 0;
     for (i = 0; i < items.length; i++) if (geoLookup(items[i].a)) geo++;
     if (geo >= Math.max(2, Math.ceil(items.length * 0.6))) order.push(['map', null]);
 
-    if (/\b(1[0-9]{3}|20[0-9]{2}|bce?\b|\bad\b|century|era|dynasty)\b/.test(blob)) {
+    /* Dates suggest a timeline - but only when the entries are events rather
+       than measurements. "1800: 7%" is a data point whose year is the label,
+       and reading it as a timeline entry silently discards the 7%. */
+    if (/\b(1[0-9]{3}|20[0-9]{2}|bce?\b|\bad\b|century|era|dynasty)\b/.test(blob) &&
+        numeric < Math.max(2, Math.ceil(items.length * 0.7))) {
       order.push(['timeline', null]);
     }
     if (/[=+\u00d7\u00f7]|\bsolve\b|\bderivative\b|\bintegral\b/.test(blob)) {
