@@ -148,9 +148,20 @@
     color: var(--ink); margin-bottom: .28rem; letter-spacing: -0.02em;
   }
   .auth-box h2 em { font-style: italic; color: var(--blue); }
-  .auth-box > p, .view-sub {
-    color: var(--muted); font-size: 0.86rem; font-weight: 300; margin-bottom: 1.75rem;
+  /* The subtitle sits inside #login-view / #signup-view, not directly inside
+     .auth-box, so the direct-child selector `.auth-box > p` never matched it
+     and the 1.75rem below it was never applied - the line sat almost flush
+     against the Google button. Matching the views themselves fixes both
+     tabs at once. */
+  .auth-box > p, .view-sub,
+  #login-view > p, #signup-view > p {
+    color: var(--muted); font-size: 0.86rem; font-weight: 300; line-height: 1.55;
+    margin-top: .35rem; margin-bottom: 1.9rem;
   }
+  /* When a message box is showing it supplies its own separation, so the
+     subtitle does not need to reserve as much. */
+  #login-view > p:has(+ .msg-box.show),
+  #signup-view > p:has(+ .msg-box.show) { margin-bottom: 1rem; }
 
   /* ── VIEWS — crossfade instead of snap ── */
   #login-view, #signup-view {
