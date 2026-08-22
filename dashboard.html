@@ -13,6 +13,9 @@
     --ink: #1a1d2e; --muted: #6b7280; --soft: #f4f6fb;
     --blue: #4a7cf6; --blue-light: #dce8ff; --white: #fff; --border: #e8ecf4;
     --green: #38bfa1; --orange: #f59e0b;
+    /* Referenced by the score-trend colour but never declared, so a negative
+       trend rendered with no colour at all. */
+    --red: #ef4444;
     --sidebar-w: 240px;
     --sans: 'DM Sans', sans-serif; --serif: 'Instrument Serif', Georgia, serif;
   }
@@ -362,9 +365,13 @@
   .cal-day.study-today { background:var(--blue); color:#fff; font-weight:700; box-shadow:0 0 0 3px rgba(74,124,246,.3); }
   .cal-day.upcoming { background:var(--blue-light); color:var(--blue); font-weight:600; }
   .cal-day.studied { color:#fff; font-weight:700; }
+  /* A mid score used to be #4a7cf6 - the exact blue of .today and
+     .study-today - so a completed average day was indistinguishable from
+     today at a glance. Studied days now read as a warmer amber-to-green
+     progression that never collides with the blue "today" marker. */
   .cal-day.studied.score-high { background:var(--green); }
-  .cal-day.studied.score-mid { background:#4a7cf6; }
-  .cal-day.studied.score-low { background:var(--orange); }
+  .cal-day.studied.score-mid  { background:#7fc4a8; }
+  .cal-day.studied.score-low  { background:var(--orange); }
   .cal-day.missed { background:#fee2e2; color:#dc2626; }
   .cal-day.exam { background:#fff0e0; color:#c06b1a; font-weight:700; position:relative; }
   .cal-exam-dot { display:block; width:4px; height:4px; border-radius:50%; background:#c06b1a; margin:1px auto 0; }
@@ -480,9 +487,25 @@
   body.dark .plan-switcher-item.active { background:rgba(74,124,246,.15); }
   body.dark .loading-overlay { background:rgba(15,17,23,.95); }
   body.dark .ring-track { stroke:#222840; }
+  /* Dark mode previously overrode only three calendar states, and one of them
+     (.study-day) is not a class this page ever renders - the real class is
+     .study-today. Everything else kept its light-mode fill, so pale chips
+     (#dce8ff upcoming, #fee2e2 missed, #fff0e0 exam) glared against the dark
+     panel. Each state now has a dark counterpart built from the same hue at
+     low alpha, so the shading reads as tinted rather than pasted on. */
   body.dark .cal-day { color:#7a8aaa; }
+  body.dark .cal-day:hover { background:rgba(74,124,246,.18); color:#9dbcff; }
   body.dark .cal-day.today { background:var(--blue); color:#fff; }
-  body.dark .cal-day.study-day { background:rgba(74,124,246,.15); color:var(--blue); }
+  body.dark .cal-day.study-today {
+    background:var(--blue); color:#fff;
+    box-shadow:0 0 0 3px rgba(74,124,246,.28);
+  }
+  body.dark .cal-day.upcoming { background:rgba(74,124,246,.16); color:#9dbcff; }
+  body.dark .cal-day.studied.score-high { background:#2f8f78; color:#fff; }
+  body.dark .cal-day.studied.score-mid  { background:#4d7f6c; color:#fff; }
+  body.dark .cal-day.studied.score-low  { background:#a5720d; color:#fff; }
+  body.dark .cal-day.missed { background:rgba(220,38,38,.18); color:#f4a5a5; }
+  body.dark .cal-day.exam   { background:rgba(245,158,11,.18); color:#f6c56b; }
   body.dark .btn-new { box-shadow:none; }
   body.dark .nav-avatar { box-shadow:none; }
   body.dark .notif-banner { background:#2a1800; border-color:#f59e0b; }
@@ -596,7 +619,6 @@
 </div>
 
 <!-- PAGE LOADER -->
-</div>
 
 <!-- DELETE CONFIRM MODAL -->
 <div class="delete-modal-overlay" id="delete-modal" style="display:none;">
