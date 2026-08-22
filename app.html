@@ -1676,14 +1676,18 @@
      need both, in the proportion their content actually demands. */
   var SUBJECT_FORMAT_MANDATE = {
     math:
-      'MATH IS PROCEDURAL. Of 9 questions: AT LEAST 5 must be "bigequation" ' +
-      '(an expression the learner actually solves, simplifies, expands or evaluates), ' +
-      'AT LEAST 1 "wordproblem", AT LEAST 1 "errorspot" (a worked solution with one ' +
-      'flawed step to find). AT MOST 2 may be mcq or truefalse combined, and those ' +
-      'two must test a concept that genuinely cannot be computed. ' +
-      'ZERO "fill" questions - asking a learner to type a remembered term teaches ' +
-      'nothing about how to solve. If you cannot write 5 solvable problems from ' +
-      'these notes, write easier problems on the same material - do not switch format.',
+      'MATH IS PROCEDURAL, AND THIS QUOTA IS THE HARDEST RULE IN THIS PROMPT.\n' +
+      'Of 9 questions, 7 OR 8 must be "bigequation" or "wordproblem". Nothing else ' +
+      'counts toward that number - not errorspot, not sequence, not fill, not mcq.\n' +
+      '  - bigequation: an expression the learner solves, simplifies, expands, ' +
+      'factors or evaluates. Aim for 4-5 of these.\n' +
+      '  - wordproblem: a situation solved in staged sub-steps. Aim for 3-4.\n' +
+      'The remaining 1-2 may be errorspot, mcq or truefalse, and ONLY for a concept ' +
+      'that genuinely cannot be computed (naming a property, stating a rule).\n' +
+      'ZERO "fill". Typing a remembered term is not practice at solving.\n' +
+      'If the notes seem too thin for 7 solvable problems, they are not: vary the ' +
+      'numbers, vary the form, apply the same method to a new situation. Write ' +
+      'easier problems on the same material. Never switch format to fill the count.',
 
     science:
       'Mostly mechanism and prediction. Of 9: AT LEAST 3 "mcq" or "scenario" that ask ' +
@@ -2103,6 +2107,22 @@
         '  whose answer depends on outside reading.\n' +
         '- Every explanation must point back to something the notes actually state.\n' +
 
+        '\n\u2550\u2550 FADE THE SUPPORT AS THE PLAN PROGRESSES \u2550\u2550\n' +
+        'Scaffolding that never fades produces a learner who can follow steps but\n' +
+        'cannot start a problem alone. Support is removed from the END first, which\n' +
+        'is the order the research favours.\n' +
+        (dayNum <= Math.max(1, Math.floor(totalDays / 3))
+          ? 'EARLY DAY (' + dayNum + ' of ' + totalDays + '): full support. Word problems get 3-4\n' +
+            'sub-steps. Mark the FIRST sub-step "shown":true so the learner sees one worked\n' +
+            'before taking over. Explanations spell out every operation.\n'
+          : (dayNum <= Math.max(2, Math.floor(totalDays * 2 / 3))
+            ? 'MIDDLE DAY (' + dayNum + ' of ' + totalDays + '): partial support. Word problems get 2-3\n' +
+              'sub-steps, none marked shown. Explanations name the method but do not\n' +
+              'restate every arithmetic move.\n'
+            : 'LATE DAY (' + dayNum + ' of ' + totalDays + '): minimal support. Word problems get 2\n' +
+              'sub-steps at most, and several should have none at all - a single answer, the\n' +
+              'learner choosing the route themselves. Explanations stay brief: state the\n' +
+              'principle, not the walkthrough. This is the point of the plan.\n')) +
         '\n\u2550\u2550 EVERY WORD PROBLEM IS SOLVED IN STEPS \u2550\u2550\n' +
         'A wordproblem MUST carry a "steps" array of 2-4 sub-steps. The learner\n' +
         'completes them one at a time and each answer feeds the next, which is how a\n' +
