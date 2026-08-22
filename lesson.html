@@ -322,10 +322,15 @@
   .fill-input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(74,124,246,.1); }
   .fill-input.correct { border-color:var(--green); background:#d1faf0; color:#1a9e80; }
   .fill-input.wrong { border-color:var(--red); background:#fee2e2; color:#dc2626; }
+  /* Base: a normal block button. Six controls share this class and only the
+     ones inside .fill-wrap sit within the input; the rest (sequence, classify,
+     graph checks) are standalone and must stay in the flow. Positioning them
+     absolutely with no positioned ancestor is what sent the sequence card's
+     "Check order" button floating over the list. */
   .fill-submit {
-    position:absolute; right:.4rem; top:50%; transform:translateY(-50%);
-    padding:.55rem 1.05rem; background:var(--blue); color:#fff;
-    border:none; border-radius:9px; font-family:var(--sans); font-size:0.85rem;
+    display:inline-flex; align-items:center; justify-content:center;
+    padding:.7rem 1.4rem; background:var(--blue); color:#fff;
+    border:none; border-radius:10px; font-family:var(--sans); font-size:0.88rem;
     font-weight:600; cursor:pointer; line-height:1.2;
     transition:background .2s ease, transform .18s cubic-bezier(.22,.61,.36,1);
   }
@@ -568,7 +573,7 @@
     .tf-btn { padding:.95rem; font-size:0.92rem; min-height:52px; border-radius:14px; }
     /* Fill in blank */
     .fill-input { font-size:0.92rem; padding:.85rem 5.6rem .85rem 1rem; }
-    .fill-submit { padding:.5rem .85rem; font-size:0.82rem; }
+    .fill-wrap .fill-submit { padding:.5rem .85rem; font-size:0.82rem; }
     /* Write area */
     .write-area { min-height:100px; font-size:0.88rem; }
     /* Results */
@@ -615,9 +620,21 @@
   .tf-btn:hover:not(:disabled), .seq-item:hover, .match-item:hover:not(:disabled),
   .classify-item:hover, .hint-btn:hover, .conf-btn:hover,
   .btn-next:hover:not(:disabled) { transform:translateY(-2px); }
-  /* Centred inside the field, so its hover must keep the -50% offset. */
-  .fill-submit:hover:not(:disabled) { transform:translateY(-50%) scale(1.03); }
-  .fill-submit:active:not(:disabled) { transform:translateY(-50%) scale(.97); }
+
+  /* Standalone check buttons lift like every other control. Placed before the
+     wrapper-scoped rules so those win by specificity (two classes beats one)
+     rather than relying on a :not() that must enumerate ancestors. */
+  .fill-submit:hover:not(:disabled) { transform:translateY(-2px); }
+  .fill-submit:active:not(:disabled) { transform:translateY(0) scale(.98); }
+
+  /* Only inside the fill wrapper does the button sit within the field. */
+  .fill-wrap .fill-submit {
+    position:absolute; right:.4rem; top:50%; transform:translateY(-50%);
+    padding:.55rem 1.05rem; border-radius:9px; font-size:0.85rem;
+  }
+  /* Its hover must preserve the centring offset or it jumps out of the box. */
+  .fill-wrap .fill-submit:hover:not(:disabled) { transform:translateY(-50%) scale(1.03); }
+  .fill-wrap .fill-submit:active:not(:disabled) { transform:translateY(-50%) scale(.97); }
   .tf-btn:active:not(:disabled), .seq-item:active, .match-item:active:not(:disabled),
   .classify-item:active, .hint-btn:active, .conf-btn:active,
   .btn-next:active:not(:disabled) {
@@ -1144,8 +1161,12 @@
     var questions = normalizeQuestions(day.questions || []);
     /* Repair the format mix before the queue is built, so a maths day cannot
        reach the learner as a pile of multiple choice. */
-    questions = enforceFormatMix(questions, fmStr(day.subjectType || day.subject_type ||
-                                                  (window.SFStore && SFStore.getItem('studyflow_subject_type')) || ''));
+    /* The subject type lives on the PLAN, not the day. Reading day.subjectType
+       returned undefined every time, so the enforcer saw an empty subject and
+       silently skipped the maths branch entirely - which is why a maths day
+       could still arrive full of multiple choice. Same source the rest of
+       buildQueue uses, so the two can no longer disagree. */
+    questions = enforceFormatMix(questions, fmStr((plan && plan.subjectType) || ''));
     day.questions = questions;
 
     /* The whiteboard is built here but queued later - see below. Placing it at
@@ -2116,7 +2137,13 @@
         '<button class="tf-btn" onclick="answerTF(this,\'False\',\'' + esc(q.correct) + '\',\'' + esc(q.explanation) + '\')">False</button>' +
         '</div>';
     } else {
-      var letters = ['A','B','C','D'];
+/* Derived, not a fixed list. A hard-coded ['A','B','C','D'] rendered the
+         badge for a fifth option as the literal text "undefined", which is what
+         appeared on any question the model returned with more than four choices. */
+      var optLetter = function (i) {
+        return i < 26 ? String.fromCharCode(65 + i) : String(i + 1);
+      };
+      var letters = { length: 0 };   // retained so old references fail loudly, not silently
       var rawOpts = q.options || [];
       // Filter empty options while tracking original index -> new index mapping
       // so correctIndex stays accurate even if some options were empty
@@ -2140,7 +2167,7 @@
       optHtml = '<div class="q-options">';
       validOpts.forEach(function(opt, oi) {
         optHtml += '<button class="q-option" onclick="answerMCQ(this,' + oi + ',' + newCorrectIndex + ',\'' + esc(q.explanation) + '\')">' +
-          '<span class="opt-letter">' + letters[oi] + '</span><span>' + opt + '</span></button>';
+          '<span class="opt-letter">' + optLetter(oi) + '</span><span>' + opt + '</span></button>';
       });
       optHtml += '</div>';
     }
@@ -2477,7 +2504,13 @@
   // q: { passage, question, options, correctIndex, hint, explanation, questionType, difficulty }
   // questionType: 'main-idea' | 'vocab-in-context' | 'inference' | 'tone' | 'detail'
   function renderPassage(q) {
-    var letters = ['A','B','C','D'];
+/* Derived, not a fixed list. A hard-coded ['A','B','C','D'] rendered the
+       badge for a fifth option as the literal text "undefined", which is what
+       appeared on any question the model returned with more than four choices. */
+    var optLetter = function (i) {
+      return i < 26 ? String.fromCharCode(65 + i) : String(i + 1);
+    };
+    var letters = { length: 0 };   // retained so old references fail loudly, not silently
     var rawOpts = q.options || [];
     var validOpts = [];
     var newCorrectIndex = -1;
@@ -2504,7 +2537,7 @@
     var optHtml = '<div class="q-options">';
     validOpts.forEach(function(opt, oi) {
       optHtml += '<button class="q-option" onclick="answerMCQ(this,' + oi + ',' + newCorrectIndex + ',\'' + esc(q.explanation) + '\')">' +
-        '<span class="opt-letter">' + letters[oi] + '</span><span>' + opt + '</span></button>';
+        '<span class="opt-letter">' + optLetter(oi) + '</span><span>' + opt + '</span></button>';
     });
     optHtml += '</div>';
 
