@@ -681,6 +681,78 @@
   @media (prefers-reduced-motion:reduce) {
     .topic-path-rail, .topic-step { animation:none; opacity:1; }
   }
+
+  /* ── SCAFFOLDED WORD PROBLEM ──────────────────────────────────────────
+     A faded worked example. The learner completes one sub-step at a time and
+     each answer is carried into the next, so a multi-stage problem is worked
+     the way it would be on paper rather than answered in a single leap.
+
+     Renkl & Atkinson's fading research found that removing the LAST step
+     first (backward fading) is the most favourable order for learning, so the
+     early steps can be shown already worked while the later ones are left for
+     the learner. */
+  @keyframes swpStepIn {
+    from { opacity:0; transform:translateY(10px); }
+    to   { opacity:1; transform:none; }
+  }
+  @keyframes swpLock { 0%{transform:scale(1);} 45%{transform:scale(1.03);} 100%{transform:scale(1);} }
+
+  .swp { position:relative; margin:.2rem 0 .4rem; }
+  .swp-rail {
+    position:absolute; left:13px; top:16px; bottom:16px; width:2px;
+    background:linear-gradient(180deg,var(--blue),rgba(74,124,246,.15));
+    border-radius:2px;
+  }
+  .swp-step {
+    display:flex; gap:.75rem; align-items:flex-start; position:relative;
+    padding:.1rem 0 .85rem;
+    animation:swpStepIn .38s cubic-bezier(.22,.61,.36,1) both;
+  }
+  .swp-step.is-locked { animation:swpStepIn .38s cubic-bezier(.22,.61,.36,1) both, swpLock .3s ease .38s; }
+  .swp-step[hidden] { display:none; }
+  .swp-num {
+    flex:0 0 28px; height:28px; border-radius:50%; background:#fff;
+    border:2px solid var(--border); display:flex; align-items:center;
+    justify-content:center; font-size:.72rem; font-weight:700; color:var(--muted);
+    z-index:1; transition:border-color .22s ease,background .22s ease,color .22s ease;
+  }
+  .swp-step.is-active .swp-num { border-color:var(--blue); color:var(--blue); }
+  .swp-step.is-done .swp-num { border-color:var(--green); background:var(--green); color:#fff; }
+  .swp-body { flex:1; min-width:0; padding-top:.15rem; }
+  .swp-prompt { font-size:.86rem; line-height:1.55; color:var(--ink); font-weight:600;
+    margin-bottom:.4rem; }
+  .swp-prompt .swp-carry { color:var(--blue); font-weight:700; }
+  .swp-row { display:flex; gap:.45rem; align-items:center; flex-wrap:wrap; }
+  .swp-input {
+    flex:1 1 130px; min-width:0; font:inherit; font-size:.9rem; font-weight:600;
+    color:var(--ink); background:#fff; border:1.5px solid var(--border);
+    border-radius:10px; padding:.55rem .7rem;
+    transition:border-color .18s ease, box-shadow .18s ease, background .18s ease;
+  }
+  .swp-input:focus { outline:none; border-color:var(--blue);
+    box-shadow:0 0 0 3px rgba(74,124,246,.14); }
+  .swp-input.is-right { border-color:var(--green); background:#ECFDF5; }
+  .swp-input.is-wrong { border-color:var(--red); background:#FEF2F2; }
+  .swp-unit { font-size:.8rem; font-weight:600; color:var(--muted); }
+  .swp-go {
+    font:inherit; font-size:.8rem; font-weight:700; color:#fff; background:var(--blue);
+    border:1.5px solid var(--blue); border-radius:10px; padding:.5rem .85rem;
+    cursor:pointer; transition:transform .18s cubic-bezier(.22,.61,.36,1), background .18s ease;
+  }
+  .swp-go:hover:not(:disabled) { transform:translateY(-2px); background:#3B69DE; }
+  .swp-go:active:not(:disabled) { transform:translateY(0) scale(.98); }
+  .swp-go:disabled { opacity:.4; cursor:default; transform:none; }
+  .swp-note { font-size:.76rem; line-height:1.5; margin-top:.35rem; }
+  .swp-note.is-right { color:#0A6B54; }
+  .swp-note.is-wrong { color:#9B2C2C; }
+  .swp-shown { font-size:.86rem; font-weight:700; color:var(--ink); }
+  .swp-shown .swp-tag { display:inline-block; font-size:.6rem; font-weight:700;
+    letter-spacing:.07em; text-transform:uppercase; color:var(--muted);
+    margin-right:.4rem; }
+  @media (prefers-reduced-motion:reduce) {
+    .swp-step, .swp-step.is-locked { animation:none; }
+    .swp-go:hover:not(:disabled) { transform:none; }
+  }
 </style>
 </head>
 <body>
@@ -1721,6 +1793,7 @@
     var sc = document.getElementById('session-card');
     var html = '';
     currentCardType = (card && card.type) || '';
+    swpState = null;   // a previous scaffold must not leak into this card
 
     if (card.type === 'pretest-intro') {
       html = buildCard('Quick Check', 'Before we start — test yourself!', false,
@@ -2852,20 +2925,248 @@
     return '';
   }
 
+  /* ── SCAFFOLDED WORD PROBLEM ──────────────────────────────────────────────
+     A multi-stage problem worked one sub-step at a time, each answer carried
+     into the next, rather than answered in a single leap.
+
+     This is a faded worked example (Renkl & Atkinson). Backward fading - the
+     early steps shown already worked, the later ones left to the learner - was
+     found the most favourable order, so `shown: true` on a step displays it
+     solved and it does not count as work.
+
+     Step shape:
+       { prompt, answer, unit, hint, shown }
+     A prompt may reference an earlier result with {1}, {2}: those placeholders
+     are substituted with what the learner actually answered, which is what
+     makes each step depend on the one before it. */
+
+  var swpState = null;
+
+  function swpSteps(q) {
+    var raw = q.steps || q.subSteps || q.parts;
+    if (Object.prototype.toString.call(raw) !== '[object Array]') return [];
+    var out = [], i;
+    for (i = 0; i < raw.length && out.length < 6; i++) {
+      var st = raw[i] || {};
+      if (typeof st === 'string') { out.push({ prompt: st, answer: '', unit: '', shown: false }); continue; }
+      var prompt = fmClean(st.prompt || st.question || st.text || st.step);
+      var answer = fmClean(st.answer == null ? '' : st.answer);
+      if (!prompt) continue;
+      out.push({
+        prompt: prompt, answer: answer,
+        unit: fmClean(st.unit || ''), hint: fmClean(st.hint || ''),
+        shown: !!st.shown
+      });
+    }
+    /* Every step except a deliberately shown one needs an answer to grade. */
+    var usable = [];
+    for (i = 0; i < out.length; i++) {
+      if (out[i].shown || out[i].answer) usable.push(out[i]);
+    }
+    return usable.length >= 2 ? usable : [];
+  }
+
+  /* Substitute {1}, {2} with the learner's own earlier answers. */
+  function swpFill(text, answers) {
+    return String(text == null ? '' : text).replace(/\{(\d+)\}/g, function (m, n) {
+      var v = answers[parseInt(n, 10) - 1];
+      return v == null || v === ''
+        ? '<span class="swp-carry">\u2026</span>'
+        : '<span class="swp-carry">' + escHtml(v) + '</span>';
+    });
+  }
+
+  function escHtml(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* Numeric-tolerant comparison: "180", "180 miles" and "180.0" all match. */
+  function swpMatches(given, expected) {
+    var g = fmClean(given).toLowerCase().replace(/[,$]/g, '');
+    var e = fmClean(expected).toLowerCase().replace(/[,$]/g, '');
+    if (!g) return false;
+    if (g === e) return true;
+    var gn = parseFloat(g.replace(/[^0-9.\-]/g, ''));
+    var en = parseFloat(e.replace(/[^0-9.\-]/g, ''));
+    if (!isNaN(gn) && !isNaN(en) && Math.abs(gn - en) < 0.001) return true;
+    /* Allow the learner to omit a unit the expected answer carries. */
+    if (e.indexOf(g) === 0 && g.length >= Math.max(1, e.length * 0.4)) return true;
+    return false;
+  }
+
+  function swpRender(steps) {
+    var html = '<div class="swp">' + (steps.length > 1 ? '<div class="swp-rail"></div>' : '');
+    for (var i = 0; i < steps.length; i++) {
+      var st = steps[i];
+      html += '<div class="swp-step" id="swp-step-' + i + '"' +
+        (i === 0 ? '' : ' hidden') + ' style="animation-delay:' + (i * 0.04).toFixed(2) + 's">' +
+        '<div class="swp-num" id="swp-num-' + i + '">' + (i + 1) + '</div>' +
+        '<div class="swp-body">' +
+        '<div class="swp-prompt" id="swp-prompt-' + i + '">' + escHtml(st.prompt) + '</div>';
+
+      if (st.shown) {
+        html += '<div class="swp-shown"><span class="swp-tag">Given</span>' +
+          escHtml(st.answer) + (st.unit ? ' ' + escHtml(st.unit) : '') + '</div>';
+      } else {
+        html += '<div class="swp-row">' +
+          '<input class="swp-input" id="swp-in-' + i + '" type="text" ' +
+          'inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off" ' +
+          'placeholder="Your answer"/>' +
+          (st.unit ? '<span class="swp-unit">' + escHtml(st.unit) + '</span>' : '') +
+          '<button class="swp-go" id="swp-go-' + i + '" onclick="swpCheck(' + i + ')">Check</button>' +
+          '</div>';
+      }
+      html += '<div class="swp-note" id="swp-note-' + i + '"></div></div></div>';
+    }
+    return html + '</div>';
+  }
+
+  function swpReveal(i) {
+    var el = document.getElementById('swp-step-' + i);
+    if (!el) return;
+    el.hidden = false;
+    el.className = 'swp-step is-active';
+    var inp = document.getElementById('swp-in-' + i);
+    if (inp) {
+      /* preventScroll so revealing a step does not yank the page. */
+      try { inp.focus({ preventScroll: true }); } catch (e) { /* older engines */ }
+    }
+    /* A step shown already worked needs no input, so move straight past it. */
+    if (swpState && swpState.steps[i] && swpState.steps[i].shown) {
+      swpState.answers[i] = swpState.steps[i].answer;
+      el.className = 'swp-step is-done';
+      var num = document.getElementById('swp-num-' + i);
+      if (num) num.innerHTML = '\u2713';
+      swpAdvance(i);
+    }
+  }
+
+  function swpAdvance(i) {
+    var next = i + 1;
+    if (!swpState) return;
+    if (next < swpState.steps.length) {
+      /* Substitute what the learner actually answered into the next prompt. */
+      var pEl = document.getElementById('swp-prompt-' + next);
+      if (pEl) pEl.innerHTML = swpFill(swpState.steps[next].prompt, swpState.answers);
+      swpReveal(next);
+      return;
+    }
+    swpFinish();
+  }
+
+  function swpCheck(i) {
+    if (!swpState || swpState.done) return;
+    var st = swpState.steps[i];
+    var inp = document.getElementById('swp-in-' + i);
+    var note = document.getElementById('swp-note-' + i);
+    var stepEl = document.getElementById('swp-step-' + i);
+    var goBtn = document.getElementById('swp-go-' + i);
+    if (!st || !inp) return;
+
+    var val = inp.value.trim();
+    if (!val) {
+      inp.style.animation = 'sfShake .42s ease';
+      setTimeout(function () { inp.style.animation = ''; }, 450);
+      return;
+    }
+
+    if (swpMatches(val, st.answer)) {
+      swpState.answers[i] = val;
+      inp.disabled = true;
+      inp.className = 'swp-input is-right';
+      if (goBtn) goBtn.disabled = true;
+      if (stepEl) stepEl.className = 'swp-step is-done is-locked';
+      var num = document.getElementById('swp-num-' + i);
+      if (num) num.innerHTML = '\u2713';
+      if (note) { note.className = 'swp-note is-right'; note.textContent = 'Correct.'; }
+      swpAdvance(i);
+      return;
+    }
+
+    /* Wrong: two tries, then show the value so the chain can continue. A
+       learner stuck on step 2 must not be locked out of steps 3 and 4. */
+    swpState.wrong[i] = (swpState.wrong[i] || 0) + 1;
+    inp.className = 'swp-input is-wrong';
+    inp.style.animation = 'sfShake .42s ease';
+    setTimeout(function () { inp.style.animation = ''; }, 450);
+
+    if (swpState.wrong[i] >= 2) {
+      swpState.answers[i] = st.answer;
+      inp.value = st.answer;
+      inp.disabled = true;
+      if (goBtn) goBtn.disabled = true;
+      if (stepEl) stepEl.className = 'swp-step is-done';
+      if (note) {
+        note.className = 'swp-note is-wrong';
+        note.textContent = 'The value here is ' + st.answer +
+          (st.hint ? ' \u2014 ' + st.hint : '') + '. Carrying it forward.';
+      }
+      swpAdvance(i);
+      return;
+    }
+
+    if (note) {
+      note.className = 'swp-note is-wrong';
+      note.textContent = st.hint ? 'Not quite. ' + st.hint : 'Not quite \u2014 try once more.';
+    }
+  }
+
+  function swpFinish() {
+    if (!swpState || swpState.done) return;
+    swpState.done = true;
+
+    var perfect = true, i;
+    for (i = 0; i < swpState.steps.length; i++) {
+      if (!swpState.steps[i].shown && (swpState.wrong[i] || 0) > 0) perfect = false;
+    }
+
+    currentAnswered = true;
+    totalAnswered++;
+    if (perfect) correctCount++;
+    showFeedback(perfect, swpState.explanation ||
+      'Each step feeds the next \u2014 that chain is the method, not the individual numbers.');
+    enableNext();
+  }
+
+  window.swpCheck = swpCheck;
+
   function renderWordProblem(q) {
     var scenario = q.scenario || q.question || '';
     var visual = buildWordProblemAid(scenario);
+
+    /* Scaffolded route: the problem is worked one sub-step at a time, each
+       answer carried into the next. Falls back to a single answer box when the
+       question did not arrive with usable steps, because a one-step scaffold
+       is just a text field with extra chrome. */
+    var steps = swpSteps(q);
+    var scaffolded = steps.length >= 2;
+
+    var solveArea;
+    if (scaffolded) {
+      swpState = {
+        steps: steps, answers: [], wrong: [], done: false,
+        explanation: q.explanation || ''
+      };
+      solveArea =
+        '<div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin:.2rem 0 .55rem;">' +
+        'Work it through, one step at a time:</div>' + swpRender(steps);
+    } else {
+      solveArea =
+        '<div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin-bottom:.5rem;">Your answer:</div>' +
+        '<div class="fill-wrap">' +
+        '<input class="fill-input" id="fill-input" type="text" placeholder="Type your answer..." inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off"/>' +
+        '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
+        '</div>';
+    }
 
     var body = '<div class="q-meta"><span class="q-type-label" style="background:#fff8ed;color:#d97706;">Word Problem</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
       '<div style="background:linear-gradient(135deg,#f0f7ff,#e8f4ff);border-left:4px solid #4a7cf6;border-radius:0 14px 14px 0;padding:1rem 1.1rem;margin-bottom:.75rem;font-size:0.9rem;line-height:1.75;color:var(--ink);">' +
       scenario + '</div>' +
       visual +
-      '<div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin-bottom:.5rem;">Your answer:</div>' +
-      '<div class="fill-wrap">' +
-      '<input class="fill-input" id="fill-input" type="text" placeholder="Type your answer..." inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off"/>' +
-      '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
-      '</div>' +
+      solveArea +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Read carefully and identify what the question is asking for.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
@@ -2877,6 +3178,11 @@
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
 
     setTimeout(function() {
+      if (scaffolded) {
+        /* Reveal the opening step; the chain drives itself from there. */
+        swpReveal(0);
+        return;
+      }
       var btn = document.getElementById('fill-btn');
       var inp = document.getElementById('fill-input');
       if (btn) { btn.dataset.answer = q.answer || ''; btn.dataset.explanation = q.explanation || ''; btn.dataset.mustBeCorrect = '1'; }
