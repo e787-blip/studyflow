@@ -294,12 +294,63 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
   }
+
+  /* ── Password visibility, remember-me, and the back control ───────────
+     Ported from the reference sign-in design. The reference was React +
+     Tailwind with a console.log submit stub; this page is vanilla HTML on live
+     Firebase auth, so the DESIGN is adopted and the working authentication is
+     left untouched. Colours are StudyFlow's own tokens, not the reference's
+     slate/black palette. */
+  .pw-wrap { position: relative; }
+  .pw-wrap .form-input { padding-right: 3rem; }
+  .pw-toggle {
+    position: absolute; right: .55rem; top: 50%; transform: translateY(-50%);
+    width: 32px; height: 32px; display: flex; align-items: center;
+    justify-content: center; background: transparent; border: 0; border-radius: 8px;
+    cursor: pointer; color: #8894ad; padding: 0;
+    transition: background .18s ease, color .18s ease;
+  }
+  .pw-toggle:hover { background: #eef2fb; color: var(--blue, #4a7cf6); }
+  .pw-toggle:focus-visible { outline: 2px solid var(--blue, #4a7cf6); outline-offset: 2px; }
+  .pw-toggle svg { width: 18px; height: 18px; }
+
+  .row-between {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: .75rem; margin: -.15rem 0 1rem;
+  }
+  .remember {
+    display: inline-flex; align-items: center; gap: .45rem;
+    font-size: .82rem; color: #5b6478; cursor: pointer; user-select: none;
+  }
+  .remember input {
+    width: 16px; height: 16px; accent-color: var(--blue, #4a7cf6);
+    cursor: pointer; margin: 0;
+  }
+
+  .back-home {
+    position: absolute; top: 1.4rem; left: 1.4rem; z-index: 3;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(255,255,255,.16); backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,.25);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; text-decoration: none;
+    transition: background .18s ease, transform .18s ease;
+  }
+  .back-home:hover { background: rgba(255,255,255,.28); transform: translateY(-1px); }
+  .back-home svg { width: 18px; height: 18px; }
+
+  @media (max-width: 860px) {
+    .back-home { top: 1rem; left: 1rem; width: 34px; height: 34px; }
+  }
 </style>
 </head>
 <body>
 
 <!-- LEFT PANEL -->
 <div class="left-panel">
+  <a href="https://studyflow-ten-vert.vercel.app" class="back-home" aria-label="Back to home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+  </a>
   <a href="https://studyflow-ten-vert.vercel.app" class="left-logo">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:rgba(255,255,255,.9)"/><stop offset="100%" style="stop-color:rgba(255,255,255,.6)"/></linearGradient></defs>
@@ -356,9 +407,25 @@
       </div>
       <div class="form-field">
         <label class="form-label">Password</label>
-        <input type="password" class="form-input" id="login-password" placeholder="••••••••" />
+        <div class="pw-wrap">
+          <input type="password" class="form-input" id="login-password" placeholder="••••••••" />
+          <button type="button" class="pw-toggle" id="login-pw-toggle"
+                  aria-label="Show password" aria-pressed="false"
+                  onclick="togglePassword('login-password', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
       </div>
-      <a href="#" class="forgot" onclick="resetPassword();return false;">Forgot password?</a>
+      <div class="row-between">
+        <label class="remember">
+          <input type="checkbox" id="login-remember" checked />
+          <span>Remember me</span>
+        </label>
+        <a href="#" class="forgot" style="margin:0" onclick="resetPassword();return false;">Forgot password?</a>
+      </div>
       <button class="btn-submit" onclick="handleLogin()">Sign in →</button>
       <p class="terms">By signing in you agree to our <a href="https://studyflow-ten-vert.vercel.app/terms.html">Terms</a> and <a href="https://studyflow-ten-vert.vercel.app/privacy.html">Privacy Policy</a>.</p>
     </div>
@@ -387,7 +454,17 @@
       </div>
       <div class="form-field">
         <label class="form-label">Password</label>
-        <input type="password" class="form-input" id="signup-password" placeholder="Min. 8 characters" />
+        <div class="pw-wrap">
+          <input type="password" class="form-input" id="signup-password" placeholder="Min. 8 characters" />
+          <button type="button" class="pw-toggle" id="signup-pw-toggle"
+                  aria-label="Show password" aria-pressed="false"
+                  onclick="togglePassword('signup-password', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="form-field">
         <label class="form-label">Class code <span style="font-weight:300;text-transform:none;letter-spacing:0;">(optional)</span></label>
@@ -409,7 +486,7 @@
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, updateProfile, sendPasswordResetEmail, signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, updateProfile, sendPasswordResetEmail, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyCY4FI-6L9tsAokNFl6o5bsmCt-JD0H8HI",
@@ -517,7 +594,22 @@
     var btn = document.querySelector('#login-view .btn-submit');
     if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
     showMsg('login-msg', 'success', 'Signing you in...');
-    signInWithEmailAndPassword(auth, email, password)
+
+    /* "Remember me" now controls real session persistence rather than being a
+       checkbox that does nothing. Local keeps the session across browser
+       restarts; session ends it when the tab closes, which is what someone on
+       a shared or school machine expects. If the call fails we still sign in
+       on the default persistence rather than blocking the learner. */
+    var remember = document.getElementById('login-remember');
+    var mode = (remember && !remember.checked)
+      ? browserSessionPersistence
+      : browserLocalPersistence;
+
+    setPersistence(auth, mode)
+      .catch(function () { /* fall back to the default */ })
+      .then(function () {
+        return signInWithEmailAndPassword(auth, email, password);
+      })
       .then(function(cred) {
         saveUser(cred.user);
         smartRedirect();
@@ -630,6 +722,32 @@
         showMsg('login-msg', 'error', msg);
       });
   }
+  /* Show/hide the password. Swaps the eye for an eye-with-slash and keeps
+     aria-pressed in step, so a screen reader announces the state rather than
+     just "button". Defined on window because the markup calls it inline, and
+     this script is a module (its scope is not global). */
+  function togglePassword(inputId, btn) {
+    var inp = document.getElementById(inputId);
+    if (!inp || !btn) return;
+    var show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+    btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    btn.innerHTML = show
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 7 10 7a18.5 18.5 0 0 1-2.16 3.19"/>' +
+        '<path d="M6.61 6.61A18.5 18.5 0 0 0 2 11s3.5 7 10 7a9.1 9.1 0 0 0 4.24-1.02"/>' +
+        '<path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M2 2l20 20"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>' +
+        '<circle cx="12" cy="12" r="3"/></svg>';
+    /* Keep the caret where the learner left it. */
+    try { inp.focus({ preventScroll: true }); } catch (e) { /* older engines */ }
+  }
+  window.togglePassword = togglePassword;
+
   window.resetPassword = resetPassword;
 
   var selectedRole = 'student';
