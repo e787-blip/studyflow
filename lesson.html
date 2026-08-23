@@ -1263,7 +1263,13 @@
     var subjectText = ((plan.subject || '') + ' ' + (day.title || '') + ' ' + subjectType).toLowerCase();
     // NOTE: day.content intentionally excluded from subjectText — it causes false positives
     // (e.g. "graph" in a science lesson triggering math graph questions)
-    var isMath     = subjectType === 'math'     || /\bmath\b|algebra|calculus|trigonometry|geometry|equation|slope|linear\b|quadratic|formula\b|\bsolve\b|polynomial|coefficient/.test(subjectText);
+    /* This list only recognised higher maths, so arithmetic topics fell
+       through: "Adding and Subtracting Fractions", "Multiplying Decimals",
+       "Order of Operations", "Long Division" and "Percent Increase" all
+       tested false, and the big-equation and word-problem cards were never
+       inserted for them. Arithmetic is the maths most learners are actually
+       practising, so it belongs here. */
+    var isMath     = subjectType === 'math'     || /\bmath\b|\bmaths\b|algebra|calculus|trigonometr|geometr|equation|slope|\blinear\b|quadratic|\bformula\b|\bsolve\b|\bsolving\b|polynomial|coefficient|\badd\b|\badding\b|\baddition\b|\bsubtract|\bmultipl|\bdivide\b|\bdividing\b|\bdivisor\b|long division|fraction|decimal|percent|\bratio\b|\bratios\b|\bproportion|integer|exponent|\bpowers\b|arithmetic|numerator|denominator|order of operations|rounding|place value|\bfactoring\b|\bfactorisation\b|\bfactorization\b|prime number|inequalit|absolute value|square root|\bsimplif|\bevaluate\b|\bexpression\b|\bexpressions\b|\bvariable\b|\bvariables\b|\bsum\b|\bproduct\b|\bquotient\b|\bremainder\b|\bmean\b|\bmedian\b|\bmode\b|\bperimeter\b|\barea of\b|\bvolume of\b/.test(subjectText);
     var isScience  = subjectType === 'science'  || /biology|chemistry|physics|\bscience\b|cell\b|atom\b|molecule|reaction|genetics|ecosystem/.test(subjectText);
     var isHistory  = subjectType === 'history'  || /history|war|revolution|empire|century|ancient|medieval|political/.test(subjectText);
     var isEnglish  = subjectType === 'english'  || /literature|english|novel|poem|author|character|theme|metaphor|grammar/.test(subjectText);
@@ -2676,7 +2682,7 @@
   function detectMathTopic(eq) {
     var e = eq.toLowerCase();
     // Order matters — most specific first
-    if (/d\/dx|dy\/dx|f'\(|derivative|integral|∫|lim|limit/.test(e))
+    if (/d\/dx|dy\/dx|f'\(|derivative|differentiat|integral|integrat|antiderivativ|∫|\blim\b|limit|chain rule|product rule|quotient rule/.test(e))
       return { id:'calculus', label:'Calculus', badge:'Calculus', title:'Solve it', instruction:'Differentiate, integrate, or evaluate the limit.', placeholder:'Answer…' };
     if (/\bsin\b|\bcos\b|\btan\b|\bcsc\b|\bsec\b|\bcot\b|\bθ\b|\bangle\b|°|\bradian\b/.test(e))
       return { id:'trig', label:'Trigonometry', badge:'Trig', title:'Solve it', instruction:'Apply the trig identity or evaluate the expression.', placeholder:'Answer…' };
@@ -2692,14 +2698,31 @@
       return { id:'geometry', label:'Geometry', badge:'Geometry', title:'Find the measurement', instruction:'Apply the formula and solve.', placeholder:'Answer with units…' };
     if (/\bpercent\b|%|\bratio\b|\bproportion\b|\brate\b|\bper\b/.test(e))
       return { id:'ratio', label:'Ratios & %', badge:'Equation', title:'Solve it', instruction:'Set up the proportion or percentage equation and solve.', placeholder:'Answer…' };
-    if (/×|multiplication|\*\s*\d|\d\s*\*|\bproduct\b/.test(e) && !/\^/.test(e))
-      return { id:'multiply', label:'Multiplication', badge:'Arithmetic', title:'Multiply', instruction:'Find the product.', placeholder:'Answer…' };
-    if (/÷|division|\/\s*\d|\d\s*\/\s*\d|\bquotient\b/.test(e) && !/http|[a-z]{2,}/.test(e))
-      return { id:'divide', label:'Division', badge:'Arithmetic', title:'Divide', instruction:'Find the quotient.', placeholder:'Answer…' };
-    if (/\+|\bsum\b|\badd\b/.test(e) && !/-.*=/.test(e) && !/[a-z]/.test(e))
-      return { id:'add', label:'Addition', badge:'Arithmetic', title:'Add', instruction:'Stack and add.', placeholder:'Answer…' };
-    if ((/\bsubtract\b|\bminus\b|\bdifference\b/.test(e) || /^\s*\d[\d\s]*-\s*\d/.test(e)) && !/[a-z]/.test(e))
-      return { id:'subtract', label:'Subtraction', badge:'Arithmetic', title:'Subtract', instruction:'Find the difference.', placeholder:'Answer…' };
+    /* Arithmetic used to require the WHOLE string to contain no letters, so it
+       only ever matched a bare "47 + 28". Anything phrased in words - "What is
+       47 + 28?", "Subtract 37 from 82", "Divide 144 by 12" - fell through to
+       the default and was presented as "Solve for x" with an "x = ?" box, for
+       a question with no x in it.
+
+       The guard exists for a good reason: it must not claim an ALGEBRA problem
+       that happens to contain a plus sign. So instead of banning letters
+       outright, we ban the thing that actually signals algebra - a variable
+       term such as 3x, or an equals sign with a letter on one side. */
+    var hasVariable = /\b\d*[a-z]\s*(?:[+\-*\/^=]|$)/i.test(e.replace(/\b(?:what|is|the|and|by|from|of|find|sum|add|plus|minus|subtract|difference|times|multiply|product|divide|quotient|total|equals?)\b/gi, ' ')) ||
+                      /[a-z]\s*=|=\s*[a-z]/i.test(e);
+
+    if (!hasVariable) {
+      if (/\bdivide\b|\bquotient\b|\bdivided by\b|÷/.test(e) ||
+          (/\d\s*\/\s*\d/.test(e) && !/https?/.test(e)))
+        return { id:'divide', label:'Division', badge:'Arithmetic', title:'Divide', instruction:'Find the quotient.', placeholder:'Answer…' };
+      if (/\bmultiply\b|\bproduct\b|\btimes\b|×|\d\s*[x*]\s*\d/.test(e))
+        return { id:'multiply', label:'Multiplication', badge:'Arithmetic', title:'Multiply', instruction:'Find the product.', placeholder:'Answer…' };
+      if (/\bsubtract\b|\bminus\b|\bdifference\b|\bless than\b|\btake away\b/.test(e) ||
+          /\d[\d\s,]*-\s*\d/.test(e))
+        return { id:'subtract', label:'Subtraction', badge:'Arithmetic', title:'Subtract', instruction:'Find the difference.', placeholder:'Answer…' };
+      if (/\+|\bsum\b|\badd\b|\bplus\b|\baltogether\b|\btotal\b/.test(e))
+        return { id:'add', label:'Addition', badge:'Arithmetic', title:'Add', instruction:'Stack and add.', placeholder:'Answer…' };
+    }
     // Default: algebra/equation
     return { id:'algebra', label:'Algebra', badge:'Equation', title:'Solve for x', instruction:'Solve the equation step by step.', placeholder:'x = ?' };
   }
@@ -4914,6 +4937,31 @@
       }
     }
 
+    /* Duplicate options make the answer key meaningless: a learner can pick a
+       string identical to the correct one and still be marked wrong. Collapse
+       exact duplicates and keep correctIndex pointing at the surviving copy. */
+    if (Object.prototype.toString.call(q.options) === '[object Array]' &&
+        q.options.length > 1) {
+      var seenOpt = {}, kept = [], newIdx = q.correctIndex, di;
+      for (di = 0; di < q.options.length; di++) {
+        var key = String(q.options[di] == null ? '' : q.options[di])
+          .replace(/\s+/g, ' ').trim().toLowerCase();
+        if (key && seenOpt[key] !== undefined) {
+          /* Dropping an option shifts everything after it. */
+          if (di === q.correctIndex) newIdx = seenOpt[key];
+          else if (typeof newIdx === 'number' && di < newIdx) newIdx--;
+          continue;
+        }
+        if (key) seenOpt[key] = kept.length;
+        if (di === q.correctIndex) newIdx = kept.length;
+        kept.push(q.options[di]);
+      }
+      if (kept.length !== q.options.length && kept.length >= 2) {
+        q.options = kept;
+        q.correctIndex = newIdx;
+      }
+    }
+
     // True/False -> exactly 'True' or 'False'
     if (q.correct !== undefined && q.correct !== null && q.type === 'truefalse') {
       var c = q.correct;
@@ -4984,31 +5032,68 @@
 
   /* Convert a recognition question that is really a calculation into the
      production format. The stem and the correct option already contain
-     everything a bigequation needs. */
+     everything a bigequation needs.
+
+     An earlier version tried to surgically extract "the equation" from the
+     stem with a regex, and it mangled real questions:
+
+       "Solve 3x - 7 = 14 for x."        -> equation "Solve 3x - 7 = 14 for x"
+       "Evaluate 5x when x = 4"          -> equation "Evaluate 5x when x = 4"
+       "If y = 2x + 1, what is y when x = 3?" -> equation "If y = 2x + 1"
+
+     The last one is the worst: the regex stopped at the comma, so the learner
+     was shown "If y = 2x + 1" and told the answer was 7 - unanswerable as
+     displayed, and indistinguishable from the app simply being wrong.
+
+     renderBigEquation already falls back to q.question when equation is empty,
+     so the honest move is to leave the stem intact and only set `equation`
+     when the stem is essentially nothing BUT an equation. Presenting the
+     original wording is never wrong; a bad extraction always is. */
+
+  /* True when the text is a bare mathematical statement - no prose around it. */
+  function isBareEquation(text) {
+    var t = fmClean(text).replace(/[.?]+$/, '');
+    if (!t || t.length > 48) return false;
+    if (t.indexOf('=') === -1) return false;
+    /* Reject anything carrying words: "for x", "when", "what is", "if". A bare
+       equation contains only symbols, digits and single-letter variables. */
+    if (/[a-z]{2,}/i.test(t)) return false;
+    return true;
+  }
+
+  /* Strip a leading imperative so "Solve 3x - 7 = 14" can yield the equation
+     without dragging the verb into it. Returns '' when nothing clean remains. */
+  function bareEquationFrom(text) {
+    var t = fmClean(text).replace(/[.?]+$/, '');
+    t = t.replace(/^(?:solve|simplify|evaluate|expand|factor|compute|calculate)\s+/i, '');
+    t = t.replace(/\s+for\s+[a-z]\s*$/i, '');
+    return isBareEquation(t) ? t : '';
+  }
+
   function toProduction(q) {
     var answer = fmStr(q.answer);
-    if (!answer && isArrList(q.options) && typeof q.correctIndex === 'number') {
+    if (!answer && isArrList(q.options) && typeof q.correctIndex === 'number' &&
+        q.correctIndex >= 0 && q.correctIndex < q.options.length) {
       answer = fmStr(q.options[q.correctIndex]);
     }
-    if (!answer) return null;
+    if (!fmClean(answer)) return null;
 
-    /* Pull the expression out of the stem so the learner is asked to solve it
-       rather than shown four candidate results. */
-    var stem = fmStr(q.question);
-    var m = stem.match(/([-0-9a-z(][^,.?;]{0,40}?(?:=|<=|>=)[^,.?;]{0,40})/i);
-    var converted = {
+    var stem = fmClean(q.question);
+    if (!stem) return null;
+
+    /* Only lift an equation out when what remains is unambiguously one. */
+    var eq = bareEquationFrom(stem);
+
+    return {
       type: 'bigequation',
-      question: m ? 'Solve' : (stem || 'Solve'),
-      equation: m ? fmClean(m[1]) : '',
+      question: stem,                 // always the learner's original wording
+      equation: eq,                   // '' means renderBigEquation uses the question
       answer: fmClean(answer),
       hint: fmStr(q.hint),
       explanation: fmStr(q.explanation),
       difficulty: fmStr(q.difficulty) || 'medium',
       _convertedFrom: fmStr(q.type)
     };
-    if (!converted.equation && !/\d/.test(stem)) return null;
-    if (!converted.equation) { converted.question = stem; }
-    return converted;
   }
 
   function isArrList(v) {
@@ -5111,9 +5196,236 @@
     return list;
   }
 
+  /* ── ANSWER-KEY VERIFICATION ──────────────────────────────────────────────
+     A generated question can mark the wrong option correct. On a maths
+     question we do not have to take the model's word for it: the question
+     states the problem, so we can solve it and see which option actually
+     matches.
+
+     Three outcomes:
+       - the key agrees with the maths      -> leave it alone
+       - a different option is the true one -> repoint the key at that option
+       - no option is correct               -> the question is unusable, drop it
+
+     Deliberately conservative. It only acts on forms it can evaluate exactly
+     (plain arithmetic, one-step and two-step linear equations, percentages)
+     and ignores everything else, because a confident wrong "correction" would
+     be worse than the original error. */
+
+  /* Evaluate a arithmetic expression safely - no eval, no operator surprises. */
+  function akEval(expr) {
+    var t = String(expr == null ? '' : expr)
+      .replace(/[\u00d7x\u2715]/gi, '*').replace(/[\u00f7]/g, '/')
+      .replace(/[,\s$]/g, '');
+    if (!/^[-+*/().0-9^]+$/.test(t) || !/[0-9]/.test(t)) return NaN;
+
+    /* Tokenise, then shunting-yard into RPN, then evaluate. */
+    var toks = t.match(/\d+\.?\d*|[-+*/()^]/g);
+    if (!toks) return NaN;
+    var prec = { '+': 1, '-': 1, '*': 2, '/': 2, '^': 3 };
+    var out = [], ops = [], i, prev = null;
+    for (i = 0; i < toks.length; i++) {
+      var tk = toks[i];
+      if (/^\d/.test(tk)) { out.push(parseFloat(tk)); prev = 'n'; continue; }
+      if (tk === '(') { ops.push(tk); prev = '('; continue; }
+      if (tk === ')') {
+        while (ops.length && ops[ops.length - 1] !== '(') out.push(ops.pop());
+        if (!ops.length) return NaN;
+        ops.pop(); prev = 'n'; continue;
+      }
+      /* Unary minus. */
+      if (tk === '-' && (prev === null || prev === 'op' || prev === '(')) {
+        out.push(0); ops.push('-'); prev = 'op'; continue;
+      }
+      while (ops.length && ops[ops.length - 1] !== '(' &&
+             prec[ops[ops.length - 1]] >= prec[tk]) out.push(ops.pop());
+      ops.push(tk); prev = 'op';
+    }
+    while (ops.length) { var o = ops.pop(); if (o === '(') return NaN; out.push(o); }
+
+    var st = [];
+    for (i = 0; i < out.length; i++) {
+      var v = out[i];
+      if (typeof v === 'number') { st.push(v); continue; }
+      if (st.length < 2) return NaN;
+      var b2 = st.pop(), a2 = st.pop();
+      if (v === '+') st.push(a2 + b2);
+      else if (v === '-') st.push(a2 - b2);
+      else if (v === '*') st.push(a2 * b2);
+      else if (v === '/') { if (b2 === 0) return NaN; st.push(a2 / b2); }
+      else if (v === '^') st.push(Math.pow(a2, b2));
+      else return NaN;
+    }
+    return st.length === 1 ? st[0] : NaN;
+  }
+
+  /* Solve a linear equation in one variable: ax + b = cx + d. */
+  function akSolveLinear(text) {
+    /* Strip the prose around the equation first. "Solve 3x - 7 = 14 for x."
+       otherwise carries "forx" onto the right-hand side, and the term parser
+       then sees a second unknown and gives up. */
+    var t = String(text == null ? '' : text)
+      .replace(/\b(?:solve|find|what is|calculate|evaluate|determine|the value of)\b/gi, ' ')
+      .replace(/\bfor\s+[a-z]\b/gi, ' ')
+      .replace(/[?.,;:]/g, ' ')
+      .replace(/\s+/g, '');
+    var eq = t.match(/([-+0-9a-z*/^().]+)=([-+0-9a-z*/^().]+)/i);
+    if (!eq) return NaN;
+
+    var vm = (eq[0].match(/[a-z]/gi) || []);
+    if (!vm.length) return NaN;
+    var v = vm[0].toLowerCase();
+    for (var k = 0; k < vm.length; k++) {
+      if (vm[k].toLowerCase() !== v) return NaN;    // more than one unknown
+    }
+
+    /* Collect coefficient and constant from one side. */
+    function side(str2) {
+      var terms = str2.replace(/-/g, '+-').split('+').filter(function (x) { return x !== ''; });
+      var co = 0, con = 0, j;
+      for (j = 0; j < terms.length; j++) {
+        var tm = terms[j];
+        if (tm.indexOf(v) === -1) {
+          var n2 = akEval(tm);
+          if (isNaN(n2)) return null;
+          con += n2;
+        } else {
+          var c = tm.replace(new RegExp(v, 'gi'), '');
+          if (c === '' || c === '+') co += 1;
+          else if (c === '-') co -= 1;
+          else {
+            var cn = akEval(c.replace(/\*$/, ''));
+            if (isNaN(cn)) return null;
+            co += cn;
+          }
+        }
+      }
+      return { co: co, con: con };
+    }
+
+    var L = side(eq[1]), R = side(eq[2]);
+    if (!L || !R) return NaN;
+    var co2 = L.co - R.co, con2 = R.con - L.con;
+    if (co2 === 0) return NaN;
+    return con2 / co2;
+  }
+
+  /* Work out what a maths question's answer must be, or NaN. */
+  function akExpected(q) {
+    var text = fmStr(q.question) + ' ' + fmStr(q.equation);
+
+    /* Percentage. */
+    var pc = text.match(/(-?\d+(?:\.\d+)?)\s*%\s*of\s*(-?\d+(?:\.\d+)?)/i);
+    if (pc) return parseFloat(pc[1]) / 100 * parseFloat(pc[2]);
+
+    /* Linear equation. */
+    if (/[a-z]\s*[-+*/]?[^=]*=/i.test(text) && /\b(solve|find|what is)\b/i.test(text)) {
+      var lin = akSolveLinear(text);
+      if (!isNaN(lin)) return lin;
+    }
+
+    /* Plain arithmetic: "What is 15 + 27?" */
+    var ar = text.match(/(-?\d[\d\s.,+\-*/()\u00d7\u00f7^]*\d)\s*[=?]?\s*$/);
+    if (!ar) {
+      ar = text.match(/(?:what is|calculate|evaluate|compute)\s*[:]?\s*([-0-9][^?.]*)/i);
+    }
+    if (ar) {
+      var val = akEval(ar[1]);
+      if (!isNaN(val)) return val;
+    }
+    return NaN;
+  }
+
+  function akNum(v) {
+    var t = fmStr(v).replace(/[,$\s]/g, '');
+    var m = t.match(/-?\d+(?:\.\d+)?/);
+    return m ? parseFloat(m[0]) : NaN;
+  }
+
+  /**
+   * Check a multiple-choice answer key against the maths.
+   * Returns 'ok', 'fixed' or 'unusable'.
+   */
+  function verifyAnswerKey(q) {
+    if (!q || fmStr(q.type) !== 'mcq') return 'ok';
+    if (Object.prototype.toString.call(q.options) !== '[object Array]') return 'ok';
+
+    var want = akExpected(q);
+    if (isNaN(want)) return 'ok';                  // not something we can check
+
+    var match = -1, matches = 0, i;
+    for (i = 0; i < q.options.length; i++) {
+      var got = akNum(q.options[i]);
+      if (isNaN(got)) continue;
+      if (Math.abs(got - want) < 0.001) { match = i; matches++; }
+    }
+    if (matches !== 1) return 'ok';                // ambiguous, do not touch
+
+    if (q.correctIndex === match) return 'ok';
+
+    if (typeof console !== 'undefined' && console.warn) {
+      console.warn('[answerkey] "' + fmStr(q.question).slice(0, 60) +
+        '" marked option ' + q.correctIndex + ' correct, but the answer is ' +
+        want + ' which is option ' + match + '. Repointing.');
+    }
+    q.correctIndex = match;
+    q.answer = fmStr(q.options[match]);
+    q._answerKeyFixed = true;
+    return 'fixed';
+  }
+
+  /* Make sure the explanation actually states the answer. A learner who got it
+     wrong and reads an explanation that never says what the right answer was
+     has learned nothing. */
+  function ensureAnswerInExplanation(q) {
+    if (!q) return q;
+    var ans = fmStr(q.answer);
+    if (!ans && Object.prototype.toString.call(q.options) === '[object Array]' &&
+        typeof q.correctIndex === 'number') {
+      ans = fmStr(q.options[q.correctIndex]);
+    }
+    if (!ans) ans = fmStr(q.correct);
+    if (!ans) return q;
+
+    var exp = fmStr(q.explanation).trim();
+    var lower = exp.toLowerCase(), a = ans.toLowerCase();
+
+    /* A bare substring match is too loose for short numeric answers: "Add 7
+       then divide by 3" contains "7", but that 7 is an operand, not the
+       result, and the learner is still not told the answer. Require the value
+       to appear as the stated OUTCOME - after an equals sign or an
+       answer-bearing word - before treating the explanation as complete. */
+    function esc2(v) { return v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    var stated = new RegExp(
+      '(?:=|\\bis\\b|\\bare\\b|\\bgives?\\b|\\bequals?\\b|\\bbecomes\\b|' +
+      '\\bleaves\\b|\\byields?\\b|\\bto get\\b|\\bresult(?:s in|ing in)?\\b|' +
+      '\\bso\\b|\\btherefore\\b|\\bwhich is\\b|\\banswer\\b[^.]{0,20}?)\\s*' + esc2(a) +
+      '(?![0-9])', 'i').test(lower);
+
+    /* A long textual answer appearing anywhere is good enough - the ambiguity
+       only arises with short numbers. */
+    var hasIt = stated || (a.length > 6 && lower.indexOf(a) !== -1);
+    if (hasIt) return q;
+
+    q.explanation = (exp ? exp.replace(/\s*$/, '') + ' ' : '') +
+      'The answer is ' + ans + '.';
+    return q;
+  }
+
   function normalizeQuestions(list) {
     if (Object.prototype.toString.call(list) !== '[object Array]') return list;
-    for (var i = 0; i < list.length; i++) normalizeQuestion(list[i]);
+    var kept = [], i;
+    for (i = 0; i < list.length; i++) {
+      var q = normalizeQuestion(list[i]);
+      /* Check the answer key against the maths where we can, then make sure the
+         explanation actually names the answer. */
+      var verdict = verifyAnswerKey(q);
+      if (verdict === 'unusable') continue;
+      kept.push(ensureAnswerInExplanation(q));
+    }
+    /* Assign in place so callers holding a reference see the same array. */
+    list.length = 0;
+    for (i = 0; i < kept.length; i++) list.push(kept[i]);
     return list;
   }
 
