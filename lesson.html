@@ -1166,7 +1166,13 @@
        silently skipped the maths branch entirely - which is why a maths day
        could still arrive full of multiple choice. Same source the rest of
        buildQueue uses, so the two can no longer disagree. */
-    questions = enforceFormatMix(questions, fmStr((plan && plan.subjectType) || ''));
+    /* Older plans were saved without subjectType, and the field was only added
+       to the generator recently, so it is absent far more often than not. When
+       it is missing the enforcer used to receive '' and skip the maths branch
+       entirely - which is exactly why a maths day still arrived as multiple
+       choice. Derive it from the same signals buildQueue already uses for
+       isMath, so the two can never disagree. */
+    questions = enforceFormatMix(questions, resolveSubjectType(plan, day));
     day.questions = questions;
 
     /* The whiteboard is built here but queued later - see below. Placing it at
@@ -1830,7 +1836,39 @@
     return html + '</div>';
   }
 
+  /* Every card render is wrapped. A single malformed question used to throw
+     inside its renderer - "o.trim is not a function" when options arrived as
+     objects, for example - and because nothing caught it, renderCard aborted
+     before writing any HTML. The learner saw the previous card frozen, or an
+     empty panel, which is what "the questions don't pop up" was. Now a failed
+     card reports itself and offers a way past, and the session survives. */
   function renderCard(card) {
+    try {
+      renderCardInner(card);
+    } catch (err) {
+      if (window.console && console.error) {
+        console.error('[card] render failed for type "' +
+          ((card && card.type) || '?') + '"', err);
+      }
+      var scErr = document.getElementById('session-card');
+      if (scErr) {
+        scErr.innerHTML =
+          '<div class="session-card"><div class="card-header" style="display:block;text-align:center">' +
+          '<h2 style="margin:0">This question didn\u2019t load</h2></div>' +
+          '<div class="card-body" style="text-align:center">' +
+          '<p style="color:var(--muted);max-width:30rem;margin:0 auto;line-height:1.6">' +
+          'Something was wrong with how this one was built. Your progress is safe \u2014 ' +
+          'skip ahead and keep going.</p>' +
+          '<div style="margin-top:1.4rem">' +
+          '<button class="btn-next" onclick="showNextCard()">Skip this one \u2192</button>' +
+          '</div></div></div>';
+      }
+      currentAnswered = true;   // never strand the learner on a broken card
+      enableNext();
+    }
+  }
+
+  function renderCardInner(card) {
     var sc = document.getElementById('session-card');
     var html = '';
     currentCardType = (card && card.type) || '';
@@ -2156,7 +2194,11 @@
       var validOpts = [];
       var newCorrectIndex = -1;
       rawOpts.forEach(function(o, origIdx) {
-        if (o && o.trim().length > 0) {
+        /* Coerce first: calling .trim() straight on the option threw
+           "o.trim is not a function" whenever a model returned options as
+           objects, and that exception aborted the entire card. */
+        o = optText(o);
+        if (o.length > 0) {
           if (origIdx === q.correctIndex) newCorrectIndex = validOpts.length;
           validOpts.push(o);
         }
@@ -2191,7 +2233,7 @@
 
     var body = '<div class="q-meta"><span class="q-type-label ' + typeClass + '">' + typeLabel + '</span>' +
       '<span class="q-difficulty ' + diffClass + '">' + (q.difficulty || 'Medium') + '</span></div>' +
-      '<div class="q-text">' + q.question + '</div>' +
+      '<div class="q-text">' + qText(q) + '</div>' +
       optHtml + confidenceTap +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Think about the key concepts from today\'s lesson.') + '</div></div>' +
@@ -2352,7 +2394,7 @@
 
     var body = '<div class="q-meta"><span class="q-type-label graph">Interactive Graph</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
-      '<div class="q-text">' + q.question + '</div>' +
+      '<div class="q-text">' + qText(q) + '</div>' +
       '<div class="graph-wrap">' +
       '<svg class="graph-svg" viewBox="0 0 ' + size + ' ' + size + '" id="graph-svg">' +
       defs + grid +
@@ -2521,7 +2563,11 @@
     var validOpts = [];
     var newCorrectIndex = -1;
     rawOpts.forEach(function(o, origIdx) {
-      if (o && o.trim().length > 0) {
+      /* Coerce first: calling .trim() straight on the option threw
+         "o.trim is not a function" whenever a model returned options as
+         objects, and that exception aborted the entire card. */
+      o = optText(o);
+      if (o.length > 0) {
         if (origIdx === q.correctIndex) newCorrectIndex = validOpts.length;
         validOpts.push(o);
       }
@@ -2570,7 +2616,7 @@
       '<div style="background:var(--soft);border-left:3px solid #7c3aed;border-radius:0 12px 12px 0;padding:.9rem 1rem 1rem;margin-bottom:1rem;font-size:0.88rem;line-height:1.8;color:var(--ink);font-style:italic;">' +
       passageText +
       '</div>' +
-      '<div class="q-text" style="font-style:normal;margin-bottom:.75rem;">' + q.question + '</div>' +
+      '<div class="q-text" style="font-style:normal;margin-bottom:.75rem;">' + qText(q) + '</div>' +
       optHtml +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Re-read the passage carefully.') + '</div></div>' +
@@ -3157,7 +3203,52 @@
     if (usable.length < 2) return [];
     /* Arithmetic check before anything is rendered. A step whose stated answer
        contradicts its own prompt would teach a false result. */
-    return swpValidate(usable);
+    var checked = swpValidate(usable);
+    /* Then make sure each surviving prompt actually says what it wants. */
+    return checked.length >= 2 ? swpClarify(checked) : [];
+  }
+
+  /* A step must make plain what it is asking for. Generated prompts drift into
+     vagueness - "Work out the first part", "Find the value" - which leaves the
+     learner guessing at both the operation and the quantity. Where the prompt
+     is vague but the arithmetic is knowable, restate it concretely; where it
+     is already explicit, leave it exactly as written. */
+  var VAGUE_PROMPT = /^(?:work (?:it |this )?out|find (?:the )?(?:value|answer|result)|calculate(?: it)?|now (?:do|solve) (?:it|this)|what(?:'s| is) (?:the )?(?:answer|result)|solve(?: it| this)?|next step|continue)\.?$/i;
+
+  function swpClarify(steps) {
+    var carried = [], i;
+    for (i = 0; i < steps.length; i++) {
+      var st = steps[i];
+      var p = fmClean(st.prompt);
+
+      /* Vague prompt with recoverable arithmetic: say the operation out loud. */
+      if (VAGUE_PROMPT.test(p)) {
+        var want = swpExpectedPercent(p, carried);
+        if (isNaN(want)) want = swpExpected(p, carried);
+        if (!isNaN(want)) {
+          st.prompt = p;   // the operation was already stated, just terse
+        } else if (st.answer) {
+          st.prompt = 'What is the value at this step?';
+        }
+      }
+
+      /* Always end on a question mark or an imperative full stop, so it reads
+         as an instruction rather than a fragment. */
+      st.prompt = fmClean(st.prompt);
+      if (st.prompt && !/[.?:]$/.test(st.prompt)) {
+        st.prompt += /^(?:what|how|which|why|when|where)\b/i.test(st.prompt) ? '?' : '.';
+      }
+
+      /* Name the unit in the prompt when the step carries one and the prompt
+         never mentions it, so the learner knows what kind of number to type. */
+      if (st.unit && st.prompt.toLowerCase().indexOf(st.unit.toLowerCase()) === -1) {
+        st.prompt = st.prompt.replace(/[.?]$/, '') +
+          ' (answer in ' + st.unit + ')' + (/\?$/.test(st.prompt) ? '?' : '.');
+      }
+
+      carried.push(st.answer);
+    }
+    return steps;
   }
 
   /* Substitute {1}, {2} with the learner's own earlier answers. */
@@ -3165,7 +3256,7 @@
     return String(text == null ? '' : text).replace(/\{(\d+)\}/g, function (m, n) {
       var v = answers[parseInt(n, 10) - 1];
       return v == null || v === ''
-        ? '<span class="swp-carry">\u2026</span>'
+        ? '<span class="swp-carry">(step ' + n + ')</span>'
         : '<span class="swp-carry">' + escHtml(v) + '</span>';
     });
   }
@@ -3198,7 +3289,13 @@
         (i === 0 ? '' : ' hidden') + ' style="animation-delay:' + (i * 0.04).toFixed(2) + 's">' +
         '<div class="swp-num" id="swp-num-' + i + '">' + (i + 1) + '</div>' +
         '<div class="swp-body">' +
-        '<div class="swp-prompt" id="swp-prompt-' + i + '">' + escHtml(st.prompt) + '</div>';
+        /* Substitute the carry placeholders now as well as on reveal. Rendering
+           the raw prompt meant a hidden step sat in the DOM reading "Divide {1}
+           by 2", and any hiccup in the reveal chain left that literal {1} on
+           screen. Before an answer exists the placeholder shows as a dash, which
+           reads as "the number from the step above". */
+        '<div class="swp-prompt" id="swp-prompt-' + i + '">' +
+        swpFill(st.prompt, []) + '</div>';
 
       if (st.shown) {
         html += '<div class="swp-shown"><span class="swp-tag">Given</span>' +
@@ -3207,7 +3304,7 @@
         html += '<div class="swp-row">' +
           '<input class="swp-input" id="swp-in-' + i + '" type="text" ' +
           'inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off" ' +
-          'placeholder="Your answer"/>' +
+          'placeholder="' + escHtml(st.unit ? 'Number of ' + st.unit : 'Your answer') + '"/>' +
           (st.unit ? '<span class="swp-unit">' + escHtml(st.unit) + '</span>' : '') +
           '<button class="swp-go" id="swp-go-' + i + '" onclick="swpCheck(' + i + ')">Check</button>' +
           '</div>';
@@ -3344,8 +3441,18 @@
         explanation: q.explanation || ''
       };
       solveArea =
-        '<div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin:.2rem 0 .55rem;">' +
-        'Work it through, one step at a time:</div>' + swpRender(steps);
+        '<div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin:.2rem 0 .2rem;">' +
+        'Work it through, one step at a time:</div>' +
+        /* State the final target up front. Without it a learner can answer
+           every sub-step correctly while never being told what the problem was
+           actually asking for. */
+        (fmClean(q.question)
+          ? '<div style="font-size:0.84rem;color:var(--ink);font-weight:600;' +
+            'margin:0 0 .7rem;padding:.55rem .75rem;border-left:3px solid var(--blue);' +
+            'background:var(--blue-light);border-radius:0 8px 8px 0;">Find: ' +
+            escHtml(fmClean(q.question)) + '</div>'
+          : '') +
+        swpRender(steps);
     } else {
       solveArea =
         '<div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin-bottom:.5rem;">Your answer:</div>' +
@@ -3450,7 +3557,7 @@
 
     var body = '<div class="q-meta"><span class="q-type-label" style="background:#fee2e2;color:#dc2626;">Find the Error</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
-      '<div class="q-text">' + q.question + '</div>' +
+      '<div class="q-text">' + qText(q) + '</div>' +
       topicVisual +
       '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:.6rem;">Tap the step that contains the mistake</div>' +
       stepsHtml +
@@ -3618,7 +3725,7 @@
 
     var body = '<div class="q-meta"><span class="q-type-label" style="background:#eef4ff;color:#4a7cf6;">Sentence Builder</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
-      '<div class="q-text">' + q.question + '</div>' +
+      '<div class="q-text">' + qText(q) + '</div>' +
       (q.translation ? '<div style="background:var(--soft);border-radius:10px;padding:.6rem .85rem;margin:.5rem 0 .75rem;font-size:0.82rem;color:var(--muted);font-style:italic;">"' + q.translation + '"</div>' : '') +
       '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:.7rem;">Drag the words into the correct order</div>' +
       '<div class="seq-wrap" id="seq-wrap">' + itemsHtml + '</div>' +
@@ -3672,7 +3779,7 @@
 
     var body = '<div class="q-meta"><span class="q-type-label sequence">Put in Order</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
-      '<div class="q-text">' + q.question + '</div>' +
+      '<div class="q-text">' + qText(q) + '</div>' +
       timelineHtml +
       '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:.7rem;">Drag to reorder, then check your answer</div>' +
       '<div class="seq-wrap" id="seq-wrap">' + itemsHtml + '</div>' +
@@ -3791,7 +3898,7 @@
 
     var body = '<div class="q-meta"><span class="q-type-label match">Matching</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
-      '<div class="q-text">' + q.question + '</div>' +
+      '<div class="q-text">' + qText(q) + '</div>' +
       '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:.7rem;">Tap a term, then tap its match</div>' +
       '<div class="match-wrap"><div class="match-col">' + leftHtml + '</div><div class="match-col">' + rightHtml + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
@@ -3921,7 +4028,7 @@
 
     var body = '<div class="q-meta"><span class="q-type-label" style="background:#f3f0ff;color:#7c3aed;">Classify</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
-      '<div class="q-text">' + q.question + '</div>' +
+      '<div class="q-text">' + qText(q) + '</div>' +
       '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:.8rem;">Tap an item, then tap a category to place it</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:1.1rem;" id="classify-pool">' + itemsHtml + '</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">' +
@@ -4875,8 +4982,69 @@
 
      Normalizing once, at ingest, keeps the fix in a single place instead of
      scattering coercions across the render and grading functions. */
+  /* Last line of defence for the question text. normalizeQuestion already
+     fills this in, but a question can reach a renderer by a path that skipped
+     normalization, and printing the word "undefined" at a learner is never
+     acceptable. */
+  /* Any option shape -> a plain string. Models return bare strings, but also
+     {text:...}, {label:...}, numbers, and nulls. */
+  function optText(o) {
+    if (o == null) return '';
+    if (typeof o === 'string') return o.trim();
+    if (typeof o === 'number' || typeof o === 'boolean') return String(o);
+    if (typeof o === 'object') {
+      var v = o.text || o.label || o.option || o.value || o.answer || o.title;
+      return v == null ? '' : String(v).trim();
+    }
+    return String(o).trim();
+  }
+
+  function qText(q) {
+    if (!q) return '';
+    var t = q.question || q.prompt || q.text || q.stem || q.scenario || q.equation || '';
+    return String(t == null ? '' : t);
+  }
+
   function normalizeQuestion(q) {
     if (!q || typeof q !== 'object') return q;
+
+    /* ── QUESTION TEXT ────────────────────────────────────────────────────
+       Every renderer writes q.question straight into the card. When the model
+       used a different key - prompt, text, stem, q, title - or omitted it, the
+       card rendered the literal word "undefined" as the question. Accept the
+       aliases a model actually produces, and fall back to any other text the
+       question carries rather than printing undefined at a learner. */
+    if (!q.question || !String(q.question).trim()) {
+      var alt = q.prompt || q.text || q.stem || q.q || q.questionText ||
+                q.title || q.scenario || q.equation || '';
+      q.question = String(alt == null ? '' : alt).trim();
+    } else {
+      q.question = String(q.question);
+    }
+
+    /* ── OPTIONS ──────────────────────────────────────────────────────────
+       renderQuestion calls o.trim() on every option. A model returning
+       [{text:'...'}] or [{label:'...'}] threw "o.trim is not a function",
+       which killed the whole card - the question simply never appeared.
+       Flatten every option to a plain string here so no renderer can crash. */
+    if (Object.prototype.toString.call(q.options) === '[object Array]') {
+      q.options = q.options.map(function (o) {
+        if (o == null) return '';
+        if (typeof o === 'string') return o;
+        if (typeof o === 'number' || typeof o === 'boolean') return String(o);
+        if (typeof o === 'object') {
+          var v = o.text || o.label || o.option || o.value || o.answer || o.title;
+          return v == null ? '' : String(v);
+        }
+        return String(o);
+      });
+    }
+
+    /* Scalar fields the renderers concatenate directly. */
+    if (q.explanation != null && typeof q.explanation !== 'string') q.explanation = String(q.explanation);
+    if (q.hint != null && typeof q.hint !== 'string') q.hint = String(q.hint);
+    if (q.scenario != null && typeof q.scenario !== 'string') q.scenario = String(q.scenario);
+    if (q.equation != null && typeof q.equation !== 'string') q.equation = String(q.equation);
 
     /* Question type. Every renderer and filter compares q.type with ===, so a
        model that writes "MCQ", "true_false" or " fill " has its question
@@ -4959,6 +5127,35 @@
       if (kept.length !== q.options.length && kept.length >= 2) {
         q.options = kept;
         q.correctIndex = newIdx;
+      }
+    }
+
+    /* Every field that gets concatenated straight into markup must be a
+       string. There are ~35 sites that do `'<div>' + q.something + '</div>'`
+       with no fallback, and a missing field there renders the literal word
+       "undefined" on screen - which is exactly what learners were seeing.
+       Guarding one call site at a time is whack-a-mole; guaranteeing the shape
+       here fixes all of them at once and keeps future renderers safe too. */
+    var TEXT_FIELDS = ['question', 'explanation', 'hint', 'answer', 'scenario',
+                       'passage', 'equation', 'prompt', 'flawed', 'fixed',
+                       'correction', 'wrongStep', 'note', 'title', 'label'];
+    for (var tf = 0; tf < TEXT_FIELDS.length; tf++) {
+      var key = TEXT_FIELDS[tf];
+      if (q[key] === undefined || q[key] === null) continue;   // absent is fine
+      if (typeof q[key] !== 'string') q[key] = String(q[key]);
+    }
+    /* A question with no stem at all cannot render. Give it something honest
+       rather than letting "undefined" reach the card. */
+    if (!q.question && q.scenario) q.question = q.scenario;
+    if (!q.question && q.prompt) q.question = q.prompt;
+    if (q.question === undefined || q.question === null) q.question = '';
+
+    /* Options must be an array of strings; a null or numeric entry renders as
+       "undefined" or breaks .trim() in the option filters. */
+    if (Object.prototype.toString.call(q.options) === '[object Array]') {
+      for (var oi2 = 0; oi2 < q.options.length; oi2++) {
+        var ov = q.options[oi2];
+        q.options[oi2] = (ov === undefined || ov === null) ? '' : String(ov);
       }
     }
 
@@ -5112,6 +5309,29 @@
       if (table[fmStr(list[i].type)]) n++;
     }
     return n;
+  }
+
+  /* Work out the subject type from whatever the plan actually carries. Uses the
+     saved classification when present, and otherwise reads the same subject and
+     title text that buildQueue uses for its isMath / isScience flags, so a plan
+     saved before subjectType existed still routes correctly. */
+  function resolveSubjectType(plan, day) {
+    var saved = fmStr(plan && plan.subjectType);
+    if (saved && saved !== 'general') return saved;
+
+    var text = (fmStr(plan && plan.subject) + ' ' + fmStr(day && day.title)).toLowerCase();
+    if (!text.trim()) return saved || '';
+
+    if (/\bmath\b|algebra|calculus|trigonometry|geometry|equation|slope|\blinear\b|quadratic|\bformula\b|\bsolve\b|polynomial|coefficient|arithmetic|fraction|multiplication|division|subtraction|addition|expression/.test(text)) return 'math';
+    if (/biology|chemistry|physics|\bscience\b|\bcell\b|\batom\b|molecule|reaction|genetics|ecosystem|photosynthesis|respiration/.test(text)) return 'science';
+    if (/\bcode\b|programming|computer science|algorithm|javascript|python|\bloop\b|recursion|data structure/.test(text)) return 'cs';
+    if (/spanish|french|german|japanese|chinese|conjugat|\bverb\b|translat|grammar/.test(text)) return 'language';
+    if (/econom|supply|demand|market|inflation|\bgdp\b|fiscal|monetary/.test(text)) return 'economics';
+    if (/history|\bwar\b|revolution|empire|century|ancient|medieval|treaty|dynasty|constitution/.test(text)) return 'history';
+    if (/literature|english|novel|poem|poetry|author|character|theme|metaphor|shakespeare/.test(text)) return 'english';
+    if (/psycholog|\bbrain\b|cognit|behavio|memory|neuro/.test(text)) return 'psychology';
+    if (/geograph|climate|\briver\b|tectonic|biome|latitude/.test(text)) return 'geography';
+    return saved || '';
   }
 
   function enforceFormatMix(list, subjectType) {
