@@ -1297,10 +1297,17 @@
     if (isMath) {
       var fillQs = (day.questions || []).filter(function(q){ return q.type === 'fill' || q.type === 'bigequation' || q.type === 'wordproblem'; });
       fillQs.forEach(function(q, i) {
+        /* A fill question is only re-cast as an equation when it is genuinely
+           solvable. Matching on the words "solve" or "simplify" alone sent a
+           definition question - one that merely QUOTED an identity - into the
+           equation card under a "Solve for x" heading. carriesExpression also
+           checks that the answer is mathematical, which a naming question's
+           never is. */
+        var looksSolvable = carriesExpression(q);
         var cardType = q.type === 'bigequation' ? 'bigequation'
           : q.type === 'wordproblem' ? 'wordproblem'
-          : (q.equation || (q.question && /solve|simplify|factor|expand/i.test(q.question))) ? 'bigequation'
-          : (q.scenario || (q.question && /if|how many|costs|total|distance|speed|rate|percent/i.test(q.question))) ? 'wordproblem'
+          : (looksSolvable && (q.equation || /solve|simplify|factor|expand|evaluate/i.test(q.question || ''))) ? 'bigequation'
+          : (q.scenario || (looksSolvable && /how many|costs|total|distance|speed|rate|percent/i.test(q.question || ''))) ? 'wordproblem'
           : 'fill';
         var insertAt4 = Math.min(3 + i * 3, sessionCards.length);
         sessionCards.splice(insertAt4, 0, { type: cardType, q: q });
@@ -5210,19 +5217,60 @@
      history day cannot arrive as nine multiple-choice questions. */
   var VARIETY_CEILING = 0.5;
 
-  /* Does this question actually contain something solvable? */
+  /* ── IS THIS ACTUALLY SOLVABLE? ───────────────────────────────────────────
+     An earlier version asked only "does the text contain an equals sign", and
+     that promoted vocabulary questions into the equation card. The real case
+     that shipped:
+
+       "The concept described as \"x^a . x^b = x^(a+b): when multiplying powers
+        with the same base, add the exponents.\" is called ________."
+       answer: "the product of powers property"
+
+     The quoted definition contains an equation, so the check passed and the
+     learner was shown a wall of prose under a "Solve for x" heading with an
+     "x = ?" box. The answer is a phrase; there is nothing to solve.
+
+     Two things settle it, and both must hold:
+       1. The ANSWER must be mathematical - a number or an expression, not a
+          phrase. This alone rules out every "what is this called" question.
+       2. The QUESTION must not be asking for a name. */
+
+  var NAMING_PATTERNS = /\b(is called|are called|is known as|is termed|refers to|the term for|the name (?:for|of)|what is the name|name (?:the|this)|which (?:term|word|property|law|rule) (?:describes|is)|is defined as|definition of)\b/i;
+
+  /* A mathematical answer: a number, or a short expression made of digits,
+     operators, parentheses and single-letter variables. "7", "x = 4",
+     "3x + 2", "-1/2" all qualify. "the product of powers property" does not. */
+  function isMathAnswer(v) {
+    var t = fmClean(v);
+    if (!t || t.length > 32) return false;
+    /* Any run of two or more letters is a word, and words are not answers to
+       an equation. Allows single variables and common function names. */
+    var stripped = t.replace(/\b(?:sqrt|sin|cos|tan|log|ln|pi|no solution|undefined|infinity)\b/gi, '');
+    if (/[A-Za-z]{2,}/.test(stripped)) return false;
+    return /\d/.test(t) || /[a-z]\s*=/i.test(t);
+  }
+
   function carriesExpression(q) {
-    var t = fmStr(q.question) + ' ' + fmStr(q.equation) + ' ' + fmStr(q.answer) + ' ' +
-            fmStr(q.explanation);
+    /* A naming question is never a calculation, whatever symbols it quotes. */
+    if (NAMING_PATTERNS.test(fmStr(q.question))) return false;
+
+    /* Whatever the learner will be asked to type must be mathematical. */
+    var answer = fmStr(q.answer);
+    if (!answer && isArrList(q.options) && typeof q.correctIndex === 'number' &&
+        q.correctIndex >= 0 && q.correctIndex < q.options.length) {
+      answer = fmStr(q.options[q.correctIndex]);
+    }
+    if (!isMathAnswer(answer)) return false;
+
+    /* And there must be something to work on. Only the QUESTION counts here -
+       an equation quoted inside an explanation is background, not the task. */
+    var t = fmStr(q.question) + ' ' + fmStr(q.equation);
     if (/[0-9a-z]\s*(?:=|<=|>=)\s*[-0-9a-z(]/i.test(t)) return true;
     if (/\b(solve|simplify|evaluate|expand|factor|compute|calculate)\b/i.test(t) &&
         /\d/.test(t)) return true;
 
     /* Two or more algebraic terms ("3x and 5x", "4y - 2y") means there is
-       something to work out even without an equals sign or an imperative.
-       Requiring two keeps vocabulary questions out: "an expression has no ___
-       sign" has no algebraic term at all and stays a recall question, which is
-       what it is. */
+       something to work out even without an equals sign or an imperative. */
     var terms = t.match(/(?:^|[^a-z0-9])\d+\s*[a-z](?:\^?\d+)?(?![a-z])/gi) || [];
     return terms.length >= 2;
   }
