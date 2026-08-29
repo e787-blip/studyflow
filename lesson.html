@@ -5363,12 +5363,41 @@
      saved classification when present, and otherwise reads the same subject and
      title text that buildQueue uses for its isMath / isScience flags, so a plan
      saved before subjectType existed still routes correctly. */
+  /* Every downstream table - PROCEDURAL_SUBJECTS, PRODUCTION_TARGET,
+     MATH_CORE_TYPES - is keyed by an exact lowercase string. The saved value
+     was returned verbatim, so a plan holding 'Math', 'Mathematics' or
+     'Algebra' (older builds, imported plans, a capitalised subject name)
+     missed every lookup and the format enforcer skipped the day entirely.
+     That is why a maths lesson could arrive with no equations in it. */
+  var SUBJECT_ALIASES = {
+    math: 'math', maths: 'math', mathematics: 'math', algebra: 'math',
+    algebra1: 'math', algebra2: 'math', calculus: 'math', geometry: 'math',
+    trigonometry: 'math', trig: 'math', arithmetic: 'math', statistics: 'math',
+    stats: 'math', precalculus: 'math', precalc: 'math',
+    cs: 'cs', computerscience: 'cs', programming: 'cs', coding: 'cs',
+    compsci: 'cs',
+    language: 'language', spanish: 'language', french: 'language',
+    german: 'language', latin: 'language', japanese: 'language',
+    science: 'science', biology: 'science', chemistry: 'science',
+    physics: 'science', bio: 'science', chem: 'science',
+    history: 'history', socialstudies: 'history',
+    geography: 'geography', economics: 'economics', econ: 'economics',
+    psychology: 'psychology', psych: 'psychology',
+    english: 'english', literature: 'english', ela: 'english',
+    general: 'general'
+  };
+
+  function normalizeSubjectKey(v) {
+    var k = fmStr(v).toLowerCase().replace(/[\s._-]+/g, '');
+    return SUBJECT_ALIASES[k] || '';
+  }
+
   function resolveSubjectType(plan, day) {
-    var saved = fmStr(plan && plan.subjectType);
+    var saved = normalizeSubjectKey(plan && plan.subjectType);
     if (saved && saved !== 'general') return saved;
 
     var text = (fmStr(plan && plan.subject) + ' ' + fmStr(day && day.title)).toLowerCase();
-    if (!text.trim()) return saved || '';
+    if (!text.trim()) return saved || 'general';
 
     if (/\bmath\b|algebra|calculus|trigonometry|geometry|equation|slope|\blinear\b|quadratic|\bformula\b|\bsolve\b|polynomial|coefficient|arithmetic|fraction|multiplication|division|subtraction|addition|expression/.test(text)) return 'math';
     if (/biology|chemistry|physics|\bscience\b|\bcell\b|\batom\b|molecule|reaction|genetics|ecosystem|photosynthesis|respiration/.test(text)) return 'science';
@@ -5379,7 +5408,7 @@
     if (/literature|english|novel|poem|poetry|author|character|theme|metaphor|shakespeare/.test(text)) return 'english';
     if (/psycholog|\bbrain\b|cognit|behavio|memory|neuro/.test(text)) return 'psychology';
     if (/geograph|climate|\briver\b|tectonic|biome|latitude/.test(text)) return 'geography';
-    return saved || '';
+    return saved || 'general';
   }
 
   function enforceFormatMix(list, subjectType) {
