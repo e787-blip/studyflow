@@ -422,11 +422,11 @@
   <div class="card active" id="step-1">
     <div class="card-icon" style="font-size:1.2rem; color:var(--blue); font-weight:700;">01</div>
     <h2>Add your <em>notes</em></h2>
-    <p class="card-sub">Upload anything — photo of notes, PDF, Word doc, video of a lecture, or just paste text.</p>
+    <p class="card-sub">Upload anything — photo of notes, PDF, Word doc, a lecture transcript (.vtt/.srt), or just paste text.</p>
 
     <!-- UPLOAD ZONE -->
     <div id="upload-zone" onclick="document.getElementById('file-input').click()" style="border:2px dashed rgba(74,124,246,.3);border-radius:16px;padding:1.8rem 1.2rem;text-align:center;background:var(--blue-light);cursor:pointer;transition:all .3s;margin-bottom:1rem;">
-      <input type="file" id="file-input" multiple accept=".pdf,.txt,.doc,.docx,.pptx,.md,.png,.jpg,.jpeg,.webp,.gif,.heic,.heif,.mp4,.mov,.m4v,.mp3,.m4a,.wav" style="display:none;" onchange="handleFiles(this.files)" />
+      <input type="file" id="file-input" multiple accept=".pdf,.txt,.doc,.docx,.pptx,.md,.vtt,.srt,.sbv,.png,.jpg,.jpeg,.webp,.gif,.heic,.heif,.mp4,.mov,.m4v,.mp3,.m4a,.wav" style="display:none;" onchange="handleFiles(this.files)" />
       <!-- Upload icon -->
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(74,124,246,.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto .75rem;display:block;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       <strong style="display:block;font-size:0.95rem;color:var(--ink);margin-bottom:.3rem;">Drop files here or tap to browse</strong>
@@ -939,59 +939,190 @@
     reader.readAsDataURL(file);
   }
 
-  // ── VIDEO/AUDIO → Web Speech API transcription ──
-  function handleVideoAudio(file) {
-    showStatus('Transcribing ' + file.name + '... this may take a minute');
-    var url = URL.createObjectURL(file);
-    var audio = new Audio(url);
-    audio.load();
+  /* ── VIDEO / AUDIO ────────────────────────────────────────────────────────
+     The previous implementation could not work, and did not.
 
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+     It played the uploaded file through an <audio> element at volume 0.01 and
+     started SpeechRecognition, hoping the two would connect. They cannot:
+     SpeechRecognition captures the MICROPHONE, not page audio. So it opened
+     the mic (an odd permission prompt for "upload a video"), heard the room
+     rather than the file, and reported "no speech detected". Echo cancellation
+     actively suppresses speaker output reaching the mic, so even at full
+     volume through speakers it would fail. playbackRate 1.5 would have
+     garbled it regardless.
+
+     There is no way to transcribe an uploaded media file in the browser
+     without a transcription service, and this app has no backend. So instead
+     of pretending, it offers the two routes that genuinely work:
+
+       1. A caption or transcript file (.vtt .srt .txt) - instant and exact.
+          Most lecture recordings, Zoom exports and YouTube videos can produce
+          one, and this is by far the best input.
+       2. Live capture from the microphone, for a lecture happening now or a
+          recording played aloud on another device. This is what the Web Speech
+          API is actually for. */
+
+  function handleVideoAudio(file) {
+    hideStatus();
+    addFileToList(file.name, 'Media files need a transcript \u2014 see below', false);
+    showMediaHelp(file.name);
+  }
+
+  function showMediaHelp(fileName) {
+    var host = document.getElementById('files-list');
+    if (!host) return;
+    if (document.getElementById('media-help')) return;   // one panel is enough
+
+    host.style.display = 'block';
+    var box = document.createElement('div');
+    box.id = 'media-help';
+    box.style.cssText =
+      'margin-top:.5rem;padding:.9rem 1rem;border:1.5px solid var(--border);' +
+      'border-radius:12px;background:var(--soft);font-size:0.82rem;line-height:1.6;color:var(--ink);';
+    box.innerHTML =
+      '<div style="font-weight:700;margin-bottom:.45rem;">Getting the words out of ' +
+      (fileName ? '\u201c' + fileName + '\u201d' : 'a recording') + '</div>' +
+      '<div style="color:var(--muted);margin-bottom:.7rem;">' +
+      'A browser cannot read speech out of a file on its own. Two options that do work:</div>' +
+      '<div style="margin-bottom:.6rem;">' +
+      '<strong>1. Upload the captions.</strong> If the lecture came from Zoom, Teams, ' +
+      'Panopto or YouTube, download the transcript or subtitle file ' +
+      '(<code>.vtt</code>, <code>.srt</code>) and drop it here. This is exact.</div>' +
+      '<div style="margin-bottom:.75rem;">' +
+      '<strong>2. Listen live.</strong> Play the recording out loud (or start this ' +
+      'during class) and StudyFlow will transcribe as it listens.</div>' +
+      '<div style="display:flex;gap:.5rem;flex-wrap:wrap;">' +
+      '<button type="button" onclick="triggerUpload(\'.vtt,.srt,.txt\')" ' +
+      'style="font:inherit;font-size:.8rem;font-weight:700;padding:.5rem .9rem;border-radius:10px;' +
+      'border:1.5px solid var(--border);background:#fff;color:var(--ink);cursor:pointer;">' +
+      'Upload a transcript file</button>' +
+      '<button type="button" id="live-listen-btn" onclick="toggleLiveListen()" ' +
+      'style="font:inherit;font-size:.8rem;font-weight:700;padding:.5rem .9rem;border-radius:10px;' +
+      'border:1.5px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;">' +
+      'Start listening</button></div>' +
+      '<div id="live-listen-status" style="margin-top:.6rem;font-size:.78rem;color:var(--muted);"></div>';
+    host.appendChild(box);
+  }
+
+  /* ── Caption files: .vtt and .srt carry timings we strip out ────────────── */
+  function parseCaptions(raw) {
+    var text = String(raw == null ? '' : raw).replace(/\r/g, '');
+    var lines = text.split('\n');
+    var out = [], seen = {}, i;
+    for (i = 0; i < lines.length; i++) {
+      var t = lines[i].trim();
+      if (!t) continue;
+      if (/^WEBVTT/i.test(t)) continue;
+      if (/^\d+$/.test(t)) continue;                       // srt cue numbers
+      if (/\d{1,2}:\d{2}(:\d{2})?[.,]\d{3}\s*-->/.test(t)) continue;   // timings
+      if (/^NOTE\b/i.test(t)) continue;
+      t = t.replace(/<[^>]+>/g, '');                        // inline vtt tags
+      t = t.replace(/^-\s*/, '').trim();                    // speaker dashes
+      if (!t) continue;
+      /* Caption files repeat lines as they scroll; keep each line once. */
+      var key = t.toLowerCase();
+      if (seen[key]) continue;
+      seen[key] = 1;
+      out.push(t);
+    }
+    return out.join(' ').replace(/\s{2,}/g, ' ').trim();
+  }
+
+  function handleCaptionFile(file) {
+    showStatus('Reading ' + file.name + '...');
+    var reader = new FileReader();
+    reader.onload = function (e) {
       hideStatus();
-      addFileToList(file.name, 'Speech recognition not supported in this browser — try Chrome', false);
-      URL.revokeObjectURL(url);
+      var text = parseCaptions(e.target.result);
+      if (text.length > 40) {
+        appendToNotes(text);
+        addFileToList(file.name, 'Transcript added (' + text.split(/\s+/).length + ' words)', true);
+      } else {
+        addFileToList(file.name, 'That file had no readable captions', false);
+      }
+    };
+    reader.onerror = function () {
+      hideStatus();
+      addFileToList(file.name, 'Could not read that file', false);
+    };
+    reader.readAsText(file);
+  }
+
+  /* ── Live capture: what SpeechRecognition is actually designed for ─────── */
+  var liveRec = null, liveText = '', liveOn = false;
+
+  function toggleLiveListen() {
+    var btn = document.getElementById('live-listen-btn');
+    var out = document.getElementById('live-listen-status');
+
+    if (liveOn) {
+      liveOn = false;
+      try { if (liveRec) liveRec.stop(); } catch (e) { /* already stopped */ }
+      if (btn) { btn.textContent = 'Start listening'; btn.style.background = 'var(--blue)'; }
       return;
     }
 
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    var recognition = new SR();
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.lang = 'en-US';
-    var transcript = '';
+    if (!SR) {
+      if (out) out.textContent = 'Live transcription needs Chrome, Edge or Safari. ' +
+        'Upload a transcript file instead.';
+      return;
+    }
 
-    recognition.onresult = function(e) {
+    liveRec = new SR();
+    liveRec.continuous = true;
+    liveRec.interimResults = true;
+    liveRec.lang = 'en-US';
+    liveText = '';
+    liveOn = true;
+
+    liveRec.onresult = function (e) {
+      var interim = '';
       for (var i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) transcript += e.results[i][0].transcript + ' ';
+        if (e.results[i].isFinal) liveText += e.results[i][0].transcript + ' ';
+        else interim += e.results[i][0].transcript;
+      }
+      if (out) {
+        var words = liveText.trim() ? liveText.trim().split(/\s+/).length : 0;
+        out.textContent = 'Listening\u2026 ' + words + ' words captured' +
+          (interim ? ' \u2014 \u201c' + interim.slice(-60) + '\u201d' : '');
       }
     };
 
-    recognition.onend = function() {
-      hideStatus();
-      URL.revokeObjectURL(url);
-      if (transcript.trim().length > 20) {
-        appendToNotes(transcript.trim());
-        addFileToList(file.name, 'Lecture transcribed', true);
-      } else {
-        addFileToList(file.name, 'No speech detected — try a video with clear audio', false);
+    liveRec.onerror = function (ev) {
+      liveOn = false;
+      if (btn) { btn.textContent = 'Start listening'; btn.style.background = 'var(--blue)'; }
+      if (!out) return;
+      out.textContent = (ev && ev.error === 'not-allowed')
+        ? 'Microphone access was blocked. Allow it in your browser settings, or upload a transcript file.'
+        : 'Listening stopped. You can start again, or upload a transcript file.';
+    };
+
+    liveRec.onend = function () {
+      /* Chrome ends the session periodically; restart while the user wants it. */
+      if (liveOn) { try { liveRec.start(); return; } catch (e) { /* fall through */ } }
+      if (btn) { btn.textContent = 'Start listening'; btn.style.background = 'var(--blue)'; }
+      var finalText = liveText.trim();
+      if (finalText.length > 40) {
+        appendToNotes(finalText);
+        addFileToList('Live recording', 'Transcribed (' + finalText.split(/\s+/).length + ' words)', true);
+        if (out) out.textContent = 'Added ' + finalText.split(/\s+/).length + ' words to your notes.';
+      } else if (out) {
+        out.textContent = 'Not enough speech captured to use.';
       }
     };
 
-    recognition.onerror = function() {
-      hideStatus();
-      URL.revokeObjectURL(url);
-      addFileToList(file.name, 'Transcription failed — paste notes manually', false);
-    };
-
-    // Play audio silently and recognize
-    audio.oncanplay = function() {
-      recognition.start();
-      audio.play();
-    };
-    audio.onended = function() { recognition.stop(); };
-    audio.volume = 0.01; // near silent
-    audio.playbackRate = 1.5; // faster = quicker transcription
+    try {
+      liveRec.start();
+      if (btn) { btn.textContent = 'Stop and use it'; btn.style.background = '#dc2626'; }
+      if (out) out.textContent = 'Listening\u2026 play the recording out loud, or let the lecture run.';
+    } catch (e) {
+      liveOn = false;
+      if (out) out.textContent = 'Could not start listening. Upload a transcript file instead.';
+    }
   }
+
+  window.toggleLiveListen = toggleLiveListen;
 
   // ── PDF ──
   function handlePDF(file) {
@@ -1094,8 +1225,13 @@
       var docExts   = ['pdf'];
       var docxExts  = ['docx'];
       var textExts  = ['txt','md','doc'];
+      /* Caption and subtitle files are the reliable way to get a lecture's
+         words in. They are checked before the plain text types so a .vtt is
+         parsed as captions rather than dumped in with its timestamps. */
+      var captionExts = ['vtt','srt','sbv'];
 
       if (imageExts.includes(ext))  { handleImage(file); }
+      else if (captionExts.includes(ext)) { handleCaptionFile(file); }
       else if (videoExts.includes(ext)) { handleVideoAudio(file); }
       else if (docExts.includes(ext))   { handlePDF(file); }
       else if (docxExts.includes(ext))  { handleDOCX(file); }
@@ -1810,6 +1946,10 @@
     var subject = typedOk ? typedSubject : detectedSubject;
     console.log('[StudyFlow] subject typed:', typedSubject || '(none)', '| detected:', detectedSubject, '| using:', subject);
     var subjectType = classifySubject(subject, notes);
+    /* Persist the classification. lesson.html needs it to decide which question
+       formats a subject requires, and it was recomputing (or defaulting to
+       "general") because this was never written to the plan. */
+    window.__sfSubjectType = subjectType;
     var strategy    = getSubjectStrategy(subjectType);
     var allDays = [];
 
