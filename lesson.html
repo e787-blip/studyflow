@@ -1303,12 +1303,20 @@
            equation card under a "Solve for x" heading. carriesExpression also
            checks that the answer is mathematical, which a naming question's
            never is. */
-        var looksSolvable = carriesExpression(q);
-        var cardType = q.type === 'bigequation' ? 'bigequation'
-          : q.type === 'wordproblem' ? 'wordproblem'
-          : (looksSolvable && (q.equation || /solve|simplify|factor|expand|evaluate/i.test(q.question || ''))) ? 'bigequation'
-          : (q.scenario || (looksSolvable && /how many|costs|total|distance|speed|rate|percent/i.test(q.question || ''))) ? 'wordproblem'
-          : 'fill';
+        /* Same mapper the runtime uses, so a question cannot be one card type
+           when pre-built and a different one when served dynamically. */
+        var cardType = cardTypeFor(q);
+        if (cardType === 'question' || cardType === 'fill') {
+          var solvable = carriesExpression(q);
+          if (solvable && (q.equation || /solve|simplify|factor|expand|evaluate/i.test(q.question || ''))) {
+            cardType = 'bigequation';
+          } else if (q.scenario ||
+                     (solvable && /how many|costs|total|distance|speed|rate|percent/i.test(q.question || ''))) {
+            cardType = 'wordproblem';
+          } else {
+            cardType = 'fill';
+          }
+        }
         var insertAt4 = Math.min(3 + i * 3, sessionCards.length);
         sessionCards.splice(insertAt4, 0, { type: cardType, q: q });
       });
@@ -1515,6 +1523,45 @@
     return out;
   }
 
+  /* ── WHICH CARD DOES THIS QUESTION BELONG ON? ─────────────────────────────
+     This is the bug that kept the big equation card off screen.
+
+     buildQueue splices a handful of pre-built cards with the right types, but
+     everything after those - the buffered questions, and the random picks that
+     make up most of a session - was returned as `{ type: 'question' }`,
+     hardcoded. renderCard has a 'bigequation' branch and a 'wordproblem'
+     branch, and getNextCard simply never sent them. So a question could be
+     `type: 'bigequation'` and still be drawn as multiple choice, and the
+     equation card only appeared for the first few cards of a session, if at
+     all.
+
+     Every path now goes through this one function, so a question's own type
+     decides its card. */
+  function cardTypeFor(q) {
+    if (!q) return 'question';
+    var t = fmStr(q.type).toLowerCase();
+
+    /* Types with a dedicated renderer are honoured directly. */
+    var DIRECT = {
+      bigequation: 1, wordproblem: 1, errorspot: 1, sequence: 1, sentence: 1,
+      match: 1, classify: 1, graph: 1, passage: 1, write: 1, scenario: 1,
+      fill: 1
+    };
+    if (DIRECT[t]) {
+      /* A fill question that is really a calculation belongs on the equation
+         card; one that asks for a remembered term does not. carriesExpression
+         checks the answer is mathematical and rejects naming questions. */
+      if (t === 'fill' && carriesExpression(q) &&
+          /solve|simplify|factor|expand|evaluate/i.test(fmStr(q.question))) {
+        return 'bigequation';
+      }
+      return t;
+    }
+
+    /* mcq / truefalse / anything unrecognised render as a standard question. */
+    return 'question';
+  }
+
   function getNextCard() {
     if (cardIndex < sessionCards.length) return sessionCards[cardIndex];
 
@@ -1557,9 +1604,15 @@
     // Use buffered AI-generated question if available
     if (questionBuffer.length > 0) {
       var q = questionBuffer.shift();
-      // Trigger generation of more in background
+      /* Buffered questions arrive straight from the API and used to bypass both
+         normalisation and format enforcement, so mid-session practice drifted
+         back to whatever the model felt like returning. Run them through the
+         same treatment as the day's own questions. */
+      q = normalizeQuestion(q);
+      var oneQ = enforceFormatMix([q], resolveSubjectType(plan, day));
+      q = (oneQ && oneQ[0]) || q;
       if (questionBuffer.length < 2) generateMoreQuestions();
-      return { type: 'question', q: q, qi: -1 };
+      return { type: cardTypeFor(q), q: q, qi: -1 };
     }
 
     // Fallback: pick from existing questions avoiding recent repeats
@@ -1575,7 +1628,7 @@
     // Start generating new questions in background
     if (!generatingNew) generateMoreQuestions();
 
-    return { type: 'question', q: picked, qi: questions.indexOf(picked) };
+    return { type: cardTypeFor(picked), q: picked, qi: questions.indexOf(picked) };
   }
 
   function generateMoreQuestions() {
