@@ -1647,6 +1647,62 @@
     }).filter(Boolean).join(', ');
     var lockLine = lockTopic || lockSubject || 'the current lesson';
 
+    /* ── FORMAT INSTRUCTION FOR TOP-UP QUESTIONS ────────────────────────────
+       This prompt used to end rule 7 with "Mix MCQ and true/false", and its
+       JSON example showed only those two types. buildQueue seeds a handful of
+       correctly-typed cards at the start of a session, but everything after
+       them comes from here - so from the model's point of view it was being
+       told, explicitly, to produce nothing but multiple choice for the rest of
+       the session. A maths lesson would open with a few equation cards and
+       then never show another one.
+
+       The format now follows the subject, matching the mandate the plan
+       generator uses. */
+    var lockType = resolveSubjectType(plan, day);
+    var FORMAT_RULES = {
+      math:
+        '7. FORMAT (this rule outranks the others on question style): of 10 questions,\n' +
+        '   7 or 8 MUST be "bigequation" or "wordproblem". Nothing else counts.\n' +
+        '   - bigequation: an expression the learner solves, simplifies, expands or\n' +
+        '     evaluates. Put it in the "equation" field. Aim for 4-5.\n' +
+        '   - wordproblem: a situation solved in 2-4 staged sub-steps, in "steps".\n' +
+        '     Each step asks for ONE quantity; reference an earlier result with {1}.\n' +
+        '     Aim for 3-4.\n' +
+        '   At most 2 may be mcq or truefalse, and only for something that genuinely\n' +
+        '   cannot be computed. ZERO "fill".\n',
+      cs:
+        '7. FORMAT: at least 3 "errorspot" (buggy code to fix) or "sequence", at least\n' +
+        '   2 "write" where the learner traces or produces code. At most 3 mcq.\n',
+      language:
+        '7. FORMAT: at least 4 "fill" where the blank is a form the learner must\n' +
+        '   PRODUCE (conjugate, decline, agree), at least 2 "write". At most 3 mcq.\n',
+      science:
+        '7. FORMAT: mix mcq with at least 2 "wordproblem" wherever the topic carries a\n' +
+        '   quantity, formula or rate, and at least 1 "classify" or "sequence".\n',
+      general:
+        '7. Mix formats: mcq, truefalse, and at least one "sequence" or "classify"\n' +
+        '   if the topic has any order or grouping. Vary difficulty.\n'
+    };
+    var formatRule = FORMAT_RULES[lockType] || FORMAT_RULES.general;
+
+    var SCHEMAS = {
+      math:
+        '[{"type":"bigequation","question":"Solve for x","equation":"3x - 7 = 14",' +
+        '"answer":"7","hint":"","explanation":"","difficulty":"Medium"},' +
+        '{"type":"wordproblem","scenario":"","question":"",' +
+        '"steps":[{"prompt":"","answer":"","unit":""},' +
+        '{"prompt":"Now use {1} to find...","answer":"","unit":""}],' +
+        '"answer":"","hint":"","explanation":"","difficulty":"Medium"},' +
+        '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,' +
+        '"hint":"","explanation":"","difficulty":"Easy"}]',
+      general:
+        '[{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,' +
+        '"hint":"","explanation":"","difficulty":"Medium"},' +
+        '{"type":"truefalse","question":"","correct":"True","hint":"",' +
+        '"explanation":"","difficulty":"Easy"}]'
+    };
+    var schema = SCHEMAS[lockType] || SCHEMAS.general;
+
     var prompt =
       'TOPIC LOCK: ' + lockLine + '\n' +
       (lockMicro   ? 'Exact scope: ' + lockMicro + '\n' : '') +
@@ -1661,11 +1717,12 @@
       '4. If you cannot think of 10 distinct questions on this topic, return fewer. NEVER go off-topic to fill the list.\n' +
       '5. Each question must cover a DIFFERENT concept or angle within the topic.\n' +
       '6. Do NOT repeat or closely resemble any of these already-used questions: ' + recentList + '\n' +
-      '7. Mix MCQ and true/false. Vary difficulty: some easy, some medium, some hard.\n' +
+      formatRule +
+      '   Vary difficulty: some easy, some medium, some hard.\n' +
       '8. Hints must be specific facts about this topic, not generic advice.\n\n' +
       'FINAL CHECK: reread every question. Delete any that is not about "' + lockLine + '".\n\n' +
       'Return ONLY a JSON array, no markdown:\n' +
-      '[{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"Medium"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"Easy"}]';
+      schema;
 
     fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
       method: 'POST',
