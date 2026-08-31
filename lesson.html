@@ -1071,9 +1071,55 @@
        re-answer questions they have already been graded on. */
     if (alreadyDone()) { showAlreadyDone(); return; }
     buildQueue();
+    logSessionShape();
     startTimer();
     showNextCard();
   }
+
+  /* ── SESSION DIAGNOSTIC ───────────────────────────────────────────────────
+     Prints what the session was actually built from. When something looks
+     wrong on a real device this is the fastest way to tell whether the problem
+     is the plan's data, the subject routing, or the card mapping - all three
+     look identical from the outside.
+
+     Also exposed as window.sfDiag() so it can be re-run from the console at
+     any point in a session. */
+  function logSessionShape() {
+    try {
+      if (!window.console || !console.log) return;
+      var qs = (day && day.questions) || [];
+      var inTypes = {}, i;
+      for (i = 0; i < qs.length; i++) {
+        var t = (qs[i] && qs[i].type) || '?';
+        inTypes[t] = (inTypes[t] || 0) + 1;
+      }
+      var cardTypes = {};
+      for (i = 0; i < sessionCards.length; i++) {
+        var c = sessionCards[i].type || '?';
+        cardTypes[c] = (cardTypes[c] || 0) + 1;
+      }
+      var resolved = resolveSubjectType(plan, day);
+      var solving = (cardTypes.bigequation || 0) + (cardTypes.wordproblem || 0);
+
+      console.log(
+        '%c[StudyFlow] session shape',
+        'font-weight:700;color:#4a7cf6',
+        '\n  plan.subject      : ' + ((plan && plan.subject) || '(none)') +
+        '\n  plan.subjectType  : ' + ((plan && plan.subjectType) || '(none)') +
+        '\n  resolved as       : ' + resolved +
+        '\n  day.title         : ' + ((day && day.title) || '(none)') +
+        '\n  questions in plan : ' + qs.length + '  ' + JSON.stringify(inTypes) +
+        '\n  cards queued      : ' + sessionCards.length + '  ' + JSON.stringify(cardTypes) +
+        '\n  solving cards     : ' + solving +
+        (solving === 0 && resolved === 'math'
+          ? '\n  >>> NO SOLVING CARDS ON A MATHS DAY. The questions above carry no' +
+            '\n      solvable expression, so nothing could be converted. Regenerate' +
+            '\n      the plan, or send this block over.'
+          : '')
+      );
+    } catch (e) { /* diagnostics must never break a session */ }
+  }
+  window.sfDiag = logSessionShape;
 
   /* ── QUEUE ── */
   function alreadyDone() {
@@ -1190,7 +1236,7 @@
     if (dayIndex === 0 && simpleQuestions.length >= 3) {
       sessionCards.push({ type: 'pretest-intro' });
       shuffled.slice(0, 3).forEach(function(q) {
-        sessionCards.push({ type: 'question', q: q, isPretest: true });
+        sessionCards.push({ type: cardTypeFor(q), q: q, isPretest: true });
       });
       sessionCards.push({ type: 'pretest-done' });
     }
@@ -1203,7 +1249,7 @@
       if (prevMissed.length > 0) {
         sessionCards.push({ type: 'review-intro', count: Math.min(prevMissed.length, 3) });
         prevMissed.slice(0, 3).forEach(function(q) {
-          sessionCards.push({ type: 'question', q: q, isReview: true });
+          sessionCards.push({ type: cardTypeFor(q), q: q, isReview: true });
         });
         sessionCards.push({ type: 'review-done' });
       }
@@ -1231,7 +1277,7 @@
       if (allPrevMissed.length > 0) {
         sessionCards.push({ type: 'interleave-intro', count: Math.min(allPrevMissed.length, 5) });
         allPrevMissed.slice(0, 5).sort(function(){ return Math.random() - 0.5; }).forEach(function(q) {
-          sessionCards.push({ type: 'question', q: q, isReview: true });
+          sessionCards.push({ type: cardTypeFor(q), q: q, isReview: true });
         });
       }
     }
@@ -1246,21 +1292,55 @@
     var regularQuestions = questions.filter(function(q){ return !SPECIAL_TYPES[q.type]; });
     var shuffled = regularQuestions.slice().sort(function(){ return Math.random() - 0.5; });
 
+    /* On a procedural subject the solving questions ARE the lesson, so they go
+       first. Previously bigequation and wordproblem sat in SPECIAL_TYPES, which
+       excluded them from this loop entirely; they were only spliced back in at
+       positions 3, 6 and 9. A learner therefore met several multiple-choice
+       questions before the first equation, and on a short session might never
+       reach one at all. Now they lead, and the remaining recognition questions
+       are folded in behind them. */
+    var qType = resolveSubjectType(plan, day);
+    if (PROCEDURAL_SUBJECTS[qType]) {
+      var coreFirst = questions.filter(function (q) {
+        var t = fmStr(q.type);
+        return t === 'bigequation' || t === 'wordproblem';
+      });
+      if (coreFirst.length) {
+        /* Alternate: solving, solving, one recognition question, repeat. That
+           keeps some variety without burying the practice. */
+        var merged = [], ci = 0, ri = 0;
+        while (ci < coreFirst.length || ri < shuffled.length) {
+          if (ci < coreFirst.length) merged.push(coreFirst[ci++]);
+          if (ci < coreFirst.length) merged.push(coreFirst[ci++]);
+          if (ri < shuffled.length) merged.push(shuffled[ri++]);
+        }
+        shuffled = merged;
+      }
+    }
+
     // Main questions — interleave fill + interactive types on ALL plans
     shuffled.forEach(function(q, i) {
-      sessionCards.push({ type: 'question', q: q, qi: i });
+      sessionCards.push({ type: cardTypeFor(q), q: q, qi: i });
 
-      // Fill in blank — every 3rd question, ALL plans
-      if ((i + 1) % 3 === 0) {
-        var fillQ = fillQuestions.length > 0
-          ? fillQuestions[Math.floor(i / 3) % fillQuestions.length]
-          : (i < shuffled.length - 1 ? shuffled[i + 1] : null);
+      /* Fill in the blank every third question. When the day has no fill
+         questions this used to fall back to shuffled[i + 1] - the NEXT question
+         in the very list being queued - so that question appeared twice, once
+         as a fill card and again a moment later as itself. Skip the slot
+         instead; a repeated question is worse than a missing variation. */
+      if ((i + 1) % 3 === 0 && fillQuestions.length > 0) {
+        var fillQ = fillQuestions[Math.floor(i / 3) % fillQuestions.length];
         if (fillQ) sessionCards.push({ type: 'fill', q: fillQ });
       }
 
-      // Feynman write — every 5 questions, ALL plans
+      /* Feynman write every fifth question. It reused `q` - the question just
+         queued on the line above - so the same item appeared twice in a row,
+         once as its own card and again as an explain-it prompt. Reach back to
+         an EARLIER question instead: explaining something from a few minutes
+         ago is the retrieval this card is for, and it cannot duplicate the
+         card next to it. */
       if ((i + 1) % 5 === 0 && i < shuffled.length - 1) {
-        sessionCards.push({ type: 'write', q: q });
+        var recallQ = shuffled[Math.max(0, i - 3)];
+        if (recallQ && recallQ !== q) sessionCards.push({ type: 'write', q: recallQ });
       }
     });
 
@@ -1295,7 +1375,19 @@
 
     // Big equation + word problem — math subjects, pulled from AI-generated fill questions
     if (isMath) {
-      var fillQs = (day.questions || []).filter(function(q){ return q.type === 'fill' || q.type === 'bigequation' || q.type === 'wordproblem'; });
+      /* Only the questions the main loop did not already queue. Without this
+         a solving question appears twice: once leading the session and once
+         spliced in behind it. */
+      var alreadyQueued = {};
+      for (var aq = 0; aq < sessionCards.length; aq++) {
+        if (sessionCards[aq].q && sessionCards[aq].q.question) {
+          alreadyQueued[fmStr(sessionCards[aq].q.question)] = 1;
+        }
+      }
+      var fillQs = (day.questions || []).filter(function(q){
+        if (alreadyQueued[fmStr(q.question)]) return false;
+        return q.type === 'fill' || q.type === 'bigequation' || q.type === 'wordproblem';
+      });
       fillQs.forEach(function(q, i) {
         /* A fill question is only re-cast as an equation when it is genuinely
            solvable. Matching on the words "solve" or "simplify" alone sent a
@@ -4519,7 +4611,7 @@
         if (reinjectAt < sessionCards.length) {
           sessionCards.splice(reinjectAt, 0, { type: 'question', q: wrongQ, isSpacedRepeat: true });
         } else {
-          sessionCards.push({ type: 'question', q: wrongQ, isSpacedRepeat: true });
+          sessionCards.push({ type: cardTypeFor(wrongQ), q: wrongQ, isSpacedRepeat: true });
         }
       }
 
