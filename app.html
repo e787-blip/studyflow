@@ -2091,9 +2091,68 @@
         if (q.type === 'fill' || q.type === 'bigequation' || q.type === 'wordproblem') {
           if (!qText) return false;
           // Accept even if answer is empty — better to show question than strip it
+          /* ── THIS IS WHERE BIG EQUATIONS WERE DISAPPEARING ────────────────
+             A bigequation whose "equation" field was empty used to be demoted
+             to fill. The very next block then rejects any fill question whose
+             text starts with an instruction verb - and INSTRUCTION_START
+             includes "solve" and "calculate". So a question like
+
+               {type:"bigequation", question:"Solve 3x - 7 = 14", equation:""}
+
+             was demoted, then DELETED. The model routinely puts the expression
+             in `question` rather than `equation`, so an entire maths day could
+             lose all five of its equation questions before it was ever saved,
+             and the learner saw only the leftover multiple choice.
+
+             Recover the equation from the question text instead. Only fall
+             back to fill when there is genuinely no expression anywhere. */
           if (q.type === 'bigequation' && (!q.equation || q.equation.trim().length < 1)) {
-            // Promote to fill if no equation
-            q.type = 'fill';
+            /* Read the QUESTION only. An earlier attempt appended the answer to
+               the search text, so "Solve 3x - 7 = 14 for x" with answer "7"
+               produced the equation "3x - 7 = 14 for x 7" - the answer printed
+               inside the box the learner is meant to solve. */
+            var qsrc = String(q.question || '');
+
+            /* Drop the leading imperative and any trailing "for x" first, so
+               what remains is the expression itself. */
+            var body = qsrc
+              .replace(/^\s*(?:solve|simplify|evaluate|expand|factor|compute|calculate|find|determine)\b\s*/i, '')
+              .replace(/^(?:the\s+value\s+of|for)\s+/i, '')
+              .replace(/\s+for\s+[a-z]\b\s*$/i, '')
+              .replace(/[\s.?]+$/, '')
+              .trim();
+
+            /* Prefer a complete equation; fall back to a bare expression. */
+            var eqm = body.match(/[-0-9a-zA-Z(][^,;?]{0,40}?(?:=|<=|>=)[^,;?]{0,40}/);
+            var picked = eqm ? eqm[0] : '';
+            if (!picked) {
+              var exm = body.match(/[-0-9(][0-9a-zA-Z\s+\-*\/^().]{2,40}/);
+              picked = exm ? exm[0] : '';
+            }
+
+            /* Keep a substitution clause: in "5x when x = 4" the "when x = 4"
+               IS the problem, and dropping it left the box reading just "5x",
+               which cannot be evaluated. Only strip a trailing clause that
+               carries no value of its own. */
+            picked = String(picked).trim();
+            var tail = picked.match(/\s+(when|where|given|if)\b([\s\S]*)$/i);
+            if (tail && tail[2].indexOf('=') === -1) {
+              picked = picked.slice(0, tail.index);
+            } else if (tail) {
+              /* Normalise "5x when x = 4" to the compact "5x, x = 4". */
+              picked = picked.slice(0, tail.index) + ', ' + tail[2].trim();
+            }
+            picked = picked.replace(/\s+(?:and|then)\b[\s\S]*$/i, '')
+                           .replace(/[\s.,;?]+$/, '')
+                           .trim();
+
+            /* Must still look like maths: a digit or an operator, and short. */
+            if (picked.length >= 2 && picked.length <= 44 &&
+                /[0-9]/.test(picked) && /[a-z0-9)]/i.test(picked)) {
+              q.equation = picked;
+            }
+            /* Nothing mathematical survived: it was never an equation question. */
+            if (!q.equation || q.equation.length < 2) q.type = 'fill';
           }
           if (q.type === 'fill') {
             // A fill question must be a declarative sentence with one blank —
