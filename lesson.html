@@ -4609,7 +4609,7 @@
       if (wrongQ && prevCard && !prevCard.isReview && !prevCard.isPretest && !prevCard.isSpacedRepeat) {
         var reinjectAt = cardIndex + 4;
         if (reinjectAt < sessionCards.length) {
-          sessionCards.splice(reinjectAt, 0, { type: 'question', q: wrongQ, isSpacedRepeat: true });
+          sessionCards.splice(reinjectAt, 0, { type: cardTypeFor(wrongQ), q: wrongQ, isSpacedRepeat: true });
         } else {
           sessionCards.push({ type: cardTypeFor(wrongQ), q: wrongQ, isSpacedRepeat: true });
         }
