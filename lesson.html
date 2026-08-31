@@ -1218,7 +1218,7 @@
        entirely - which is exactly why a maths day still arrived as multiple
        choice. Derive it from the same signals buildQueue already uses for
        isMath, so the two can never disagree. */
-    questions = enforceFormatMix(questions, resolveSubjectType(plan, day));
+    questions = enforceFormatMix(questions, resolveSubjectType(plan, day), day && day.title, true);
     day.questions = questions;
 
     /* The whiteboard is built here but queued later - see below. Placing it at
@@ -1327,7 +1327,11 @@
          in the very list being queued - so that question appeared twice, once
          as a fill card and again a moment later as itself. Skip the slot
          instead; a repeated question is worse than a missing variation. */
-      if ((i + 1) % 3 === 0 && fillQuestions.length > 0) {
+      /* Fill cards every third question - but not on maths. The maths mandate
+         is zero fill: typing a remembered term is not practice at solving, and
+         these interleaved cards were pushing the solving share down to 60%
+         even when every generated question was an equation. */
+      if ((i + 1) % 3 === 0 && fillQuestions.length > 0 && qType !== 'math') {
         var fillQ = fillQuestions[Math.floor(i / 3) % fillQuestions.length];
         if (fillQ) sessionCards.push({ type: 'fill', q: fillQ });
       }
@@ -1338,7 +1342,9 @@
          an EARLIER question instead: explaining something from a few minutes
          ago is the retrieval this card is for, and it cannot duplicate the
          card next to it. */
-      if ((i + 1) % 5 === 0 && i < shuffled.length - 1) {
+      /* One explain-it card per session on maths, not one every five. */
+      var writeEvery = (qType === 'math') ? 8 : 5;
+      if ((i + 1) % writeEvery === 0 && i < shuffled.length - 1) {
         var recallQ = shuffled[Math.max(0, i - 3)];
         if (recallQ && recallQ !== q) sessionCards.push({ type: 'write', q: recallQ });
       }
@@ -1386,6 +1392,11 @@
       }
       var fillQs = (day.questions || []).filter(function(q){
         if (alreadyQueued[fmStr(q.question)]) return false;
+        /* Maths carries no fill cards: the mandate is zero fill, and letting
+           them back in here was the last thing holding the solving share
+           below target. Definitions still reach the learner as the ordinary
+           question cards the main loop queues. */
+        if (q.type === 'fill' && resolveSubjectType(plan, day) === 'math') return false;
         return q.type === 'fill' || q.type === 'bigequation' || q.type === 'wordproblem';
       });
       fillQs.forEach(function(q, i) {
@@ -1701,7 +1712,7 @@
          back to whatever the model felt like returning. Run them through the
          same treatment as the day's own questions. */
       q = normalizeQuestion(q);
-      var oneQ = enforceFormatMix([q], resolveSubjectType(plan, day));
+      var oneQ = enforceFormatMix([q], resolveSubjectType(plan, day), day && day.title);
       q = (oneQ && oneQ[0]) || q;
       if (questionBuffer.length < 2) generateMoreQuestions();
       return { type: cardTypeFor(q), q: q, qi: -1 };
@@ -5413,7 +5424,16 @@
   var MATH_CORE_TYPES = { bigequation: 1, wordproblem: 1 };
 
   /* Share of a day that must be core solving work, per subject. */
-  var PRODUCTION_TARGET = { math: 0.75, cs: 0.6, language: 0.6 };
+  /* Maths is now 90%: only genuine definitions and a rule-naming question or
+     two should be anything other than solving work. */
+  var PRODUCTION_TARGET = { math: 0.9, cs: 0.6, language: 0.6 };
+
+  /* A maths day must carry at least this many solving questions. Below it, the
+     shortfall is generated. */
+  /* Eight, so that even a day whose model output was entirely definitions ends
+     up around 80-90% solving work once the one or two legitimate definition
+     questions are counted alongside. */
+  var MATH_MIN_SOLVING = 8;
 
   /* No single format may exceed this share on a non-procedural subject, so a
      history day cannot arrive as nine multiple-choice questions. */
@@ -5613,7 +5633,169 @@
     return saved || 'general';
   }
 
-  function enforceFormatMix(list, subjectType) {
+  /* ── GUARANTEED SOLVING PRACTICE ──────────────────────────────────────────
+     Everything upstream now asks for equations: the plan prompt requests five,
+     the top-up prompt requests seven or eight, and the sanitiser no longer
+     deletes them. But all of that still depends on the model complying, and a
+     maths lesson with no equations in it is not a maths lesson.
+
+     This is the floor. When a maths day arrives short of solving practice, the
+     missing questions are built here from the day's own topic. Every generated
+     question is computed, not templated from a table, so the answer is correct
+     by construction rather than by trust.
+
+     It only ever ADDS. Model questions are always kept and always come first. */
+
+  function randInt(lo, hi) { return lo + Math.floor(Math.random() * (hi - lo + 1)); }
+
+  /* One-step: ax = b, x + a = b, x - a = b */
+  function genOneStep() {
+    var form = randInt(0, 2), a, x, b, eq, ans;
+    x = randInt(2, 12);
+    if (form === 0) {
+      a = randInt(2, 9); b = a * x;
+      eq = a + 'x = ' + b; ans = String(x);
+      return { eq: eq, ans: ans, why: 'Divide both sides by ' + a + ': x = ' + b + ' \u00f7 ' + a + ' = ' + x + '.' };
+    }
+    if (form === 1) {
+      a = randInt(2, 20); b = x + a;
+      eq = 'x + ' + a + ' = ' + b; ans = String(x);
+      return { eq: eq, ans: ans, why: 'Subtract ' + a + ' from both sides: x = ' + b + ' \u2212 ' + a + ' = ' + x + '.' };
+    }
+    a = randInt(2, 15); b = x - a;
+    eq = 'x \u2212 ' + a + ' = ' + b; ans = String(x);
+    return { eq: eq, ans: ans, why: 'Add ' + a + ' to both sides: x = ' + b + ' + ' + a + ' = ' + x + '.' };
+  }
+
+  /* Two-step: ax + b = c */
+  function genTwoStep() {
+    var a = randInt(2, 9), x = randInt(2, 12), b = randInt(2, 20);
+    var c = a * x + b;
+    return {
+      eq: a + 'x + ' + b + ' = ' + c,
+      ans: String(x),
+      why: 'Subtract ' + b + ' from both sides to get ' + a + 'x = ' + (c - b) +
+           ', then divide by ' + a + ': x = ' + x + '.'
+    };
+  }
+
+  /* Combining like terms: ax + bx */
+  function genCombine() {
+    var a = randInt(2, 9), b = randInt(2, 9);
+    return {
+      eq: a + 'x + ' + b + 'x',
+      ans: (a + b) + 'x',
+      why: 'The terms share the variable x, so add the coefficients: ' +
+           a + ' + ' + b + ' = ' + (a + b) + ', giving ' + (a + b) + 'x.'
+    };
+  }
+
+  /* Distribute: a(x + b) */
+  function genDistribute() {
+    var a = randInt(2, 8), b = randInt(2, 9);
+    return {
+      eq: a + '(x + ' + b + ')',
+      ans: a + 'x + ' + (a * b),
+      why: 'Multiply each term inside by ' + a + ': ' + a + '\u00b7x = ' + a +
+           'x and ' + a + '\u00b7' + b + ' = ' + (a * b) + '.'
+    };
+  }
+
+  /* Evaluate: ax when x = n */
+  function genEvaluate() {
+    var a = randInt(3, 12), n = randInt(2, 9);
+    return {
+      eq: a + 'x, x = ' + n,
+      ans: String(a * n),
+      why: 'Substitute x = ' + n + ': ' + a + ' \u00d7 ' + n + ' = ' + (a * n) + '.'
+    };
+  }
+
+  /* A staged word problem whose steps are computed, so swpValidate passes. */
+  function genWordProblem() {
+    var base = randInt(2, 6), rate = randInt(2, 5), miles = randInt(3, 9);
+    var total = base + rate * miles;
+    return {
+      type: 'wordproblem',
+      scenario: 'A taxi charges a $' + base + ' flat fee plus $' + rate +
+                ' for every mile. A ride costs $' + total + ' in total.',
+      question: 'How many miles was the ride?',
+      steps: [
+        { prompt: 'Subtract ' + base + ' from ' + total + ' to remove the flat fee.',
+          answer: String(total - base), unit: 'dollars',
+          hint: 'The flat fee is charged once, whatever the distance.' },
+        { prompt: 'Divide {1} by ' + rate + ' to find the miles.',
+          answer: String(miles), unit: 'miles',
+          hint: 'Each mile costs $' + rate + '.' }
+      ],
+      answer: String(miles),
+      hint: 'Take the flat fee off first, then divide by the per-mile rate.',
+      explanation: 'Removing the $' + base + ' fee leaves $' + (total - base) +
+                   ' of mileage charges. At $' + rate + ' per mile that is ' +
+                   miles + ' miles.',
+      difficulty: 'Medium',
+      _generated: true
+    };
+  }
+
+  /* Choose the generators that suit the day's topic. */
+  function generatorsFor(title) {
+    var t = fmStr(title).toLowerCase();
+    if (/two-step|two step/.test(t)) return [genTwoStep, genOneStep, genTwoStep];
+    if (/one-step|one step/.test(t)) return [genOneStep, genOneStep, genTwoStep];
+    if (/like terms|combin|simplif/.test(t)) return [genCombine, genDistribute, genCombine];
+    if (/distribut|expand/.test(t)) return [genDistribute, genCombine, genDistribute];
+    if (/evaluat|substitut/.test(t)) return [genEvaluate, genOneStep, genEvaluate];
+    /* General algebra: a spread of the core skills. */
+    return [genOneStep, genTwoStep, genCombine, genDistribute, genEvaluate];
+  }
+
+  function synthesizeSolvingQuestions(dayObj, howMany, existing) {
+    var gens = generatorsFor(dayObj && dayObj.title);
+    var out = [], seen = {}, guard = 0, k;
+    /* Seed the seen-set with what the day already has, so a generated equation
+       can never duplicate one the model supplied - two identical "Solve for x"
+       cards in a row is exactly what the learner notices. */
+    if (Object.prototype.toString.call(existing) === '[object Array]') {
+      for (k = 0; k < existing.length; k++) {
+        var ex = existing[k];
+        if (ex && ex.equation) seen[fmStr(ex.equation)] = 1;
+        if (ex && ex.scenario) seen[fmStr(ex.scenario)] = 1;
+      }
+    }
+
+    while (out.length < howMany && guard < 60) {
+      guard++;
+      /* Every third one is a word problem, so both formats appear. */
+      if (out.length % 3 === 2) {
+        var wp = genWordProblem();
+        if (!seen[wp.scenario]) { seen[wp.scenario] = 1; out.push(wp); }
+        continue;
+      }
+      var g = gens[out.length % gens.length]();
+      if (seen[g.eq]) continue;
+      seen[g.eq] = 1;
+      out.push({
+        type: 'bigequation',
+        question: g.eq.indexOf('=') !== -1 ? 'Solve for x' : 'Simplify',
+        equation: g.eq,
+        answer: g.ans,
+        hint: 'Work backwards through the operations.',
+        explanation: g.why,
+        difficulty: 'Medium',
+        _generated: true
+      });
+    }
+    return out;
+  }
+
+  /* topicTitle is optional: it only steers WHICH generators are used. Reading
+     the global `day` here instead made the function depend on page state and
+     threw whenever it was called on its own. */
+  /* isFullDay distinguishes a whole day's question set from a single top-up
+     question. The floor only makes sense for a day; guessing from list length
+     meant a short day never got its practice while a batched top-up did. */
+  function enforceFormatMix(list, subjectType, topicTitle, isFullDay) {
     if (!isArrList(list) || !list.length) return list;
     var i, converted = 0;
 
@@ -5646,9 +5828,29 @@
         }
       }
 
-      if (converted && typeof console !== 'undefined' && console.info) {
+      /* The floor. Conversion can only work with what the model sent; if a
+         maths day still has too little solving practice, build the rest. */
+      /* The floor applies to a whole day, not to a single top-up question.
+         Running it on a one-item list produced eight generated equations every
+         time the buffer refilled. */
+      if (subjectType === 'math' && isFullDay) {
+        var have = coreCount(list, subjectType);
+        var short = MATH_MIN_SOLVING - have;
+        if (short > 0) {
+          var made = synthesizeSolvingQuestions(
+            { title: topicTitle || (typeof day !== 'undefined' && day ? day.title : '') },
+            short, list);
+          for (i = 0; i < made.length; i++) list.push(made[i]);
+          if (typeof console !== 'undefined' && console.info) {
+            console.info('[format] math: generated ' + made.length +
+              ' solving question(s) to reach the minimum');
+          }
+        }
+      }
+
+      if (typeof console !== 'undefined' && console.info) {
         console.info('[format] ' + subjectType + ': ' + converted +
-          ' question(s) converted to solving format; core share now ' +
+          ' converted; core share now ' +
           Math.round(coreCount(list, subjectType) / list.length * 100) + '%');
       }
       return list;
