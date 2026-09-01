@@ -3483,6 +3483,21 @@
         /\btake\b[^.]*\baway from\b/.test(t)) { var tmp = a; a = b; b = tmp; }
     if (/\bdivide\b[^.]*\binto\b/.test(t)) { var t2 = a; a = b; b = t2; }
 
+    /* Never draw a line that is not arithmetic: division by zero produced
+       "10 \u00f7 0 = 5", which is worse than showing nothing. */
+    if (ops[0] === '\u00f7' && b === 0) return '';
+
+    /* And the line must actually compute to the answer beside it. A prompt the
+       parser reads differently from the author would otherwise put a false
+       equation in front of the learner. */
+    var lhs;
+    if (ops[0] === '+') lhs = a + b;
+    else if (ops[0] === '\u2212') lhs = a - b;
+    else if (ops[0] === '\u00d7') lhs = a * b;
+    else lhs = a / b;
+    var shown = parseFloat(String(answer).replace(/[^0-9.\-]/g, ''));
+    if (isNaN(shown) || Math.abs(lhs - shown) > 0.011) return '';
+
     return a + ' ' + ops[0] + ' ' + b + ' = ' + String(answer);
   }
 
@@ -9701,8 +9716,9 @@ var SFBoard = (function () {
       var det = typeof p === 'string' ? '' : clean(p && (p.detail || p.body || p.note));
       if (lab) pillars.push({ label: lab, detail: det });
     }
-    /* No explicit pillars: take the lesson's own step headings, which are the
-       closest thing the content already has to structure. */
+    /* No explicit pillars: use whatever structure the day already has. Step
+       headings first, then concepts, then key terms - the schema guarantees
+       keyTerms, so the board can almost always be built. */
     if (!pillars.length) {
       var ds = list(day.steps);
       for (i = 0; i < ds.length && pillars.length < 3; i++) {
@@ -9712,11 +9728,49 @@ var SFBoard = (function () {
         if (l2) pillars.push({ label: l2, detail: d2 });
       }
     }
+    if (!pillars.length) {
+      var cps = list(day.concepts);
+      for (i = 0; i < cps.length && pillars.length < 3; i++) {
+        var c0 = cps[i];
+        var cl = typeof c0 === 'string' ? clean(c0) : clean(c0 && (c0.name || c0.title || c0.label));
+        var cd = typeof c0 === 'string' ? '' : clean(c0 && (c0.detail || c0.description || c0.body));
+        if (cl) pillars.push({ label: cl, detail: cd });
+      }
+    }
+    if (!pillars.length) {
+      var kts = list(day.keyTerms);
+      for (i = 0; i < kts.length && pillars.length < 3; i++) {
+        var kt = kts[i] || {};
+        var term = clean(kt.term), def = clean(kt.definition);
+        if (term) pillars.push({ label: term, detail: def });
+      }
+    }
 
+    /* The day schema already carries these under different names, and reading
+       only `trap`/`anchor` meant the board found nothing and never rendered:
+
+         misconceptions: [{ believe, actually, why }]   <- the trap
+         caseStudy:      { title, what, connection }    <- the real-world anchor
+
+       Read those first, and fall back to the shorter aliases. */
     var trap = clean(day.trap || day.misconception || day.commonMistake ||
                      day.commonTrap || day.watchOut);
+    if (!trap && isArr(day.misconceptions) && day.misconceptions.length) {
+      var mc = day.misconceptions[0] || {};
+      var believe = clean(mc.believe), actually = clean(mc.actually);
+      if (believe && actually) trap = 'Many think ' + believe + ' In fact ' + actually;
+      else trap = believe || actually;
+    }
+
     var anchor = clean(day.anchor || day.realWorld || day.application ||
                        day.example || day.whyItMatters);
+    if (!anchor && day.caseStudy && typeof day.caseStudy === 'object') {
+      var cs = day.caseStudy;
+      anchor = clean(cs.what) || clean(cs.connection) || clean(cs.title);
+      if (clean(cs.title) && clean(cs.what)) {
+        anchor = clean(cs.title) + ': ' + clean(cs.what);
+      }
+    }
 
     if (!pillars.length && !trap && !anchor) return null;
     return {
