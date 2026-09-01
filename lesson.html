@@ -767,6 +767,19 @@
   .swp-go:hover:not(:disabled) { transform:translateY(-2px); background:#3B69DE; }
   .swp-go:active:not(:disabled) { transform:translateY(0) scale(.98); }
   .swp-go:disabled { opacity:.4; cursor:default; transform:none; }
+  /* The worked line for a step: what was actually computed. A learner who only
+     sees "Correct" learns that they were right, not why. */
+  .swp-eq {
+    display:inline-block; margin-top:.4rem; padding:.4rem .7rem;
+    border-radius:9px; background:var(--soft); border:1.5px solid var(--border);
+    font-family:'Georgia',serif; font-size:1.02rem; font-weight:700; color:var(--ink);
+    letter-spacing:.01em;
+  }
+  .swp-eq.is-right { border-color:var(--green); background:#ECFDF5; }
+  .swp-target {
+    font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--blue); margin-bottom:.2rem;
+  }
   .swp-note { font-size:.76rem; line-height:1.5; margin-top:.35rem; }
   .swp-note.is-right { color:#0A6B54; }
   .swp-note.is-wrong { color:#9B2C2C; }
@@ -1076,6 +1089,87 @@
     showNextCard();
   }
 
+  /* ── FEYNMAN ORDERING ─────────────────────────────────────────────────────
+     The Feynman technique is a loop, not a card type:
+
+       1. Study the concept.
+       2. Explain it in plain language, as if to someone with no background.
+       3. The explanation falters - those are the gaps.
+       4. Go back to the source for exactly those gaps, then explain again.
+
+     Sprinkling an "explain it" card every fifth question does none of that.
+     The explanation has to come EARLY, before the learner has been told the
+     answers, so that the attempt is what exposes the gaps; and again at the
+     END, once practice has shown them what they actually did not know.
+
+     So the session becomes:
+
+       lesson  ->  EXPLAIN (first pass, gaps exposed)
+               ->  practice (the gaps get worked)
+               ->  EXPLAIN AGAIN (second pass, now informed)
+
+     The second pass is the point of the whole thing: it is where the learner
+     finds out whether the practice actually closed anything. It is placed last
+     so it can draw on everything that happened, and it is skipped when there
+     was nothing to practise. */
+  function applyFeynmanOrder(cards, dayObj) {
+    if (Object.prototype.toString.call(cards) !== '[object Array]') return cards;
+
+    /* Anything already an explain card gets pulled out; we place them. */
+    var writes = [], rest = [], i;
+    for (i = 0; i < cards.length; i++) {
+      if (cards[i] && cards[i].type === 'write') writes.push(cards[i]);
+      else rest.push(cards[i]);
+    }
+
+    /* Where does the teaching end and practice begin? */
+    var TEACHING = { welcome: 1, lesson: 1, terms: 1, 'sfwb-brief': 1,
+                     'pretest-intro': 1, 'pretest-done': 1,
+                     'review-intro': 1, 'review-done': 1, 'interleave-intro': 1 };
+    var firstPractice = rest.length;
+    for (i = 0; i < rest.length; i++) {
+      if (!TEACHING[rest[i].type]) { firstPractice = i; break; }
+    }
+    var practiceCount = rest.length - firstPractice;
+    if (practiceCount < 2) return cards;   // nothing to loop around
+
+    /* A subject for the learner to explain: the day itself. */
+    function explainCard(pass) {
+      var w = writes.shift();
+      if (w) { w.feynmanPass = pass; return w; }
+      return {
+        type: 'write',
+        feynmanPass: pass,
+        q: {
+          type: 'write',
+          question: pass === 1
+            ? 'Before you practise: explain ' +
+              (fmClean(dayObj && dayObj.title) || 'today\u2019s topic') +
+              ' in your own words, as if to someone who has never seen it. ' +
+              'Wherever you get stuck is what this session is for.'
+            : 'Now explain ' +
+              (fmClean(dayObj && dayObj.title) || 'it') +
+              ' again, in plainer words than before. What can you say now that ' +
+              'you could not say at the start?',
+          modelAnswer: fmStr(dayObj && dayObj.content).slice(0, 400),
+          hint: pass === 1
+            ? 'Do not look anything up. A gap you find now is worth more than a tidy answer.'
+            : 'Use the simplest words you can. If you still need jargon, that part is not finished.'
+        }
+      };
+    }
+
+    var out = rest.slice(0, firstPractice);
+    out.push(explainCard(1));                       // step 2: explain first
+    out = out.concat(rest.slice(firstPractice));    // step 3: gaps get worked
+    out.push(explainCard(2));                       // step 4: explain again
+
+    /* Any further explain cards the day supplied sit inside the practice run
+       rather than being dropped. */
+    while (writes.length) out.splice(Math.max(firstPractice + 2, out.length - 2), 0, writes.shift());
+    return out;
+  }
+
   /* ── SESSION DIAGNOSTIC ───────────────────────────────────────────────────
      Prints what the session was actually built from. When something looks
      wrong on a real device this is the fastest way to tell whether the problem
@@ -1342,12 +1436,12 @@
          an EARLIER question instead: explaining something from a few minutes
          ago is the retrieval this card is for, and it cannot duplicate the
          card next to it. */
-      /* One explain-it card per session on maths, not one every five. */
-      var writeEvery = (qType === 'math') ? 8 : 5;
-      if ((i + 1) % writeEvery === 0 && i < shuffled.length - 1) {
-        var recallQ = shuffled[Math.max(0, i - 3)];
-        if (recallQ && recallQ !== q) sessionCards.push({ type: 'write', q: recallQ });
-      }
+      /* The explain-it card used to land here, every Nth question. That is not
+         the Feynman technique - it is a random interruption. Feynman is a loop:
+         explain the idea first, let the attempt expose gaps, practise the gaps,
+         then explain again. The two explain cards are now placed at the two
+         points in the session where that loop actually turns. See
+         applyFeynmanOrder below. */
     });
 
     // ── INTERACTIVE TYPES — all plans, woven into session ──
@@ -1497,7 +1591,11 @@
         sessionCards.splice(insertAt3, 0, { type: 'match', q: matchQ });
       }
     }
-  }
+  
+    /* The Feynman loop is applied last, once every other card is in place, so
+       it can see where teaching ends and practice begins. */
+    sessionCards = applyFeynmanOrder(sessionCards, day);
+}
 
   // Build a graph question from day content (works generically for linear function topics)
   function buildGraphQuestion(day) {
@@ -3351,6 +3449,53 @@
   }
 
   /* A percentage prompt: "what is 25% of 80". */
+  /* Turn a step's prompt into the arithmetic it describes, so the learner sees
+     the line they would have written on paper: "Subtract 3 from 17" becomes
+     "17 \u2212 3 = 14". Reuses the same parsing the validator uses, so if the
+     equation cannot be built with certainty nothing is shown rather than
+     something wrong. */
+  function swpWorkedLine(prompt, carried, answer) {
+    var t = String(prompt == null ? '' : prompt).toLowerCase()
+      .replace(/\{(\d+)\}/g, function (m, n) {
+        var v = swpNum(carried[parseInt(n, 10) - 1]);
+        return isNaN(v) ? m : String(v);
+      });
+
+    var pct = t.match(/(-?\d+(?:\.\d+)?)\s*%\s*of\s*(-?\d+(?:\.\d+)?)/);
+    if (pct) {
+      return pct[1] + '% of ' + pct[2] + ' = ' + String(answer);
+    }
+
+    var nums = (t.match(/-?\d+(?:\.\d+)?/g) || []).map(parseFloat);
+    if (nums.length !== 2) return '';
+
+    var ops = [];
+    if (/\b(add|sum|total|combined|plus|altogether|together)\b/.test(t)) ops.push('+');
+    if (/\b(subtract|minus|difference|less than|take away|remaining|left over)\b/.test(t)) ops.push('\u2212');
+    if (/\b(multiply|times|product|each|per\b.*\bfor|rate)\b/.test(t)) ops.push('\u00d7');
+    if (/\b(divide|divided by|per person|split|share|quotient|average)\b/.test(t)) ops.push('\u00f7');
+    if (ops.length !== 1) return '';
+
+    var a = nums[0], b = nums[1];
+    /* English reverses the operands in some phrasings, exactly as the
+       validator handles. */
+    if (/\bsubtract\b[^.]*\bfrom\b/.test(t) || /\bless than\b/.test(t) ||
+        /\btake\b[^.]*\baway from\b/.test(t)) { var tmp = a; a = b; b = tmp; }
+    if (/\bdivide\b[^.]*\binto\b/.test(t)) { var t2 = a; a = b; b = t2; }
+
+    return a + ' ' + ops[0] + ' ' + b + ' = ' + String(answer);
+  }
+
+  /* What this step is asking the learner to produce, in a few words. */
+  function swpTargetOf(step) {
+    var u = fmClean(step && step.unit);
+    if (u) return 'Find the ' + u;
+    var p = fmClean(step && step.prompt).toLowerCase();
+    var m = p.match(/\b(?:find|work out|calculate|determine)\s+(?:the\s+)?([a-z ]{3,26})/);
+    if (m) return 'Find the ' + fmClean(m[1]);
+    return 'Find the value';
+  }
+
   function swpExpectedPercent(prompt, carried) {
     var t = String(prompt == null ? '' : prompt).toLowerCase()
       .replace(/\{(\d+)\}/g, function (m, n) {
@@ -3514,12 +3659,18 @@
            by 2", and any hiccup in the reveal chain left that literal {1} on
            screen. Before an answer exists the placeholder shows as a dash, which
            reads as "the number from the step above". */
+        /* State what the step is for before stating what to do. A learner who
+           only sees "Divide 14 by 2" is following instructions; one who sees
+           "Find the miles" first knows what the number will mean. */
+        '<div class="swp-target">' + escHtml(swpTargetOf(st)) + '</div>' +
         '<div class="swp-prompt" id="swp-prompt-' + i + '">' +
         swpFill(st.prompt, []) + '</div>';
 
       if (st.shown) {
-        html += '<div class="swp-shown"><span class="swp-tag">Given</span>' +
-          escHtml(st.answer) + (st.unit ? ' ' + escHtml(st.unit) : '') + '</div>';
+        var shownEq = swpWorkedLine(st.prompt, [], st.answer);
+        html += '<div class="swp-shown"><span class="swp-tag">Worked for you</span>' +
+          escHtml(st.answer) + (st.unit ? ' ' + escHtml(st.unit) : '') + '</div>' +
+          (shownEq ? '<div class="swp-eq">' + escHtml(shownEq) + '</div>' : '');
       } else {
         html += '<div class="swp-row">' +
           '<input class="swp-input" id="swp-in-' + i + '" type="text" ' +
@@ -3529,7 +3680,8 @@
           '<button class="swp-go" id="swp-go-' + i + '" onclick="swpCheck(' + i + ')">Check</button>' +
           '</div>';
       }
-      html += '<div class="swp-note" id="swp-note-' + i + '"></div></div></div>';
+      html += '<div id="swp-eq-' + i + '"></div>' +
+        '<div class="swp-note" id="swp-note-' + i + '"></div></div></div>';
     }
     return html + '</div>';
   }
@@ -3591,7 +3743,17 @@
       if (stepEl) stepEl.className = 'swp-step is-done is-locked';
       var num = document.getElementById('swp-num-' + i);
       if (num) num.innerHTML = '\u2713';
-      if (note) { note.className = 'swp-note is-right'; note.textContent = 'Correct.'; }
+      var eqEl = document.getElementById('swp-eq-' + i);
+      if (eqEl) {
+        var worked = swpWorkedLine(st.prompt, swpState.answers, val);
+        eqEl.innerHTML = worked
+          ? '<div class="swp-eq is-right">' + escHtml(worked) + '</div>'
+          : '';
+      }
+      if (note) {
+        note.className = 'swp-note is-right';
+        note.textContent = st.unit ? 'Correct \u2014 ' + val + ' ' + st.unit + '.' : 'Correct.';
+      }
       swpAdvance(i);
       return;
     }
@@ -3609,10 +3771,15 @@
       inp.disabled = true;
       if (goBtn) goBtn.disabled = true;
       if (stepEl) stepEl.className = 'swp-step is-done';
+      var eqEl2 = document.getElementById('swp-eq-' + i);
+      if (eqEl2) {
+        var w2 = swpWorkedLine(st.prompt, swpState.answers, st.answer);
+        eqEl2.innerHTML = w2 ? '<div class="swp-eq">' + escHtml(w2) + '</div>' : '';
+      }
       if (note) {
         note.className = 'swp-note is-wrong';
-        note.textContent = 'The value here is ' + st.answer +
-          (st.hint ? ' \u2014 ' + st.hint : '') + '. Carrying it forward.';
+        note.textContent = (st.hint ? st.hint + ' ' : '') + 'Carrying ' + st.answer +
+          (st.unit ? ' ' + st.unit : '') + ' into the next step.';
       }
       swpAdvance(i);
       return;
