@@ -2462,6 +2462,10 @@
         '\nFINAL CHECK: Before outputting, reread every question you wrote. Verify each one is about "' + subject + '". Replace anything that is not.\n' +
         '\nOUTPUT: ONLY valid compact JSON. No markdown. Replace ALL empty strings with REAL content.\n\n' +
         '{"title":"","microTopic":"","briefing":"","content":"","steps":[],"diagram":{"type":"none","label":""},"concepts":[],' +
+        /* The opening whiteboard is built from these three. Without them in the
+           schema the model never returned them, so the board had nothing to
+           show and silently did not render. */
+        '"pillars":[{"label":"","detail":""},{"label":"","detail":""},{"label":"","detail":""}],' +
         '"keyTerms":[{"term":"","definition":""},{"term":"","definition":""},{"term":"","definition":""},{"term":"","definition":""}],' +
         '"misconceptions":[{"believe":"","actually":"","why":""},{"believe":"","actually":"","why":""}],' +
         '"caseStudy":{"title":"","what":"","connection":""},' +
