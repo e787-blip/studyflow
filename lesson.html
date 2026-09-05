@@ -3581,6 +3581,20 @@
       if (out[i].shown || out[i].answer) usable.push(out[i]);
     }
     if (usable.length < 2) return [];
+
+    /* No step is ever pre-worked.
+
+       Backward fading (showing the first step already solved) is sound in the
+       research, but in this interface it reads as the app having skipped a
+       step: the learner arrives at a problem already part-answered, with no
+       sense of why. The fading that matters here happens ACROSS DAYS - later
+       days get fewer sub-steps, and eventually none - which achieves the same
+       gradual release without a card that looks broken.
+
+       So every step in a word problem belongs to the learner. */
+    var fi;
+    for (fi = 0; fi < usable.length; fi++) usable[fi].shown = false;
+
     /* Arithmetic check before anything is rendered. A step whose stated answer
        contradicts its own prompt would teach a false result. */
     var checked = swpValidate(usable);
