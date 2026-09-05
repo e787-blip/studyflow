@@ -2312,7 +2312,8 @@
         'is the order the research favours.\n' +
         (dayNum <= Math.max(1, Math.floor(totalDays / 3))
           ? 'EARLY DAY (' + dayNum + ' of ' + totalDays + '): full support. Word problems get 3-4\n' +
-            'sub-steps. Mark the FIRST sub-step "shown":true so the learner sees one worked\n' +
+            'sub-steps, every one of them answered by the learner. Do NOT mark any step\n' +
+            '\"shown\" - a pre-answered step reads as though the app skipped it.\n' +
             'before taking over. Explanations spell out every operation.\n'
           : (dayNum <= Math.max(2, Math.floor(totalDays * 2 / 3))
             ? 'MIDDLE DAY (' + dayNum + ' of ' + totalDays + '): partial support. Word problems get 2-3\n' +
@@ -2367,8 +2368,8 @@
         '    is 80, then 40 x 2 must actually equal 80.\n' +
         '  - Order the steps so each genuinely needs the one before it. If two steps\n' +
         '    are independent, that is one step with two parts, not two steps.\n' +
-        '  - On an easy day you may mark the first step "shown":true to display it\n' +
-        '    already worked, leaving the rest to the learner.\n' +
+        '  - Never mark a step \"shown\". Every sub-step belongs to the learner; support\n' +
+        '    fades across DAYS (fewer sub-steps later on), not within a problem.\n' +
         '\n\u2550\u2550 THE ANSWER KEY MUST BE RIGHT \u2550\u2550\n' +
         'correctIndex is ZERO-BASED. The first option is 0, the second is 1, the third\n' +
         'is 2, the fourth is 3. Off-by-one here means the learner is told their correct\n' +
