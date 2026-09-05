@@ -1322,7 +1322,9 @@
     var openingBoard = buildOpeningBoard();
     // Only mcq/truefalse can render correctly through the generic question card —
     // every other type has its own dedicated renderer and must be excluded here.
-    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1 };
+    /* Kept in sync with SPECIAL_TYPES below - a sequence question drawn into
+       the pre-test would still be spliced in later by its own injector. */
+    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1 };
     var simpleQuestions = questions.filter(function(q){ return !SPECIAL_TYPES_PRETEST[q.type]; });
     var shuffled = simpleQuestions.slice().sort(function(){ return Math.random() - 0.5; });
 
@@ -1381,7 +1383,12 @@
     // wordproblem, errorspot, passage, sentence, write) has its own dedicated rendering path
     // injected separately below. Including them here would both render them incorrectly
     // (renderQuestion only understands mcq/truefalse) AND duplicate them in the session.
-    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1 };
+    /* `sequence` was missing here. It has a dedicated renderer AND a dedicated
+       injector further down (aiSeqQs), so leaving it out of this list meant the
+       main loop queued it once and the injector spliced the very same question
+       in again - every history and geography day showed its "order these
+       events" question twice. Every type with its own injector belongs here. */
+    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1 };
     var fillQuestions = questions.filter(function(q){ return q.type === 'fill'; });
     var regularQuestions = questions.filter(function(q){ return !SPECIAL_TYPES[q.type]; });
     var shuffled = regularQuestions.slice().sort(function(){ return Math.random() - 0.5; });
@@ -1473,8 +1480,22 @@
       }
     }
 
-    // Big equation + word problem — math subjects, pulled from AI-generated fill questions
-    if (isMath) {
+    /* Fill / big-equation / word-problem catch-up — EVERY subject.
+       This block used to be gated behind `if (isMath)`, which silently threw
+       work away on every other subject. fill, bigequation and wordproblem all
+       sit in SPECIAL_TYPES, so the main loop never queues them; the only other
+       route in is the "every third question" fill slot, and there are just
+       floor(regularCount / 3) of those. A science, psychology, economics,
+       English, language or general day generates 2-3 fill questions and has
+       room for one, so the rest were generated, validated and then discarded.
+       Economics was worse: its schema asks for a word problem, nothing queued
+       it, and the only injector was math-only - so that question never once
+       reached a learner.
+
+       Running for all subjects fixes both. Math behaviour is unchanged: the
+       inner rule below still strips fill cards from maths days, and anything
+       the main loop already queued is skipped, so nothing duplicates. */
+    {
       /* Only the questions the main loop did not already queue. Without this
          a solving question appears twice: once leading the session and once
          spliced in behind it. */
@@ -9787,10 +9808,78 @@ var SFBoard = (function () {
     }
 
     if (!pillars.length && !trap && !anchor) return null;
-    return {
-      type: 'brief', topic: topic, subject: clean(subject) || topic,
+
+    /* ── SUBJECT-APPROPRIATE LAYOUT ───────────────────────────────────────
+       The board has eleven scenes - map, timeline, cycle, parts, equation,
+       steps, chart, compare, pyramid, hero - but this function always
+       returned type 'brief', which aliases straight to 'hero'. Every subject
+       therefore opened on the identical generic card: same shapes, same
+       arrangement, only the words changed. Geography never got a map,
+       history never got a timeline, maths never got worked lines.
+
+       Two things are needed for a scene to build: the right `type`, and the
+       data that scene reads. Setting the type alone is not enough - Scene.map
+       with no places fails, build() falls through to autoScene, and the
+       output collapses back to the same generic card. So this also supplies
+       `items` (every scene reads it) and the scene-specific field.
+
+       Anything unrecognised keeps the previous 'brief'/hero behaviour, and if
+       a chosen scene still cannot build, build()'s autoScene fallback catches
+       it. So this can add a better diagram but never remove one. */
+    var boardType = 'brief';
+    var extra = {};
+    var labels = [];
+    for (i = 0; i < pillars.length; i++) {
+      if (pillars[i] && pillars[i].label) labels.push(pillars[i].label);
+    }
+
+    if (labels.length >= 2) {
+      var sKey = (clean(subject) + ' ' + topic + ' ' + clean(day.microTopic)).toLowerCase();
+
+      /* Chronology first: a history topic is only a timeline when it actually
+         carries dates, otherwise the scene draws an axis with nothing on it. */
+      var dated = /\b(1[0-9]{3}|20[0-9]{2})\b|\bbce\b|\bbc\b|\bcentury\b/i
+                    .test(clean(day.content) + ' ' + labels.join(' '));
+
+      if (/geograph|\bregion\b|\bcontinent\b|\bcountry\b|countries|\briver\b|\bmap\b|climate|border|migration|trade route|territory/.test(sKey)) {
+        boardType = 'map';
+        extra.places = labels;
+      } else if (dated && /histor|\bwar\b|revolution|empire|treaty|dynasty|ancient|medieval|timeline|chronolog/.test(sKey)) {
+        boardType = 'timeline';
+      } else if (/\bcycle\b|\bloop\b|feedback|circular|photosynthesis|respiration|water cycle|carbon cycle|rock cycle/.test(sKey)) {
+        boardType = 'cycle';
+      } else if (/\bcell\b|anatomy|organelle|structure|\bparts\b|components|atom|molecule|skeleton|organ\b/.test(sKey)) {
+        boardType = 'parts';
+        extra.center = topic;
+      } else if (/\bmath\b|maths|algebra|calculus|equation|solve|solving|arithmetic|fraction|geometry|trigonometr|formula/.test(sKey)) {
+        /* Real worked lines beat pillar labels here. Pull them from a solving
+           question the day already generated; without them the equation scene
+           has nothing to write, so fall back rather than draw a blank. */
+        var eqLines = [];
+        var qs = list(day.questions);
+        for (i = 0; i < qs.length && eqLines.length < 3; i++) {
+          var qq = qs[i] || {};
+          if (qq.type === 'bigequation' && clean(qq.equation)) {
+            eqLines.push(clean(qq.equation));
+            if (clean(qq.answer)) eqLines.push('= ' + clean(qq.answer));
+          }
+        }
+        if (eqLines.length >= 2) { boardType = 'equation'; extra.lines = eqLines; }
+      } else if (/programming|computer science|algorithm|\bcode\b|recursion|\bprocess\b|procedure|method|workflow|conditioning|experiment/.test(sKey)) {
+        boardType = 'steps';
+      } else if (/\bversus\b|\bvs\b|compared|contrast|difference between|supply and demand/.test(sKey)) {
+        boardType = 'compare';
+      }
+
+      if (boardType !== 'brief') extra.items = labels;
+    }
+
+    var spec = {
+      type: boardType, topic: topic, subject: clean(subject) || topic,
       pillars: pillars, trap: trap, anchor: anchor
     };
+    for (var ek in extra) { if (extra.hasOwnProperty(ek)) spec[ek] = extra[ek]; }
+    return spec;
   }
 
   /** Build a board spec for the day's topic, or null. */
