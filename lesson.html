@@ -1564,9 +1564,14 @@
       sessionCards.splice(insertAt6, 0, { type: 'passage', q: q });
     });
 
-    // Sequence — science (processes), history (timelines), any subject with 3+ keyTerms
-    // (language uses dedicated sentence-builder below instead of generic keyTerm sequencing)
-    if (!isLanguage && day.keyTerms && day.keyTerms.length >= 3 && (isScience || isHistory || day.keyTerms.length >= 4)) {
+    /* Sequence — science (processes), history (timelines), and any other
+       subject with 4+ keyTerms. The trailing keyTerms clause is an escape
+       hatch past the subject check, and maths was slipping through it: a day
+       with four key terms got a generic "put these terms in order" card built
+       from definitions rather than from working. Science and history still
+       reach it on their own merits; maths no longer rides the fallback.
+       (Language uses the dedicated sentence-builder below instead.) */
+    if (!isLanguage && day.keyTerms && day.keyTerms.length >= 3 && (isScience || isHistory || (!isMath && day.keyTerms.length >= 4))) {
       var seqQ = buildSequenceQuestion(day, subjectType);
       if (seqQ) {
         var insertAt2 = Math.min(7, sessionCards.length);
@@ -1604,8 +1609,14 @@
       sessionCards.splice(insertAtSeq, 0, { type: 'sequence', q: q });
     });
 
-    // Matching — vocabulary-heavy subjects: english, language, science, history
-    if (day.keyTerms && day.keyTerms.length >= 4) {
+    /* Matching — vocabulary-heavy subjects only.
+       The gate below used to check nothing but the key-term count, despite the
+       comment naming specific subjects. That meant every maths day carrying
+       four key terms got a "match each term to its definition" card: pure
+       vocabulary recall on the one subject whose whole mandate is that 80-90%
+       of the work must be solving. Excluding maths is the point of the fix;
+       every other subject keeps the card exactly as before. */
+    if (!isMath && day.keyTerms && day.keyTerms.length >= 4) {
       var matchQ = buildMatchQuestion(day, subjectType);
       if (matchQ) {
         var insertAt3 = Math.min(10, sessionCards.length);
