@@ -4464,55 +4464,146 @@
      This turns each type into something that can actually be explained, using
      what that question already carries. Nothing is invented, and a fill's
      answer is never surfaced, since the blank may not have been attempted. */
-  function feynmanConcept(q) {
-    q = q || {};
+  /* ── FEYNMAN CONCEPT LINE ───────────────────────────────────────────────
+     The card asks "explain this concept in your own words", then printed
+     q.question raw. Most stems are instructions, not concepts, so learners
+     were told to explain "Solve for x", "Sort:", or a sentence still carrying
+     its blanks.
+
+     The first attempt at a fix swung too far the other way and pushed the day
+     title through a sentence template, which produced "How to turn a Algebra:
+     Variables, Expressions, and Equations word problem into an equation" -
+     broken grammar wrapped around a chapter heading.
+
+     So: prefer the concrete thing the question already carries - the actual
+     equation, the actual scenario, the actual two categories - and give the
+     learner a sample problem, a property, or a definition to explain. Only
+     fall back to the topic when there is nothing concrete, and clean it up
+     first. A fill's answer is never surfaced, since the blank may not have
+     been attempted yet. */
+
+  /* Day titles arrive as chapter headings: "Algebra: Variables, Expressions,
+     and Equations", "Unit 3 - Fractions". Reduce to the part that reads as a
+     topic so it can sit inside a sentence without mangling it. */
+  function feynmanTopic() {
     var d = (typeof day !== 'undefined' && day) ? day : {};
-    var topic = String(d.title || d.microTopic || '').replace(/\s+/g, ' ').trim();
+    var t = String(d.microTopic || d.title || '').replace(/\s+/g, ' ').trim();
+    if (!t) return '';
+    var ci = t.indexOf(':');
+    if (ci > -1) {
+      var after = t.slice(ci + 1).trim();
+      if (after.length >= 4) t = after;
+    }
+    t = t.replace(/^(unit|chapter|lesson|day|week|part|module|section)\s*\d*\s*[-\u2013\u2014:.]?\s*/i, '').trim();
+    t = t.replace(/\s*[-\u2013\u2014]\s*(practice|review|intro(duction)?|basics)$/i, '').trim();
+    if (t.length > 54) {
+      t = t.slice(0, 51).replace(/[\s,;:]+\S*$/, '') + '\u2026';
+    }
+    return t;
+  }
+
+  /* A taught term to hang a definition prompt on. */
+  function feynmanTerm() {
+    var d = (typeof day !== 'undefined' && day) ? day : {};
+    var kt = d.keyTerms;
+    if (!kt || !kt.length) return '';
+    for (var i = 0; i < kt.length; i++) {
+      var t = kt[i];
+      var label = String((t && (t.term || t.label || t.name)) || (typeof t === 'string' ? t : '')).trim();
+      if (label && label.length <= 48) return label;
+    }
+    return '';
+  }
+
+  function feynmanConcept(q) {
+    var out = feynmanConceptRaw(q);
+    out = String(out == null ? '' : out).replace(/\s+/g, ' ').trim();
+    return out || 'The main idea from this lesson, in your own words';
+  }
+
+  function feynmanConceptRaw(q) {
+    q = q || {};
+    var topic = feynmanTopic();
     var stem  = String(q.question || '').replace(/\s+/g, ' ').trim();
     var type  = q.type;
+    function trim(v, n) {
+      v = String(v || '').replace(/\s+/g, ' ').trim();
+      if (v.length > n) v = v.slice(0, n - 1).replace(/[\s,;:]+\S*$/, '') + '\u2026';
+      return v;
+    }
 
     /* Model-written explain prompts are already phrased as concepts. */
     if (type === 'write' && stem) return stem;
 
+    /* Give them the real expression to work, not a description of one. */
     if (type === 'bigequation') {
-      var eq = String(q.equation || '').replace(/\s+/g, ' ').trim();
-      if (eq) return 'How to solve an equation like ' + eq;
-      return topic ? ('How to solve ' + topic + ' problems') : stem;
+      var eq = trim(q.equation, 70);
+      if (eq) return 'Walk through a sample problem: ' + eq;
+      var bt = feynmanTerm();
+      if (bt) return 'Explain the property: ' + bt;
+      return topic ? ('Walk through a sample problem from ' + topic + ', step by step')
+                   : 'Walk through a sample problem, step by step';
     }
     if (type === 'wordproblem') {
-      if (topic) return 'How to turn a ' + topic + ' word problem into an equation';
-      var sc = String(q.scenario || '').replace(/\s+/g, ' ').trim();
-      return sc || stem;
+      var sc = trim(q.scenario, 120);
+      if (sc) return 'Walk through this problem: ' + sc;
+      return topic ? ('How to turn a word problem about ' + topic + ' into an equation')
+                   : 'How to turn a word problem into an equation';
     }
     if (type === 'errorspot') {
-      return topic ? ('The most common mistakes in ' + topic + ', and how to avoid them')
-                   : 'The most common mistakes here, and how to avoid them';
+      return topic ? ('The most common mistake in ' + topic + ', and how to avoid it')
+                   : 'The most common mistake here, and how to avoid it';
     }
     if (type === 'classify') {
-      var a = String(q.categoryA || '').trim(), b = String(q.categoryB || '').trim();
+      var a = trim(q.categoryA, 40), b = trim(q.categoryB, 40);
       if (a && b) return 'The difference between ' + a + ' and ' + b;
-      return topic || stem;
+      return topic ? ('Explain the key idea behind ' + topic) : stem;
     }
     if (type === 'sequence') {
-      return topic ? ('The correct order of ' + topic + ', and why the order matters')
-                   : 'Why these steps have to happen in this order';
+      /* History orders events, not procedure steps: calling the Missouri
+         Compromise a "step" reads as a mistake to anyone studying it. Geography
+         is deliberately NOT included - its sequences are usually processes such
+         as the water cycle, which are steps. */
+      var st = (typeof plan !== 'undefined' && plan) ? String(plan.subjectType || '') : '';
+      var noun = (st === 'history') ? 'events' : 'steps';
+      var verb = (noun === 'events') ? 'happened' : 'happen';
+      var items = (q.items && q.items.length) ? q.items : null;
+      if (items && items.length >= 2) {
+        return 'Why these ' + noun + ' ' + verb + ' in this order: ' +
+               trim(items[0], 30) + ' \u2192 ' + trim(items[items.length - 1], 30);
+      }
+      return topic ? ('The correct order of ' + noun + ' in ' + topic + ', and why order matters')
+                   : ('Why these ' + noun + ' have to be in this order');
     }
     /* A sentence-builder stem is an instruction ("Build: I ate the apple").
-       The thing worth explaining is the grammar that makes the sentence work. */
+       The thing worth explaining is the grammar that makes it work. */
     if (type === 'sentence') {
-      var tr = String(q.translation || '').replace(/\s+/g, ' ').trim();
-      if (tr) return 'How to say "' + tr + '" — and the grammar rule behind the word order';
+      var tr = trim(q.translation, 60);
+      if (tr) return 'How to say "' + tr + '" \u2014 and the grammar rule behind the word order';
       return topic ? ('The grammar rule behind ' + topic) : stem;
     }
     /* The passage is not on this card, so its stem cannot stand alone. */
-    if (type === 'passage') return topic || stem;
-    /* Never print the blank line, and never reveal the answer. */
-    if (type === 'fill') return topic || stem.replace(/_{2,}/g, '…');
+    if (type === 'passage') {
+      return topic ? ('Explain the key idea behind ' + topic) : stem;
+    }
+    /* Never print the blank line and never reveal the answer: hang the prompt
+       on a term the lesson already taught instead. */
+    if (type === 'fill') {
+      var term = feynmanTerm();
+      if (term) return 'Explain the definition of: ' + term;
+      return topic ? ('Explain the key idea behind ' + topic)
+                   : stem.replace(/_{2,}/g, '\u2026');
+    }
 
     /* mcq, truefalse, scenario: self-contained, but only if the stem is a real
        sentence rather than a stub like "Sort:" or a leftover blank. */
     if (stem && stem.length >= 14 && !/_{2,}/.test(stem) && !/^[a-z\s]{0,12}:$/i.test(stem)) return stem;
-    return topic || stem;
+    var t2 = feynmanTerm();
+    if (t2) return 'Explain the definition of: ' + t2;
+    if (topic) return 'Explain the key idea behind ' + topic;
+    /* Last resort. An empty chip left the card reading "Explain this concept:"
+       followed by nothing, so always hand back something answerable. */
+    return stem || 'The main idea from this lesson, in your own words';
   }
 
   function renderWrite(q) {
