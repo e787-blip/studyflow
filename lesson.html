@@ -1828,9 +1828,20 @@
       }
     }
 
-    // Writing prompt every ~5th card after first pass
+    /* Writing prompt every ~5th card after first pass.
+       This used to take a uniformly random question, so the Feynman card
+       regularly asked the learner to explain a bare instruction: "Solve for x",
+       "Sort:", "Find the mistake:". feynmanConcept() now rewrites any type into
+       something explainable, but a self-contained question still makes the
+       better prompt, so prefer those and fall back to random. */
     if (cardIndex % 5 === 0 && cardIndex > sessionCards.length) {
-      var wq = questions[Math.floor(Math.random() * questions.length)];
+      var GOOD_WRITE = { write:1, mcq:1, scenario:1, truefalse:1 };
+      var preferred = [];
+      for (var wi = 0; wi < questions.length; wi++) {
+        if (questions[wi] && GOOD_WRITE[questions[wi].type]) preferred.push(questions[wi]);
+      }
+      var pool = preferred.length ? preferred : questions;
+      var wq = pool[Math.floor(Math.random() * pool.length)];
       return { type: 'write', q: wq };
     }
 
@@ -4424,21 +4435,91 @@
   }
 
   function getFeynmanTip(subjectType) {
+    /* psychology, geography, economics and cs had no entry, so four of the ten
+       subjects silently fell through to the generic line and lost the guidance
+       that makes this card worth doing. */
     var tips = {
-      math:     'Walk through the steps like you\'re solving it live. Include the formula and why it works.',
-      science:  'Describe the process step by step. Include cause and effect. Use specific names and terms.',
-      history:  'Explain the who, what, when, and most importantly WHY it happened and what changed.',
-      english:  'Identify the literary technique or theme and give a specific example from the text.',
-      language: 'Give the meaning, use it in a sentence, and explain any grammar rules that apply.',
-      general:  'Write it simply. Don\'t look at your notes — just explain what you know.'
+      math:       'Walk through the steps like you\'re solving it live. Include the formula and why it works.',
+      science:    'Describe the process step by step. Include cause and effect. Use specific names and terms.',
+      history:    'Explain the who, what, when, and most importantly WHY it happened and what changed.',
+      english:    'Identify the literary technique or theme and give a specific example from the text.',
+      language:   'Give the meaning, use it in a sentence, and explain any grammar rules that apply.',
+      psychology: 'Name the effect, then give a real example of it. Say what causes it and what it predicts.',
+      geography:  'Say where it happens and why there. Link the physical cause to its human effect.',
+      economics:  'State the cause, then trace the effect on price, supply and demand. Use a concrete example.',
+      cs:         'Explain what the code does, step by step, then say why it works and when it would break.',
+      general:    'Write it simply. Don\'t look at your notes — just explain what you know.'
     };
     return tips[subjectType] || tips.general;
   }
 
+  /* ── FEYNMAN CONCEPT LINE ───────────────────────────────────────────────
+     The card asks "explain this concept in your own words", then printed
+     q.question raw. Most question stems are instructions, not concepts, so
+     the learner was told to explain things like "Solve for x", "Simplify",
+     "Sort:", "Find the mistake:", or a fill-in sentence still carrying its
+     blanks. A passage question was worse - its stem ("What was the purpose?")
+     is meaningless once the passage is no longer on screen.
+
+     This turns each type into something that can actually be explained, using
+     what that question already carries. Nothing is invented, and a fill's
+     answer is never surfaced, since the blank may not have been attempted. */
+  function feynmanConcept(q) {
+    q = q || {};
+    var d = (typeof day !== 'undefined' && day) ? day : {};
+    var topic = String(d.title || d.microTopic || '').replace(/\s+/g, ' ').trim();
+    var stem  = String(q.question || '').replace(/\s+/g, ' ').trim();
+    var type  = q.type;
+
+    /* Model-written explain prompts are already phrased as concepts. */
+    if (type === 'write' && stem) return stem;
+
+    if (type === 'bigequation') {
+      var eq = String(q.equation || '').replace(/\s+/g, ' ').trim();
+      if (eq) return 'How to solve an equation like ' + eq;
+      return topic ? ('How to solve ' + topic + ' problems') : stem;
+    }
+    if (type === 'wordproblem') {
+      if (topic) return 'How to turn a ' + topic + ' word problem into an equation';
+      var sc = String(q.scenario || '').replace(/\s+/g, ' ').trim();
+      return sc || stem;
+    }
+    if (type === 'errorspot') {
+      return topic ? ('The most common mistakes in ' + topic + ', and how to avoid them')
+                   : 'The most common mistakes here, and how to avoid them';
+    }
+    if (type === 'classify') {
+      var a = String(q.categoryA || '').trim(), b = String(q.categoryB || '').trim();
+      if (a && b) return 'The difference between ' + a + ' and ' + b;
+      return topic || stem;
+    }
+    if (type === 'sequence') {
+      return topic ? ('The correct order of ' + topic + ', and why the order matters')
+                   : 'Why these steps have to happen in this order';
+    }
+    /* A sentence-builder stem is an instruction ("Build: I ate the apple").
+       The thing worth explaining is the grammar that makes the sentence work. */
+    if (type === 'sentence') {
+      var tr = String(q.translation || '').replace(/\s+/g, ' ').trim();
+      if (tr) return 'How to say "' + tr + '" — and the grammar rule behind the word order';
+      return topic ? ('The grammar rule behind ' + topic) : stem;
+    }
+    /* The passage is not on this card, so its stem cannot stand alone. */
+    if (type === 'passage') return topic || stem;
+    /* Never print the blank line, and never reveal the answer. */
+    if (type === 'fill') return topic || stem.replace(/_{2,}/g, '…');
+
+    /* mcq, truefalse, scenario: self-contained, but only if the stem is a real
+       sentence rather than a stub like "Sort:" or a leftover blank. */
+    if (stem && stem.length >= 14 && !/_{2,}/.test(stem) && !/^[a-z\s]{0,12}:$/i.test(stem)) return stem;
+    return topic || stem;
+  }
+
   function renderWrite(q) {
+    var concept = feynmanConcept(q);
     var body = '<div class="q-meta"><span class="q-type-label write">Feynman Technique</span><span class="q-difficulty medium">Deep Learning</span></div>' +
       '<div class="q-text">Explain this concept <strong>in your own words</strong>, as if teaching it to a friend:</div>' +
-      '<div style="background:var(--blue-light);border-radius:10px;padding:.75rem 1rem;margin:.5rem 0 .75rem;font-size:0.88rem;color:var(--blue);font-weight:600;">' + q.question + '</div>' +
+      '<div style="background:var(--blue-light);border-radius:10px;padding:.75rem 1rem;margin:.5rem 0 .75rem;font-size:0.88rem;color:var(--blue);font-weight:600;">' + concept + '</div>' +
       '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:.5rem;">' + getFeynmanTip(plan.subjectType) + '</div>' +
       '<textarea class="write-area" id="write-input" placeholder="Write your explanation here. The more specific the better — include examples, causes, effects, dates, names..."></textarea>' +
       '<div style="display:flex;align-items:center;gap:.75rem;margin-top:.65rem;">' +
