@@ -1614,7 +1614,15 @@
         /* Same mapper the runtime uses, so a question cannot be one card type
            when pre-built and a different one when served dynamically. */
         var cardType = cardTypeFor(q);
-        if (cardType === 'question' || cardType === 'fill') {
+        /* Re-casting a fill question into an equation or a word problem only
+           makes sense where those cards belong. It used to run on every
+           subject, and any question carrying a number and the words "how many"
+           was converted - so a science fill about ATP and NADPH counts became
+           a word problem, and the learner met their photosynthesis revision
+           inside a maths card. Only maths and economics ask for these formats
+           in their schemas; everywhere else a fill question stays a fill
+           question, which is what its subject intended it to be. */
+        if (QUANTITATIVE_SUBJECTS[qType] && (cardType === 'question' || cardType === 'fill')) {
           var solvable = carriesExpression(q);
           if (solvable && (q.equation || /solve|simplify|factor|expand|evaluate/i.test(q.question || ''))) {
             cardType = 'bigequation';
@@ -1624,6 +1632,8 @@
           } else {
             cardType = 'fill';
           }
+        } else if (cardType === 'question') {
+          cardType = 'fill';
         }
         var insertAt4 = injectSpread(i, fillQs.length, 0);
         sessionCards.splice(insertAt4, 0, { type: cardType, q: q });
@@ -4011,6 +4021,27 @@
 
   window.swpCheck = swpCheck;
 
+  /* What this card is called, in the language of the subject being studied.
+     Falls back to a neutral phrase rather than guessing, because a wrong
+     subject name reads worse than no subject name. */
+  function wordProblemHeading() {
+    var t = (typeof resolveSubjectType === 'function')
+      ? resolveSubjectType(typeof plan !== 'undefined' ? plan : null,
+                           typeof day !== 'undefined' ? day : null)
+      : 'general';
+    return {
+      math:       'Real world math',
+      economics:  'Applied economics',
+      science:    'Working it out',
+      cs:         'Tracing the logic',
+      geography:  'Reading the data',
+      psychology: 'Reading the study',
+      history:    'Reading the evidence',
+      english:    'Working through the text',
+      language:   'Working it out'
+    }[t] || 'Working it out';
+  }
+
   function renderWordProblem(q) {
     var scenario = q.scenario || q.question || '';
     var visual = buildWordProblemAid(scenario);
@@ -4060,8 +4091,17 @@
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Read carefully and identify what the question is asking for.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
+    /* The heading used to be the literal string "Real world math", on every
+       subject that ever produced a word problem. A science day asking how many
+       rounds of the Calvin cycle 18 ATP supports is not real world math; it is
+       biology that happens to involve counting, and framing it as a maths card
+       tells the learner the app has lost track of what they are studying.
+       Economics had the same problem with its supply-and-demand problems.
+
+       The card is named after the subject it belongs to. */
     var card = '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Word Problem</div><h2>Real world math</h2></div>' +
+      '<div class="card-header"><div class="card-badge">✦ Word Problem</div><h2>' +
+        esc(wordProblemHeading()) + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -5942,6 +5982,12 @@
   function fmClean(v) { return fmStr(v).replace(/\s+/g, ' ').trim(); }
 
   var PROCEDURAL_SUBJECTS = { math: 1, cs: 1, language: 1 };
+
+  /* Subjects whose schemas actually ask for bigequation / wordproblem cards.
+     Nothing else should ever be re-cast into one: a question that counts
+     molecules is still biology, and presenting it as a maths problem loses the
+     subject the learner thinks they are studying. */
+  var QUANTITATIVE_SUBJECTS = { math: 1, economics: 1 };
 
   var PRODUCTION_TYPES = { bigequation: 1, wordproblem: 1, errorspot: 1,
                            write: 1, sequence: 1 };

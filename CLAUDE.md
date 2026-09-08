@@ -103,7 +103,7 @@ Keep the two lists identical.
 | general | mcq ×3, truefalse ×2, fill ×2, write |
 
 Math carries no MCQ on purpose — see invariant 1. Science's `sequence` replaced a
-third MCQ when the synthetic key-terms ordering card was removed (invariant 5).
+third MCQ when the synthetic key-terms ordering card was removed (invariant 6).
 
 Every type has a renderer (`renderFill`, `renderBigEquation`, `renderPassage`,
 `renderErrorSpot`, `renderSentence`, `renderSequence`, `renderMatch`,
@@ -199,7 +199,27 @@ on a word boundary. `applyFeynmanOrder` printed the raw title for a long time.
 
 `getFeynmanTip()` must have an entry for all 10 subjects.
 
-### 5. An ordering card needs content that has a real order
+### 5. Injected cards go in the practice run, never the opening block
+
+`practiceStart` is captured **before** the main loop and every injector places
+relative to it via `injectAt` / `injectSpread`. Capture it after the loop and it
+points at the end of the question run, which silently disables the spreading.
+
+Injectors used fixed absolute indices for a long time, which assumed the queue
+began with question cards. It never does. On day 0 a passage card was spliced
+into the middle of the pre-test and the welcome, whiteboard and lesson cards
+were pushed to positions 10, 12 and 13 — a learner's first session asked them to
+sort and match vocabulary before being taught anything.
+
+`applyFeynmanOrder` shares the trap: pre-test cards are ordinary question cards,
+so its scan for "where practice begins" must skip `isPretest` / `isReview` or the
+explain-first card lands inside the pre-test.
+
+Fixed offsets also do not survive a short day — three passage offsets all clamp
+to the end and the learner reads three passages back to back. Use `injectSpread`
+for any group of more than one.
+
+### 6. An ordering card needs content that has a real order
 
 `checkSequence` grades by comparing the learner's order against `q.items`
 verbatim — so whatever the card was built from **is** the answer key.
@@ -215,7 +235,7 @@ That injector is gone. `buildSequenceQuestion` is kept, unused, with a note.
 arrives with a real order and an explanation. To give a subject one, add
 `sequence` to its schema in `app.html` — do not re-wire the builder.
 
-### 6. Never leak an answer onto the opening whiteboard
+### 7. Never leak an answer onto the opening whiteboard
 
 `briefFor` builds the board shown *before* any practice. Its math branch pulls
 real equations out of the day's own `bigequation` questions — that is intended,
@@ -226,7 +246,24 @@ worked solutions to the first two questions the learner was about to be asked.
 Worked lines with answers belong on `fromWrongAnswer`, where the learner has
 already committed to an answer.
 
-### 7. Question badges are chosen in `renderQuestion`, from the card
+### 8. A question belongs to its subject, and must be framed as its subject
+
+Two things used to drag questions out of their own subject:
+
+- **The fill/bigequation/wordproblem injector re-cast on every subject.** Any
+  fill question carrying a number and the words "how many" became a word
+  problem, so a science fill about ATP and NADPH counts was served as one. Only
+  `QUANTITATIVE_SUBJECTS` (math, economics) may be re-cast now — those are the
+  only schemas that ask for these formats.
+- **`renderWordProblem` hard-coded the heading "Real world math"**, on every
+  subject that produced a word problem. `wordProblemHeading()` names the card
+  after the resolved subject instead.
+
+`app.html`'s prompt also carries a QUESTION TYPE LOCK: the per-subject tally
+("3 MCQ, 2 True/False...") reads as a suggestion on its own, and the model would
+reach for a word problem the moment the notes contained numbers.
+
+### 9. Question badges are chosen in `renderQuestion`, from the card
 
 Pass the card: `renderQuestion(card.q, !!card.isReview, card)`.
 
@@ -306,6 +343,11 @@ What to check after any `buildQueue` or renderer change:
 6. No question's answer appears on the opening board
 7. Math still yields 10 bigequation / 2 wordproblem / 0 match / 0 sequence / 0 fill
 8. Every card in every session renders without throwing
+9. The whiteboard sits between `welcome` and `lesson` in every session — check
+   this with a real page load (an iframe with a cache-busting query works), not
+   by calling `buildQueue()` in an already-loaded page; script-ordering bugs are
+   invisible to the latter
+10. No `bigequation` or `wordproblem` card on a non-quantitative subject
 
 Verify by executing the code, not by reading it. Several bugs here looked correct
 on inspection and only showed up when the queue was actually built — and two

@@ -2450,6 +2450,16 @@
         '8. misconceptions: exactly 2 items, each {believe,actually,why}. These are the specific WRONG things students most often think about this exact topic. "believe" = the mistaken idea in the student\'s own words. "actually" = the correct idea. "why" = the reason the mistake is so tempting. Be concrete and specific to "' + subject + '" - never generic study advice.\n' +
         '9. caseStudy: one real-world anchor {title,what,connection}. "title" = a specific named real event, experiment, structure, person, or application. "what" = 1-2 sentences on what actually happened. "connection" = how it directly demonstrates this exact topic. Must be a REAL documented example, not hypothetical.\n' +
         questionInstructions +
+        /* The line above names the exact types this subject wants, but only as
+           a tally ("3 MCQ, 2 True/False..."), and the model reads that as a
+           suggestion. It would reach for a word problem on a science day the
+           moment the notes contained numbers - so a photosynthesis question
+           about ATP counts came back typed "wordproblem" and the learner met
+           their biology revision inside a maths card. Say it as a rule. */
+        '\nQUESTION TYPE LOCK: use ONLY the "type" values listed above for this subject, in those quantities.\n' +
+        'Do NOT use any other type, even if the notes contain numbers, dates, steps or formulas.\n' +
+        'A question that involves counting or arithmetic is still a question about THIS subject - ask it as one of the\n' +
+        'types listed above, not as a "wordproblem" or "bigequation", unless those types appear in the list.\n' +
         '\nFILL-IN-THE-BLANK RULES (type "fill") - these are strict:\n' +
         '1. The question MUST be a complete declarative SENTENCE, never an instruction or command.\n' +
         '2. It MUST contain exactly one blank written as ________ (8 underscores).\n' +
