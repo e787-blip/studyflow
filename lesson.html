@@ -1133,6 +1133,13 @@
                      'review-intro': 1, 'review-done': 1, 'interleave-intro': 1 };
     var firstPractice = rest.length;
     for (i = 0; i < rest.length; i++) {
+      /* A pre-test or day-start review question is not practice. It is the
+         cold probe that runs BEFORE any teaching, and its cards are ordinary
+         question cards, so this scan used to stop at the first one - putting
+         the "explain it before you start" card at index 1, inside the pre-test
+         itself, between the intro and the first question. Skip past them and
+         find where the real practice run begins. */
+      if (rest[i].isPretest || rest[i].isReview) continue;
       if (!TEACHING[rest[i].type]) { firstPractice = i; break; }
     }
     var practiceCount = rest.length - firstPractice;
@@ -1333,6 +1340,12 @@
        card one meant it ran BEFORE the pre-test, which defeats the pre-test:
        that exists to probe what the learner already knows, and showing them
        the topic overview first hands them the answers. */
+    /* Index at which the practice run begins - everything before it is the
+       opening block (pre-test, welcome, whiteboard, lesson, key terms), which
+       injected cards must never break into. Assigned just before the main
+       loop; read by injectAt / injectSpread further down. */
+    var practiceStart = 0;
+
     var openingBoard = buildOpeningBoard();
     // Only mcq/truefalse can render correctly through the generic question card —
     // every other type has its own dedicated renderer and must be excluded here.
@@ -1442,6 +1455,13 @@
       }
     }
 
+    /* The practice run starts HERE, before the main loop queues a single
+       question - not after it. Captured after the loop, practiceStart pointed
+       at the END of the question run, so every injected card was placed past
+       all of them and the spreading did nothing: three passages in a row, then
+       classify, sequence and match, all bunched at the tail. */
+    practiceStart = sessionCards.length;
+
     // Main questions — interleave fill + interactive types on ALL plans
     shuffled.forEach(function(q, i) {
       sessionCards.push({ type: cardTypeFor(q), q: q, qi: i,
@@ -1474,6 +1494,41 @@
          points in the session where that loop actually turns. See
          applyFeynmanOrder below. */
     });
+
+    /* ── WHERE INJECTED CARDS GO ──────────────────────────────────────────
+       Every injector below used to splice at a fixed absolute index - 2, 3, 5,
+       6, 7, 8, 10 - which quietly assumed the queue began with question cards.
+       It never does. There is always an opening block in front (welcome,
+       whiteboard, lesson, key terms), and on day 1 a pre-test sits in front of
+       even that.
+
+       So on day 0 the passage injector spliced at index 2, landing in the
+       middle of the pre-test, and classify / sequence / match landed between
+       the pre-test and the welcome card. The learner's very first session
+       opened by asking them to sort, order and match vocabulary before being
+       taught anything at all, with the welcome card at position 10, the
+       whiteboard at 12 and the lesson at 13.
+
+       practiceStart is the end of the opening block, captured before any
+       injector runs. Offsets are measured from there, so the opening block
+       always stays intact and in front. */
+    function injectAt(offset) {
+      return Math.min(practiceStart + offset, sessionCards.length);
+    }
+
+    /* Place the i-th card of a group of n, spread through the practice run.
+
+       Fixed offsets do not survive a short day. The passage injector asked for
+       2, 6 and 10; a history day whose practice run is four cards long clamps
+       all three to the end, and the learner reads three passages back to back.
+       Spreading by proportion instead keeps them apart at any length. `bias`
+       nudges a group off-centre so two single-card groups do not land on the
+       same slot. */
+    function injectSpread(i, n, bias) {
+      var len = sessionCards.length - practiceStart;
+      var slot = Math.round((len + 1) * (i + 1) / (n + 1)) + (bias || 0);
+      return practiceStart + Math.max(0, Math.min(slot, len));
+    }
 
     // ── INTERACTIVE TYPES — all plans, woven into session ──
     var subjectType = plan.subjectType || 'general';
@@ -1510,7 +1565,7 @@
     if (isMath && isGraphTopic) {
       var graphQ = buildGraphQuestion(day);
       if (graphQ) {
-        var insertAt = Math.min(4, sessionCards.length);
+        var insertAt = injectAt(4);
         sessionCards.splice(insertAt, 0, { type: 'graph', q: graphQ });
       }
     }
@@ -1570,7 +1625,7 @@
             cardType = 'fill';
           }
         }
-        var insertAt4 = Math.min(3 + i * 3, sessionCards.length);
+        var insertAt4 = injectSpread(i, fillQs.length, 0);
         sessionCards.splice(insertAt4, 0, { type: cardType, q: q });
       });
     }
@@ -1588,7 +1643,7 @@
        the learner. */
     var errorSpotQs = (day.questions || []).filter(function(q){ return q.type === 'errorspot'; });
     errorSpotQs.forEach(function(q, i) {
-      var insertAt5 = Math.min(8 + i * 3, sessionCards.length);
+      var insertAt5 = injectSpread(i, errorSpotQs.length, 1);
       sessionCards.splice(insertAt5, 0, { type: 'errorspot', q: q });
     });
 
@@ -1596,7 +1651,7 @@
     // (separate from the inline MCQ-reuse mechanism above, which only fires every 5th question)
     var aiWriteQs = (day.questions || []).filter(function(q){ return q.type === 'write'; });
     aiWriteQs.forEach(function(q, i) {
-      var insertAtW = Math.min(6 + i * 4, sessionCards.length);
+      var insertAtW = injectSpread(i, aiWriteQs.length, 2);
       sessionCards.splice(insertAtW, 0, { type: 'write', q: q });
     });
 
@@ -1609,7 +1664,7 @@
       return q.type === 'passage' && fmStr(q.passage).trim().length >= 20;
     });
     passageQs.forEach(function(q, i) {
-      var insertAt6 = Math.min(2 + i * 4, sessionCards.length);
+      var insertAt6 = injectSpread(i, passageQs.length, -1);
       sessionCards.splice(insertAt6, 0, { type: 'passage', q: q });
     });
 
@@ -1637,7 +1692,7 @@
     if (isLanguage) {
       var sentenceQs = (day.questions || []).filter(function(q){ return q.type === 'sentence' && Array.isArray(q.words) && q.words.length >= 3; });
       sentenceQs.forEach(function(q, i) {
-        var insertAt7 = Math.min(3 + i * 3, sessionCards.length);
+        var insertAt7 = injectSpread(i, sentenceQs.length, 0);
         sessionCards.splice(insertAt7, 0, { type: 'sentence', q: q });
       });
     }
@@ -1645,21 +1700,21 @@
     // Classify questions — ALL subjects (science, history, geography, cs, psychology, economics)
     var classifyQs = (day.questions || []).filter(function(q){ return q.type === 'classify' && q.categoryA && q.categoryB && Array.isArray(q.itemsA) && Array.isArray(q.itemsB); });
     classifyQs.forEach(function(q, i) {
-      var insertAt8 = Math.min(6 + i * 4, sessionCards.length);
+      var insertAt8 = injectSpread(i, classifyQs.length, 1);
       sessionCards.splice(insertAt8, 0, { type: 'classify', q: q });
     });
 
     // Scenario questions — ALL subjects (psychology, economics, geography, history)
     var scenarioQs = (day.questions || []).filter(function(q){ return q.type === 'scenario' && q.question && Array.isArray(q.options); });
     scenarioQs.forEach(function(q, i) {
-      var insertAt9 = Math.min(5 + i * 4, sessionCards.length);
+      var insertAt9 = injectSpread(i, scenarioQs.length, -1);
       sessionCards.splice(insertAt9, 0, { type: 'scenario', q: q });
     });
 
     // Sequence questions from AI — history, geography, science
     var aiSeqQs = (day.questions || []).filter(function(q){ return q.type === 'sequence' && Array.isArray(q.items) && q.items.length >= 3; });
     aiSeqQs.forEach(function(q, i) {
-      var insertAtSeq = Math.min(7 + i * 4, sessionCards.length);
+      var insertAtSeq = injectSpread(i, aiSeqQs.length, 2);
       sessionCards.splice(insertAtSeq, 0, { type: 'sequence', q: q });
     });
 
@@ -1673,7 +1728,7 @@
     if (!isMath && day.keyTerms && day.keyTerms.length >= 4) {
       var matchQ = buildMatchQuestion(day, subjectType);
       if (matchQ) {
-        var insertAt3 = Math.min(10, sessionCards.length);
+        var insertAt3 = injectSpread(0, 1, 3);
         sessionCards.splice(insertAt3, 0, { type: 'match', q: matchQ });
       }
     }
