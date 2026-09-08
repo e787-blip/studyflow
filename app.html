@@ -2182,6 +2182,14 @@
           return true;
         }
         if (q.type === 'write') return !!(qText && qText.length > 3);
+        /* A passage card is the passage. Without one the learner gets an empty
+           quote block above four options about a text they were never shown -
+           and nothing else validated this, because passage fell through to the
+           unknown-type catch-all below, which only checks the question text. */
+        if (q.type === 'passage') {
+          if (String(q.passage || '').trim().length < 20) return false;
+          return !!(qText && Array.isArray(q.options) && q.options.length >= 2);
+        }
         // Unknown types — keep if they have question text
         return qText.length > 3;
       });
@@ -2249,11 +2257,24 @@
       var d = difficulty;
 
       if (subjectType === 'math') {
-        questionInstructions = '\n\nMATH: 1 MCQ, 5 bigequation (real equations), 1 errorspot (EXACTLY 1 hasError:true), 1 wordproblem. All answers must be real values.\n';
-        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Simplify","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Evaluate","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Expand or factor","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"errorspot","question":"Find the mistake:","steps":[{"text":"","hasError":false},{"text":"","hasError":false},{"text":"","hasError":true}],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"wordproblem","scenario":"","question":"What is the answer?","steps":[{"prompt":"","answer":"","unit":"","hint":""},{"prompt":"Now use {1} to find...","answer":"","unit":""}],"answer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
+        /* No MCQ. Maths asks for ~80% equations, 10-15% word problems and about
+           5% anything else - and errorspot already spends that 5%. The MCQ was
+           a second non-core question the format enforcer could not convert
+           (its answer is a phrase, so carriesExpression rejects it), so it sat
+           in every maths day as recognition work the mix has no room for.
+           Concepts still reach the learner: the key-terms card, the whiteboard
+           brief and the two Feynman prompts are all conceptual. */
+        questionInstructions = '\n\nMATH: 6 bigequation (real equations), 1 errorspot (EXACTLY 1 hasError:true), 1 wordproblem. All answers must be real values.\n';
+        questionSchema = '{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Simplify","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Evaluate","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Expand or factor","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"errorspot","question":"Find the mistake:","steps":[{"text":"","hasError":false},{"text":"","hasError":false},{"text":"","hasError":true}],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"wordproblem","scenario":"","question":"What is the answer?","steps":[{"prompt":"","answer":"","unit":"","hint":""},{"prompt":"Now use {1} to find...","answer":"","unit":""}],"answer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       } else if (subjectType === 'science') {
-        questionInstructions = '\n\nSCIENCE: 3 MCQ (cause-effect, predict outcome, structure-function), 2 True/False, 2 Fill, 1 Classify, 1 Write.\n';
-        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"classify","question":"Sort:","categoryA":"","categoryB":"","itemsA":["","",""],"itemsB":["","",""],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"write","question":"","modelAnswer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
+        /* The sequence question replaces a third MCQ. lesson.html used to bolt a
+           "put these in order" card onto every science day, built from the
+           day's key terms - and key terms have no order, so the answer key was
+           whatever order the model listed them in. A process the model is
+           asked to sequence on purpose (the stages of respiration, the steps
+           of mitosis) has a real one. */
+        questionInstructions = '\n\nSCIENCE: 2 MCQ (cause-effect, predict outcome), 2 True/False, 2 Fill, 1 Classify, 1 Sequence (a real process, in the order it happens), 1 Write.\n';
+        questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"classify","question":"Sort:","categoryA":"","categoryB":"","itemsA":["","",""],"itemsB":["","",""],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"sequence","question":"Put these steps in the order they happen:","items":["","","",""],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"write","question":"","modelAnswer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       } else if (subjectType === 'psychology') {
         questionInstructions = '\n\nPSYCHOLOGY: 3 MCQ, 2 True/False, 1 Scenario, 2 Fill, 1 Write.\n';
         questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"scenario","question":"","options":["","","",""],"correctIndex":3,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"write","question":"","modelAnswer":"","hint":"","explanation":"","difficulty":"'+d+'"}';

@@ -179,6 +179,11 @@
   /* STRUGGLING LESSON CARD */
   .card-header.struggling-header { background:linear-gradient(135deg,#f59e0b,#d97706); }
 
+  /* A question the pre-test already asked, now returning after the lesson.
+     Green rather than the brand blue, so the learner reads it as "this is the
+     same one again, on purpose" before reading the badge. */
+  .card-header.retest-header { background:linear-gradient(135deg,#34a065,#1d7a45); }
+
   .card-body { padding:1.6rem 2rem; }
 
   /* CONTENT */
@@ -1142,13 +1147,18 @@
         feynmanPass: pass,
         q: {
           type: 'write',
+          /* day.title arrives as a chapter heading - "Algebra: Variables,
+             Expressions, and Equations" - and printing it raw inside a
+             sentence produced exactly the broken grammar invariant 4 warns
+             about. feynmanTopic strips the prefix and truncates on a word
+             boundary; it is the only thing that should reach these prompts. */
           question: pass === 1
             ? 'Before you practise: explain ' +
-              (fmClean(dayObj && dayObj.title) || 'today\u2019s topic') +
+              (feynmanTopic(dayObj) || 'today\u2019s topic') +
               ' in your own words, as if to someone who has never seen it. ' +
               'Wherever you get stuck is what this session is for.'
             : 'Now explain ' +
-              (fmClean(dayObj && dayObj.title) || 'it') +
+              (feynmanTopic(dayObj) || 'it') +
               ' again, in plainer words than before. What can you say now that ' +
               'you could not say at the start?',
           modelAnswer: fmStr(dayObj && dayObj.content).slice(0, 400),
@@ -1291,7 +1301,11 @@
     // If generation stripped every question, rebuild from the day's own
     // content BEFORE the queue is assembled, so the session has real
     // practice cards instead of ending right after the lesson card.
-    if (!day.questions || !day.questions.length) {
+    /* A non-array here used to reach questions.filter() and throw, which kills
+       the session on a blank screen. day.questions comes out of localStorage,
+       so it is only ever as well-formed as whatever was last written there. */
+    if (Object.prototype.toString.call(day.questions) !== '[object Array]') day.questions = [];
+    if (!day.questions.length) {
       var seeded = buildFallbackQuestions(day);
       if (seeded.length) day.questions = seeded;
     }
@@ -1328,10 +1342,19 @@
     var simpleQuestions = questions.filter(function(q){ return !SPECIAL_TYPES_PRETEST[q.type]; });
     var shuffled = simpleQuestions.slice().sort(function(){ return Math.random() - 0.5; });
 
+    /* The pre-test asks three questions before any teaching, and the main loop
+       below queues those same three again as ordinary practice. That is the
+       design - probe, teach, then re-ask, which is the whole point of opening
+       with a test - but nothing said so, so the second showing read as the app
+       repeating itself by mistake. The questions are recorded here and the
+       repeat is badged where it appears. */
+    var pretestAsked = {};
+
     // FEATURE 3: Pre-test on Day 1 — 3 questions BEFORE lesson content
     if (dayIndex === 0 && simpleQuestions.length >= 3) {
       sessionCards.push({ type: 'pretest-intro' });
       shuffled.slice(0, 3).forEach(function(q) {
+        pretestAsked[fmStr(q.question)] = 1;
         sessionCards.push({ type: cardTypeFor(q), q: q, isPretest: true });
       });
       sessionCards.push({ type: 'pretest-done' });
@@ -1421,7 +1444,8 @@
 
     // Main questions — interleave fill + interactive types on ALL plans
     shuffled.forEach(function(q, i) {
-      sessionCards.push({ type: cardTypeFor(q), q: q, qi: i });
+      sessionCards.push({ type: cardTypeFor(q), q: q, qi: i,
+                          isRetest: !!pretestAsked[fmStr(q.question)] });
 
       /* Fill in the blank every third question. When the day has no fill
          questions this used to fall back to shuffled[i + 1] - the NEXT question
@@ -1462,11 +1486,22 @@
        tested false, and the big-equation and word-problem cards were never
        inserted for them. Arithmetic is the maths most learners are actually
        practising, so it belongs here. */
-    var isMath     = subjectType === 'math'     || /\bmath\b|\bmaths\b|algebra|calculus|trigonometr|geometr|equation|slope|\blinear\b|quadratic|\bformula\b|\bsolve\b|\bsolving\b|polynomial|coefficient|\badd\b|\badding\b|\baddition\b|\bsubtract|\bmultipl|\bdivide\b|\bdividing\b|\bdivisor\b|long division|fraction|decimal|percent|\bratio\b|\bratios\b|\bproportion|integer|exponent|\bpowers\b|arithmetic|numerator|denominator|order of operations|rounding|place value|\bfactoring\b|\bfactorisation\b|\bfactorization\b|prime number|inequalit|absolute value|square root|\bsimplif|\bevaluate\b|\bexpression\b|\bexpressions\b|\bvariable\b|\bvariables\b|\bsum\b|\bproduct\b|\bquotient\b|\bremainder\b|\bmean\b|\bmedian\b|\bmode\b|\bperimeter\b|\barea of\b|\bvolume of\b/.test(subjectText);
-    var isScience  = subjectType === 'science'  || /biology|chemistry|physics|\bscience\b|cell\b|atom\b|molecule|reaction|genetics|ecosystem/.test(subjectText);
-    var isHistory  = subjectType === 'history'  || /history|war|revolution|empire|century|ancient|medieval|political/.test(subjectText);
-    var isEnglish  = subjectType === 'english'  || /literature|english|novel|poem|author|character|theme|metaphor|grammar/.test(subjectText);
-    var isLanguage = subjectType === 'language' || /spanish|french|german|japanese|chinese|language|verb|conjugate|translate/.test(subjectText);
+    /* These flags used to be derived from raw title/subject text alone, and so
+       could contradict qType - the classification the rest of the pipeline
+       runs on. A history day titled "Causes of the French Revolution" set
+       isLanguage true off the word "French", which suppressed its ordering
+       card and ran the sentence-builder injector against it instead. When
+       qType has actually classified the day, that decision now wins; the text
+       patterns stay as the fallback for a day it could not classify, which is
+       where they earn their keep - they recognise far more arithmetic than the
+       classifier does ("Order of Operations", "Long Division", "Rounding").
+       subjectType is no longer read here: qType is the normalised form of that
+       same field, so the two can no longer disagree. */
+    var isMath     = qType === 'math'     || (qType === 'general' && /\bmath\b|\bmaths\b|algebra|calculus|trigonometr|geometr|equation|slope|\blinear\b|quadratic|\bformula\b|\bsolve\b|\bsolving\b|polynomial|coefficient|\badd\b|\badding\b|\baddition\b|\bsubtract|\bmultipl|\bdivide\b|\bdividing\b|\bdivisor\b|long division|fraction|decimal|percent|\bratio\b|\bratios\b|\bproportion|integer|exponent|\bpowers\b|arithmetic|numerator|denominator|order of operations|rounding|place value|\bfactoring\b|\bfactorisation\b|\bfactorization\b|prime number|inequalit|absolute value|square root|\bsimplif|\bevaluate\b|\bexpression\b|\bexpressions\b|\bvariable\b|\bvariables\b|\bsum\b|\bproduct\b|\bquotient\b|\bremainder\b|\bmean\b|\bmedian\b|\bmode\b|\bperimeter\b|\barea of\b|\bvolume of\b/.test(subjectText));
+    var isScience  = qType === 'science'  || (qType === 'general' && /biology|chemistry|physics|\bscience\b|cell\b|atom\b|molecule|reaction|genetics|ecosystem/.test(subjectText));
+    var isHistory  = qType === 'history'  || (qType === 'general' && /history|war|revolution|empire|century|ancient|medieval|political/.test(subjectText));
+    var isEnglish  = qType === 'english'  || (qType === 'general' && /literature|english|novel|poem|author|character|theme|metaphor|grammar/.test(subjectText));
+    var isLanguage = qType === 'language' || (qType === 'general' && /spanish|french|german|japanese|chinese|language|verb|conjugate|translate/.test(subjectText));
 
     // Graph — ONLY for topics that explicitly involve graphing/coordinates
     // NOT for algebra, arithmetic, equations in general — only when notes mention graphing
@@ -1540,14 +1575,22 @@
       });
     }
 
-    // Error spot — math and science, pulled from AI-generated errorspot questions
-    if (isMath || isScience) {
-      var errorSpotQs = (day.questions || []).filter(function(q){ return q.type === 'errorspot'; });
-      errorSpotQs.forEach(function(q, i) {
-        var insertAt5 = Math.min(8 + i * 3, sessionCards.length);
-        sessionCards.splice(insertAt5, 0, { type: 'errorspot', q: q });
-      });
-    }
+    /* Error spot — every subject that generated one. This used to be gated on
+       `isMath || isScience`, and computer science only ever reached it by
+       accident: isScience was matched off the word "Science" in "Computer
+       Science". The moment those flags were made to agree with the resolved
+       subject type, the accident stopped and the CS errorspot - which its
+       schema asks for by name - was generated, validated and then dropped.
+
+       There is nothing to gate here in the first place. An errorspot card only
+       exists if the model produced an errorspot question, and any subject that
+       produced one meant it. Invariant 3: every generated question must reach
+       the learner. */
+    var errorSpotQs = (day.questions || []).filter(function(q){ return q.type === 'errorspot'; });
+    errorSpotQs.forEach(function(q, i) {
+      var insertAt5 = Math.min(8 + i * 3, sessionCards.length);
+      sessionCards.splice(insertAt5, 0, { type: 'errorspot', q: q });
+    });
 
     // Feynman write — AI-generated write questions from science/history/english/general schemas
     // (separate from the inline MCQ-reuse mechanism above, which only fires every 5th question)
@@ -1558,26 +1601,37 @@
     });
 
     // Passage comprehension — ALL subjects that generate passage-type questions
-    var passageQs = (day.questions || []).filter(function(q){ return q.type === 'passage'; });
+    /* The passage text is checked here as well as in app.html's sanitiser: that
+       check stops new plans carrying an empty passage, but every plan already
+       sitting in a learner's localStorage predates it, and a passage card with
+       no passage is four options about a text that is never shown. */
+    var passageQs = (day.questions || []).filter(function(q){
+      return q.type === 'passage' && fmStr(q.passage).trim().length >= 20;
+    });
     passageQs.forEach(function(q, i) {
       var insertAt6 = Math.min(2 + i * 4, sessionCards.length);
       sessionCards.splice(insertAt6, 0, { type: 'passage', q: q });
     });
 
-    /* Sequence — science (processes), history (timelines), and any other
-       subject with 4+ keyTerms. The trailing keyTerms clause is an escape
-       hatch past the subject check, and maths was slipping through it: a day
-       with four key terms got a generic "put these terms in order" card built
-       from definitions rather than from working. Science and history still
-       reach it on their own merits; maths no longer rides the fallback.
-       (Language uses the dedicated sentence-builder below instead.) */
-    if (!isLanguage && day.keyTerms && day.keyTerms.length >= 3 && (isScience || isHistory || (!isMath && day.keyTerms.length >= 4))) {
-      var seqQ = buildSequenceQuestion(day, subjectType);
-      if (seqQ) {
-        var insertAt2 = Math.min(7, sessionCards.length);
-        sessionCards.splice(insertAt2, 0, { type: 'sequence', q: seqQ });
-      }
-    }
+    /* The synthetic "put these key terms in order" card used to be built here,
+       for science, history, and any non-maths day with 4+ key terms. It is
+       gone, and it should not come back in that form.
+
+       checkSequence grades by comparing the learner's order against
+       q.items verbatim - so whatever order the card was built from IS the
+       answer key. buildSequenceQuestion built its items from
+       day.keyTerms.slice(0, 4), meaning the "correct" order was nothing more
+       than the order the model happened to list the vocabulary in. The card
+       shipped as: Chloroplast, Mitochondrion, Glucose, Stomata - four terms
+       with no order between them - and marked the learner wrong for any of
+       the 23 arrangements that were not the one the model typed.
+
+       Maths was excluded from it for a different reason (invariant 2), which
+       hid how broad the problem was: it was reaching eight of the ten
+       subjects. Ordering cards now come only from a model-generated
+       `sequence` question, which arrives with a real order and an explanation
+       to back it - see the aiSeqQs injector below. History and geography ask
+       for one in their schema; science now does too. */
 
     // Sentence Builder — language subjects only
     if (isLanguage) {
@@ -1645,6 +1699,11 @@
     };
   }
 
+  /* UNUSED, and kept only so the reason stays next to the code: this builds an
+     ordering card out of day.keyTerms, and key terms have no inherent order,
+     so the answer key was arbitrary. See the note in buildQueue where it used
+     to be called. Do not re-wire it to a subject; add a `sequence` question to
+     that subject's schema in app.html instead. */
   function buildSequenceQuestion(day, subjectType) {
     if (!day.keyTerms || day.keyTerms.length < 3) return null;
     var items = day.keyTerms.slice(0, 4).map(function(t) {
@@ -2378,15 +2437,19 @@
       html = buildCard('Key Terms', 'Words to Know', false, termsHtml, 'Learn these', 'Next →', false);
     }
     else if (card.type === 'question') {
-      html = renderQuestion(card.q, false);
-      // Add badge for spaced repeat and review questions
-      if (card.isSpacedRepeat) {
-        html = html.replace('class="card-tag"', 'class="card-tag" style="background:#fff8e0;color:#d97706;border-color:#f59e0b;"');
-        html = html.replace(/(<div class="card-tag"[^>]*>)[^<]*/,'$1<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.95"/></svg> Try again');
-      } else if (card.isReview) {
-        html = html.replace('class="card-tag"', 'class="card-tag" style="background:#dce8ff;color:#2851c8;border-color:#4a7cf6;"');
-        html = html.replace(/(<div class="card-tag"[^>]*>)[^<]*/,'$1<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> Review');
-      }
+      /* The badge is chosen inside renderQuestion, from the card.
+
+         It used to be patched in here, by string-replacing class="card-tag" on
+         the rendered HTML - and renderQuestion has never emitted a card-tag.
+         It emits card-badge. So all three replacements silently matched
+         nothing and every one of these badges was invisible: a spaced-repeat
+         question never said "Try again", and a review question never said
+         "Review". isReview was passed as a hard-coded false on top of that, so
+         even the badge text renderQuestion computes for itself could not fire.
+
+         Passing the card is the fix. Nothing downstream needs to know how the
+         header is built, and there is no HTML string to keep in sync. */
+      html = renderQuestion(card.q, !!card.isReview, card);
     }
     else if (card.type === 'fill') {
       html = renderFill(card.q);
@@ -2528,11 +2591,20 @@
       '<button class="btn-next" ' + (disabled ? 'disabled' : '') + ' onclick="showNextCard()">' + nextLabel + '</button></div></div>';
   }
 
-  function renderQuestion(q, isReview) {
+  /* card is optional - it carries the flags that decide which badge this
+     question wears. Called without one, the question renders as ordinary
+     practice, which is what every non-question renderer expects. */
+  function renderQuestion(q, isReview, card) {
     var diffClass = (q.difficulty || 'medium').toLowerCase();
     var typeLabel = q.type === 'truefalse' ? 'True / False' : 'Multiple Choice';
     var typeClass = q.type === 'truefalse' ? 'tf' : 'mcq';
     var badge = isReview ? 'Review Question' : (day.isFinal ? 'Final Exam' : 'Day ' + (dayIndex + 1) + ' — Practice');
+    if (card && card.isSpacedRepeat) badge = 'Try again';
+    /* The pre-test asked this same question before the lesson. Saying so is
+       the whole fix: unlabelled, the second showing reads as the app glitching
+       and repeating itself, when it is actually the point of opening with a
+       test - answer it cold, learn, then answer it again. */
+    else if (card && card.isRetest) badge = 'You saw this in the pre-test';
     var title = day.title || (day.isFinal ? 'Final Test' : 'Practice Questions');
     var optHtml = '';
 
@@ -2602,7 +2674,9 @@
 
     var streak = correctCount + '/' + totalAnswered;
     return '<div class="session-card">' +
-      '<div class="card-header' + (isReview ? ' struggling-header' : '') + '"><div class="card-badge">✦ ' + badge + '</div><h2>' + title + '</h2></div>' +
+      '<div class="card-header' + (isReview ? ' struggling-header' : '') +
+        (card && card.isRetest ? ' retest-header' : '') +
+        '"><div class="card-badge">✦ ' + badge + '</div><h2>' + title + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -4485,8 +4559,10 @@
   /* Day titles arrive as chapter headings: "Algebra: Variables, Expressions,
      and Equations", "Unit 3 - Fractions". Reduce to the part that reads as a
      topic so it can sit inside a sentence without mangling it. */
-  function feynmanTopic() {
-    var d = (typeof day !== 'undefined' && day) ? day : {};
+  /* dayObj is optional: applyFeynmanOrder is handed the day it is ordering,
+     and reading the global instead made the two able to disagree. */
+  function feynmanTopic(dayObj) {
+    var d = dayObj || ((typeof day !== 'undefined' && day) ? day : {});
     var t = String(d.microTopic || d.title || '').replace(/\s+/g, ' ').trim();
     if (!t) return '';
     var ci = t.indexOf(':');
@@ -5828,12 +5904,30 @@
      two should be anything other than solving work. */
   var PRODUCTION_TARGET = { math: 0.9, cs: 0.6, language: 0.6 };
 
-  /* A maths day must carry at least this many solving questions. Below it, the
-     shortfall is generated. */
-  /* Eight, so that even a day whose model output was entirely definitions ends
-     up around 80-90% solving work once the one or two legitimate definition
-     questions are counted alongside. */
-  var MATH_MIN_SOLVING = 8;
+  /* Composition of a maths day, as a share of its questions.
+
+     A single floor on "solving work" was not enough. It counted bigequation
+     and wordproblem together, so the cheapest way to satisfy it was more
+     equations - and the top-up generator only produced a word problem on
+     every third item, so a day short by one or two got equations and nothing
+     else. The measured result was a day of 7 equations and exactly 1 word
+     problem, whatever the model sent: one shape, repeated, with a single
+     token exception.
+
+     The two formats are therefore targeted separately. Equations remain the
+     bulk of the work; word problems are held to a real minority share rather
+     than left to chance, because they are what stops the day reading as the
+     same card eleven times. */
+  var MATH_MIX = {
+    bigequation: 0.80,   /* the bulk of the day */
+    wordproblem: 0.13    /* 10-15%: a genuine minority, not a token */
+  };
+
+  /* Denominator for those shares, and the floor on a maths day's length. A day
+     the model returned short is topped up to this before the shares are taken,
+     so a thin day cannot satisfy the mix with two questions. Raise or lower
+     this one number to make maths days longer or shorter. */
+  var MATH_DAY_QUESTIONS = 12;
 
   /* No single format may exceed this share on a non-procedural subject, so a
      history day cannot arrive as nine multiple-choice questions. */
@@ -6024,12 +6118,23 @@
     if (/\bmath\b|algebra|calculus|trigonometry|geometry|equation|slope|\blinear\b|quadratic|\bformula\b|\bsolve\b|polynomial|coefficient|arithmetic|fraction|multiplication|division|subtraction|addition|expression/.test(text)) return 'math';
     if (/biology|chemistry|physics|\bscience\b|\bcell\b|\batom\b|molecule|reaction|genetics|ecosystem|photosynthesis|respiration/.test(text)) return 'science';
     if (/\bcode\b|programming|computer science|algorithm|javascript|python|\bloop\b|recursion|data structure/.test(text)) return 'cs';
-    if (/spanish|french|german|japanese|chinese|conjugat|\bverb\b|translat|grammar/.test(text)) return 'language';
+
+    /* The humanities are tested BEFORE the language check, and deliberately.
+       The language pattern matches bare nationality words, so while it sat
+       above these lines "Causes of the French Revolution" resolved to
+       'language', not 'history' - and every downstream table keyed on the
+       subject type then routed a history day as a language day. The same held
+       for the German invasion of Poland, the Spanish conquest of the Americas
+       and the Japanese occupation of China. A nationality in a title is not a
+       language lesson; a title that is genuinely about a language still has
+       nothing here to match, and falls through to the language test below. */
     if (/econom|supply|demand|market|inflation|\bgdp\b|fiscal|monetary/.test(text)) return 'economics';
     if (/history|\bwar\b|revolution|empire|century|ancient|medieval|treaty|dynasty|constitution/.test(text)) return 'history';
     if (/literature|english|novel|poem|poetry|author|character|theme|metaphor|shakespeare/.test(text)) return 'english';
     if (/psycholog|\bbrain\b|cognit|behavio|memory|neuro/.test(text)) return 'psychology';
-    if (/geograph|climate|\briver\b|tectonic|biome|latitude/.test(text)) return 'geography';
+    if (/geograph|climate|\briver/.test(text) || /tectonic|biome|latitude|longitude|erosion|watershed|\bdelta\b|monsoon|\bglacier/.test(text)) return 'geography';
+
+    if (/spanish|french|german|japanese|chinese|conjugat|\bverb\b|translat|grammar/.test(text)) return 'language';
     return saved || 'general';
   }
 
@@ -6111,12 +6216,18 @@
     };
   }
 
-  /* A staged word problem whose steps are computed, so swpValidate passes. */
-  function genWordProblem() {
+  /* Staged word problems whose steps are computed, so swpValidate passes.
+
+     There used to be exactly one of these - a taxi with a flat fee and a
+     per-mile rate. That was tolerable while a day generated at most one word
+     problem; now that the mix asks for one or two every day, a seven-day plan
+     would have been seven runs of the same taxi with different numbers. Four
+     shapes, each a different two-step structure, so a week of maths does not
+     read as one problem wearing new digits. */
+  function wpTaxi() {
     var base = randInt(2, 6), rate = randInt(2, 5), miles = randInt(3, 9);
     var total = base + rate * miles;
     return {
-      type: 'wordproblem',
       scenario: 'A taxi charges a $' + base + ' flat fee plus $' + rate +
                 ' for every mile. A ride costs $' + total + ' in total.',
       question: 'How many miles was the ride?',
@@ -6132,10 +6243,91 @@
       hint: 'Take the flat fee off first, then divide by the per-mile rate.',
       explanation: 'Removing the $' + base + ' fee leaves $' + (total - base) +
                    ' of mileage charges. At $' + rate + ' per mile that is ' +
-                   miles + ' miles.',
-      difficulty: 'Medium',
-      _generated: true
+                   miles + ' miles.'
     };
+  }
+
+  /* Total-then-share: work out a total, then split it. */
+  function wpShare() {
+    var each = randInt(3, 9), people = randInt(3, 8), extra = randInt(2, 12);
+    var total = each * people + extra;
+    return {
+      scenario: 'A class packs ' + total + ' books into boxes. Each box holds ' +
+                each + ' books, and ' + extra + ' books are left over.',
+      question: 'How many full boxes are there?',
+      steps: [
+        { prompt: 'Subtract the ' + extra + ' leftover books from ' + total + '.',
+          answer: String(each * people), unit: 'books',
+          hint: 'Only the packed books go into full boxes.' },
+        { prompt: 'Divide {1} by ' + each + ' to find the number of boxes.',
+          answer: String(people), unit: 'boxes',
+          hint: 'Each full box holds ' + each + '.' }
+      ],
+      answer: String(people),
+      hint: 'Set the leftovers aside first, then divide.',
+      explanation: 'Taking off the ' + extra + ' leftovers leaves ' + (each * people) +
+                   ' books. At ' + each + ' per box that fills ' + people + ' boxes.'
+    };
+  }
+
+  /* Percentage change: find the part, then the new total. */
+  function wpPercent() {
+    var pct = [10, 20, 25, 50][randInt(0, 3)];
+    /* A multiple of 20 keeps every one of those percentages a whole number of
+       dollars. Deriving the price any other way produced answers like $52.50,
+       and a two-step problem is hard enough without the learner having to
+       guess whether the box wants "52.5" or "52.50". */
+    var start = 20 * randInt(2, 9);
+    var part = start * pct / 100;
+    return {
+      scenario: 'A jacket costs $' + start + '. In a sale the price is cut by ' + pct + '%.',
+      question: 'What is the sale price?',
+      steps: [
+        { prompt: 'Find ' + pct + '% of ' + start + '.',
+          answer: String(part), unit: 'dollars',
+          hint: pct + '% means ' + pct + ' out of every 100.' },
+        { prompt: 'Subtract {1} from ' + start + ' to get the sale price.',
+          answer: String(start - part), unit: 'dollars',
+          hint: 'The discount comes off the original price.' }
+      ],
+      answer: String(start - part),
+      hint: 'Work out the discount first, then take it off.',
+      explanation: pct + '% of $' + start + ' is $' + part + ', so the sale price is $' +
+                   (start - part) + '.'
+    };
+  }
+
+  /* Rate over time: combine two quantities, then scale. */
+  function wpRate() {
+    var perHour = randInt(4, 12), hours = randInt(3, 8), bonus = randInt(5, 30);
+    var total = perHour * hours + bonus;
+    return {
+      scenario: 'Sam earns $' + perHour + ' an hour plus a $' + bonus +
+                ' bonus for the week. He was paid $' + total + '.',
+      question: 'How many hours did Sam work?',
+      steps: [
+        { prompt: 'Subtract the $' + bonus + ' bonus from ' + total + '.',
+          answer: String(perHour * hours), unit: 'dollars',
+          hint: 'The bonus is not paid by the hour.' },
+        { prompt: 'Divide {1} by ' + perHour + ' to find the hours.',
+          answer: String(hours), unit: 'hours',
+          hint: 'Each hour is worth $' + perHour + '.' }
+      ],
+      answer: String(hours),
+      hint: 'Take the bonus off first, then divide by the hourly rate.',
+      explanation: 'Removing the $' + bonus + ' bonus leaves $' + (perHour * hours) +
+                   '. At $' + perHour + ' an hour that is ' + hours + ' hours.'
+    };
+  }
+
+  var WORD_PROBLEM_GENS = [wpTaxi, wpShare, wpPercent, wpRate];
+
+  function genWordProblem(nth) {
+    var g = WORD_PROBLEM_GENS[(nth || 0) % WORD_PROBLEM_GENS.length]();
+    g.type = 'wordproblem';
+    g.difficulty = 'Medium';
+    g._generated = true;
+    return g;
   }
 
   /* Choose the generators that suit the day's topic. */
@@ -6150,7 +6342,12 @@
     return [genOneStep, genTwoStep, genCombine, genDistribute, genEvaluate];
   }
 
-  function synthesizeSolvingQuestions(dayObj, howMany, existing) {
+  /* Build the shortfall of each format separately. The old signature took a
+     single `howMany` and produced a word problem on every third item, so a
+     day short by one or two got equations only - which is precisely how a
+     maths day ended up as one shape repeated. The caller now says how many of
+     each it needs. */
+  function synthesizeSolvingQuestions(dayObj, needEq, needWp, existing) {
     var gens = generatorsFor(dayObj && dayObj.title);
     var out = [], seen = {}, guard = 0, k;
     /* Seed the seen-set with what the day already has, so a generated equation
@@ -6164,17 +6361,27 @@
       }
     }
 
-    while (out.length < howMany && guard < 60) {
+    /* Start the rotation somewhere different each day. Indexing from 0 meant a
+       day needing a single word problem always got WORD_PROBLEM_GENS[0], so
+       adding three more shapes changed nothing: every day of a plan still
+       opened with the same taxi. The offset is what makes the variety real. */
+    var wpOffset = randInt(0, WORD_PROBLEM_GENS.length - 1);
+    var madeWp = 0;
+    while (madeWp < (needWp || 0) && guard < 60) {
       guard++;
-      /* Every third one is a word problem, so both formats appear. */
-      if (out.length % 3 === 2) {
-        var wp = genWordProblem();
-        if (!seen[wp.scenario]) { seen[wp.scenario] = 1; out.push(wp); }
-        continue;
-      }
-      var g = gens[out.length % gens.length]();
+      var wp = genWordProblem(wpOffset + madeWp);
+      if (seen[wp.scenario]) continue;
+      seen[wp.scenario] = 1; out.push(wp); madeWp++;
+    }
+
+    var madeEq = 0;
+    guard = 0;
+    while (madeEq < (needEq || 0) && guard < 120) {
+      guard++;
+      var g = gens[madeEq % gens.length]();
       if (seen[g.eq]) continue;
       seen[g.eq] = 1;
+      madeEq++;
       out.push({
         type: 'bigequation',
         question: g.eq.indexOf('=') !== -1 ? 'Solve for x' : 'Simplify',
@@ -6234,17 +6441,30 @@
          Running it on a one-item list produced eight generated equations every
          time the buffer refilled. */
       if (subjectType === 'math' && isFullDay) {
-        var have = coreCount(list, subjectType);
-        var short = MATH_MIN_SOLVING - have;
-        if (short > 0) {
-          var made = synthesizeSolvingQuestions(
-            { title: topicTitle || (typeof day !== 'undefined' && day ? day.title : '') },
-            short, list);
-          for (i = 0; i < made.length; i++) list.push(made[i]);
-          if (typeof console !== 'undefined' && console.info) {
-            console.info('[format] math: generated ' + made.length +
-              ' solving question(s) to reach the minimum');
-          }
+        /* Each format is topped up against its own target. Measuring them
+           together is what produced the one-shape day: a shortfall of two was
+           always filled with two equations, because the generator only
+           reached a word problem on its third item. */
+        var total = Math.max(list.length, MATH_DAY_QUESTIONS);
+        var wantEq = Math.round(total * MATH_MIX.bigequation);
+        var wantWp = Math.max(1, Math.round(total * MATH_MIX.wordproblem));
+
+        var haveEq = 0, haveWp = 0;
+        for (i = 0; i < list.length; i++) {
+          var ty = fmStr(list[i].type);
+          if (ty === 'bigequation') haveEq++;
+          else if (ty === 'wordproblem') haveWp++;
+        }
+
+        var made = synthesizeSolvingQuestions(
+          { title: topicTitle || (typeof day !== 'undefined' && day ? day.title : '') },
+          Math.max(0, wantEq - haveEq), Math.max(0, wantWp - haveWp), list);
+        for (i = 0; i < made.length; i++) list.push(made[i]);
+
+        if (made.length && typeof console !== 'undefined' && console.info) {
+          console.info('[format] math: generated ' + made.length +
+            ' question(s) to reach ' + wantEq + ' equation(s) and ' +
+            wantWp + ' word problem(s)');
         }
       }
 
@@ -8094,16 +8314,37 @@
     }
   }
 
-  try {
-    init();
-  } catch(err) {
-    var sc = document.getElementById('session-card');
-    if (sc) {
-      sc.innerHTML = '<div class="session-card"><div class="card-header"><div class="card-badge">✦ Error</div><h2>Could not load session</h2></div>' +
-        '<div class="card-body"><p class="content-text">Error: ' + (err && err.message ? err.message : String(err)) + '</p>' +
-        '<p class="content-text" style="margin-top:1rem;"><a href="dashboard.html" style="color:var(--blue);font-weight:600;">← Back to dashboard</a></p></div></div>';
+  function startSession() {
+    try {
+      init();
+    } catch(err) {
+      var sc = document.getElementById('session-card');
+      if (sc) {
+        sc.innerHTML = '<div class="session-card"><div class="card-header"><div class="card-badge">✦ Error</div><h2>Could not load session</h2></div>' +
+          '<div class="card-body"><p class="content-text">Error: ' + (err && err.message ? err.message : String(err)) + '</p>' +
+          '<p class="content-text" style="margin-top:1rem;"><a href="dashboard.html" style="color:var(--blue);font-weight:600;">← Back to dashboard</a></p></div></div>';
+      }
+      console.error('[lesson init]', err);
     }
-    console.error('[lesson init]', err);
+  }
+
+  /* init() used to be called right here, inline - and this is script block 1 of
+     two. Block 2 is what defines window.SFWhiteboard, and it has not been
+     parsed yet at this point. buildQueue opens by asking buildOpeningBoard for
+     the session's whiteboard; that function reads window.SFWhiteboard, finds
+     nothing, and its try/catch returns null. So the opening board was dropped
+     from every session ever built, silently, while the whiteboard module
+     itself was perfectly healthy - every scene built and rendered when called
+     from the console, which is exactly why this looked fine for so long.
+
+     DOMContentLoaded fires after BOTH blocks have run. Registering here also
+     keeps the ordering the integration layer at the end of block 2 depends on:
+     this listener is added first, so init() has built sessionCards before that
+     layer's own DOMContentLoaded handler tries to attach to it. */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startSession);
+  } else {
+    startSession();
   }
 </script>
  <!-- ═══════════════════════════════════════════════════════════════════════════
@@ -10035,16 +10276,29 @@ var SFBoard = (function () {
         boardType = 'parts';
         extra.center = topic;
       } else if (/\bmath\b|maths|algebra|calculus|equation|solve|solving|arithmetic|fraction|geometry|trigonometr|formula/.test(sKey)) {
-        /* Real worked lines beat pillar labels here. Pull them from a solving
-           question the day already generated; without them the equation scene
-           has nothing to write, so fall back rather than draw a blank. */
+        /* Real equations beat pillar labels here. Pull them from the solving
+           questions the day already generated; without them the equation scene
+           has nothing to write, so fall back rather than draw a blank.
+
+           The answers are deliberately NOT drawn. This board used to push
+           '= ' + qq.answer after each equation, so the card that opens the
+           session displayed the worked solutions to the first two questions
+           the learner was about to be asked - "3x + 7 = 22 / = 5" - before
+           they had attempted either. It went unnoticed because the opening
+           board was never reaching the queue at all (see the init() note at
+           the end of script block 1); the moment that was fixed, the leak
+           became visible on the first maths session.
+
+           Showing the equations themselves is fine and is the point of the
+           card: this is the shape of today's work. Showing what they come out
+           to is not. Worked lines with answers belong on the wrong-answer
+           board, where the learner has already committed to an answer. */
         var eqLines = [];
         var qs = list(day.questions);
         for (i = 0; i < qs.length && eqLines.length < 3; i++) {
           var qq = qs[i] || {};
           if (qq.type === 'bigequation' && clean(qq.equation)) {
             eqLines.push(clean(qq.equation));
-            if (clean(qq.answer)) eqLines.push('= ' + clean(qq.answer));
           }
         }
         if (eqLines.length >= 2) { boardType = 'equation'; extra.lines = eqLines; }
