@@ -279,6 +279,39 @@ Current states: plain practice, `isReview` → "Review Question" (amber header),
 
 ---
 
+## Diagrams
+
+Two separate systems, often confused:
+
+| | Where | Drawn by |
+|---|---|---|
+| `day.diagram` | the **lesson card** | `generateDiagramSVG` → `curatedDiagramSVG`, else `SFDiagramKit` |
+| the opening board | card 2 of the session | `SFWhiteboard.briefFor` → `SFBoard` scenes |
+
+`curatedDiagramSVG` holds 21 hand-drawn templates: brain, neuron, atom,
+supply-demand, dna, ecosystem, water-cycle, mitosis, memory-model,
+plate-tectonics, photosynthesis, forces, wave, circuit, number-line, fractions,
+place-value, area-model, triangle, states-of-matter, solar-system.
+
+**Two rules:**
+
+1. **Names are matched with hyphens flattened to spaces.** The prompt asks for
+   templates by hyphenated name (`water-cycle`), every pattern is written with
+   spaces (`water cycle`), and without the normalisation at the top of
+   `curatedDiagramSVG` the documented name matches nothing and silently falls
+   through to a generic auto-diagram. `water-cycle` and `plate-tectonics` failed
+   this way for a long time — invisibly, because the fallback always draws
+   *something*.
+2. **Every name in `app.html`'s template list must exist in
+   `curatedDiagramSVG`.** Listing one that does not is not an error; it just
+   quietly loses the picture.
+
+When adding a template, check the geometry by rendering it, not by reading the
+path data. On a quadratic `Q(p0, c, p1)` the curve peaks at
+`0.25*p0y + 0.5*cy + 0.25*p1y`, not at the control point — the wave template's
+crest and trough markers were first placed on the zero crossings because of
+exactly this.
+
 ## The whiteboard (`window.SFWhiteboard`, script block 2)
 
 Three entry points:
@@ -348,6 +381,8 @@ What to check after any `buildQueue` or renderer change:
    by calling `buildQueue()` in an already-loaded page; script-ordering bugs are
    invisible to the latter
 10. No `bigequation` or `wordproblem` card on a non-quantitative subject
+11. Every curated diagram still resolves **by its exact hyphenated name**
+    (`generateDiagramSVG({type:'water-cycle'})`), not just by a spaced label
 
 Verify by executing the code, not by reading it. Several bugs here looked correct
 on inspection and only showed up when the queue was actually built — and two

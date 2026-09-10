@@ -2435,7 +2435,18 @@
         '   a sentence that reads correctly once the answer is put back in.\n' +
 
         '5. diagram: every topic should get one. Use a hand-drawn template when the topic matches one, otherwise build a custom diagram.\n' +
-        '   Template: {"type":"brain|neuron|atom|supply-demand|dna|ecosystem|water-cycle|mitosis|memory-model|plate-tectonics|photosynthesis","label":"short caption"}\n' +
+        /* Every name here must match a template in curatedDiagramSVG() in
+           lesson.html. Listing one that does not exist is not an error - the
+           kit quietly falls back to a generic custom diagram - so the failure
+           is invisible and the topic silently loses its picture. Keep the two
+           lists in step. */
+        '   Template: {"type":"brain|neuron|atom|supply-demand|dna|ecosystem|water-cycle|mitosis|memory-model|plate-tectonics|photosynthesis\n' +
+        '                    |forces|wave|circuit|number-line|fractions|place-value|area-model|triangle|states-of-matter|solar-system","label":"short caption"}\n' +
+        '   Use forces for gravity, weight, friction or Newton\'s laws; wave for wavelength/amplitude/frequency;\n' +
+        '   circuit for voltage, current or resistance; number-line for adding and subtracting; fractions for\n' +
+        '   numerator/denominator or equivalence; place-value for columns and regrouping; area-model for\n' +
+        '   multiplying; triangle for angles or area; states-of-matter for solid/liquid/gas; solar-system for\n' +
+        '   orbits, planets, day and year.\n' +
         '   Custom (use this for ANY topic with no template - history, literature, maths, law, music, anything):\n' +
         '   {"type":"custom","layout":"flow|cycle|timeline|hierarchy|parts|concept","title":"short title","items":["...","...","..."]}\n' +
         '   - flow = ordered steps or a causal chain; cycle = a repeating loop; timeline = dated events;\n' +
