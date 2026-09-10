@@ -312,6 +312,39 @@ On a hub layout (`concept`, `parts`) pass the topic as `center` and leave
 `title` empty — passing both prints the topic twice, once above the drawing and
 once inside it. The card captions the diagram underneath anyway.
 
+### Custom layouts
+
+`SFDiagramKit.fromSpec` draws 11, from `{layout, title, items, ...}`:
+
+| Layout | Needs | Falls back to |
+|---|---|---|
+| `flow` `cycle` `timeline` `hierarchy` | 2+ items | — |
+| `parts` `concept` | items + `center` | — |
+| `compare` | `left` + `right` | — |
+| `graph` | `xLabel`, `yLabel`, `shape`, 1-3 items | always draws |
+| `bars` | every item ending in a number | `flow` |
+| `venn` | `left` + `right` (+ `shared`) | `compare` |
+| `matrix` | exactly 4 items | `concept` |
+
+The last four each **decline** when their data is missing rather than drawing an
+empty frame — a bar chart with no numbers is not a bar chart. Keep that: a wrong
+layout choice should cost a plainer diagram, never a broken one.
+
+`venn` is model-driven only. `specFromDayStructure` will never pick it from a
+flat list of labels, because deciding which side each item belongs on would
+state something the notes never said.
+
+Two ordering traps in `dgLayoutFor`, both already fixed, both easy to reintroduce:
+
+- **`matrix` is tested before `graph`.** "two axes" matches both patterns, and
+  while graph came first every two-by-two classification was drawn as a line
+  chart.
+- **`dgLabels` must not cut a trailing number.** It trims a label at its first
+  clause, and cutting `"Nitrogen: 78"` at the colon threw the value away — which
+  left `buildBars` with nothing to measure, so it declined and every chart came
+  out as a row of plain boxes. It now only trims when the clause contains
+  letters.
+
 `curatedDiagramSVG` holds 21 hand-drawn templates: brain, neuron, atom,
 supply-demand, dna, ecosystem, water-cycle, mitosis, memory-model,
 plate-tectonics, photosynthesis, forces, wave, circuit, number-line, fractions,
@@ -409,6 +442,8 @@ What to check after any `buildQueue` or renderer change:
     (`generateDiagramSVG({type:'water-cycle'})`), not just by a spaced label
 12. `diagramForDay` returns a diagram for all 10 subjects on a day carrying
     **no `diagram` field at all** — that is the common case in production
+13. All 11 custom layouts draw, all six `graph` shapes draw, and `bars` / `venn`
+    / `matrix` each fall back rather than return null when given wrong data
 
 Verify by executing the code, not by reading it. Several bugs here looked correct
 on inspection and only showed up when the queue was actually built — and two

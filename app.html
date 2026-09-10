@@ -2451,6 +2451,20 @@
         '   {"type":"custom","layout":"flow|cycle|timeline|hierarchy|parts|concept","title":"short title","items":["...","...","..."]}\n' +
         '   - flow = ordered steps or a causal chain; cycle = a repeating loop; timeline = dated events;\n' +
         '     hierarchy = ranked levels, broadest last; parts = a whole and its components; concept = an idea and related terms.\n' +
+        /* These four draw shapes the box-and-arrow layouts cannot. Each needs
+           its own fields, and each declines and falls back when they are
+           missing, so a wrong choice costs a plainer diagram, never a broken
+           one. Pick them when the CONTENT is that shape - a chart only when
+           there are real numbers in the notes. */
+        '   Four more, when the material genuinely has that shape - do not force them:\n' +
+        '   {"type":"custom","layout":"graph","title":"","xLabel":"Time","yLabel":"Population","shape":"rise|fall|peak|scurve|exp|linear","items":["what happens early","what happens in the middle","what happens at the end"]}\n' +
+        '     <- a relationship or trend. items label three points along the line, in order.\n' +
+        '   {"type":"custom","layout":"bars","title":"","items":["Oxygen: 21","Nitrogen: 78","Argon: 1"]}\n' +
+        '     <- comparing real quantities. EVERY item must end in a number from the notes, or do not use this layout.\n' +
+        '   {"type":"custom","layout":"venn","title":"","left":{"title":"A","items":["only A"]},"right":{"title":"B","items":["only B"]},"shared":["true of both"]}\n' +
+        '     <- two things that overlap. Use when the notes say what they share AND what they do not.\n' +
+        '   {"type":"custom","layout":"matrix","title":"","xLabel":"","yLabel":"","xLow":"low","xHigh":"high","yHigh":"high","yLow":"low","items":["top-left","top-right","bottom-left","bottom-right"]}\n' +
+        '     <- four groups sorted on two traits at once. items go in reading order and there must be exactly four.\n' +
         '   - 3 to 6 items, each under 40 characters, taken from the student notes. Never filler.\n' +
         '   Custom comparison uses a different shape:\n' +
         '   {"type":"custom","layout":"compare","title":"A vs B","left":{"title":"A","items":["..."]},"right":{"title":"B","items":["..."]}}\n' +

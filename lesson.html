@@ -7637,6 +7637,256 @@
       return svg + '</svg>';
     }
 
+    /* A number pulled off the end of a label: "Oxygen: 21", "Nitrogen 78%". */
+    function valueOf(item) {
+      if (item && typeof item === 'object') {
+        var v = item.value != null ? item.value : item.n;
+        var num = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+        return isNaN(num) ? null : { label: clean(item.label || item.name || ''), v: num,
+                                     shown: clean(String(v)) };
+      }
+      var t = clean(item);
+      var m = t.match(/^(.*?)[\s:=—-]+(-?\d[\d,]*(?:\.\d+)?)\s*(%|kg|km|m|s|g|cm|mm|°c|°f|bn|m\b)?\s*$/i);
+      if (!m) return null;
+      var n = parseFloat(m[2].replace(/,/g, ''));
+      if (isNaN(n)) return null;
+      var lab = clean(m[1]);
+      if (!lab) return null;
+      return { label: lab, v: n, shown: m[2] + (m[3] ? m[3] : '') };
+    }
+
+    /* Horizontal bar chart. Horizontal, not vertical, because the labels are
+       words from a lesson and words need room to be read. */
+    function buildBars(title, items) {
+      var vals = [], i, got;
+      for (i = 0; i < items.length && vals.length < 7; i++) {
+        got = valueOf(items[i]);
+        if (got) vals.push(got);
+      }
+      /* Without numbers there is no chart to draw - say so by declining rather
+         than inventing values. */
+      if (vals.length < 2) return null;
+
+      var labW = 0;
+      for (i = 0; i < vals.length; i++) {
+        labW = Math.max(labW, measure(vals[i].label, SUB_SIZE + 1, 700));
+      }
+      labW = Math.min(140, Math.max(52, labW + 8));
+
+      var barH = 22, gap = 12, valW = 40;
+      var plotW = 210;
+      var w = MARGIN + labW + 10 + plotW + valW + MARGIN;
+      var tb = titleBlock(title, w);
+      var top = tb.h + 8;
+      var h = top + vals.length * (barH + gap) + MARGIN;
+      var svg = open(w, h) + tb.svg;
+
+      var max = 0;
+      for (i = 0; i < vals.length; i++) max = Math.max(max, Math.abs(vals[i].v));
+      if (!max) return null;
+
+      var x0 = MARGIN + labW + 10;
+      /* Baseline, so the bars are read against something. */
+      svg += '<line x1="' + r1(x0) + '" y1="' + r1(top - 4) + '" x2="' + r1(x0) +
+        '" y2="' + r1(top + vals.length * (barH + gap) - gap + 4) +
+        '" stroke="' + RULE + '" stroke-width="1.4"/>';
+
+      for (i = 0; i < vals.length; i++) {
+        var c = pal(i), y = top + i * (barH + gap);
+        var bw = Math.max(3, plotW * (Math.abs(vals[i].v) / max));
+        svg += '<rect x="' + r1(x0) + '" y="' + r1(y) + '" width="' + r1(bw) +
+          '" height="' + barH + '" rx="4" fill="' + c.f + '" stroke="' + c.s + '" stroke-width="1.6"/>';
+        svg += T(x0 - 8, y + barH / 2 + 3.5, vals[i].label,
+          { anchor: 'end', size: SUB_SIZE + 1, weight: 700, fill: INK });
+        svg += T(x0 + bw + 7, y + barH / 2 + 3.5, vals[i].shown,
+          { anchor: 'start', size: SUB_SIZE + 1, weight: 700, fill: c.t });
+      }
+      return svg + '</svg>';
+    }
+
+    /* Which way does the line go? Read it off the words rather than guessing. */
+    function curveShape(text) {
+      var t = String(text || '').toLowerCase();
+      if (/\bpeak|rises? then|then falls?|boom.*bust|bell|maximum|optimum/.test(t)) return 'peak';
+      if (/\bs-?curve|logistic|levels? off|plateau|saturat|carrying capacity/.test(t)) return 'scurve';
+      if (/\bfalls?\b|\bdecline|decreas|drops?\b|inverse|negative correlation|cools?\b/.test(t)) return 'fall';
+      if (/exponential|accelerat|compound|doubl/.test(t)) return 'exp';
+      return 'rise';
+    }
+
+    /* A labelled axis graph: the shape of a relationship, with the points that
+       matter marked on the line. Nothing else in the kit draws an axis, so a
+       lesson about a trend, a rate or a relationship had to be forced into
+       boxes-and-arrows before this existed. */
+    function buildGraph(title, spec, items) {
+      var xLab = clean(spec.xLabel || spec.x || 'Time');
+      var yLab = clean(spec.yLabel || spec.y || 'Amount');
+      var shape = String(spec.shape || '').toLowerCase();
+      if (!/^(rise|fall|peak|scurve|exp|linear)$/.test(shape)) {
+        shape = curveShape(title + ' ' + items.join(' ') + ' ' + (spec.note || ''));
+      }
+
+      var w = 380, plotL = 58, plotR = 22, plotT = 0, plotB = 46;
+      var tb = titleBlock(title, w);
+      plotT = tb.h + 14;
+      var h = 236;
+      var x0 = plotL, x1 = w - plotR, y0 = h - plotB, y1 = plotT;
+      var svg = open(w, h) + tb.svg;
+
+      /* Grid, faint, so values can be compared without counting pixels. */
+      var g;
+      for (g = 1; g <= 3; g++) {
+        var gy = y0 - (y0 - y1) * g / 4;
+        svg += '<line x1="' + r1(x0) + '" y1="' + r1(gy) + '" x2="' + r1(x1) + '" y2="' + r1(gy) +
+          '" stroke="#eef2f7" stroke-width="1"/>';
+      }
+      /* Axes */
+      svg += '<line x1="' + r1(x0) + '" y1="' + r1(y1) + '" x2="' + r1(x0) + '" y2="' + r1(y0) +
+        '" stroke="' + INK + '" stroke-width="1.8"/>';
+      svg += '<line x1="' + r1(x0) + '" y1="' + r1(y0) + '" x2="' + r1(x1) + '" y2="' + r1(y0) +
+        '" stroke="' + INK + '" stroke-width="1.8"/>';
+
+      var W2 = x1 - x0, H2 = y0 - y1;
+      function px(t) { return x0 + W2 * t; }
+      function py(v) { return y0 - H2 * v; }
+
+      var d, mark;
+      if (shape === 'fall') {
+        d = 'M' + r1(px(0)) + ' ' + r1(py(0.88)) + ' C' + r1(px(0.35)) + ' ' + r1(py(0.80)) +
+            ' ' + r1(px(0.6)) + ' ' + r1(py(0.30)) + ' ' + r1(px(1)) + ' ' + r1(py(0.10));
+        mark = [[0.06, 0.87], [0.55, 0.42], [0.95, 0.12]];
+      } else if (shape === 'peak') {
+        d = 'M' + r1(px(0)) + ' ' + r1(py(0.12)) + ' C' + r1(px(0.28)) + ' ' + r1(py(0.95)) +
+            ' ' + r1(px(0.72)) + ' ' + r1(py(0.95)) + ' ' + r1(px(1)) + ' ' + r1(py(0.12));
+        mark = [[0.06, 0.20], [0.5, 0.83], [0.94, 0.20]];
+      } else if (shape === 'scurve') {
+        d = 'M' + r1(px(0)) + ' ' + r1(py(0.08)) + ' C' + r1(px(0.45)) + ' ' + r1(py(0.10)) +
+            ' ' + r1(px(0.5)) + ' ' + r1(py(0.90)) + ' ' + r1(px(1)) + ' ' + r1(py(0.90));
+        mark = [[0.08, 0.10], [0.5, 0.50], [0.93, 0.88]];
+      } else if (shape === 'exp') {
+        d = 'M' + r1(px(0)) + ' ' + r1(py(0.06)) + ' C' + r1(px(0.55)) + ' ' + r1(py(0.08)) +
+            ' ' + r1(px(0.78)) + ' ' + r1(py(0.30)) + ' ' + r1(px(1)) + ' ' + r1(py(0.94));
+        mark = [[0.08, 0.07], [0.6, 0.22], [0.95, 0.90]];
+      } else if (shape === 'linear') {
+        d = 'M' + r1(px(0)) + ' ' + r1(py(0.10)) + ' L' + r1(px(1)) + ' ' + r1(py(0.90));
+        mark = [[0.08, 0.16], [0.5, 0.50], [0.93, 0.85]];
+      } else {
+        d = 'M' + r1(px(0)) + ' ' + r1(py(0.10)) + ' C' + r1(px(0.3)) + ' ' + r1(py(0.30)) +
+            ' ' + r1(px(0.55)) + ' ' + r1(py(0.72)) + ' ' + r1(px(1)) + ' ' + r1(py(0.90));
+        mark = [[0.08, 0.14], [0.5, 0.50], [0.93, 0.88]];
+      }
+      svg += '<path d="' + d + '" fill="none" stroke="' + pal(0).s + '" stroke-width="2.6" stroke-linecap="round"/>';
+
+      /* Up to three labelled points on the line. Each label is placed on the
+         side with room: left of centre goes above, right of centre below, so
+         the text never sits on the curve it is annotating. */
+      var k;
+      for (k = 0; k < mark.length && k < items.length; k++) {
+        var mx = px(mark[k][0]), my = py(mark[k][1]);
+        var c2 = pal(k + 1);
+        svg += '<circle cx="' + r1(mx) + '" cy="' + r1(my) + '" r="4.5" fill="#fff" stroke="' +
+          c2.s + '" stroke-width="2.4"/>';
+        var lines = wrap(items[k], 118, SUB_SIZE, 700, 2);
+        var above = mark[k][1] < 0.55;
+        var ty = above ? my - 12 - (lines.length - 1) * SUB_SIZE * 1.32 : my + 18;
+        var anch = 'middle', tx = mx;
+        if (mark[k][0] < 0.18) { anch = 'start'; tx = mx - 2; }
+        else if (mark[k][0] > 0.82) { anch = 'end'; tx = mx + 2; }
+        svg += multiT(tx, ty + (lines.length - 1) * SUB_SIZE * 0.66, lines,
+          { size: SUB_SIZE, weight: 700, fill: c2.t, anchor: anch });
+      }
+
+      /* Axis labels. y is rotated, which is the only way it fits beside a
+         240px-tall plot without stealing width from the chart. */
+      svg += T((x0 + x1) / 2, h - 14, xLab, { size: SUB_SIZE + 1, weight: 700, fill: MUTED });
+      svg += '<g transform="translate(' + r1(x0 - 30) + ',' + r1((y0 + y1) / 2) + ') rotate(-90)">' +
+        T(0, 0, yLab, { size: SUB_SIZE + 1, weight: 700, fill: MUTED }) + '</g>';
+      /* Direction hints on the axes. */
+      svg += T(x1, y0 + 14, '→', { size: SUB_SIZE, weight: 700, fill: RULE });
+      return svg + '</svg>';
+    }
+
+    /* Two overlapping sets: what belongs to each, and what they share. The one
+       shape that states "these things are different AND related" at once. */
+    function buildVenn(title, left, right, shared) {
+      /* The overlap has to be wide enough to hold the shared labels: at 52 the
+         lens was narrower than the text in it, so "Cell division" crossed both
+         circle edges. */
+      var w = 380, rr = 88, ov = 64;
+      var tb = titleBlock(title, w);
+      var cy = tb.h + 8 + rr;
+      var h = cy + rr + 34;
+      var cxL = w / 2 - rr + ov / 2, cxR = w / 2 + rr - ov / 2;
+      var svg = open(w, h) + tb.svg;
+      var cL = pal(0), cR = pal(1);
+
+      svg += '<circle cx="' + r1(cxL) + '" cy="' + r1(cy) + '" r="' + rr + '" fill="' + cL.f +
+        '" fill-opacity="0.75" stroke="' + cL.s + '" stroke-width="1.9"/>';
+      svg += '<circle cx="' + r1(cxR) + '" cy="' + r1(cy) + '" r="' + rr + '" fill="' + cR.f +
+        '" fill-opacity="0.75" stroke="' + cR.s + '" stroke-width="1.9"/>';
+
+      function stack(cx, list, colour, maxW) {
+        var out = '', j, yy, lh = SUB_SIZE * 1.5;
+        var n = Math.min(list.length, 3);
+        for (j = 0; j < n; j++) {
+          yy = cy - (n - 1) * lh / 2 + j * lh + SUB_SIZE * 0.35;
+          var one = wrap(list[j], maxW, SUB_SIZE, 600, 1);
+          out += T(cx, yy, one[0], { size: SUB_SIZE, weight: 600, fill: colour });
+        }
+        return out;
+      }
+      svg += stack(cxL - ov / 2 - 8, left.items || [], cL.t, 84);
+      svg += stack(cxR + ov / 2 + 8, right.items || [], cR.t, 84);
+      if (shared && shared.length) svg += stack(w / 2, shared, '#334155', ov - 4);
+
+      /* Set names sit above their own circle, never over the overlap. */
+      svg += T(cxL - ov / 2 - 8, tb.h + 4, clean(left.title || 'A'),
+        { size: NODE_SIZE, weight: 700, fill: cL.t });
+      svg += T(cxR + ov / 2 + 8, tb.h + 4, clean(right.title || 'B'),
+        { size: NODE_SIZE, weight: 700, fill: cR.t });
+      svg += T(w / 2, h - 12, 'shared', { size: SUB_SIZE, weight: 700, fill: MUTED });
+      return svg + '</svg>';
+    }
+
+    /* Two axes, four quadrants: the shape for anything sorted on two
+       independent traits at once. */
+    function buildMatrix(title, spec, items) {
+      if (items.length < 4) return null;
+      var w = 380, cell = 128, gap = 6;
+      var tb = titleBlock(title, w);
+      var left = 74, top = tb.h + 24;
+      var h = top + cell * 2 + gap + 44;
+      var svg = open(w, h) + tb.svg;
+
+      var xLab = clean(spec.xLabel || spec.x || ''), yLab = clean(spec.yLabel || spec.y || '');
+      var xs = [clean(spec.xLow || 'low'), clean(spec.xHigh || 'high')];
+      var ys = [clean(spec.yHigh || 'high'), clean(spec.yLow || 'low')];
+
+      var r, c2, idx = 0;
+      for (r = 0; r < 2; r++) {
+        for (c2 = 0; c2 < 2; c2++) {
+          var x = left + c2 * (cell + gap), y = top + r * (cell + gap);
+          var col = pal(idx);
+          svg += roundRect(x, y, cell, cell, 10, col, 1.6);
+          var ln = wrap(items[idx], cell - 20, SUB_SIZE + 1, 700, 4);
+          svg += multiT(x + cell / 2, y + cell / 2, ln,
+            { size: SUB_SIZE + 1, weight: 700, fill: col.t });
+          idx++;
+        }
+      }
+      /* Column and row headings, outside the grid. */
+      svg += T(left + cell / 2, top - 8, xs[0], { size: SUB_SIZE, weight: 700, fill: MUTED });
+      svg += T(left + cell + gap + cell / 2, top - 8, xs[1], { size: SUB_SIZE, weight: 700, fill: MUTED });
+      svg += '<g transform="translate(' + r1(left - 10) + ',' + r1(top + cell / 2) + ') rotate(-90)">' +
+        T(0, 0, ys[0], { size: SUB_SIZE, weight: 700, fill: MUTED }) + '</g>';
+      svg += '<g transform="translate(' + r1(left - 10) + ',' + r1(top + cell + gap + cell / 2) + ') rotate(-90)">' +
+        T(0, 0, ys[1], { size: SUB_SIZE, weight: 700, fill: MUTED }) + '</g>';
+      if (xLab) svg += T(left + cell + gap / 2, h - 12, xLab, { size: SUB_SIZE + 1, weight: 700, fill: INK });
+      if (yLab) svg += '<g transform="translate(' + r1(left - 42) + ',' + r1(top + cell) + ') rotate(-90)">' +
+        T(0, 0, yLab, { size: SUB_SIZE + 1, weight: 700, fill: INK }) + '</g>';
+      return svg + '</svg>';
+    }
+
     /* ── §5 topic understanding ────────────────────────────────────────────── */
 
     var STOP = { the:1, a:1, an:1, of:1, and:1, or:1, to:1, in:1, on:1, for:1, with:1,
@@ -7732,6 +7982,36 @@
         return buildCompare(title, norm(spec.left), norm(spec.right));
       }
 
+      /* Layouts that need more than a list of labels are tried first, and each
+         falls back rather than drawing an empty frame: a bar chart with no
+         numbers in it is not a bar chart. */
+      if (layout === 'venn') {
+        var vl = spec.left || {}, vr = spec.right || {};
+        var vshared = [];
+        var srcS = spec.shared || spec.both || spec.overlap || [];
+        for (i = 0; i < srcS.length && vshared.length < 3; i++) {
+          var sv = clean(typeof srcS[i] === 'string' ? srcS[i] : (srcS[i] && srcS[i].label) || '');
+          if (sv) vshared.push(sv);
+        }
+        if ((vl.items || vl.title) && (vr.items || vr.title)) {
+          return buildVenn(title, vl, vr, vshared);
+        }
+        layout = 'compare';
+      }
+      if (layout === 'bars' || layout === 'bar' || layout === 'chart') {
+        var bars = buildBars(title, spec.items || items);
+        if (bars) return bars;
+        layout = 'flow';
+      }
+      if (layout === 'graph' || layout === 'axes' || layout === 'plot' || layout === 'arcgraph') {
+        return buildGraph(title, spec, items);
+      }
+      if (layout === 'matrix' || layout === 'quadrant' || layout === 'grid') {
+        var mx = buildMatrix(title, spec, items);
+        if (mx) return mx;
+        layout = 'concept';
+      }
+
       if (items.length < 2) return null;
 
       switch (layout) {
@@ -7797,6 +8077,10 @@
       polish: polish,
       fromSpec: fromSpec,
       forTopic: forTopic,
+      buildBars: buildBars,
+      buildGraph: buildGraph,
+      buildVenn: buildVenn,
+      buildMatrix: buildMatrix,
       classify: classify,
       extractItems: extractItems,
       _build: {
@@ -8730,8 +9014,13 @@
       }
       if (!v) continue;
       /* A node is a label, not a sentence. Cut at the first clause so the box
-         stays readable rather than wrapping to four lines. */
-      v = v.replace(/\s*[—–-]\s.*$/, '').replace(/[.;:]\s.*$/, '');
+         stays readable rather than wrapping to four lines - but only when the
+         clause is words. "Nitrogen: 78" is a label AND its value, and cutting
+         at the colon threw the 78 away, which left buildBars with nothing to
+         measure and silently demoted every chart to a row of plain boxes. */
+      v = v.replace(/([.;:]|\s[—–-])\s(.*)$/, function (full, sep, rest) {
+        return /[A-Za-z]/.test(rest) ? '' : full;
+      });
       if (v.length > 40) v = v.slice(0, 38).replace(/\s\S*$/, '') + '…';
       if (v.length < 2) continue;
       out.push(v);
@@ -8743,6 +9032,17 @@
   function dgLayoutFor(d, hasSteps) {
     var t = (dgClean(d && d.title) + ' ' + dgClean(d && d.microTopic) + ' ' +
              dgClean(d && d.content).slice(0, 400)).toLowerCase();
+
+    /* The shapes that need particular data are tested first, because each of
+       them says something the generic box-and-arrow layouts cannot. */
+    if (/\bboth\b|shared|in common|overlap|similarit|as well as both|neither/.test(t) &&
+        /\bversus\b|\bvs\.?\b|difference|compared|contrast|\bboth\b/.test(t)) return 'venn';
+    /* matrix is tested before graph on purpose: "two axes" matches both
+       patterns, and while graph came first every two-by-two classification was
+       drawn as a line chart. */
+    if (/two axes|quadrant|\bmatrix\b|classified? by|sorted? on|high and low|four (?:types|groups|kinds)/.test(t)) return 'matrix';
+    if (/\bgraph\b|\bplot(ted|s)?\b|\bcurve\b|\baxis\b|\baxes\b|correlation|\btrend\b|\brate of\b|over time|relationship between|as .* increases/.test(t)) return 'graph';
+    if (/\bpercent|\b\d+\s*%|how much|\bfigures?\b|\bdata\b|\bstatistics?\b|compare the (?:size|amount|number)/.test(t)) return 'bars';
 
     if (/\bcycle\b|\bloop\b|repeating|recurring|feedback|circulat|\bseasons\b|\brotation\b|renew/.test(t)) return 'cycle';
     if (/\b1[0-9]{3}\b|\b20[0-9]{2}\b|timeline|chronolog|\bcentury\b|\bera\b|\bdynasty\b|\bperiod\b/.test(t)) return 'timeline';
@@ -8756,10 +9056,14 @@
   /* Map the day.visual spec onto a layout the kit can draw. The exotic types
      (atom, molecule, cell, vector, equation, geometry, arc) have no custom
      builder, so they are handed to the curated matcher by name instead. */
+  /* bars, arcGraph and balance used to be approximated with flow/compare
+     because the kit had no builder for them. They have real ones now, so a
+     spec asking for a chart gets a chart. */
   var DG_VISUAL_LAYOUT = {
     timeline: 'timeline', flow: 'flow', cycle: 'cycle', parts: 'parts',
-    compare: 'compare', concept: 'concept', web: 'concept', bars: 'flow',
-    map: 'concept', balance: 'compare', arcGraph: 'flow'
+    compare: 'compare', concept: 'concept', web: 'concept', bars: 'bars',
+    map: 'concept', balance: 'venn', arcGraph: 'graph', graph: 'graph',
+    venn: 'venn', matrix: 'matrix'
   };
 
   function specFromDayVisual(v, title) {
@@ -8799,8 +9103,15 @@
     if (items.length < 2) return null;
 
     var layout = dgLayoutFor(d, steps.length >= 2 && items === steps);
-    /* compare needs two named sides, which loose items cannot supply. */
-    if (layout === 'compare') layout = items.length >= 4 ? 'concept' : 'flow';
+    /* A loose list of labels cannot fill a two-sided or four-quadrant shape,
+       and bars need numbers. Fall back rather than draw an empty frame. */
+    if (layout === 'compare' || layout === 'venn') layout = items.length >= 4 ? 'concept' : 'flow';
+    if (layout === 'matrix' && items.length < 4) layout = 'concept';
+    if (layout === 'bars') {
+      var numbered = 0;
+      for (var bi = 0; bi < items.length; bi++) if (/\d/.test(items[bi])) numbered++;
+      if (numbered < 2) layout = 'flow';
+    }
 
     /* concept and parts both draw a hub with the spokes around it. Passing the
        topic as BOTH the diagram title and the hub printed it twice, once above
