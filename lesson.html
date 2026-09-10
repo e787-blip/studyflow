@@ -2406,15 +2406,17 @@
       // Rich lesson card: diagram auto-injected, steps rendered if present, full content
       var lessonBody = '';
 
-      // Auto-inject diagram if day.diagram specifies a type
-      if (day.diagram && day.diagram.type && day.diagram.type !== 'none') {
-        var diagramSvg = generateDiagramSVG(day.diagram);
-        if (diagramSvg) {
-          lessonBody += '<div style="text-align:center;margin-bottom:1rem;padding:.75rem;background:var(--soft);border-radius:14px;">' +
-            diagramSvg +
-            '<div style="font-size:0.68rem;color:var(--muted);margin-top:.4rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">' +
-            (day.diagram.label || day.diagram.type) + '</div></div>';
-        }
+      /* The diagram is built for THIS lesson, from this lesson's material -
+         see diagramForDay. The old test here was
+         `day.diagram.type !== 'none'`, and app.html defaults that field to
+         'none', so every day where the model skipped the field showed no
+         diagram at all. */
+      var dgm = diagramForDay(day);
+      if (dgm && dgm.svg) {
+        lessonBody += '<div style="text-align:center;margin-bottom:1rem;padding:.75rem;background:var(--soft);border-radius:14px;">' +
+          dgm.svg +
+          '<div style="font-size:0.68rem;color:var(--muted);margin-top:.4rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">' +
+          esc(dgm.caption) + '</div></div>';
       }
 
       // Lesson text content
@@ -4665,7 +4667,13 @@
       var after = t.slice(ci + 1).trim();
       if (after.length >= 4) t = after;
     }
-    t = t.replace(/^(unit|chapter|lesson|day|week|part|module|section)\s*\d*\s*[-\u2013\u2014:.]?\s*/i, '').trim();
+    /* The prefix must actually look like a prefix: the word, then a number or
+       a separator. Without that, the bare word matched anything starting with
+       it - "Parts of the animal cell" lost its "Part" and became "s of the
+       animal cell", which then went into the Feynman prompt and the diagram
+       title. \b after the word also stops "Parts", "Weekly" and "Sections"
+       being read as "Part", "Week" and "Section". */
+    t = t.replace(/^(?:unit|chapter|lesson|day|week|part|module|section)\b\s*(?:\d+\b\s*[-\u2013\u2014:.]?|[-\u2013\u2014:.])\s*/i, '').trim();
     t = t.replace(/\s*[-\u2013\u2014]\s*(practice|review|intro(duction)?|basics)$/i, '').trim();
     if (t.length > 54) {
       t = t.slice(0, 51).replace(/[\s,;:]+\S*$/, '') + '\u2026';
@@ -7391,24 +7399,50 @@
       var h = tb.h + (maxY - minY) + MARGIN * 2;
       var svg = open(wC, h) + tb.svg;
 
-      /* The arc is tightest where it passes between two neighbours, so clear it
-         against the box edge measured along that midpoint direction — not
-         against R, which would leave it running underneath the boxes. */
-      var Rin = Math.max(26, R * cosHalf - maxH / 2 - 14);
       var pts = [], a;
       for (i = 0; i < n; i++) {
         a = -Math.PI / 2 + i * 2 * Math.PI / n;
         pts.push({ a: a, x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) });
       }
-      /* Arcs first, so boxes paint over their ends. */
+      /* Connectors run along the node ring itself, through the gap between one
+         box and the next.
+
+         They used to be drawn on a much smaller ring:
+           Rin = R * cos(pi/n) - maxH/2 - 14
+         which for four nodes put the arcs at roughly a third of the node
+         radius. The result was four short arrows floating near the middle of
+         the diagram, touching nothing - the ring read as four labels with some
+         marks between them rather than as a cycle.
+
+         Each end is set back by the angle that box subtends at the centre, so
+         the arrow starts and finishes clear of the boxes instead of under
+         them. R already guarantees a gap: chordNeed keeps neighbouring boxes
+         at least maxW + 26 apart. */
       if (n > 1) {
-        var step = 2 * Math.PI / n, padA = Math.min(step * 0.34, 0.50);
+        var Rarc = R;
+        var halfAng = [];
         for (i = 0; i < n; i++) {
-          var a0 = pts[i].a + padA, a1 = pts[(i + 1) % n].a - padA;
+          var reach = Math.sqrt(boxes[i].w * boxes[i].w + boxes[i].h * boxes[i].h) / 2 + 7;
+          halfAng.push(Math.atan2(Math.min(reach, R * 0.92), R));
+        }
+        var stepA = 2 * Math.PI / n;
+        for (i = 0; i < n; i++) {
+          var j = (i + 1) % n;
+          var pad0 = halfAng[i], pad1 = halfAng[j];
+          /* Keep a drawable arc even when the boxes are wide: give back the
+             padding proportionally rather than dropping the arrow. */
+          var span = stepA - pad0 - pad1;
+          if (span < 0.16) {
+            var give = (0.16 - span) / 2;
+            pad0 = Math.max(0.04, pad0 - give);
+            pad1 = Math.max(0.04, pad1 - give);
+          }
+          var a0 = pts[i].a + pad0, a1 = pts[j].a - pad1;
           if (a1 < a0) a1 += 2 * Math.PI;
-          var sx = cx + Rin * Math.cos(a0), sy = cy + Rin * Math.sin(a0);
-          var ex = cx + Rin * Math.cos(a1), ey = cy + Rin * Math.sin(a1);
-          svg += '<path d="M' + r1(sx) + ' ' + r1(sy) + ' A' + r1(Rin) + ' ' + r1(Rin) +
+          if (a1 - a0 < 0.06) continue;
+          var sx = cx + Rarc * Math.cos(a0), sy = cy + Rarc * Math.sin(a0);
+          var ex = cx + Rarc * Math.cos(a1), ey = cy + Rarc * Math.sin(a1);
+          svg += '<path d="M' + r1(sx) + ' ' + r1(sy) + ' A' + r1(Rarc) + ' ' + r1(Rarc) +
             ' 0 0 1 ' + r1(ex) + ' ' + r1(ey) + '" fill="none" stroke="' + MUTED +
             '" stroke-width="1.6" marker-end="url(#sfdkArrow)"/>';
         }
@@ -8654,6 +8688,180 @@
     }
   }
 
+
+  /* ── A DIAGRAM FOR EVERY LESSON ───────────────────────────────────────────
+     Diagrams used to depend entirely on the model remembering to fill in
+     day.diagram. app.html defaults that field to {type:'none'}, and the lesson
+     card skipped the diagram whenever it was 'none' - so any day where the
+     model omitted the field, or returned a spec too thin to draw, simply had
+     no picture. Nothing reported it, because "no diagram" looks exactly like
+     "this topic did not need one".
+
+     day.visual made it worse: the prompt asks for it, app.html validates it,
+     and the only thing that ever read it was fromDay(), which is dormant. A
+     whole second diagram spec was being generated and thrown away on every
+     day of every plan.
+
+     This builds the lesson's diagram from whatever that lesson actually
+     carries, in order of how specific it is:
+
+       1. day.diagram   - what the model chose deliberately
+       2. day.visual    - the second spec, previously discarded
+       3. the day's own structure - its steps, concepts, key terms, pillars
+
+     Step 3 is the point: it is drawn from THIS lesson's material, so two
+     lessons never get the same picture, and a lesson is never left without
+     one. Only when a day carries no structure at all does this return null. */
+
+  function dgClean(v) {
+    return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+  }
+
+  /* Pull short, drawable labels out of one of the day's structured fields. */
+  function dgLabels(arr, keys, max) {
+    var out = [], i, j, v;
+    if (Object.prototype.toString.call(arr) !== '[object Array]') return out;
+    for (i = 0; i < arr.length && out.length < (max || 6); i++) {
+      var item = arr[i];
+      v = '';
+      if (typeof item === 'string') v = dgClean(item);
+      else if (item && typeof item === 'object') {
+        for (j = 0; j < keys.length && !v; j++) v = dgClean(item[keys[j]]);
+      }
+      if (!v) continue;
+      /* A node is a label, not a sentence. Cut at the first clause so the box
+         stays readable rather than wrapping to four lines. */
+      v = v.replace(/\s*[—–-]\s.*$/, '').replace(/[.;:]\s.*$/, '');
+      if (v.length > 40) v = v.slice(0, 38).replace(/\s\S*$/, '') + '…';
+      if (v.length < 2) continue;
+      out.push(v);
+    }
+    return out;
+  }
+
+  /* Which layout suits this day's material? Read from the day's own words. */
+  function dgLayoutFor(d, hasSteps) {
+    var t = (dgClean(d && d.title) + ' ' + dgClean(d && d.microTopic) + ' ' +
+             dgClean(d && d.content).slice(0, 400)).toLowerCase();
+
+    if (/\bcycle\b|\bloop\b|repeating|recurring|feedback|circulat|\bseasons\b|\brotation\b|renew/.test(t)) return 'cycle';
+    if (/\b1[0-9]{3}\b|\b20[0-9]{2}\b|timeline|chronolog|\bcentury\b|\bera\b|\bdynasty\b|\bperiod\b/.test(t)) return 'timeline';
+    if (/parts of|structure of|anatomy|components|made up of|consists? of|layers of|\borganelles?\b|\bregions?\b/.test(t)) return 'parts';
+    if (/hierarch|\bpyramid\b|\btiers?\b|ranked|classification|taxonom|trophic/.test(t)) return 'hierarchy';
+    if (/\bversus\b|\bvs\.?\b|compared with|difference between|contrast/.test(t)) return 'compare';
+    /* Ordered material is a flow; everything else is a web of related ideas. */
+    return hasSteps ? 'flow' : 'concept';
+  }
+
+  /* Map the day.visual spec onto a layout the kit can draw. The exotic types
+     (atom, molecule, cell, vector, equation, geometry, arc) have no custom
+     builder, so they are handed to the curated matcher by name instead. */
+  var DG_VISUAL_LAYOUT = {
+    timeline: 'timeline', flow: 'flow', cycle: 'cycle', parts: 'parts',
+    compare: 'compare', concept: 'concept', web: 'concept', bars: 'flow',
+    map: 'concept', balance: 'compare', arcGraph: 'flow'
+  };
+
+  function specFromDayVisual(v, title) {
+    if (!v || typeof v !== 'object') return null;
+    var layout = DG_VISUAL_LAYOUT[String(v.type || '').trim()];
+    if (!layout) return null;
+    if (layout === 'compare') {
+      if (!v.left || !v.right) return null;
+      return { type: 'custom', layout: 'compare', title: dgClean(v.title || title),
+               left: v.left, right: v.right };
+    }
+    var items = dgLabels(v.items || v.places || v.nodes, ['label', 'name', 'text'], 6);
+    if (items.length < 2) return null;
+    return { type: 'custom', layout: layout, title: dgClean(v.title || v.label || title),
+             center: dgClean(v.center || title), items: items };
+  }
+
+  /* Build a spec out of the day's own structure. */
+  function specFromDayStructure(d) {
+    var title = (typeof feynmanTopic === 'function' ? feynmanTopic(d) : '') || dgClean(d && d.title);
+
+    var steps    = dgLabels(d && d.steps,    ['action', 'step', 'label', 'name'], 6);
+    var concepts = dgLabels(d && d.concepts, ['name', 'label', 'term'],           6);
+    var pillars  = dgLabels(d && d.pillars,  ['label', 'title', 'name'],          6);
+    var terms    = dgLabels(d && d.keyTerms, ['term', 'name', 'label'],           6);
+
+    /* Ordered material first: steps describe a procedure, and a procedure
+       drawn as a chain teaches more than the same words as a word cloud. */
+    var items = steps.length >= 3 ? steps
+              : concepts.length >= 3 ? concepts
+              : terms.length    >= 3 ? terms
+              : pillars.length  >= 2 ? pillars
+              : steps.length    >= 2 ? steps
+              : concepts.length >= 2 ? concepts
+              : terms.length    >= 2 ? terms
+              : [];
+    if (items.length < 2) return null;
+
+    var layout = dgLayoutFor(d, steps.length >= 2 && items === steps);
+    /* compare needs two named sides, which loose items cannot supply. */
+    if (layout === 'compare') layout = items.length >= 4 ? 'concept' : 'flow';
+
+    /* concept and parts both draw a hub with the spokes around it. Passing the
+       topic as BOTH the diagram title and the hub printed it twice, once above
+       the drawing and once inside it. The card already captions the diagram
+       underneath, so the hub keeps the name and the title is dropped. */
+    if (layout === 'concept' || layout === 'parts') {
+      var hub = title.replace(
+        /^(?:the\s+)?(?:main\s+)?(?:parts|structure|anatomy|components|regions|layers|sections|elements)\s+of\s+(?:the\s+|an?\s+)?/i, '');
+      hub = dgClean(hub) || title || 'Today';
+      if (hub.length > 28) hub = hub.slice(0, 26).replace(/\s\S*$/, '') + '\u2026';
+      return { type: 'custom', layout: layout, title: '', center: hub, items: items };
+    }
+
+    return { type: 'custom', layout: layout, title: title,
+             center: title || 'Today', items: items };
+  }
+
+  /**
+   * The diagram for a lesson card, or null when the day carries nothing.
+   * Always prefers the most specific source available.
+   */
+  function diagramForDay(d) {
+    if (!d) return null;
+    var svg = null, title = dgClean(d.title);
+
+    /* 1. What the model asked for. */
+    if (d.diagram && d.diagram.type && d.diagram.type !== 'none') {
+      try { svg = generateDiagramSVG(d.diagram); } catch (e) { svg = null; }
+      if (svg) return { svg: svg, caption: dgClean(d.diagram.label) || title };
+    }
+
+    /* 2. The visual spec, which nothing used to read. Exotic types have no
+          custom builder, so try them against the curated templates by name. */
+    if (d.visual && d.visual.type) {
+      var vs = specFromDayVisual(d.visual, title);
+      if (vs) {
+        try { svg = generateDiagramSVG(vs); } catch (e) { svg = null; }
+      }
+      if (!svg) {
+        try { svg = generateDiagramSVG(String(d.visual.type)); } catch (e) { svg = null; }
+      }
+      if (svg) return { svg: svg, caption: dgClean(d.visual.title || d.visual.label) || title };
+    }
+
+    /* 3. Built from this lesson's own material. */
+    var ds = specFromDayStructure(d);
+    if (ds) {
+      try { svg = generateDiagramSVG(ds); } catch (e) { svg = null; }
+      if (svg) return { svg: svg, caption: ds.title || title };
+    }
+
+    /* 4. Last try: let the curated matcher read the topic itself. A day about
+          photosynthesis should get the photosynthesis drawing even if every
+          structured field came back empty. */
+    if (title) {
+      try { svg = generateDiagramSVG(title + ' ' + dgClean(d.microTopic)); } catch (e) { svg = null; }
+      if (svg) return { svg: svg, caption: title };
+    }
+
+    return null;
+  }
 
   function formatContent(content) {
     if (!content) return '';

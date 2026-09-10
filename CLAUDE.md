@@ -288,6 +288,30 @@ Two separate systems, often confused:
 | `day.diagram` | the **lesson card** | `generateDiagramSVG` → `curatedDiagramSVG`, else `SFDiagramKit` |
 | the opening board | card 2 of the session | `SFWhiteboard.briefFor` → `SFBoard` scenes |
 
+**Every lesson gets a diagram, built from that lesson.** `diagramForDay(day)`
+is the single entry point for the lesson card, and it tries four sources in
+order of how specific they are:
+
+1. `day.diagram` — what the model chose deliberately
+2. `day.visual` — the second spec the prompt asks for. Nothing read it before:
+   its only consumer was the dormant `fromDay`, so a whole diagram spec was
+   generated, validated in `app.html`, and thrown away on every day of every
+   plan.
+3. **the day's own structure** — `steps`, `concepts`, `keyTerms`, `pillars`,
+   with the layout chosen from the day's own words (cycle / timeline / parts /
+   hierarchy / flow / concept). This is the workhorse: it is drawn from *this*
+   lesson's material, so two lessons never get the same picture.
+4. the curated matcher, against the topic text
+
+Before this, the lesson card tested `day.diagram.type !== 'none'` — and
+`app.html` defaults that field to `'none'`. Any day where the model omitted the
+field showed no diagram at all, and nothing reported it, because "no diagram"
+looks exactly like "this topic did not need one".
+
+On a hub layout (`concept`, `parts`) pass the topic as `center` and leave
+`title` empty — passing both prints the topic twice, once above the drawing and
+once inside it. The card captions the diagram underneath anyway.
+
 `curatedDiagramSVG` holds 21 hand-drawn templates: brain, neuron, atom,
 supply-demand, dna, ecosystem, water-cycle, mitosis, memory-model,
 plate-tectonics, photosynthesis, forces, wave, circuit, number-line, fractions,
@@ -383,6 +407,8 @@ What to check after any `buildQueue` or renderer change:
 10. No `bigequation` or `wordproblem` card on a non-quantitative subject
 11. Every curated diagram still resolves **by its exact hyphenated name**
     (`generateDiagramSVG({type:'water-cycle'})`), not just by a spaced label
+12. `diagramForDay` returns a diagram for all 10 subjects on a day carrying
+    **no `diagram` field at all** — that is the common case in production
 
 Verify by executing the code, not by reading it. Several bugs here looked correct
 on inspection and only showed up when the queue was actually built — and two
