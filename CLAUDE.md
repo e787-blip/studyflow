@@ -450,6 +450,21 @@ on inspection and only showed up when the queue was actually built — and two
 (the missing opening board, the dead badges) only showed up when the *page* was
 loaded rather than the functions called directly.
 
+## Making diagrams
+
+There is a project skill for this: `.claude/skills/diagram/`. It covers picking
+a shape from the material rather than the subject, the kit's API, the specific
+traps (Bézier peaks, text anchoring, silent fallbacks, load order), and a
+preview script:
+
+```bash
+python3 .claude/skills/diagram/scripts/preview_diagrams.py --demo -o /tmp/p.html
+```
+
+That pulls the real kit out of `lesson.html` and renders any set of specs onto
+one page, so a diagram can be *looked at* rather than read. Use it — every
+diagram bug in this codebase read as correct code.
+
 ## Deploying
 
 `main` is the live branch. Push to GitHub and Vercel rebuilds automatically —
