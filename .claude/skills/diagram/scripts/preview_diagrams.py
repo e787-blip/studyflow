@@ -81,9 +81,11 @@ def normalise(entry, index):
 
 def build_page(script_src, specs):
     """The kit runs against a live DOM, so the page executes block 1 and then
-    draws each spec. Block 1 also defines init(), which is deferred to
-    DOMContentLoaded and bails immediately without a signed-in user - harmless
-    here, but the try/catch keeps a redirect from taking the page away."""
+    draws each spec. Block 1 also defers init() to DOMContentLoaded, and init()
+    opens with an auth guard that *navigates* - with no signed-in user it sent
+    this preview page to the live login screen before a single diagram drew.
+    So the listener is swallowed below. The drawing functions are all defined at
+    parse time and need nothing init() does."""
     payload = json.dumps(specs)
     return """<!doctype html>
 <meta charset="utf-8">
@@ -100,6 +102,20 @@ def build_page(script_src, specs):
   .meta { font-size:10px; color:#94a3b8; margin-top:8px; }
 </style>
 <div id="out"></div>
+<script>
+/* Block 1 registers init() on DOMContentLoaded, and init()'s auth guard
+   redirects to studyflow-ten-vert.vercel.app when localStorage has no
+   studyflow_user - which is always, here. Drop that one listener before block 1
+   parses. Seeding a fake user instead does not work: init() then runs on to the
+   next guard and redirects to the dashboard. */
+(function () {
+  var add = document.addEventListener.bind(document);
+  document.addEventListener = function (type, fn, opts) {
+    if (type === 'DOMContentLoaded') return;
+    return add(type, fn, opts);
+  };
+})();
+</script>
 <script>%s</script>
 <script>
 var SPECS = %s;
