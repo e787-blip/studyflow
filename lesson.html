@@ -801,7 +801,7 @@
 <body>
 
 <nav>
-  <a href="https://studyflow-ten-vert.vercel.app/dashboard.html" class="logo">
+  <a href="dashboard.html" class="logo">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
       <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
@@ -817,7 +817,7 @@
       </text>
     </svg>
   </a>
-  <a href="https://studyflow-ten-vert.vercel.app/dashboard.html" class="nav-back">← Dashboard</a>
+  <a href="dashboard.html" class="nav-back">← Dashboard</a>
   <button onclick="toggleDark()" id="dark-toggle" title="Toggle dark mode" style="background:var(--soft);border:1.5px solid var(--border);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;padding:0;flex-shrink:0;"><svg id="dark-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
 </nav>
 
@@ -1042,7 +1042,7 @@
   function init() {
     // Auth guard
     if (!SFStore.getItem('studyflow_user')) {
-      window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html';
+      window.location.href = 'login.html';
       return;
     }
     var sessionStartTime = Date.now();
@@ -1052,12 +1052,12 @@
     var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
     userPlan = user.tier || 'free';
 
-    if (!saved) { window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html'; return; }
+    if (!saved) { window.location.href = 'dashboard.html'; return; }
     plan = JSON.parse(saved);
 
     // Validate plan has days
     if (!plan || !Array.isArray(plan.days) || plan.days.length === 0) {
-      window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html'; return;
+      window.location.href = 'dashboard.html'; return;
     }
 
     // Clamp dayIndex to valid range
@@ -1069,7 +1069,7 @@
     if (dayIndex >= plan.days.length) dayIndex = 0; // all null — fallback to 0
 
     day = plan.days[dayIndex];
-    if (!day) { window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html'; return; }
+    if (!day) { window.location.href = 'dashboard.html'; return; }
     day = JSON.parse(JSON.stringify(day)); // deep copy
 
     // Restore timer
@@ -2144,7 +2144,7 @@
       'Return ONLY a JSON array, no markdown:\n' +
       schema;
 
-    fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
+    fetch('api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: prompt })
@@ -5786,7 +5786,7 @@
     // TIER 3: Feynman technique — AI identifies knowledge gaps specifically
     var prompt = 'You are a tutor grading a student explanation using the Feynman Technique. Be specific, honest, and encouraging.\n\nCONCEPT: ' + question + '\nCORRECT EXPLANATION: ' + modelAnswer + '\nSTUDENT WROTE: ' + answer + '\n\nRespond in this exact format:\n SCORE: X/10\n WHAT YOU NAILED: [1-2 specific things they got right, reference their exact words]\n KNOWLEDGE GAPS: [specific concepts they missed or got wrong — be precise]\n ADVICE: [one concrete tip to fill the biggest gap]\n\nBe specific — reference actual content from their answer. Never be generic.';
 
-    fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
+    fetch('api/generate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: prompt })
     })
@@ -5998,7 +5998,7 @@
 
     addChatMsg('', 'ai thinking');
 
-    fetch('https://studyflow-ten-vert.vercel.app/api/chat', {
+    fetch('api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -6183,7 +6183,7 @@
         SFStore.setItem(classKey, JSON.stringify(classData));
 
         // Sync to Firestore for cross-device access
-        fetch('https://studyflow-ten-vert.vercel.app/api/class', {
+        fetch('api/class', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

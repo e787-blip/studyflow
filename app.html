@@ -273,7 +273,7 @@
 <body>
 
 <nav>
-  <a href="https://studyflow-ten-vert.vercel.app" class="logo">
+  <a href="index.html" class="logo">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
       <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
@@ -290,7 +290,7 @@
     </svg>
   </a>
   <div style="display:flex;align-items:center;gap:.75rem;">
-    <a href="https://studyflow-ten-vert.vercel.app/dashboard.html" style="font-size:0.82rem;color:var(--muted);text-decoration:none;font-weight:500;">Dashboard</a>
+    <a href="dashboard.html" style="font-size:0.82rem;color:var(--muted);text-decoration:none;font-weight:500;">Dashboard</a>
     <button onclick="toggleDark()" id="dark-toggle" title="Toggle dark mode" style="background:var(--soft);border:1.5px solid var(--border);border-radius:8px;padding:.35rem .5rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;width:34px;height:34px;">
       <svg id="dark-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
@@ -398,7 +398,7 @@
         <div style="font-weight:800;color:#8b5cf6;">$14.99<span style="font-size:0.7rem;font-weight:400;">/mo</span></div>
       </div>
     </div>
-    <a href="https://studyflow-ten-vert.vercel.app/pricing.html" style="display:block;background:var(--blue);color:#fff;padding:.9rem;border-radius:12px;font-weight:700;font-size:0.95rem;text-decoration:none;margin-bottom:.6rem;box-shadow:0 4px 14px rgba(74,124,246,.3);">Upgrade now →</a>
+    <a href="pricing.html" style="display:block;background:var(--blue);color:#fff;padding:.9rem;border-radius:12px;font-weight:700;font-size:0.95rem;text-decoration:none;margin-bottom:.6rem;box-shadow:0 4px 14px rgba(74,124,246,.3);">Upgrade now →</a>
     <button onclick="closeUpgradeModal()" style="background:none;border:none;color:var(--muted);font-size:0.85rem;cursor:pointer;font-family:var(--sans);">Continue with 7-day plan</button>
   </div>
 </div>
@@ -792,7 +792,7 @@
 
     // Sync to Firestore so the teacher sees them from any device
     showMsg('Joining...', true);
-    fetch('https://studyflow-ten-vert.vercel.app/api/class', {
+    fetch('api/class', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'join', classCode: code, studentData: studentRecord })
@@ -854,7 +854,7 @@
 
   // Auth guard — redirect to login if not signed in
   if (!SFStore.getItem('studyflow_user')) {
-    window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html';
+    window.location.href = 'login.html';
   }
 
   // ── FILE HANDLING — supports photos, video, audio, PDF, DOCX, TXT ──
@@ -919,7 +919,7 @@
     var reader = new FileReader();
     reader.onload = function(e) {
       var base64 = e.target.result.split(',')[1];
-      fetch('https://studyflow-ten-vert.vercel.app/api/extract', {
+      fetch('api/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageData: base64, mediaType: mediaType, filename: file.name })
@@ -2969,7 +2969,7 @@
             ? 'Retrying day ' + dayNum + ' (attempt ' + attempt + ' of ' + MAX_RETRIES + ')...'
             : 'Building your ' + strategy.label + ' plan \u2014 day ' + dayNum + ' of ' + totalDays + '...'
         );
-        fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
+        fetch('api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: prompt }),
@@ -3115,7 +3115,7 @@
               SFStore.removeItem('studyflow_minutes');
               SFStore.setItem('studyflow_current_day', '0');
               cleanupBgHandlers();
-              window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html';
+              window.location.href = 'dashboard.html';
             }
           });
         })(n);
