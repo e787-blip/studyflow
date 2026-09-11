@@ -1,5 +1,17 @@
 'use strict';
-const MAX_PROMPT_CHARS = 12000; // more notes context
+/* The whole prompt must fit, or the model never sees the part that matters.
+   app.html builds roughly 21k characters and puts the JSON skeleton, the
+   QUESTION TYPE LOCK and the "output only JSON" instruction at the END - so a
+   12000-char cap discarded exactly the things the response is graded against,
+   and the model was left guessing the shape from the prose above it. It was
+   silently dropping ~7k characters even before the extended formats were
+   added, which is the most likely reason day payloads arrived with fields
+   missing and keyTerms sometimes as strings rather than objects.
+
+   Claude Haiku 4.5 takes a 200k-token context; 12000 chars is about 3k tokens.
+   60000 leaves generous headroom over the current prompt plus the 3500-char
+   notes budget app.html allows. */
+const MAX_PROMPT_CHARS = 60000;
 const FETCH_TIMEOUT_MS = 45000; // 45s server-side (Vercel limit is 60s)
 
 function fetchWithTimeout(url, opts) {
@@ -21,6 +33,12 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'prompt must be a non-empty string' });
 
   const trimmedPrompt = prompt.slice(0, MAX_PROMPT_CHARS);
+  /* Truncation here is never harmless - it removes the tail, which is where
+     the schema lives. Say so rather than failing silently. */
+  if (prompt.length > MAX_PROMPT_CHARS) {
+    console.warn('[generate.js] prompt truncated:', prompt.length, '->', MAX_PROMPT_CHARS,
+                 '- the JSON skeleton may have been cut off');
+  }
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Server misconfiguration' });
 
