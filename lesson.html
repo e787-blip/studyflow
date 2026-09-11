@@ -9822,18 +9822,38 @@ var SFBoard = (function () {
       minX = Math.min(minX, px - boxes[i].w / 2); maxX = Math.max(maxX, px + boxes[i].w / 2);
       minY = Math.min(minY, py - boxes[i].h / 2); maxY = Math.max(maxY, py + boxes[i].h / 2);
     }
+    /* The ring the arrows ride reaches R in every direction, and between two
+       nodes it can pass outside every box - with three nodes the bottom arc
+       sits at +R while the lowest box centre is only at R*sin(30), so bounding
+       the card by the boxes alone clipped that arrow off the canvas entirely.
+       Two of the three arrows drew, which reads as a deliberate open arc
+       rather than as a missing one. */
+    minX = Math.min(minX, -R); maxX = Math.max(maxX, R);
+    minY = Math.min(minY, -R); maxY = Math.max(maxY, R);
+
     var w = (maxX - minX) + PAD * 2, h = (maxY - minY) + PAD * 2;
     var cx = -minX + PAD, cy = -minY + PAD;
-    var Rin = Math.max(26, R * cosH - maxH / 2 - 16);
-
-    var o = '', step = 2 * Math.PI / n, padA = Math.min(step * 0.34, 0.5);
+    /* The arrows ride the SAME circle the nodes sit on, each one starting and
+       ending clear of the boxes it joins. They used to be drawn on a much
+       smaller circle - R * cos(PI/n) minus half a box height - and cos(PI/n)
+       is 0.5 at three nodes, so the ring collapsed to about a quarter of R:
+       a small circle of arrowheads floating in the middle of the card,
+       connected to nothing. It reads as correct code; it only shows up when
+       the card is looked at. */
+    var o = '', step = 2 * Math.PI / n;
+    /* Half-angle a box occupies as seen from the centre. Half the diagonal is
+       used rather than half the width so the gap clears the corner whatever
+       direction the box sits in. Capped so an arc never closes up entirely. */
+    function clearAng(b) {
+      return Math.min(Math.atan2(Math.sqrt(b.w * b.w + b.h * b.h) / 2 + 8, R), step * 0.40);
+    }
     for (i = 0; i < n; i++) {
       var t = tone(i), b = boxes[i], p = pts[i];
-      var a0 = p.a + padA, a1 = pts[(i + 1) % n].a - padA;
+      var a0 = p.a + clearAng(b), a1 = pts[(i + 1) % n].a - clearAng(boxes[(i + 1) % n]);
       if (a1 < a0) a1 += 2 * Math.PI;
-      var arc = '<path d="M' + r1(cx + Rin * Math.cos(a0)) + ' ' + r1(cy + Rin * Math.sin(a0)) +
-        ' A' + r1(Rin) + ' ' + r1(Rin) + ' 0 0 1 ' + r1(cx + Rin * Math.cos(a1)) + ' ' +
-        r1(cy + Rin * Math.sin(a1)) + '" fill="none" stroke="' + RULE +
+      var arc = '<path d="M' + r1(cx + R * Math.cos(a0)) + ' ' + r1(cy + R * Math.sin(a0)) +
+        ' A' + r1(R) + ' ' + r1(R) + ' 0 0 1 ' + r1(cx + R * Math.cos(a1)) + ' ' +
+        r1(cy + R * Math.sin(a1)) + '" fill="none" stroke="' + RULE +
         '" stroke-width="1.6" marker-end="url(#sfbTip)"/>';
       var bx = cx + p.x - b.w / 2, by = cy + p.y - b.h / 2;
       o += g(i + 1, arc + cardRich(bx, by, b.w, b.h, t, 12, false) +
