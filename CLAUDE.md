@@ -133,11 +133,28 @@ that" guidance, and the diagram shape that suits the material:
 | language | grammar · reading · vocab |
 | general | study |
 
-`resolveSubtopic(subjectType, subjectText, notes)` reads the learner's subject
-line plus the first 1200 characters of their notes. **First match wins, so the
-narrower pattern is listed first** — the same ordering trap as the humanities
-and language classifiers below. A list ending in a `/./` catch-all always
-resolves; one without it falls back to the subject's own mix, unchanged.
+`resolveSubtopics(subjectType, subjectText, notes)` returns the subtopics a
+plan actually covers, best first. Each subtopic scores its `terms` against the
+subject line (counted triple — it is what the learner meant) and the first 3000
+characters of the notes. A runner-up joins the list only with a score of 2+ and
+at least half the leader's, so one stray word cannot split a plan that is
+really about one thing. Ties break on declaration order, so **the narrower
+subtopic is listed first** — the same ordering trap as the humanities and
+language classifiers below. An entry marked `fallback:true` is used only when
+nothing matches.
+
+**Days are dealt round-robin across that list.** All days generate in parallel
+from `subjectType` alone and no day knows its own title yet, so this is how a
+plan covering both reading comprehension and comma splices teaches each on its
+own days instead of averaging them. `generateDay` picks
+`subtopics[(dayNum - 1) % subtopics.length]` and uses that subtopic's guide.
+
+`terms` are regex fragments, not literals. A term of five characters or more
+matches any suffix (`variable` catches `variables`, `develop` catches
+`developmental`); shorter ones stay exact, or `map` would match `maple`.
+
+The evidence these mixes rest on, and the three things it does **not**
+establish, are in [docs/question-design.md](docs/question-design.md).
 
 Maths has no subtopics on purpose: its mix is governed by `MATH_MIX` and the
 synthesis floor, and `picked.subtopic` is forced null for it.
@@ -386,7 +403,7 @@ Two ordering traps in `dgLayoutFor`, both already fixed, both easy to reintroduc
   out as a row of plain boxes. It now only trims when the clause contains
   letters.
 
-`curatedDiagramSVG` holds 21 hand-drawn templates: brain, neuron, atom,
+`curatedDiagramSVG` holds 22 hand-drawn templates: brain, neuron, atom,
 supply-demand, dna, ecosystem, water-cycle, mitosis, memory-model,
 plate-tectonics, photosynthesis, forces, wave, circuit, number-line, fractions,
 place-value, area-model, triangle, states-of-matter, solar-system.

@@ -8442,6 +8442,47 @@
     }
 
     // ── FOOD CHAIN / ECOSYSTEM ────────────────────────────────────────────────
+    // ── ROCK CYCLE ───────────────────────────────────────────────────────────
+    /* Three rock types in a triangle with magma at the centre. The processes
+       ride the arrows, because in this topic the arrows ARE the content - a
+       learner who can name the three rocks but not what turns one into another
+       has the picture and not the cycle. Labels sit outside the triangle on
+       the side the arrow runs, so none of them cross a path. */
+    if (/rock cycle|igneous|sedimentary|metamorphic|magma/.test(d)) {
+      return '<svg viewBox="0 0 460 300" width="100%" style="max-width:460px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs><marker id="rcA" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">' +
+        '<path d="M0,0 L7,3.5 L0,7 Z" fill="#57534e"/></marker></defs>' +
+        // Igneous — top
+        '<rect x="176" y="26" width="108" height="36" rx="9" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>' +
+        '<text x="230" y="44" style="' + LP + '" fill="#991b1b" text-anchor="middle">Igneous</text>' +
+        '<text x="230" y="56" style="' + LT + '" fill="#ef4444" text-anchor="middle">granite, basalt</text>' +
+        // Sedimentary — bottom right
+        '<rect x="314" y="226" width="108" height="36" rx="9" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>' +
+        '<text x="368" y="244" style="' + LP + '" fill="#92400e" text-anchor="middle">Sedimentary</text>' +
+        '<text x="368" y="256" style="' + LT + '" fill="#b45309" text-anchor="middle">sandstone, shale</text>' +
+        // Metamorphic — bottom left
+        '<rect x="38" y="226" width="108" height="36" rx="9" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>' +
+        '<text x="92" y="244" style="' + LP + '" fill="#5b21b6" text-anchor="middle">Metamorphic</text>' +
+        '<text x="92" y="256" style="' + LT + '" fill="#7c3aed" text-anchor="middle">marble, slate</text>' +
+        // Magma — centre
+        '<ellipse cx="230" cy="162" rx="46" ry="24" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>' +
+        '<text x="230" y="166" style="' + LP + '" fill="#9a3412" text-anchor="middle">Magma</text>' +
+        // Igneous -> Sedimentary, down the right side
+        '<path d="M284 58 Q372 120 362 226" fill="none" stroke="#57534e" stroke-width="1.8" marker-end="url(#rcA)"/>' +
+        '<text x="418" y="128" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="middle">weathering</text>' +
+        '<text x="418" y="140" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="middle">&amp; erosion</text>' +
+        // Sedimentary -> Metamorphic, along the bottom
+        '<path d="M310 244 L154 244" fill="none" stroke="#57534e" stroke-width="1.8" marker-end="url(#rcA)"/>' +
+        '<text x="232" y="284" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="middle">heat &amp; pressure</text>' +
+        // Metamorphic -> Magma, inward
+        '<path d="M146 232 L188 178" fill="none" stroke="#57534e" stroke-width="1.8" marker-end="url(#rcA)"/>' +
+        '<text x="118" y="198" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="middle">melting</text>' +
+        // Magma -> Igneous, up the middle
+        '<path d="M230 136 L230 72" fill="none" stroke="#57534e" stroke-width="1.8" marker-end="url(#rcA)"/>' +
+        '<text x="244" y="106" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="start">cooling</text>' +
+        '</svg>';
+    }
+
     if (/food chain|food web|ecosystem|producer|consumer|decomposer|trophic/.test(d)) {
       return '<svg viewBox="0 0 290 300" width="100%" style="max-width:330px;display:block;margin:0 auto;' + LF + '">' +
         '<defs><marker id="eA" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#374151"/></marker></defs>' +
