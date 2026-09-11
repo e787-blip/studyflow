@@ -114,6 +114,47 @@ Every type has a renderer (`renderFill`, `renderBigEquation`, `renderPassage`,
 `app.html`, `SPECIAL_TYPES` + `SPECIAL_TYPES_PRETEST`, an injector in
 `buildQueue`, and a renderer plus its dispatch case.
 
+### Subtopics
+
+A subject is not one kind of knowledge, so the matrix above is the **fallback**,
+not the whole story. `SUBTOPICS` in `app.html` splits the nine non-maths
+subjects into 25 subtopics, each with its own mix, its own "ask this / avoid
+that" guidance, and the diagram shape that suits the material:
+
+| Subject | Subtopics |
+|---|---|
+| science | life · physical · earth |
+| english | reading · grammar · literature |
+| history | civics · social · era |
+| geography | physical · human · maps |
+| psychology | methods · bioCog · social |
+| economics | personal · macro · micro |
+| cs | programming · algorithms · systems |
+| language | grammar · reading · vocab |
+| general | study |
+
+`resolveSubtopic(subjectType, subjectText, notes)` reads the learner's subject
+line plus the first 1200 characters of their notes. **First match wins, so the
+narrower pattern is listed first** — the same ordering trap as the humanities
+and language classifiers below. A list ending in a `/./` catch-all always
+resolves; one without it falls back to the subject's own mix, unchanged.
+
+Maths has no subtopics on purpose: its mix is governed by `MATH_MIX` and the
+synthesis floor, and `picked.subtopic` is forced null for it.
+
+Two things follow from how mixes are written:
+
+- A mix is a **list of type names** (`['passage:inference', 'fill', ...]`) and
+  `buildQuestionSchema` generates the JSON from it. Only the twelve types with
+  renderers are valid; a name with no renderer is queued and silently skipped.
+- The quota line the model reads is counted by `tallyFor()` from that same
+  list, so the tally and the schema cannot drift apart. They were two
+  hand-maintained strings, and a tally disagreeing with the schema reads to
+  the model as permission to improvise.
+
+Adding a subtopic is a `SUBTOPICS` entry and nothing else. Adding a question
+*type* is still the four-place job described above.
+
 ### Subject classification
 
 `resolveSubjectType(plan, day)` is the single source of truth. It honours a saved
