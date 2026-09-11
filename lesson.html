@@ -11135,9 +11135,19 @@ var SFBoard = (function () {
     if (!pillars.length) {
       var ds = list(day.steps);
       for (i = 0; i < ds.length && pillars.length < 3; i++) {
-        var st = ds[i] || {};
-        var l2 = clean(st.step || st.title || st.label);
-        var d2 = clean(st.action || st.body || st.detail);
+        var st = ds[i];
+        /* steps and keyTerms arrive as plain strings whenever the model
+           ignores the object schema - which it does on some days and not
+           others, from the same prompt. Reading only the object form left
+           pillars empty, and with no trap and no anchor briefFor then returned
+           null, so the opening whiteboard was simply absent from those
+           sessions and present in the rest. That is the whole of the "it does
+           not show up every time" report. pillars and concepts below already
+           accepted both shapes; these two did not. */
+        var l2 = typeof st === 'string' ? clean(st)
+                                        : clean(st && (st.step || st.title || st.label));
+        var d2 = typeof st === 'string' ? ''
+                                        : clean(st && (st.action || st.body || st.detail));
         if (l2) pillars.push({ label: l2, detail: d2 });
       }
     }
@@ -11153,8 +11163,12 @@ var SFBoard = (function () {
     if (!pillars.length) {
       var kts = list(day.keyTerms);
       for (i = 0; i < kts.length && pillars.length < 3; i++) {
-        var kt = kts[i] || {};
-        var term = clean(kt.term), def = clean(kt.definition);
+        var kt = kts[i];
+        /* Same string-or-object split as steps above. */
+        var term = typeof kt === 'string' ? clean(kt)
+                                          : clean(kt && (kt.term || kt.title || kt.label));
+        var def  = typeof kt === 'string' ? ''
+                                         : clean(kt && (kt.definition || kt.detail));
         if (term) pillars.push({ label: term, detail: def });
       }
     }
