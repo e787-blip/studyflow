@@ -1364,9 +1364,15 @@
     var pretestAsked = {};
 
     // FEATURE 3: Pre-test on Day 1 — 3 questions BEFORE lesson content
-    if (dayIndex === 0 && simpleQuestions.length >= 3) {
-      sessionCards.push({ type: 'pretest-intro' });
-      shuffled.slice(0, 3).forEach(function(q) {
+    /* Two is enough to probe prior knowledge, and demanding three silently
+       removed the pre-test from 23 of the 25 subtopic mixes - the extended
+       formats are excluded from the pre-test pool, so most mixes no longer
+       carry three plain mcq/truefalse questions. The intro card counts the
+       questions rather than claiming three. */
+    var pretestCount = Math.min(3, simpleQuestions.length);
+    if (dayIndex === 0 && pretestCount >= 2) {
+      sessionCards.push({ type: 'pretest-intro', count: pretestCount });
+      shuffled.slice(0, pretestCount).forEach(function(q) {
         pretestAsked[fmStr(q.question)] = 1;
         sessionCards.push({ type: cardTypeFor(q), q: q, isPretest: true });
       });
@@ -2380,7 +2386,7 @@
 
     if (card.type === 'pretest-intro') {
       html = buildCard('Quick Check', 'Before we start — test yourself!', false,
-        '<p class="content-text" style="text-align:center;">We\'re going to show you 3 questions <strong>before</strong> the lesson. Don\'t worry if you don\'t know the answers — this actually helps you learn better. It\'s backed by science! </p>',
+        '<p class="content-text" style="text-align:center;">We\'re going to show you ' + (card.count || 3) + ' question' + ((card.count || 3) === 1 ? '' : 's') + ' <strong>before</strong> the lesson. Don\'t worry if you don\'t know the answers — this actually helps you learn better. It\'s backed by science! </p>',
         'Takes 2 minutes', 'Let\'s try →', false);
     }
     else if (card.type === 'pretest-done') {
