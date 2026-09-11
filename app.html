@@ -1625,7 +1625,21 @@
               'database', 'operating system', 'debug', 'syntax error']],
          [1, ['code', 'function', 'loop', 'network', 'sorting']]],
 
-    history: [[3, ['revolution', 'treaty', 'dynasty', 'colonialism', 'renaissance',
+    history: [/* Civics is history's other half, and the list had only the
+                 British-flavoured end of it - constitution, parliament,
+                 monarchy - so US government notes ("a bill is referred to
+                 committee, the President may veto it") scored nothing and
+                 fell through to `general`. That also meant the history/civics
+                 subtopic, which is written for exactly those notes, could
+                 almost never fire. */
+              [3, ['civics', 'congress', 'senate', 'legislature', 'veto',
+                   'judicial branch', 'executive branch', 'legislative branch',
+                   'bill of rights', 'supreme court', 'separation of powers',
+                   'checks and balances', 'filibuster', 'impeachment']],
+              [2, ['government', 'democracy', 'senator', 'representative',
+                   'legislation', 'amendment', 'federal', 'citizenship',
+                   'electoral', 'ratify']],
+              [3, ['revolution', 'treaty', 'dynasty', 'colonialism', 'renaissance',
                    'industrial revolution', 'factories', 'black death',
                    'reformation', 'imperialism', 'armistice', 'abolition',
                    'constitution', 'parliament', 'monarchy', 'feudal']],
@@ -1841,6 +1855,10 @@
     if (type === 'tracetable')  return '{"type":"tracetable","question":"","setup":"","columns":["Step","Value"],"rows":[["1",""],["2",""],["3",""]],"blankCol":1,' + tail;
     if (type === 'matchpairs')  return '{"type":"matchpairs","question":"Match each item to its pair.","pairs":[{"left":"","right":""},{"left":"","right":""},{"left":"","right":""},{"left":"","right":""}],' + tail;
     if (type === 'estimate')    return '{"type":"estimate","question":"","answer":0,"tolerance":0,"unit":"",' + tail;
+    /* One passage, several questions against it - the shape reading
+       comprehension is actually practised in. buildQueue expands this into a
+       passage card followed by its questions. */
+    if (type === 'readingset')  return '{"type":"readingset","title":"","passage":"","questions":[{"question":"What is the main idea of the passage?","options":["","","",""],"correctIndex":' + idx + ',"questionType":"main-idea"},{"question":"","options":["","","",""],"correctIndex":' + ((i + 1) % 4) + ',"questionType":"inference"},{"question":"","options":["","","",""],"correctIndex":' + ((i + 2) % 4) + ',"questionType":"vocab-in-context"}],' + tail;
     return '';
   }
 
@@ -1858,7 +1876,8 @@
                      passage:'Passage', errorspot:'Errorspot', scenario:'Scenario',
                      wordproblem:'Wordproblem', twopart:'Two-part', corroborate:'Corroborate',
                      highlight:'Find-the-evidence', tracetable:'Trace table',
-                     matchpairs:'Match pairs', estimate:'Estimate' };
+                     matchpairs:'Match pairs', estimate:'Estimate',
+                     readingset:'Reading set (passage + 3 questions)' };
 
   /* The quota line the model reads is counted from the same list the schema is
      built from, so the two can no longer drift apart. They were two hand-kept
@@ -1913,7 +1932,7 @@
     english: [
       { key:'reading', label:'Reading comprehension',
         terms:['reading','comprehension','main idea','inference','infer','summar','nonfiction','informational','passage','central idea','text evidence','author.s purpose'],
-        types:['twopart:passage','highlight','passage:main-idea','passage:inference','passage:vocab-in-context','mcq','fill','truefalse'],
+        types:['readingset','highlight','readingset','twopart:passage','mcq','fill','truefalse'],
         guide:'ASK: what the passage itself supports - the idea it builds, what it implies without stating, and what a word means in this sentence. Every question must be answerable from the passage alone. AVOID: outside knowledge, and opinion questions with no right answer.',
         visual:'a concept hub around the central idea, or compare for two viewpoints.' },
       { key:'grammar', label:'Grammar and mechanics',
@@ -1923,7 +1942,7 @@
         visual:'compare a correct and an incorrect form side by side.' },
       { key:'literature', label:'Literary analysis',
         terms:['literature','literary','novel','poem','poetry','shakespeare','theme','symbol','metaphor','character','narrat','imagery','tone','motif','protagonist','setting','plot','figurative'],
-        types:['corroborate','twopart:passage','highlight','passage:evidence','write','mcq','fill','matchpairs','truefalse'],
+        types:['readingset','corroborate','twopart:passage','highlight','mcq','fill','matchpairs','truefalse'],
         guide:'ASK: what a specific choice achieves in a specific passage, with the text quoted in the question. AVOID: naming a device with no text attached to it.',
         visual:'a concept hub for theme, compare for two characters, timeline for plot.' }
     ],
@@ -2020,7 +2039,7 @@
         visual:'compare two forms, or a 2x2 matrix for a conjugation pattern.' },
       { key:'reading', label:'Reading and conversation',
         terms:['reading','conversation','dialogue','listening','comprehension','phrase','greeting','culture','speaking','travel','ordering','directions'],
-        types:['highlight','passage:main-idea','twopart:passage','sentence','matchpairs','mcq','fill','truefalse','write'],
+        types:['readingset','highlight','sentence','matchpairs','mcq','fill','truefalse','write'],
         guide:'ASK: what a short passage or exchange actually says, and how to respond in the language. AVOID: translating isolated words with no context.',
         visual:'compare two ways of saying the same thing.' },
       { key:'vocab', label:'Vocabulary',
@@ -2542,6 +2561,22 @@
           q.tolerance = (isFinite(et) && et > 0) ? et : Math.abs(ev) * 0.1;
           return true;
         }
+        if (q.type === 'readingset') {
+          if (String(q.passage || '').trim().length < 120) return false;
+          if (!Array.isArray(q.questions)) return false;
+          q.questions = q.questions.filter(function(sq){
+            if (!sq || !String(sq.question || '').trim()) return false;
+            if (!Array.isArray(sq.options)) return false;
+            var o = sq.options.filter(function(x){ return x && String(x).trim(); });
+            if (o.length < 2) return false;
+            while (sq.options.length < 4) sq.options.push('Option ' + (sq.options.length + 1));
+            if (typeof sq.correctIndex !== 'number' || sq.correctIndex < 0 || sq.correctIndex >= sq.options.length) sq.correctIndex = 0;
+            return true;
+          });
+          /* A passage with one question is just a long passage card - the
+             point of the format is several questions against one text. */
+          return q.questions.length >= 2;
+        }
         if (q.type === 'write') return !!(qText && qText.length > 3);
         /* A passage card is the passage. Without one the learner gets an empty
            quote block above four options about a text they were never shown -
@@ -2888,6 +2923,11 @@
         '  cells must be correct - they are the answer key.\n' +
         'matchpairs: 3-5 pairs. Every "right" value must be DIFFERENT from every other, or\n' +
         '  two rows become indistinguishable and one is marked wrong whatever is chosen.\n' +
+        'readingset: ONE passage of 150-220 words, written from the student notes, followed\n' +
+        '  by 3 questions ABOUT THAT PASSAGE. The learner reads the passage on its own card\n' +
+        '  first, so every question must be answerable from the passage alone, and no two\n' +
+        '  questions in a set may test the same thing. Do not write three mini-passages -\n' +
+        '  write one passage worth reading, then question it from three angles.\n' +
         'estimate: "answer" is a number from the notes and "tolerance" is how far off is\n' +
         '  still fine (about 10%). Use it where reasoning to the right ballpark is the skill.\n' +
         '\nVISUAL (field "visual") - pick the ONE diagram type that genuinely fits this topic and fill it with REAL content from the notes. Never invent filler labels. Use exactly one of:\n' +

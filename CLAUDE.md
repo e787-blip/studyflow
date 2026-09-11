@@ -14,7 +14,7 @@ multi-step terminal workflows.
 | Frontend | Vanilla HTML/CSS/JS. No build step, no framework, no bundler. |
 | Hosting | Vercel — `studyflow-ten-vert.vercel.app` (also pushed to GitHub Pages) |
 | Backend | Vercel serverless, `api/*.js`, uses `module.exports` (not ESM) |
-| AI | Groq API, `llama-3.1-8b-instant`, key in `GROQ_API_KEY` env var on Vercel |
+| AI | Anthropic API, `claude-haiku-4-5`, key in `ANTHROPIC_API_KEY` env var on Vercel. `api/generate.js` caps the prompt at 60 000 chars — the whole prompt must fit, because the JSON schema sits at the end of it. |
 | Auth | localStorage only. Accounts in `studyflow_accounts`, session in `studyflow_user` |
 | Storage | All plan data in localStorage, namespaced per account via `SFStore` |
 

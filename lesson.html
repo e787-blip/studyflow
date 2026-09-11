@@ -1351,7 +1351,7 @@
     // every other type has its own dedicated renderer and must be excluded here.
     /* Kept in sync with SPECIAL_TYPES below - a sequence question drawn into
        the pre-test would still be spliced in later by its own injector. */
-    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1 };
+    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1 };
     var simpleQuestions = questions.filter(function(q){ return !SPECIAL_TYPES_PRETEST[q.type]; });
     var shuffled = simpleQuestions.slice().sort(function(){ return Math.random() - 0.5; });
 
@@ -1430,7 +1430,7 @@
        main loop queued it once and the injector spliced the very same question
        in again - every history and geography day showed its "order these
        events" question twice. Every type with its own injector belongs here. */
-    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1 };
+    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1 };
     var fillQuestions = questions.filter(function(q){ return q.type === 'fill'; });
     var regularQuestions = questions.filter(function(q){ return !SPECIAL_TYPES[q.type]; });
     var shuffled = regularQuestions.slice().sort(function(){ return Math.random() - 0.5; });
@@ -1767,6 +1767,34 @@
   
     /* The Feynman loop is applied last, once every other card is in place, so
        it can see where teaching ends and practice begins. */
+    /* A reading set expands into several cards that must stay together: the
+       passage, then the questions about it. Spread the SETS through the
+       practice run, and splice each set's cards in as one contiguous block.
+
+       This runs AFTER every other injector on purpose. Placed with them, the
+       injectors that follow computed their slots against the lengthened queue
+       and spliced a twopart and a highlight into the middle of a set - so the
+       learner read a passage, answered one question on it, was asked something
+       unrelated, then returned to it. Going last means nothing can break a
+       block apart. */
+    var readingSets = (day.questions || []).filter(function (q) {
+      return q.type === 'readingset' && q.passage &&
+             Object.prototype.toString.call(q.questions) === '[object Array]' && q.questions.length;
+    });
+    readingSets.forEach(function (set, i) {
+      var block = [{ type: 'reading-passage', q: set }];
+      set.questions.forEach(function (sq) {
+        var copy = {}, k;
+        for (k in sq) if (Object.prototype.hasOwnProperty.call(sq, k)) copy[k] = sq[k];
+        copy.type = 'passage';
+        copy.passage = set.passage;      // renderPassage still needs the text
+        copy.collapsePassage = true;     // but collapsed: they just read it
+        if (!copy.difficulty) copy.difficulty = set.difficulty;
+        block.push({ type: 'passage', q: copy });
+      });
+      Array.prototype.splice.apply(sessionCards, [injectSpread(i, readingSets.length, 0), 0].concat(block));
+    });
+
     sessionCards = applyFeynmanOrder(sessionCards, day);
 }
 
@@ -1926,7 +1954,7 @@
       match: 1, classify: 1, graph: 1, passage: 1, write: 1, scenario: 1,
       fill: 1,
       twopart: 1, corroborate: 1, highlight: 1, tracetable: 1, matchpairs: 1,
-      estimate: 1
+      estimate: 1, readingset: 1
     };
     if (DIRECT[t]) {
       /* A fill question that is really a calculation belongs on the equation
@@ -2579,6 +2607,7 @@
     else if (card.type === 'scenario') {
       html = renderScenario(card.q);
     }
+    else if (card.type === 'reading-passage') { html = renderReadingPassage(card.q); }
     else if (card.type === 'twopart')     { html = renderTwoPart(card.q); }
     else if (card.type === 'corroborate') { html = renderCorroborate(card.q); }
     else if (card.type === 'highlight')   { html = renderHighlight(card.q); }
@@ -3145,10 +3174,17 @@
     var body =
       '<div class="q-meta"><span class="q-type-label" style="background:#f3f0ff;color:#7c3aed;">' + typeLabel + '</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
-      '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.08em;color:#7c3aed;margin-bottom:.35rem;">' + passageLabel + '</div>' +
+      /* Inside a reading set the learner has just read this passage on its own
+         card, so re-printing 200 words above every follow-up question buries
+         the question and makes the set feel like the same passage four times.
+         It collapses to a line they can open to check a detail. */
+      (q.collapsePassage
+        ? '<details style="margin-bottom:1rem;"><summary style="cursor:pointer;font-size:0.68rem;font-weight:700;letter-spacing:.08em;color:#7c3aed;">' + passageLabel + ' — tap to re-read</summary>'
+        : '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.08em;color:#7c3aed;margin-bottom:.35rem;">' + passageLabel + '</div>') +
       '<div style="background:var(--soft);border-left:3px solid #7c3aed;border-radius:0 12px 12px 0;padding:.9rem 1rem 1rem;margin-bottom:1rem;font-size:0.88rem;line-height:1.8;color:var(--ink);font-style:italic;">' +
       passageText +
       '</div>' +
+      (q.collapsePassage ? '</details>' : '') +
       '<div class="q-text" style="font-style:normal;margin-bottom:.75rem;">' + qText(q) + '</div>' +
       optHtml +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
@@ -4761,6 +4797,7 @@
        splicing it in after "estimate" produced "How to estimate how many
        seconds are there in one day?". */
     if (type === 'estimate')    return 'How to estimate: ' + trim(stem, 70);
+    if (type === 'readingset')  return 'How to find the main idea and the evidence for it in a text';
 
     /* Give them the real expression to work, not a description of one. */
     if (type === 'bigequation') {
@@ -4988,6 +5025,26 @@
      and evidence-based selected response (English) are the same shape: part A
      asks what, part B asks why or where the text says so. Grading both
      separates "knows it" from "guessed it", which a single tier cannot. */
+  /* READING SET — one passage on its own card, then the questions about it.
+     A reading comprehension day used to serve three passage questions, each
+     carrying its own block of text, so the learner read three separate walls
+     of prose and answered one question on each. Real comprehension practice
+     is the other shape: read once, then answer several questions against that
+     text. buildQueue expands a `readingset` into this card followed by its
+     questions, which is also why roughly one card in four is a passage. */
+  function renderReadingPassage(q) {
+    var words = String(q.passage || '').split(/\s+/).filter(Boolean).length;
+    var mins = Math.max(1, Math.round(words / 200));
+    var n = (q.questions || []).length;
+    var body = '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.08em;color:#7c3aed;margin-bottom:.5rem;">READ THIS FIRST</div>' +
+      '<div style="background:var(--soft);border-left:3px solid #7c3aed;border-radius:0 12px 12px 0;padding:1rem 1.1rem 1.1rem;margin-bottom:.9rem;font-size:0.92rem;line-height:1.85;color:var(--ink);">' +
+      esc(q.passage || '') + '</div>' +
+      '<p class="content-text" style="text-align:center;font-size:.84rem;color:var(--muted);">' +
+      n + ' question' + (n === 1 ? '' : 's') + ' follow. You can re-open the passage on each one.</p>';
+    return buildCard('Reading', q.title ? String(q.title) : 'Read the passage', false,
+      body, 'About ' + mins + ' min read', 'I\'ve read it →', false);
+  }
+
   function renderTwoPart(q) {
     var optHtml = (q.options || []).map(function (opt, i) {
       return '<button class="q-option option-btn tp-a" onclick="answerTwoPartA(this,' + i + ')">' +
