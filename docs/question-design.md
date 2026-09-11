@@ -75,6 +75,40 @@ the learner has just read the lesson card.
 subtopic guide — they ask for a mechanism, a cause, or an application, and
 `AVOID` lines rule out naming and definition-recall.
 
+## 5. Six formats the original twelve could not express
+
+The research above kept pointing at interactions, not topics — and the same
+interaction kept coming up in different subjects under different names.
+
+**Two-tier diagnostics** (science) ask for an answer and then the reasoning
+behind it, so a right answer reached by guessing can be told apart from one
+that is understood; the reason tier is what makes that visible, and adding it
+measurably cuts guessing. **Evidence-based selected response** (English, and
+the STAAR/PARCC family) asks Part A for the answer and Part B for the line of
+text supporting it. Those are the same card. That is `twopart`, and it is why
+credit requires both parts — and why Part B stays hidden until Part A is
+committed, since the reason list otherwise gives Part A away.
+
+**Corroboration** is one of the four historical reading skills in Stanford's
+Reading Like a Historian framework, alongside sourcing, contextualisation and
+close reading. StudyFlow could already ask the other three; corroboration needs
+two documents on screen at once, which no existing format allowed. That is
+`corroborate`. **Close reading** of a specific line is `highlight`.
+
+**Multiple representations** — translating between an equation, a table, a
+graph and a description — is a core NCTM process standard and associated with
+higher conceptual understanding than working in one representation alone. That
+is what `matchpairs` is for outside vocabulary.
+
+`tracetable` is the worked-example effect made active: the procedure is given
+and the learner carries the values through it. `estimate` exists because
+reasoning to the right order of magnitude is a different skill from computing
+an exact value, and marking 47 wrong against a key of 50 tests neither.
+
+**What this does not establish:** that these six are the best six, or that the
+per-subject assignment is optimal. They are formats with research behind the
+*interaction*; which subtopic gets which is judgment.
+
 ## What none of this establishes
 
 - **The specific counts.** That reading comprehension gets four passage
@@ -94,3 +128,11 @@ subtopic guide — they ask for a mechanism, a cause, or an application, and
 - [Interleaved Training and Category Learning (Kang)](https://www.unh.edu/teaching-learning-resource-hub/sites/default/files/media/2023-06/itow-interleaved-training-and-category-learning-kang.pdf)
 - [Improving Students' Learning With Effective Learning Techniques (Dunlosky et al., 2013)](https://iverson.cm.utexas.edu/courses/310M/Handouts/Dunlosky%20et%20al.%20-%202013%20-%20Improving%20Students%E2%80%99%20Learning%20With%20Effective%20Learni.pdf)
 - [Strengthening the Student Toolbox (Dunlosky, American Educator)](https://www.aft.org/ae/fall2013/dunlosky)
+- [Informing the uninformed: a multitier approach to uncover students' misconceptions](https://journals.physiology.org/doi/pdf/10.1152/advan.00130.2018)
+- [Development of two-tier diagnostic instrument in chemistry](https://www.researchgate.net/publication/254383547_Development_of_two-tier_diagnostic_instrument_and_assess_students'_understanding_in_chemistry)
+- [Stanford History Education Group — Reading Like a Historian](https://csaa.wested.org/resource/stanford-history-education-group-reading-like-a-historian/)
+- [Historical Thinking Chart (SHEG)](https://www.trumanlibrary.gov/sites/default/files/2019-10/Copy%20of%20Historical%20Thinking%20Chart.pdf)
+- [Multiple representations (mathematics education)](https://en.wikipedia.org/wiki/Multiple_representations_(mathematics_education))
+- [Multiple Representations — SERP Institute](https://www.serpinstitute.org/sensemaking/multiple-representations)
+- [Evidence-Based Selected Response questions](https://support.focalpointk12.com/hc/en-us/articles/115002565992-How-do-I-create-an-Evidence-Based-Selected-Response-Question-EBSR)
+- [Text Dependent Questions (Wisconsin DPI)](https://dpi.wi.gov/sites/default/files/imce/ela/bank/RI.RRTC_Text_Dependent_Questions.pdf)

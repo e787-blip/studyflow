@@ -1351,7 +1351,7 @@
     // every other type has its own dedicated renderer and must be excluded here.
     /* Kept in sync with SPECIAL_TYPES below - a sequence question drawn into
        the pre-test would still be spliced in later by its own injector. */
-    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1 };
+    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1 };
     var simpleQuestions = questions.filter(function(q){ return !SPECIAL_TYPES_PRETEST[q.type]; });
     var shuffled = simpleQuestions.slice().sort(function(){ return Math.random() - 0.5; });
 
@@ -1424,7 +1424,7 @@
        main loop queued it once and the injector spliced the very same question
        in again - every history and geography day showed its "order these
        events" question twice. Every type with its own injector belongs here. */
-    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1 };
+    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1 };
     var fillQuestions = questions.filter(function(q){ return q.type === 'fill'; });
     var regularQuestions = questions.filter(function(q){ return !SPECIAL_TYPES[q.type]; });
     var shuffled = regularQuestions.slice().sort(function(){ return Math.random() - 0.5; });
@@ -1710,6 +1710,19 @@
       sessionCards.splice(insertAt7, 0, { type: 'sentence', q: q });
     });
 
+    /* The six research-backed formats. Each is excluded from the main loop by
+       SPECIAL_TYPES, so it reaches the learner only through this injector -
+       and none of them is gated on subject, because a question of type X
+       exists only because a schema asked for one. */
+    [['twopart', 0], ['corroborate', 1], ['highlight', 1],
+     ['tracetable', 0], ['matchpairs', 2], ['estimate', 0]].forEach(function (pair) {
+      var t = pair[0];
+      var qs = (day.questions || []).filter(function (q) { return q.type === t; });
+      qs.forEach(function (q, i) {
+        sessionCards.splice(injectSpread(i, qs.length, pair[1]), 0, { type: t, q: q });
+      });
+    });
+
     // Classify questions — ALL subjects (science, history, geography, cs, psychology, economics)
     var classifyQs = (day.questions || []).filter(function(q){ return q.type === 'classify' && q.categoryA && q.categoryB && Array.isArray(q.itemsA) && Array.isArray(q.itemsB); });
     classifyQs.forEach(function(q, i) {
@@ -1905,7 +1918,9 @@
     var DIRECT = {
       bigequation: 1, wordproblem: 1, errorspot: 1, sequence: 1, sentence: 1,
       match: 1, classify: 1, graph: 1, passage: 1, write: 1, scenario: 1,
-      fill: 1
+      fill: 1,
+      twopart: 1, corroborate: 1, highlight: 1, tracetable: 1, matchpairs: 1,
+      estimate: 1
     };
     if (DIRECT[t]) {
       /* A fill question that is really a calculation belongs on the equation
@@ -2158,7 +2173,8 @@
   function submitControl() {
     /* The visible check/submit control on the current card, whatever type it is. */
     var ids = ['fill-btn', 'seq-check-btn', 'classify-check-btn', 'write-submit',
-               'graph-check-btn', 'match-check-btn'];
+               'graph-check-btn', 'match-check-btn',
+               'mp-check-btn', 'tt-check-btn', 'est-check-btn'];
     var i, el;
     for (i = 0; i < ids.length; i++) {
       el = document.getElementById(ids[i]);
@@ -2557,6 +2573,12 @@
     else if (card.type === 'scenario') {
       html = renderScenario(card.q);
     }
+    else if (card.type === 'twopart')     { html = renderTwoPart(card.q); }
+    else if (card.type === 'corroborate') { html = renderCorroborate(card.q); }
+    else if (card.type === 'highlight')   { html = renderHighlight(card.q); }
+    else if (card.type === 'tracetable')  { html = renderTraceTable(card.q); }
+    else if (card.type === 'matchpairs')  { html = renderMatchPairs(card.q); }
+    else if (card.type === 'estimate')    { html = renderEstimate(card.q); }
     else if (card.type === 'done') {
       html = buildCard('Session Complete', 'Great work today!', false,
         '<p class="content-text" style="text-align:center;">You\'ve finished all the cards for this session. Tap below to see your results.</p>',
@@ -4717,6 +4739,23 @@
     /* Model-written explain prompts are already phrased as concepts. */
     if (type === 'write' && stem) return stem;
 
+    /* The six newer formats carry their concept somewhere other than the stem,
+       and printing the stem raw would reproduce an instruction ("Trace the
+       loop", "Match each term") on a card that asks the learner to teach the
+       idea back. Invariant 4. */
+    if (type === 'twopart')     return trim(q.reasonPrompt || stem, 90);
+    if (type === 'corroborate') return 'Why two accounts of ' + topic + ' can disagree';
+    if (type === 'highlight')   return 'How to find the evidence for a claim in a text';
+    if (type === 'tracetable')  return 'Walk through what happens at each step of: ' + trim(q.setup || topic, 70);
+    if (type === 'matchpairs') {
+      var pr = (q.pairs || [])[0];
+      return pr && pr.left ? 'How ' + trim(pr.left, 40) + ' relates to its pair' : 'The key pairings in ' + topic;
+    }
+    /* A colon rather than a preposition: the stem is a full question, and
+       splicing it in after "estimate" produced "How to estimate how many
+       seconds are there in one day?". */
+    if (type === 'estimate')    return 'How to estimate: ' + trim(stem, 70);
+
     /* Give them the real expression to work, not a description of one. */
     if (type === 'bigequation') {
       var eq = trim(q.equation, 70);
@@ -4929,6 +4968,374 @@
   }
 
   // ── SCENARIO — read a scenario, pick the best concept/explanation ──
+  /* ══ RESEARCH-BACKED QUESTION FORMATS ══════════════════════════════════════
+     Six formats that the twelve original types could not express. Each one is
+     a distinct INTERACTION, not a relabelled multiple choice, and each is
+     reused across every subject whose material has that shape - which is why
+     there are six rather than one per subject. See docs/question-design.md.
+
+     All six follow the house contract: one handler per card, guarded by
+     currentAnswered, ending in handleResult() then enableNext(). handleResult
+     already calls showFeedback, so these must not call it again. */
+
+  /* TWO-PART — answer, then justify it. Two-tier diagnostic items (science)
+     and evidence-based selected response (English) are the same shape: part A
+     asks what, part B asks why or where the text says so. Grading both
+     separates "knows it" from "guessed it", which a single tier cannot. */
+  function renderTwoPart(q) {
+    var optHtml = (q.options || []).map(function (opt, i) {
+      return '<button class="q-option option-btn tp-a" onclick="answerTwoPartA(this,' + i + ')">' +
+        '<span class="opt-letter">' + String.fromCharCode(65 + i) + '</span>' +
+        '<span class="opt-text">' + esc(opt) + '</span></button>';
+    }).join('');
+    var reasonHtml = (q.reasons || []).map(function (r, i) {
+      return '<button class="q-option option-btn tp-b" onclick="answerTwoPartB(this,' + i + ')">' +
+        '<span class="opt-letter">' + String.fromCharCode(65 + i) + '</span>' +
+        '<span class="opt-text">' + esc(r) + '</span></button>';
+    }).join('');
+
+    window._twoPartState = { q: q, partA: null };
+
+    var passage = q.passage ? '<div class="tp-passage" style="background:#f8fafc;border-left:4px solid #4a7cf6;border-radius:0 12px 12px 0;padding:.85rem 1rem;margin-bottom:.9rem;font-size:.88rem;line-height:1.7;">' + esc(q.passage) + '</div>' : '';
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#eef2ff;color:#4338ca;">Two-part</span>' +
+      '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
+      passage +
+      '<div style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;">Part A</div>' +
+      '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.question) + '</div>' +
+      '<div class="q-options" id="tp-a-opts">' + optHtml + '</div>' +
+      '<div id="tp-b-block" style="display:none;margin-top:1.1rem;padding-top:1rem;border-top:1px dashed var(--rule,#cbd5e1);">' +
+        '<div style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;">Part B</div>' +
+        '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.reasonPrompt || 'Which statement best supports your answer?') + '</div>' +
+        '<div class="q-options" id="tp-b-opts">' + reasonHtml + '</div>' +
+      '</div>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Answer Part A first, then find the reason that backs it up.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Two-part question</div><h2>' + esc(day.title || 'Answer, then justify it') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function answerTwoPartA(btn, i) {
+    var st = window._twoPartState;
+    if (!st || st.partA !== null || currentAnswered) return;
+    st.partA = i;
+    var opts = document.querySelectorAll('.tp-a');
+    for (var k = 0; k < opts.length; k++) {
+      opts[k].disabled = true;
+      if (opts[k] !== btn) opts[k].classList.add('dimmed');
+    }
+    /* No 'chosen' class exists in the sheet, and reusing correct-ans here
+       would assert a verdict before Part B has been answered. */
+    btn.style.borderColor = '#4a7cf6';
+    btn.style.background = 'rgba(74,124,246,.08)';
+    /* Part B is only revealed after A is committed. Showing both at once lets
+       the reason list give away the answer to A. */
+    var b = document.getElementById('tp-b-block');
+    if (b) b.style.display = 'block';
+  }
+
+  function answerTwoPartB(btn, i) {
+    var st = window._twoPartState;
+    if (!st || st.partA === null || currentAnswered) return;
+    currentAnswered = true;
+    totalAnswered++;
+    var q = st.q;
+    var aOK = st.partA === q.correctIndex;
+    var bOK = i === q.reasonIndex;
+    var both = aOK && bOK;
+
+    var opts = document.querySelectorAll('.tp-b');
+    for (var k = 0; k < opts.length; k++) {
+      opts[k].disabled = true;
+      if (k === q.reasonIndex) opts[k].classList.add('correct-ans');
+      else if (opts[k] === btn) opts[k].classList.add('wrong-ans');
+      else opts[k].classList.add('dimmed');
+    }
+    var aOpts = document.querySelectorAll('.tp-a');
+    if (aOpts[q.correctIndex]) aOpts[q.correctIndex].classList.add('correct-ans');
+
+    /* The diagnostic payload: right answer with the wrong reason is the case
+       worth naming, because it usually means a guess that landed. */
+    var note = both ? ''
+      : (aOK ? 'Part A was right, but not for that reason — that is the part worth re-reading. '
+             : (bOK ? 'Your reasoning was sound, but it does not support the answer you picked in Part A. '
+                    : ''));
+    if (both) spawnConfetti();
+    handleResult(both, note + esc(q.explanation || ''), btn);
+    enableNext();
+  }
+
+  /* CORROBORATE — two sources side by side. Corroboration is one of the four
+     historical reading skills and the only one StudyFlow could not ask for,
+     because every other format shows a single text. */
+  function renderCorroborate(q) {
+    var A = q.sourceA || {}, B = q.sourceB || {};
+    function srcBlock(s, tone) {
+      return '<div style="flex:1 1 200px;min-width:0;background:' + tone.bg + ';border:1px solid ' + tone.br +
+        ';border-radius:12px;padding:.75rem .85rem;">' +
+        '<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:' + tone.fg + ';margin-bottom:.35rem;">' + esc(s.label || 'Source') + '</div>' +
+        '<div style="font-size:.84rem;line-height:1.65;">' + esc(s.text || '') + '</div></div>';
+    }
+    var optHtml = (q.options || []).map(function (opt, i) {
+      return '<button class="q-option option-btn" onclick="answerMCQ(this,' + i + ',' + q.correctIndex + ',\'' + esc(q.explanation) + '\')">' +
+        '<span class="opt-letter">' + String.fromCharCode(65 + i) + '</span>' +
+        '<span class="opt-text">' + esc(opt) + '</span></button>';
+    }).join('');
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#fef3c7;color:#92400e;">Compare sources</span>' +
+      '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
+      '<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:.9rem;">' +
+      srcBlock(A, { bg: '#eff6ff', br: '#bfdbfe', fg: '#1d4ed8' }) +
+      srcBlock(B, { bg: '#fdf4ff', br: '#f0abfc', fg: '#a21caf' }) + '</div>' +
+      '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.question) + '</div>' +
+      '<div class="q-options">' + optHtml + '</div>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Ask what each source claims, and where they actually differ.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Compare two sources</div><h2>' + esc(day.title || 'Do these agree?') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  /* HIGHLIGHT — pick the sentence that does the work. Text-dependent close
+     reading: the learner must locate evidence inside the passage rather than
+     recognise a paraphrase of it. */
+  function renderHighlight(q) {
+    var sents = q.sentences || [];
+    var sentHtml = sents.map(function (s, i) {
+      return '<button class="hl-sent" data-i="' + i + '" onclick="answerHighlight(this,' + i + ')" ' +
+        'style="display:block;width:100%;text-align:left;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;' +
+        'padding:.6rem .75rem;margin-bottom:.4rem;font-size:.86rem;line-height:1.6;cursor:pointer;font-family:inherit;color:inherit;">' +
+        esc(s) + '</button>';
+    }).join('');
+
+    window._highlightState = { q: q };
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#ecfdf5;color:#047857;">Find the evidence</span>' +
+      '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
+      '<div class="q-text" style="margin-bottom:.8rem;">' + esc(q.question) + '</div>' +
+      '<div>' + sentHtml + '</div>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Read each sentence and ask which one actually states it.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Find the evidence</div><h2>' + esc(day.title || 'Locate it in the text') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function answerHighlight(btn, i) {
+    var st = window._highlightState;
+    if (!st || currentAnswered) return;
+    currentAnswered = true;
+    totalAnswered++;
+    var q = st.q, ok = i === q.correctIndex;
+    var all = document.querySelectorAll('.hl-sent');
+    for (var k = 0; k < all.length; k++) {
+      all[k].disabled = true;
+      if (k === q.correctIndex) { all[k].style.borderColor = '#10b981'; all[k].style.background = '#ecfdf5'; }
+      else if (all[k] === btn) { all[k].style.borderColor = '#ef4444'; all[k].style.background = '#fef2f2'; }
+      else { all[k].style.opacity = '.5'; }
+    }
+    if (ok) spawnConfetti();
+    handleResult(ok, q.explanation || '', btn);
+    enableNext();
+  }
+
+  /* MATCH PAIRS — a model-authored matching card. The existing match card is
+     synthesised from keyTerms; this one lets a schema ask for the pairing that
+     matters (word to translation, representation to representation, term to
+     function). A select per row rather than click-to-pair: far less state to
+     get wrong, and it works with a keyboard. */
+  function renderMatchPairs(q) {
+    var pairs = (q.pairs || []).filter(function (p) { return p && p.left && p.right; });
+    var rights = pairs.map(function (p) { return p.right; }).slice();
+    /* Shuffled once at render, and the correct value is compared by text, so
+       the order of the menu cannot leak the answer. */
+    rights.sort(function () { return Math.random() - 0.5; });
+    var optTags = rights.map(function (r) { return '<option value="' + esc(r) + '">' + esc(r) + '</option>'; }).join('');
+
+    var rowsHtml = pairs.map(function (p, i) {
+      return '<div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;flex-wrap:wrap;">' +
+        '<div style="flex:1 1 120px;min-width:0;font-size:.87rem;font-weight:600;">' + esc(p.left) + '</div>' +
+        '<select class="mp-sel" data-i="' + i + '" style="flex:1 1 150px;min-width:0;padding:.45rem .55rem;border:1.5px solid #e2e8f0;' +
+        'border-radius:9px;font-family:inherit;font-size:.85rem;background:#fff;color:inherit;">' +
+        '<option value="">— choose —</option>' + optTags + '</select></div>';
+    }).join('');
+
+    window._matchPairsState = { q: q, pairs: pairs };
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#f0f9ff;color:#0369a1;">Match</span>' +
+      '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
+      '<div class="q-text" style="margin-bottom:.8rem;">' + esc(q.question || 'Match each item to its pair.') + '</div>' +
+      rowsHtml +
+      '<button class="fill-submit" id="mp-check-btn" onclick="checkMatchPairs()" style="margin-top:.6rem;">Check answers</button>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Work from the ones you are sure of first.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Match the pairs</div><h2>' + esc(day.title || 'Match them up') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function checkMatchPairs() {
+    var st = window._matchPairsState;
+    if (!st || currentAnswered) return;
+    currentAnswered = true;
+    totalAnswered++;
+    var sels = document.querySelectorAll('.mp-sel'), right = 0, k;
+    for (k = 0; k < sels.length; k++) {
+      var want = st.pairs[k] ? st.pairs[k].right : '';
+      var got = sels[k].value;
+      sels[k].disabled = true;
+      if (got === want) { right++; sels[k].style.borderColor = '#10b981'; sels[k].style.background = '#ecfdf5'; }
+      else { sels[k].style.borderColor = '#ef4444'; sels[k].style.background = '#fef2f2'; }
+    }
+    var all = right === st.pairs.length && st.pairs.length > 0;
+    var btn = document.getElementById('mp-check-btn');
+    if (btn) btn.disabled = true;
+    if (all) spawnConfetti();
+    handleResult(all, (all ? '' : right + ' of ' + st.pairs.length + ' matched. ') + (st.q.explanation || ''), btn);
+    enableNext();
+  }
+
+  /* TRACE TABLE — run the procedure by hand, one row at a time. The format
+     computing teachers use for loops, and it works for any procedure with a
+     running value. One column is blanked; the rest is given, so the learner
+     traces rather than re-derives. */
+  function renderTraceTable(q) {
+    var cols = q.columns || [], rows = q.rows || [];
+    var blank = typeof q.blankCol === 'number' ? q.blankCol : (cols.length - 1);
+
+    var head = cols.map(function (c) {
+      return '<th style="text-align:left;padding:.4rem .55rem;font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1.5px solid #e2e8f0;">' + esc(c) + '</th>';
+    }).join('');
+    var bodyRows = rows.map(function (r, ri) {
+      var cells = (r || []).map(function (cell, ci) {
+        if (ci === blank) {
+          return '<td style="padding:.3rem .35rem;border-bottom:1px solid #f1f5f9;">' +
+            '<input class="tt-in" data-r="' + ri + '" inputmode="text" ' +
+            'style="width:80px;padding:.35rem .45rem;border:1.5px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:.85rem;background:#fff;color:inherit;"></td>';
+        }
+        return '<td style="padding:.4rem .55rem;font-size:.85rem;border-bottom:1px solid #f1f5f9;">' + esc(cell) + '</td>';
+      }).join('');
+      return '<tr>' + cells + '</tr>';
+    }).join('');
+
+    window._traceState = { q: q, blank: blank };
+
+    /* esc() flattens newlines to spaces - it is written for attribute and JS
+       string contexts - which collapsed a whole procedure onto one line inside
+       the <pre>. Escape each line and rejoin, so the breaks survive. */
+    var setupTxt = String(q.setup || '').split('\n').map(function (ln) { return esc(ln); }).join('\n');
+    var setup = setupTxt ? '<pre style="background:#0f172a;color:#e2e8f0;border-radius:10px;padding:.7rem .85rem;overflow-x:auto;font-size:.8rem;line-height:1.6;margin-bottom:.85rem;white-space:pre-wrap;">' + setupTxt + '</pre>' : '';
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#f1f5f9;color:#334155;">Trace it</span>' +
+      '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
+      '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.question) + '</div>' + setup +
+      '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>' + head + '</tr></thead><tbody>' + bodyRows + '</tbody></table></div>' +
+      '<button class="fill-submit" id="tt-check-btn" onclick="checkTraceTable()" style="margin-top:.7rem;">Check answers</button>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Take one row at a time and carry the value forward.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Trace the steps</div><h2>' + esc(day.title || 'Work it through') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function checkTraceTable() {
+    var st = window._traceState;
+    if (!st || currentAnswered) return;
+    currentAnswered = true;
+    totalAnswered++;
+    var ins = document.querySelectorAll('.tt-in'), rows = st.q.rows || [], right = 0, k;
+    for (k = 0; k < ins.length; k++) {
+      var ri = parseInt(ins[k].getAttribute('data-r'), 10);
+      var want = fmStr((rows[ri] || [])[st.blank]).trim().toLowerCase();
+      var got = fmStr(ins[k].value).trim().toLowerCase();
+      ins[k].disabled = true;
+      if (got === want && got !== '') { right++; ins[k].style.borderColor = '#10b981'; ins[k].style.background = '#ecfdf5'; }
+      else {
+        ins[k].style.borderColor = '#ef4444'; ins[k].style.background = '#fef2f2';
+        ins[k].value = ins[k].value ? ins[k].value + '  →  ' + ((rows[ri] || [])[st.blank] || '') : ((rows[ri] || [])[st.blank] || '');
+      }
+    }
+    var all = right === ins.length && ins.length > 0;
+    var btn = document.getElementById('tt-check-btn');
+    if (btn) btn.disabled = true;
+    if (all) spawnConfetti();
+    handleResult(all, (all ? '' : right + ' of ' + ins.length + ' rows correct. ') + (st.q.explanation || ''), btn);
+    enableNext();
+  }
+
+  /* ESTIMATE — a number, judged inside a tolerance band. Reasoning to the
+     right order of magnitude is a different skill from computing an exact
+     value, and marking 47 wrong because the key says 50 tests neither. */
+  function renderEstimate(q) {
+    window._estimateState = { q: q };
+    var unit = q.unit ? '<span style="font-size:.9rem;color:var(--muted);margin-left:.45rem;">' + esc(q.unit) + '</span>' : '';
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#fff7ed;color:#c2410c;">Estimate</span>' +
+      '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
+      '<div class="q-text" style="margin-bottom:.8rem;">' + esc(q.question) + '</div>' +
+      '<div style="display:flex;align-items:center;margin-bottom:.6rem;">' +
+      '<input id="est-in" inputmode="decimal" placeholder="your estimate" ' +
+      'style="width:150px;padding:.55rem .7rem;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-size:.95rem;background:#fff;color:inherit;">' + unit + '</div>' +
+      '<button class="fill-submit" id="est-check-btn" onclick="checkEstimate()">Check answer</button>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Round the numbers to something easy, then adjust.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Estimate it</div><h2>' + esc(day.title || 'About how much?') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function checkEstimate() {
+    var st = window._estimateState;
+    if (!st || currentAnswered) return;
+    var el = document.getElementById('est-in');
+    if (!el) return;
+    var raw = fmStr(el.value).replace(/[, ]/g, '').replace(/[^0-9.eE+-]/g, '');
+    if (raw === '') return;                     // nothing typed: do not burn the attempt
+    currentAnswered = true;
+    totalAnswered++;
+    var got = parseFloat(raw);
+    var want = parseFloat(st.q.answer);
+    /* A tolerance of zero would make this an exact-answer card wearing an
+       estimate label, so fall back to 10% of the target. */
+    var tol = parseFloat(st.q.tolerance);
+    if (!isFinite(tol) || tol <= 0) tol = Math.abs(want) * 0.1;
+    var ok = isFinite(got) && isFinite(want) && Math.abs(got - want) <= tol;
+    el.disabled = true;
+    el.style.borderColor = ok ? '#10b981' : '#ef4444';
+    el.style.background = ok ? '#ecfdf5' : '#fef2f2';
+    var btn = document.getElementById('est-check-btn');
+    if (btn) btn.disabled = true;
+    var msg = ok ? '' : ('A good estimate was about ' + st.q.answer + (st.q.unit ? ' ' + st.q.unit : '') + '. ');
+    if (ok) spawnConfetti();
+    handleResult(ok, msg + (st.q.explanation || ''), btn);
+    enableNext();
+  }
+
   function renderScenario(q) {
     // Scenario questions have: question (the scenario text), options[], correctIndex
     var optHtml = (q.options || []).map(function(opt, i) {

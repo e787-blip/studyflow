@@ -1832,6 +1832,15 @@
     if (type === 'passage')   return '{"type":"passage","questionType":"' + (variant || 'main-idea') + '","passage":"","question":"","options":["","","",""],"correctIndex":' + idx + ',' + tail;
     if (type === 'errorspot') return '{"type":"errorspot","question":"Find the mistake:","steps":[{"text":"","hasError":false},{"text":"","hasError":false},{"text":"","hasError":true},{"text":"","hasError":false}],' + tail;
     if (type === 'wordproblem') return '{"type":"wordproblem","scenario":"","question":"","steps":[{"prompt":"","answer":"","unit":"","hint":""},{"prompt":"Now use {1} to find...","answer":"","unit":""}],"answer":"",' + tail;
+    /* The six research-backed formats. Shapes must match the renderers in
+       lesson.html exactly - a field the renderer does not read is dead, and a
+       field it needs but never receives is a blank card. */
+    if (type === 'twopart')     return '{"type":"twopart"' + (variant === 'passage' ? ',"passage":""' : '') + ',"question":"","options":["","","",""],"correctIndex":' + idx + ',"reasonPrompt":"' + (variant === 'passage' ? 'Which line from the text best supports that answer?' : 'Why is that the case?') + '","reasons":["","","",""],"reasonIndex":' + ((i + 2) % 4) + ',' + tail;
+    if (type === 'corroborate') return '{"type":"corroborate","sourceA":{"label":"Source A","text":""},"sourceB":{"label":"Source B","text":""},"question":"","options":["","","",""],"correctIndex":' + idx + ',' + tail;
+    if (type === 'highlight')   return '{"type":"highlight","question":"","sentences":["","","",""],"correctIndex":' + idx + ',' + tail;
+    if (type === 'tracetable')  return '{"type":"tracetable","question":"","setup":"","columns":["Step","Value"],"rows":[["1",""],["2",""],["3",""]],"blankCol":1,' + tail;
+    if (type === 'matchpairs')  return '{"type":"matchpairs","question":"Match each item to its pair.","pairs":[{"left":"","right":""},{"left":"","right":""},{"left":"","right":""},{"left":"","right":""}],' + tail;
+    if (type === 'estimate')    return '{"type":"estimate","question":"","answer":0,"tolerance":0,"unit":"",' + tail;
     return '';
   }
 
@@ -1847,7 +1856,9 @@
   var QTYPE_NAME = { mcq:'MCQ', truefalse:'True/False', fill:'Fill', write:'Write',
                      classify:'Classify', sequence:'Sequence', sentence:'Sentence builder',
                      passage:'Passage', errorspot:'Errorspot', scenario:'Scenario',
-                     wordproblem:'Wordproblem' };
+                     wordproblem:'Wordproblem', twopart:'Two-part', corroborate:'Corroborate',
+                     highlight:'Find-the-evidence', tracetable:'Trace table',
+                     matchpairs:'Match pairs', estimate:'Estimate' };
 
   /* The quota line the model reads is counted from the same list the schema is
      built from, so the two can no longer drift apart. They were two hand-kept
@@ -1885,143 +1896,143 @@
     science: [
       { key:'life', label:'Life science',
         terms:['cell','cells','biolog','organism','photosynthesis','respiration','genetic','dna','rna','evolution','ecosystem','enzyme','mitosis','meiosis','protein','bacteria','virus','plant','animal','digest','circulat','nervous','immune','heredity','chromosome'],
-        types:['sequence:process','sequence:process','classify','fill','fill','mcq','mcq','truefalse','write'],
+        types:['twopart','sequence:process','classify','matchpairs','fill','mcq','estimate','truefalse','write'],
         guide:'ASK: the order of a real process and what each stage produces, and what breaks if one stage fails. AVOID: naming a structure with no function attached.',
         visual:'a cycle or flow for a process, parts for a structure.' },
       { key:'physical', label:'Physical science',
         terms:['force','forces','motion','energy','atom','atoms','molecul','chemical','reaction','element','compound','physics','chemistry','electric','magnet','heat','thermal','wave','waves','light','sound','gravity','friction','momentum','acid','base','periodic'],
-        types:['mcq','mcq','mcq','fill','fill','classify','truefalse','truefalse','write'],
+        types:['twopart','estimate','tracetable','mcq','fill','classify','truefalse','mcq','write'],
         guide:'ASK: predict what happens to one quantity when another changes, and why. AVOID: recall of a definition with nothing to reason about.',
         visual:'a graph for a relationship, compare for two opposing cases.' },
       { key:'earth', label:'Earth and space science',
         terms:['earth','rock','rocks','mineral','volcan','earthquake','plate','tectonic','weather','climate','atmosphere','ocean','erosion','fossil','planet','solar','star','moon','space','galaxy','water cycle','carbon cycle'],
-        types:['sequence:process','sequence:process','classify','mcq','mcq','fill','fill','truefalse','write'],
+        types:['twopart','sequence:process','matchpairs','corroborate','mcq','fill','truefalse','classify','write'],
         guide:'ASK: how one stage of a cycle feeds the next, and what evidence shows it happened. AVOID: naming layers or categories with no process attached.',
         visual:'a cycle for anything that repeats, timeline for anything dated.' }
     ],
     english: [
       { key:'reading', label:'Reading comprehension',
         terms:['reading','comprehension','main idea','inference','infer','summar','nonfiction','informational','passage','central idea','text evidence','author.s purpose'],
-        types:['passage:main-idea','passage:inference','passage:vocab-in-context','passage:authors-purpose','mcq','fill','fill','write'],
+        types:['twopart:passage','highlight','passage:main-idea','passage:inference','passage:vocab-in-context','mcq','fill','write'],
         guide:'ASK: what the passage itself supports - the idea it builds, what it implies without stating, and what a word means in this sentence. Every question must be answerable from the passage alone. AVOID: outside knowledge, and opinion questions with no right answer.',
         visual:'a concept hub around the central idea, or compare for two viewpoints.' },
       { key:'grammar', label:'Grammar and mechanics',
         terms:['grammar','punctuation','comma','apostrophe','clause','sentence structure','subject.verb','agreement','tense','pronoun','modifier','fragment','run.on','capitali[sz]','spelling','mechanics','parts of speech'],
-        types:['sentence','sentence','sentence','fill','fill','fill','mcq','mcq','write'],
+        types:['highlight','sentence','sentence','matchpairs','fill','fill','mcq','twopart','write'],
         guide:'ASK: the learner to build or repair a real sentence. Every question needs an actual sentence in it. AVOID: asking what a term means in the abstract - naming the rule is not applying it.',
         visual:'compare a correct and an incorrect form side by side.' },
       { key:'literature', label:'Literary analysis',
         terms:['literature','literary','novel','poem','poetry','shakespeare','theme','symbol','metaphor','character','narrat','imagery','tone','motif','protagonist','setting','plot','figurative'],
-        types:['passage:evidence','passage:tone','write','write','mcq','mcq','fill','fill','truefalse'],
+        types:['corroborate','twopart:passage','highlight','passage:evidence','write','mcq','fill','matchpairs','truefalse'],
         guide:'ASK: what a specific choice achieves in a specific passage, with the text quoted in the question. AVOID: naming a device with no text attached to it.',
         visual:'a concept hub for theme, compare for two characters, timeline for plot.' }
     ],
     history: [
       { key:'civics', label:'Civics and government',
         terms:['civics','government','constitution','congress','senate','parliament','bill','law','court','supreme','amendment','voting','election','democracy','citizen','branch','federal','judicial','legislat','executive','rights'],
-        types:['sequence:process','classify','scenario','passage:sourcing','passage:perspective','mcq','mcq','fill','truefalse'],
+        types:['twopart','sequence:process','highlight','matchpairs','scenario','passage:sourcing','mcq','fill','truefalse'],
         guide:'ASK: how a process actually moves - who acts, in what order, and what stops it. Apply a rule to a short concrete case. AVOID: counting seats or naming office-holders as trivia.',
         visual:'a flow for how a process moves, hierarchy for who answers to whom.' },
       { key:'social', label:'Social and economic history',
         terms:['industrial','immigration','migration','labor','labour','slavery','civil rights','women','social','economic','trade','agricultur','urban','class','reform','movement','protest','population'],
-        types:['passage:sourcing','passage:cause-effect','classify','classify','mcq','mcq','write','fill','truefalse'],
+        types:['corroborate','twopart','passage:cause-effect','classify','mcq','write','fill','highlight','truefalse'],
         guide:'ASK: what changed for ordinary people and why, and which groups experienced it differently. AVOID: a single national story with no one in it.',
         visual:'compare before and after, or a bar chart when the notes carry real figures.' },
       { key:'era', label:'Events and eras',
         fallback:true,
-        types:['passage:sourcing','passage:cause-effect','passage:perspective','sequence:chronology','mcq','mcq','classify','fill','truefalse'],
+        types:['corroborate','passage:sourcing','passage:cause-effect','sequence:chronology','twopart','mcq','classify','fill','matchpairs'],
         guide:'ASK: causes, consequences, motives and order. Tie an event to what it produced. AVOID: bare date recall unless the notes stress the chronology.',
         visual:'a timeline for anything dated, flow for a causal chain.' }
     ],
     geography: [
       { key:'physical', label:'Physical geography',
         terms:['river','rivers','mountain','glacier','erosion','delta','climate','weather','biome','desert','rainforest','tectonic','volcano','earthquake','coast','landform','ecosystem','monsoon','hydrolog'],
-        types:['sequence:process','sequence:process','classify','mcq','mcq','fill','fill','truefalse','write'],
+        types:['twopart','sequence:process','estimate','matchpairs','mcq','fill','classify','truefalse','write'],
         guide:'ASK: how a physical process produces the landform or pattern you can observe, and where. AVOID: naming a feature with no process behind it.',
         visual:'a cycle or flow for the process, map only for real named places.' },
       { key:'human', label:'Human geography',
         terms:['population','urban','city','cities','migration','settlement','development','economy','culture','resource','agriculture','industry','globali[sz]','density','trade','tourism'],
-        types:['scenario','classify','classify','mcq','mcq','fill','fill','write','truefalse'],
+        types:['twopart','scenario','estimate','classify','mcq','fill','write','matchpairs','truefalse'],
         guide:'ASK: why people are where they are, and what happens when one pressure changes. AVOID: capital-city trivia unless the notes are about capitals.',
         visual:'compare two places, or a bar chart when the notes carry real figures.' },
       { key:'maps', label:'Maps and regions',
         terms:['map','maps','atlas','latitude','longitude','coordinate','scale','projection','continent','region','border','country','countries','capital','hemisphere','compass'],
-        types:['mcq','mcq','mcq','fill','fill','classify','truefalse','truefalse','write'],
+        types:['estimate','matchpairs','twopart','mcq','fill','classify','truefalse','highlight','write'],
         guide:'ASK: where something is relative to something else, and what that position causes. AVOID: lists of names with nothing following from them.',
         visual:'a map, but only with real place names the notes use.' }
     ],
     psychology: [
       { key:'methods', label:'Research methods',
         terms:['research','method','experiment','variable','control','hypothesis','sampling','correlation','causation','validity','reliability','ethic','bias','placebo','double.blind','statistic'],
-        types:['scenario','scenario','classify','mcq','mcq','truefalse','truefalse','fill','write'],
+        types:['twopart','corroborate','scenario','classify','mcq','truefalse','fill','write','matchpairs'],
         guide:'ASK: judge a described study - what is wrong with it, what it can and cannot show. AVOID: definitions of method terms with no study attached.',
         visual:'compare two study designs, or a 2x2 matrix for variable types.' },
       { key:'bioCog', label:'Biological and cognitive',
         terms:['brain','neuron','neural','cortex','memory','cognit','perception','attention','sensation','encoding','retrieval','sleep','conditioning','learning','language','neurotransmitter','hormone'],
-        types:['sequence:process','fill','fill','mcq','mcq','mcq','truefalse','write','classify'],
+        types:['twopart','sequence:process','matchpairs','fill','mcq','truefalse','write','classify','estimate'],
         guide:'ASK: the path information takes and where it breaks down. AVOID: asking who discovered something, which tests trivia rather than understanding.',
         visual:'a flow for a processing path, parts for brain structure.' },
       { key:'social', label:'Social and developmental',
         terms:['social','develop','child','adolescen','attachment','personality','group','conform','obedien','attitude','prejudice','stage','moral','identity','therapy','disorder','stress'],
-        types:['scenario','scenario','mcq','mcq','classify','fill','fill','write','truefalse'],
+        types:['twopart','scenario','scenario','matchpairs','classify','fill','write','truefalse','mcq'],
         guide:'ASK: apply a named theory or effect to a short concrete situation. AVOID: naming a stage without what it predicts.',
         visual:'a hierarchy for staged theories, concept hub for an idea and its parts.' }
     ],
     economics: [
       { key:'personal', label:'Personal finance',
         terms:['budget','saving','savings','credit','debt','loan','interest rate','compound interest','invest','tax','taxes','income','salary','insurance','bank','mortgage','personal finance'],
-        types:['wordproblem','wordproblem','scenario','fill','fill','mcq','mcq','truefalse','write'],
+        types:['estimate','wordproblem','twopart','tracetable','fill','mcq','truefalse','write','matchpairs'],
         guide:'ASK: work the actual figures from the notes - what it costs, what it grows to, what is left. AVOID: definitions with no money in them.',
         visual:'a bar chart or graph, but only with real figures from the notes.' },
       { key:'macro', label:'Macroeconomics',
         terms:['gdp','inflation','unemployment','fiscal','monetary','central bank','federal reserve','recession','growth','trade deficit','tariff','exchange rate','macro','national income','business cycle'],
-        types:['wordproblem','mcq','mcq','mcq','classify','fill','fill','truefalse','write'],
+        types:['twopart','estimate','wordproblem','mcq','classify','fill','truefalse','write','matchpairs'],
         guide:'ASK: what happens to output, prices or employment when one lever moves, and in which direction. AVOID: definition-only questions with no change to reason about.',
         visual:'a graph for a trend, flow for a causal chain.' },
       { key:'micro', label:'Microeconomics',
         fallback:true,
-        types:['wordproblem','scenario','classify','mcq','mcq','fill','fill','truefalse','write'],
+        types:['twopart','estimate','wordproblem','scenario','classify','mcq','fill','truefalse','write'],
         guide:'ASK: what happens to price, quantity or incentives when one thing changes, and why. Direction of movement matters more than a number. AVOID: definition-only questions.',
         visual:'a supply-demand template, or compare two market cases.' }
     ],
     cs: [
       { key:'programming', label:'Programming fundamentals',
         terms:['variable','loop','loops','function','conditional','if statement','syntax','debug','python','javascript','java','code','coding','program','string','array','input','output','boolean','operator'],
-        types:['errorspot','sequence:trace','mcq','mcq','fill','write','truefalse','truefalse','classify'],
+        types:['tracetable','twopart','errorspot','sequence:trace','mcq','fill','write','truefalse','matchpairs'],
         guide:'ASK: trace what the code does line by line with a given input, or find the one line that breaks it. AVOID: syntax trivia a reference would answer.',
         visual:'a flow for control flow, compare for two versions of the code.' },
       { key:'algorithms', label:'Algorithms and data structures',
         terms:['algorithm','sort','sorting','search','recursion','recursive','complexity','big.o','stack','queue','tree','graph','hash','linked list','data structure','traversal','binary'],
-        types:['sequence:trace','classify','mcq','mcq','mcq','write','errorspot','fill','truefalse'],
+        types:['tracetable','twopart','estimate','sequence:trace','classify','mcq','write','errorspot','matchpairs'],
         guide:'ASK: the order of steps on a concrete input, and which approach costs more as the input grows. AVOID: quoting a complexity without reasoning to it.',
         visual:'a flow for the steps, graph for how cost grows, compare for two approaches.' },
       { key:'systems', label:'Theory and systems',
         fallback:true,
-        types:['classify','mcq','mcq','mcq','truefalse','truefalse','fill','fill','write'],
+        types:['twopart','matchpairs','classify','mcq','truefalse','fill','write','estimate','highlight'],
         guide:'ASK: how two things differ and when each is used. AVOID: acronym expansion as an end in itself.',
         visual:'a hierarchy for layered systems, compare for two designs.' }
     ],
     language: [
       { key:'grammar', label:'Grammar and conjugation',
         terms:['conjugat','tense','verb','grammar','gender','plural','article','pronoun','adjective','agreement','preterite','subjunctive','imperfect','case','declension','past tense','present tense'],
-        types:['sentence','sentence','sentence','fill','fill','mcq','mcq','truefalse','write'],
+        types:['matchpairs','sentence','sentence','highlight','fill','fill','mcq','twopart','truefalse'],
         guide:'ASK: produce or correct a real sentence - conjugate it, fix it, reorder it. AVOID: asking about grammar terminology in the abstract.',
         visual:'compare two forms, or a 2x2 matrix for a conjugation pattern.' },
       { key:'reading', label:'Reading and conversation',
         terms:['reading','conversation','dialogue','listening','comprehension','phrase','greeting','culture','speaking','travel','ordering','directions'],
-        types:['passage:main-idea','passage:inference','sentence','mcq','mcq','fill','fill','truefalse','write'],
+        types:['highlight','passage:main-idea','twopart:passage','sentence','matchpairs','mcq','fill','truefalse','write'],
         guide:'ASK: what a short passage or exchange actually says, and how to respond in the language. AVOID: translating isolated words with no context.',
         visual:'compare two ways of saying the same thing.' },
       { key:'vocab', label:'Vocabulary',
         fallback:true,
-        types:['fill','fill','fill','mcq','mcq','mcq','sentence','truefalse','write'],
+        types:['matchpairs','matchpairs','fill','fill','mcq','mcq','sentence','twopart','truefalse'],
         guide:'ASK: the word used inside a sentence that fixes its meaning. AVOID: bare word-to-word pairs with no context.',
         visual:'a concept hub grouping words by theme.' }
     ],
     general: [
       { key:'study', label:'Study skills',
         terms:['study','studying','revision','revise','note.taking','memor','exam technique','time management','productivity','habit','focus','procrastinat','flashcard','recall'],
-        types:['scenario','scenario','mcq','mcq','fill','fill','write','truefalse','classify'],
+        types:['twopart','scenario','scenario','matchpairs','mcq','fill','write','truefalse','highlight'],
         guide:'ASK: apply the technique to a described situation and say what to do next. AVOID: asking which technique is best in the abstract.',
         visual:'a flow for a routine, compare for two techniques.' }
     ]
@@ -2469,6 +2480,68 @@
           }
           return true;
         }
+        if (q.type === 'twopart') {
+          var tpO = (q.options || []).filter(function(o){ return o && String(o).trim(); });
+          var tpR = (q.reasons || []).filter(function(o){ return o && String(o).trim(); });
+          if (!qText || tpO.length < 2 || tpR.length < 2) return false;
+          if (typeof q.correctIndex !== 'number' || q.correctIndex < 0 || q.correctIndex >= q.options.length) q.correctIndex = 0;
+          if (typeof q.reasonIndex !== 'number' || q.reasonIndex < 0 || q.reasonIndex >= q.reasons.length) q.reasonIndex = 0;
+          return true;
+        }
+        if (q.type === 'corroborate') {
+          var sA = q.sourceA || {}, sB = q.sourceB || {};
+          if (String(sA.text || '').trim().length < 15 || String(sB.text || '').trim().length < 15) return false;
+          var coO = (q.options || []).filter(function(o){ return o && String(o).trim(); });
+          if (!qText || coO.length < 2) return false;
+          if (typeof q.correctIndex !== 'number' || q.correctIndex < 0 || q.correctIndex >= q.options.length) q.correctIndex = 0;
+          return true;
+        }
+        if (q.type === 'highlight') {
+          var hs = (q.sentences || []).filter(function(o){ return o && String(o).trim(); });
+          if (!qText || hs.length < 3) return false;
+          q.sentences = q.sentences.filter(function(o){ return o && String(o).trim(); });
+          if (typeof q.correctIndex !== 'number' || q.correctIndex < 0 || q.correctIndex >= q.sentences.length) q.correctIndex = 0;
+          return true;
+        }
+        if (q.type === 'tracetable') {
+          if (!qText || !Array.isArray(q.columns) || q.columns.length < 2) return false;
+          if (!Array.isArray(q.rows)) return false;
+          /* Every row must be as wide as the header, or the blank column lands
+             on a cell that does not exist and the card renders a short row. */
+          q.rows = q.rows.filter(function(r){ return Array.isArray(r) && r.length === q.columns.length; });
+          if (q.rows.length < 2) return false;
+          if (typeof q.blankCol !== 'number' || q.blankCol < 0 || q.blankCol >= q.columns.length) q.blankCol = q.columns.length - 1;
+          /* The blanked cells are the answer key: a row with nothing there
+             cannot be graded. */
+          var bc = q.blankCol;
+          if (q.rows.some(function(r){ return !String(r[bc] == null ? '' : r[bc]).trim(); })) return false;
+          return true;
+        }
+        if (q.type === 'matchpairs') {
+          var pp = (q.pairs || []).filter(function(p){ return p && String(p.left || '').trim() && String(p.right || '').trim(); });
+          if (pp.length < 3) return false;
+          /* Two identical right-hand values make two rows indistinguishable,
+             so one of them is graded wrong whatever the learner picks. */
+          var seenR = {}, k2;
+          for (k2 = 0; k2 < pp.length; k2++) {
+            var rv = String(pp[k2].right).trim().toLowerCase();
+            if (seenR[rv]) return false;
+            seenR[rv] = 1;
+          }
+          q.pairs = pp;
+          return true;
+        }
+        if (q.type === 'estimate') {
+          if (!qText) return false;
+          var ev = parseFloat(q.answer);
+          if (!isFinite(ev)) return false;
+          q.answer = ev;
+          var et = parseFloat(q.tolerance);
+          /* Zero tolerance would make this an exact-answer card wearing an
+             estimate label. */
+          q.tolerance = (isFinite(et) && et > 0) ? et : Math.abs(ev) * 0.1;
+          return true;
+        }
         if (q.type === 'write') return !!(qText && qText.length > 3);
         /* A passage card is the passage. Without one the learner gets an empty
            quote block above four options about a text they were never shown -
@@ -2796,6 +2869,27 @@
         'BAD (instruction, not a sentence): {"type":"fill","question":"Order these events chronologically to show the Silk Road ________"}\n' +
         'BAD (no context, ambiguous): {"type":"fill","question":"________ is important."}\n' +
         'BAD (answer is a whole sentence): {"type":"fill","question":"Explain the Silk Road ________","answer":"It was a trade route that connected..."}\n' +
+        /* The six newer formats carry fields the model has never been asked
+           for before. The schema shows their shape; this says what belongs in
+           them, because a two-part question whose Part B does not actually
+           justify Part A is the one failure that looks fine in the JSON. */
+        '\nTHE SIX EXTENDED FORMATS - what goes in each field:\n' +
+        'twopart: Part A is the question; "reasons" are four explanations, and reasonIndex\n' +
+        '  must be the one that genuinely justifies the option at correctIndex. The other\n' +
+        '  three must be wrong REASONS, not wrong facts - a common misconception is ideal.\n' +
+        '  When "passage" is present, the reasons must be lines or paraphrases FROM it.\n' +
+        'corroborate: two SHORT sources (1-2 sentences) that genuinely differ in claim,\n' +
+        '  emphasis or perspective. If both say the same thing there is nothing to ask.\n' +
+        'highlight: "sentences" are 4 sentences of a passage; correctIndex is the ONE that\n' +
+        '  states the evidence the question asks for. The others must be from the same text.\n' +
+        'tracetable: "setup" is the procedure (code, a rule, a formula). "columns" names each\n' +
+        '  column, "rows" gives every cell, and blankCol is the column the learner fills in.\n' +
+        '  Every row must have exactly as many cells as there are columns, and the blanked\n' +
+        '  cells must be correct - they are the answer key.\n' +
+        'matchpairs: 3-5 pairs. Every "right" value must be DIFFERENT from every other, or\n' +
+        '  two rows become indistinguishable and one is marked wrong whatever is chosen.\n' +
+        'estimate: "answer" is a number from the notes and "tolerance" is how far off is\n' +
+        '  still fine (about 10%). Use it where reasoning to the right ballpark is the skill.\n' +
         '\nVISUAL (field "visual") - pick the ONE diagram type that genuinely fits this topic and fill it with REAL content from the notes. Never invent filler labels. Use exactly one of:\n' +
         '{"type":"timeline","items":["1914: war begins","1918: armistice signed"]}  <- dates/eras\n' +
         '{"type":"flow","items":["Tariffs rise","Southern states protest","Secession"],"label":"Cause and effect"}  <- causal chains, processes\n' +

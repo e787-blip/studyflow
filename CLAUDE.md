@@ -87,7 +87,12 @@ Keep the two lists identical.
 
 ### Subject → question type matrix
 
-10 subject types, 12 question types. Schemas live in `app.html`.
+10 subject types, **18 question types**. Schemas live in `app.html`.
+
+The original 12 are `mcq`, `truefalse`, `fill`, `write`, `classify`, `sequence`,
+`sentence`, `passage`, `errorspot`, `scenario`, `wordproblem`, `bigequation`.
+Six more were added for formats those could not express — see
+**Extended formats** below.
 
 | Subject | Types generated |
 |---|---|
@@ -110,9 +115,53 @@ Every type has a renderer (`renderFill`, `renderBigEquation`, `renderPassage`,
 `renderWrite`, `renderClassify`, `renderScenario`, `renderWordProblem`,
 `renderGraph`, `renderQuestion`) dispatched by `card.type` in `renderCardInner`.
 
-**If you add a question type, you must touch four places:** the schema in
-`app.html`, `SPECIAL_TYPES` + `SPECIAL_TYPES_PRETEST`, an injector in
-`buildQueue`, and a renderer plus its dispatch case.
+**If you add a question type, you must touch eight places.** The old note said
+four; four is what the compiler would catch if this had one. The full list:
+
+1. `qtpl()` in `app.html` — the JSON fragment. Its shape must match the
+   renderer field for field.
+2. `QTYPE_NAME` in `app.html`, or the quota line prints a raw slug.
+3. A branch in `sanitizeDayQuestions` in `app.html`. Without one the type falls
+   through to the unknown-type catch-all, which only checks that question text
+   exists — so a malformed card reaches a renderer intact.
+4. `SPECIAL_TYPES` **and** `SPECIAL_TYPES_PRETEST` in `lesson.html`, identical.
+5. `DIRECT` in `cardTypeFor`, or the card is served as a generic question.
+6. An injector in `buildQueue` — ungated on subject.
+7. A renderer plus its `renderCardInner` dispatch case.
+8. A `feynmanConcept()` case, or the teach-it-back card prints the raw stem
+   (invariant 4).
+
+Anything with its own check button also belongs in `submitControl()`'s id list,
+or Enter and Cmd-Enter will not reach it.
+
+### Extended formats
+
+Six formats, each a distinct interaction rather than a relabelled MCQ, and each
+reused across every subject whose material has that shape. That is why there are
+six rather than one per subject — two-tier diagnostics (science) and
+evidence-based selected response (English) are the same card.
+
+| Type | Interaction | Used by |
+|---|---|---|
+| `twopart` | Part A answer, then Part B reason or text evidence; Part B is hidden until A is committed, and credit needs both | science, english, history, psychology, economics, geography, cs, language, general |
+| `corroborate` | two short sources side by side, asked what they disagree about | history, english, science, psychology |
+| `highlight` | pick the one sentence that carries the evidence | english, history, geography, cs, language, general |
+| `tracetable` | run a procedure by hand, filling one column of a table | cs, science, economics |
+| `matchpairs` | model-authored matching, one `<select>` per row | every subject except math |
+| `estimate` | a number judged inside a tolerance band | math-adjacent subjects: science, geography, economics, cs, psychology |
+
+**Math deliberately uses none of them.** Its mix is governed by `MATH_MIX` and
+the synthesis floor, and adding a non-core type lowers the solving share — the
+same reason invariant 1 forbids adding to `MATH_CORE_TYPES`.
+
+Two gotchas already paid for:
+
+- **Option lists need `<div class="q-options">` around them.** A bare `<button
+  class="q-option">` sizes to its text; the full-width look comes from that
+  wrapper being a column flexbox.
+- **`esc()` in block 1 replaces newlines with spaces** — it is written for
+  attribute and JS-string contexts. It collapsed a whole procedure onto one line
+  inside `tracetable`'s `<pre>`. Escape line by line and rejoin.
 
 ### Subtopics
 
