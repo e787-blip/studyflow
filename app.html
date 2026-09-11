@@ -1810,6 +1810,239 @@
      bigequation, wordproblem, errorspot, write. Subjects whose content is
      DECLARATIVE get retrieval formats - mcq, truefalse, fill. Most subjects
      need both, in the proportion their content actually demands. */
+  /* ── QUESTION TYPE TEMPLATES ──────────────────────────────────────────────
+     One JSON fragment per question type, so a subject's mix can be written as
+     a list of type names instead of a hand-assembled 2000-character string.
+     Every name here has a renderer in lesson.html; a name with no renderer is
+     queued and then silently skipped, so do not invent one. */
+  function qtpl(entry, d, i) {
+    var bits = String(entry).split(':'), type = bits[0], variant = bits[1] || '';
+    var tail = '"hint":"","explanation":"","difficulty":"' + d + '"}';
+    /* Rotate the key so a subject's answers are not all option A / all True -
+       the model anchors hard on a repeated correctIndex. */
+    var idx = i % 4;
+    if (type === 'mcq')       return '{"type":"mcq","question":"","options":["","","",""],"correctIndex":' + idx + ',' + tail;
+    if (type === 'scenario')  return '{"type":"scenario","question":"","options":["","","",""],"correctIndex":' + idx + ',' + tail;
+    if (type === 'truefalse') return '{"type":"truefalse","question":"","correct":"' + (i % 2 ? 'False' : 'True') + '",' + tail;
+    if (type === 'fill')      return '{"type":"fill","question":"","answer":"",' + tail;
+    if (type === 'write')     return '{"type":"write","question":"","modelAnswer":"",' + tail;
+    if (type === 'classify')  return '{"type":"classify","question":"Sort:","categoryA":"","categoryB":"","itemsA":["","",""],"itemsB":["","",""],' + tail;
+    if (type === 'sequence')  return '{"type":"sequence","question":"Put these in the order they happen:","items":["","","",""],' + tail;
+    if (type === 'sentence')  return '{"type":"sentence","question":"","words":["","",""],"translation":"",' + tail;
+    if (type === 'passage')   return '{"type":"passage","questionType":"' + (variant || 'main-idea') + '","passage":"","question":"","options":["","","",""],"correctIndex":' + idx + ',' + tail;
+    if (type === 'errorspot') return '{"type":"errorspot","question":"Find the mistake:","steps":[{"text":"","hasError":false},{"text":"","hasError":false},{"text":"","hasError":true},{"text":"","hasError":false}],' + tail;
+    if (type === 'wordproblem') return '{"type":"wordproblem","scenario":"","question":"","steps":[{"prompt":"","answer":"","unit":"","hint":""},{"prompt":"Now use {1} to find...","answer":"","unit":""}],"answer":"",' + tail;
+    return '';
+  }
+
+  function buildQuestionSchema(types, d) {
+    var out = [], i, frag;
+    for (i = 0; i < types.length; i++) {
+      frag = qtpl(types[i], d, i);
+      if (frag) out.push(frag);
+    }
+    return out.join(',');
+  }
+
+  var QTYPE_NAME = { mcq:'MCQ', truefalse:'True/False', fill:'Fill', write:'Write',
+                     classify:'Classify', sequence:'Sequence', sentence:'Sentence builder',
+                     passage:'Passage', errorspot:'Errorspot', scenario:'Scenario',
+                     wordproblem:'Wordproblem' };
+
+  /* The quota line the model reads is counted from the same list the schema is
+     built from, so the two can no longer drift apart. They were two hand-kept
+     strings before, and a tally that disagrees with the schema is read by the
+     model as permission to improvise. */
+  function tallyFor(types) {
+    var order = [], counts = {}, i, base;
+    for (i = 0; i < types.length; i++) {
+      base = String(types[i]).split(':')[0];
+      if (!counts[base]) { counts[base] = 0; order.push(base); }
+      counts[base]++;
+    }
+    var parts = [];
+    for (i = 0; i < order.length; i++) {
+      parts.push(counts[order[i]] + ' ' + (QTYPE_NAME[order[i]] || order[i]));
+    }
+    return parts.join(', ');
+  }
+
+  /* ── SUBTOPICS ────────────────────────────────────────────────────────────
+     A subject is not one kind of knowledge. "English" is reading comprehension
+     one week and comma splices the next, and the same nine-question mix serves
+     neither well. Each entry sets the formats, what to ask, and which diagram
+     shape suits the material.
+
+     Tested in order, FIRST MATCH WINS, so the narrower pattern must come
+     first - the same trap the subject classifier hit, where a bare nationality
+     word sent "Causes of the French Revolution" to `language`.
+
+     Formats are drawn only from the twelve types that already have renderers.
+     bigequation and wordproblem stay inside math and economics: a question
+     belongs to its subject, and those two formats recast anything numeric as
+     arithmetic. */
+  var SUBTOPICS = {
+    science: [
+      { key:'life', label:'Life science',
+        test:/\b(cell|cells\w*|biolog\w*|organism\w*|photosynthesis\w*|respiration\w*|genetic\w*|dna|rna|evolution\w*|ecosystem\w*|enzyme\w*|mitosis\w*|meiosis\w*|protein\w*|bacteria\w*|virus\w*|plant\w*|animal\w*|digest\w*|circulat\w*|nervous\w*|immune\w*|heredity\w*|chromosome\w*)/,
+        types:['sequence:process','sequence:process','classify','fill','fill','mcq','mcq','truefalse','write'],
+        guide:'ASK: the order of a real process and what each stage produces, and what breaks if one stage fails. AVOID: naming a structure with no function attached.',
+        visual:'a cycle or flow for a process, parts for a structure.' },
+      { key:'physical', label:'Physical science',
+        test:/\b(force\w*|forces\w*|motion\w*|energy\w*|atom|atoms\w*|molecul\w*|chemical\w*|reaction\w*|element\w*|compound\w*|physics\w*|chemistry\w*|electric\w*|magnet\w*|heat|thermal\w*|wave|waves\w*|light\w*|sound\w*|gravity\w*|friction\w*|momentum\w*|acid|base|periodic\w*)/,
+        types:['mcq','mcq','mcq','fill','fill','classify','truefalse','truefalse','write'],
+        guide:'ASK: predict what happens to one quantity when another changes, and why. AVOID: recall of a definition with nothing to reason about.',
+        visual:'a graph for a relationship, compare for two opposing cases.' },
+      { key:'earth', label:'Earth and space science',
+        test:/\b(earth\w*|rock|rocks\w*|mineral\w*|volcan\w*|earthquake\w*|plate\w*|tectonic\w*|weather\w*|climate\w*|atmosphere\w*|ocean\w*|erosion\w*|fossil\w*|planet\w*|solar\w*|star|moon|space\w*|galaxy\w*|water cycle\w*|carbon cycle\w*)/,
+        types:['sequence:process','sequence:process','classify','mcq','mcq','fill','fill','truefalse','write'],
+        guide:'ASK: how one stage of a cycle feeds the next, and what evidence shows it happened. AVOID: naming layers or categories with no process attached.',
+        visual:'a cycle for anything that repeats, timeline for anything dated.' }
+    ],
+    english: [
+      { key:'reading', label:'Reading comprehension',
+        test:/\b(reading\w*|comprehension\w*|main idea\w*|inference\w*|infer\w*|summar\w*|nonfiction\w*|informational\w*|passage\w*|central idea\w*|text evidence\w*|author.s purpose\w*)/,
+        types:['passage:main-idea','passage:inference','passage:vocab-in-context','passage:authors-purpose','mcq','fill','fill','write'],
+        guide:'ASK: what the passage itself supports - the idea it builds, what it implies without stating, and what a word means in this sentence. Every question must be answerable from the passage alone. AVOID: outside knowledge, and opinion questions with no right answer.',
+        visual:'a concept hub around the central idea, or compare for two viewpoints.' },
+      { key:'grammar', label:'Grammar and mechanics',
+        test:/\b(grammar\w*|punctuation\w*|comma\w*|apostrophe\w*|clause\w*|sentence structure\w*|subject.verb\w*|agreement\w*|tense\w*|pronoun\w*|modifier\w*|fragment\w*|run.on\w*|capitali[sz]\w*|spelling\w*|mechanics\w*|parts of speech\w*)/,
+        types:['sentence','sentence','sentence','fill','fill','fill','mcq','mcq','write'],
+        guide:'ASK: the learner to build or repair a real sentence. Every question needs an actual sentence in it. AVOID: asking what a term means in the abstract - naming the rule is not applying it.',
+        visual:'compare a correct and an incorrect form side by side.' },
+      { key:'literature', label:'Literary analysis',
+        test:/\b(literature\w*|literary\w*|novel\w*|poem|poetry\w*|shakespeare\w*|theme\w*|symbol\w*|metaphor\w*|character\w*|narrat\w*|imagery\w*|tone|motif\w*|protagonist\w*|setting\w*|plot|figurative\w*)/,
+        types:['passage:evidence','passage:tone','write','write','mcq','mcq','fill','fill','truefalse'],
+        guide:'ASK: what a specific choice achieves in a specific passage, with the text quoted in the question. AVOID: naming a device with no text attached to it.',
+        visual:'a concept hub for theme, compare for two characters, timeline for plot.' }
+    ],
+    history: [
+      { key:'civics', label:'Civics and government',
+        test:/\b(civics\w*|government\w*|constitution\w*|congress\w*|senate\w*|parliament\w*|bill|law|court\w*|supreme\w*|amendment\w*|voting\w*|election\w*|democracy\w*|citizen\w*|branch\w*|federal\w*|judicial\w*|legislat\w*|executive\w*|rights\w*)/,
+        types:['sequence:process','classify','scenario','passage:sourcing','passage:perspective','mcq','mcq','fill','truefalse'],
+        guide:'ASK: how a process actually moves - who acts, in what order, and what stops it. Apply a rule to a short concrete case. AVOID: counting seats or naming office-holders as trivia.',
+        visual:'a flow for how a process moves, hierarchy for who answers to whom.' },
+      { key:'social', label:'Social and economic history',
+        test:/\b(industrial\w*|immigration\w*|migration\w*|labor\w*|labour\w*|slavery\w*|civil rights\w*|women\w*|social\w*|economic\w*|trade\w*|agricultur\w*|urban\w*|class\w*|reform\w*|movement\w*|protest\w*|population\w*)/,
+        types:['passage:sourcing','passage:cause-effect','classify','classify','mcq','mcq','write','fill','truefalse'],
+        guide:'ASK: what changed for ordinary people and why, and which groups experienced it differently. AVOID: a single national story with no one in it.',
+        visual:'compare before and after, or a bar chart when the notes carry real figures.' },
+      { key:'era', label:'Events and eras',
+        test:/./,
+        types:['passage:sourcing','passage:cause-effect','passage:perspective','sequence:chronology','mcq','mcq','classify','fill','truefalse'],
+        guide:'ASK: causes, consequences, motives and order. Tie an event to what it produced. AVOID: bare date recall unless the notes stress the chronology.',
+        visual:'a timeline for anything dated, flow for a causal chain.' }
+    ],
+    geography: [
+      { key:'physical', label:'Physical geography',
+        test:/\b(river\w*|rivers\w*|mountain\w*|glacier\w*|erosion\w*|delta\w*|climate\w*|weather\w*|biome\w*|desert\w*|rainforest\w*|tectonic\w*|volcano\w*|earthquake\w*|coast\w*|landform\w*|ecosystem\w*|monsoon\w*|hydrolog\w*)/,
+        types:['sequence:process','sequence:process','classify','mcq','mcq','fill','fill','truefalse','write'],
+        guide:'ASK: how a physical process produces the landform or pattern you can observe, and where. AVOID: naming a feature with no process behind it.',
+        visual:'a cycle or flow for the process, map only for real named places.' },
+      { key:'human', label:'Human geography',
+        test:/\b(population\w*|urban\w*|city|cities\w*|migration\w*|settlement\w*|development\w*|economy\w*|culture\w*|resource\w*|agriculture\w*|industry\w*|globali[sz]\w*|density\w*|trade\w*|tourism\w*)/,
+        types:['scenario','classify','classify','mcq','mcq','fill','fill','write','truefalse'],
+        guide:'ASK: why people are where they are, and what happens when one pressure changes. AVOID: capital-city trivia unless the notes are about capitals.',
+        visual:'compare two places, or a bar chart when the notes carry real figures.' },
+      { key:'maps', label:'Maps and regions',
+        test:/\b(map|maps|atlas\w*|latitude\w*|longitude\w*|coordinate\w*|scale\w*|projection\w*|continent\w*|region\w*|border\w*|country\w*|countries\w*|capital\w*|hemisphere\w*|compass\w*)/,
+        types:['mcq','mcq','mcq','fill','fill','classify','truefalse','truefalse','write'],
+        guide:'ASK: where something is relative to something else, and what that position causes. AVOID: lists of names with nothing following from them.',
+        visual:'a map, but only with real place names the notes use.' }
+    ],
+    psychology: [
+      { key:'methods', label:'Research methods',
+        test:/\b(research\w*|method\w*|experiment\w*|variable\w*|control\w*|hypothesis\w*|sampling\w*|correlation\w*|causation\w*|validity\w*|reliability\w*|ethic\w*|bias|placebo\w*|double.blind\w*|statistic\w*)/,
+        types:['scenario','scenario','classify','mcq','mcq','truefalse','truefalse','fill','write'],
+        guide:'ASK: judge a described study - what is wrong with it, what it can and cannot show. AVOID: definitions of method terms with no study attached.',
+        visual:'compare two study designs, or a 2x2 matrix for variable types.' },
+      { key:'bioCog', label:'Biological and cognitive',
+        test:/\b(brain\w*|neuron\w*|neural\w*|cortex\w*|memory\w*|cognit\w*|perception\w*|attention\w*|sensation\w*|encoding\w*|retrieval\w*|sleep\w*|conditioning\w*|learning\w*|language\w*|neurotransmitter\w*|hormone\w*)/,
+        types:['sequence:process','fill','fill','mcq','mcq','mcq','truefalse','write','classify'],
+        guide:'ASK: the path information takes and where it breaks down. AVOID: asking who discovered something, which tests trivia rather than understanding.',
+        visual:'a flow for a processing path, parts for brain structure.' },
+      { key:'social', label:'Social and developmental',
+        test:/\b(social\w*|develop\w*|child\w*|adolescen\w*|attachment\w*|personality\w*|group\w*|conform\w*|obedien\w*|attitude\w*|prejudice\w*|stage\w*|moral\w*|identity\w*|therapy\w*|disorder\w*|stress\w*)/,
+        types:['scenario','scenario','mcq','mcq','classify','fill','fill','write','truefalse'],
+        guide:'ASK: apply a named theory or effect to a short concrete situation. AVOID: naming a stage without what it predicts.',
+        visual:'a hierarchy for staged theories, concept hub for an idea and its parts.' }
+    ],
+    economics: [
+      { key:'personal', label:'Personal finance',
+        test:/\b(budget\w*|saving\w*|savings\w*|credit\w*|debt|loan|interest rate\w*|compound interest\w*|invest\w*|tax|taxes\w*|income\w*|salary\w*|insurance\w*|bank|mortgage\w*|personal finance\w*)/,
+        types:['wordproblem','wordproblem','scenario','fill','fill','mcq','mcq','truefalse','write'],
+        guide:'ASK: work the actual figures from the notes - what it costs, what it grows to, what is left. AVOID: definitions with no money in them.',
+        visual:'a bar chart or graph, but only with real figures from the notes.' },
+      { key:'macro', label:'Macroeconomics',
+        test:/\b(gdp|inflation\w*|unemployment\w*|fiscal\w*|monetary\w*|central bank\w*|federal reserve\w*|recession\w*|growth\w*|trade deficit\w*|tariff\w*|exchange rate\w*|macro\w*|national income\w*|business cycle\w*)/,
+        types:['wordproblem','mcq','mcq','mcq','classify','fill','fill','truefalse','write'],
+        guide:'ASK: what happens to output, prices or employment when one lever moves, and in which direction. AVOID: definition-only questions with no change to reason about.',
+        visual:'a graph for a trend, flow for a causal chain.' },
+      { key:'micro', label:'Microeconomics',
+        test:/./,
+        types:['wordproblem','scenario','classify','mcq','mcq','fill','fill','truefalse','write'],
+        guide:'ASK: what happens to price, quantity or incentives when one thing changes, and why. Direction of movement matters more than a number. AVOID: definition-only questions.',
+        visual:'a supply-demand template, or compare two market cases.' }
+    ],
+    cs: [
+      { key:'programming', label:'Programming fundamentals',
+        test:/\b(variable\w*|loop|loops\w*|function\w*|conditional\w*|if statement\w*|syntax\w*|debug\w*|python\w*|javascript\w*|java|code|coding\w*|program\w*|string\w*|array\w*|input\w*|output\w*|boolean\w*|operator\w*)/,
+        types:['errorspot','sequence:trace','mcq','mcq','fill','write','truefalse','truefalse','classify'],
+        guide:'ASK: trace what the code does line by line with a given input, or find the one line that breaks it. AVOID: syntax trivia a reference would answer.',
+        visual:'a flow for control flow, compare for two versions of the code.' },
+      { key:'algorithms', label:'Algorithms and data structures',
+        test:/\b(algorithm\w*|sort|sorting\w*|search\w*|recursion\w*|recursive\w*|complexity\w*|big.o\w*|stack\w*|queue\w*|tree|graph\w*|hash|linked list\w*|data structure\w*|traversal\w*|binary\w*)/,
+        types:['sequence:trace','classify','mcq','mcq','mcq','write','errorspot','fill','truefalse'],
+        guide:'ASK: the order of steps on a concrete input, and which approach costs more as the input grows. AVOID: quoting a complexity without reasoning to it.',
+        visual:'a flow for the steps, graph for how cost grows, compare for two approaches.' },
+      { key:'systems', label:'Theory and systems',
+        test:/./,
+        types:['classify','mcq','mcq','mcq','truefalse','truefalse','fill','fill','write'],
+        guide:'ASK: how two things differ and when each is used. AVOID: acronym expansion as an end in itself.',
+        visual:'a hierarchy for layered systems, compare for two designs.' }
+    ],
+    language: [
+      { key:'grammar', label:'Grammar and conjugation',
+        test:/\b(conjugat\w*|tense\w*|verb|grammar\w*|gender\w*|plural\w*|article\w*|pronoun\w*|adjective\w*|agreement\w*|preterite\w*|subjunctive\w*|imperfect\w*|case|declension\w*|past tense\w*|present tense\w*)/,
+        types:['sentence','sentence','sentence','fill','fill','mcq','mcq','truefalse','write'],
+        guide:'ASK: produce or correct a real sentence - conjugate it, fix it, reorder it. AVOID: asking about grammar terminology in the abstract.',
+        visual:'compare two forms, or a 2x2 matrix for a conjugation pattern.' },
+      { key:'reading', label:'Reading and conversation',
+        test:/\b(reading\w*|conversation\w*|dialogue\w*|listening\w*|comprehension\w*|phrase\w*|greeting\w*|culture\w*|speaking\w*|travel\w*|ordering\w*|directions\w*)/,
+        types:['passage:main-idea','passage:inference','sentence','mcq','mcq','fill','fill','truefalse','write'],
+        guide:'ASK: what a short passage or exchange actually says, and how to respond in the language. AVOID: translating isolated words with no context.',
+        visual:'compare two ways of saying the same thing.' },
+      { key:'vocab', label:'Vocabulary',
+        test:/./,
+        types:['fill','fill','fill','mcq','mcq','mcq','sentence','truefalse','write'],
+        guide:'ASK: the word used inside a sentence that fixes its meaning. AVOID: bare word-to-word pairs with no context.',
+        visual:'a concept hub grouping words by theme.' }
+    ],
+    general: [
+      { key:'study', label:'Study skills',
+        test:/\b(study\w*|studying\w*|revision\w*|revise\w*|note.taking\w*|memor\w*|exam technique\w*|time management\w*|productivity\w*|habit\w*|focus\w*|procrastinat\w*|flashcard\w*|recall\w*)/,
+        types:['scenario','scenario','mcq','mcq','fill','fill','write','truefalse','classify'],
+        guide:'ASK: apply the technique to a described situation and say what to do next. AVOID: asking which technique is best in the abstract.',
+        visual:'a flow for a routine, compare for two techniques.' }
+    ]
+  };
+
+  /* First match wins, so the narrower pattern is listed first. A catch-all
+     `/./` entry at the end of a list makes that subject always resolve to a
+     subtopic; a subject with no catch-all falls back to its existing mix. */
+  function resolveSubtopic(subjectType, subjectText, notes) {
+    var list = SUBTOPICS[subjectType];
+    if (!list) return null;
+    /* The subject line is what the learner actually meant; the notes are
+       sampled only as a tie-breaker, and are capped so one stray word deep in
+       a long document cannot outvote the title. */
+    var t = (String(subjectText || '') + ' ' + String(notes || '').substring(0, 1200)).toLowerCase();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].test && list[i].test.test(t)) return list[i];
+    }
+    return null;
+  }
+
   var SUBJECT_FORMAT_MANDATE = {
     math:
       'MATH IS PROCEDURAL, AND THIS QUOTA IS THE HARDEST RULE IN THIS PROMPT.\n' +
@@ -1902,7 +2135,7 @@
              'AVOID: questions needing knowledge the notes do not contain.'
   };
 
-  function getSubjectStrategy(subjectType) {
+  function getSubjectStrategy(subjectType, subjectText, notes) {
     var strategies = {
       math:        { label: 'Math',                  feynmanPrompt: 'Explain this concept and give a worked example.' },
       science:     { label: 'Science',               feynmanPrompt: 'Explain this process step by step in simple language.' },
@@ -1918,6 +2151,17 @@
     var picked = strategies[subjectType] || strategies.general;
     picked.questionGuide = SUBJECT_QUESTION_GUIDE[subjectType] || SUBJECT_QUESTION_GUIDE.general;
     picked.formatMandate = SUBJECT_FORMAT_MANDATE[subjectType] || SUBJECT_FORMAT_MANDATE.general;
+    /* A subject is not one kind of knowledge. When the topic resolves to a
+       subtopic, its mix and its guidance replace the subject-wide ones; when
+       it does not, everything below is untouched and the subject keeps the
+       mix it has always had. Maths is deliberately excluded - its mix is
+       governed by MATH_MIX and the synthesis floor in lesson.html. */
+    picked.subtopic = (subjectType === 'math')
+      ? null
+      : resolveSubtopic(subjectType, subjectText, notes);
+    if (picked.subtopic && picked.subtopic.guide) {
+      picked.questionGuide = picked.subtopic.guide;
+    }
     return picked;
   }
 
@@ -1950,7 +2194,7 @@
        formats a subject requires, and it was recomputing (or defaulting to
        "general") because this was never written to the plan. */
     window.__sfSubjectType = subjectType;
-    var strategy    = getSubjectStrategy(subjectType);
+    var strategy    = getSubjectStrategy(subjectType, subject, notes);
     var allDays = [];
 
     // ── Background tab protection ──
@@ -2255,8 +2499,15 @@
       var difficulty = isFirst ? 'Easy' : (isLast ? 'Hard' : 'Medium');
       var questionInstructions = '', questionSchema = '';
       var d = difficulty;
+      var sub = strategy && strategy.subtopic;
 
-      if (subjectType === 'math') {
+      if (sub) {
+        /* Tally and schema are both generated from sub.types, so the quota the
+           model reads and the shapes it is handed cannot disagree. */
+        questionInstructions = '\n\n' + String(subjectType).toUpperCase() + ' \u2014 ' +
+                               sub.label.toUpperCase() + ': ' + tallyFor(sub.types) + '.\n';
+        questionSchema = buildQuestionSchema(sub.types, d);
+      } else if (subjectType === 'math') {
         /* No MCQ. Maths asks for ~80% equations, 10-15% word problems and about
            5% anything else - and errorspot already spends that 5%. The MCQ was
            a second non-core question the format enforcer could not convert
@@ -2466,6 +2717,7 @@
         '   {"type":"custom","layout":"matrix","title":"","xLabel":"","yLabel":"","xLow":"low","xHigh":"high","yHigh":"high","yLow":"low","items":["top-left","top-right","bottom-left","bottom-right"]}\n' +
         '     <- four groups sorted on two traits at once. items go in reading order and there must be exactly four.\n' +
         '   - 3 to 6 items, each under 40 characters, taken from the student notes. Never filler.\n' +
+        (sub && sub.visual ? '   For this topic in particular, prefer ' + sub.visual + '\n' : '') +
         '   Custom comparison uses a different shape:\n' +
         '   {"type":"custom","layout":"compare","title":"A vs B","left":{"title":"A","items":["..."]},"right":{"title":"B","items":["..."]}}\n' +
         '   Put each fact on the side it actually belongs to - never guess an attribution.\n' +

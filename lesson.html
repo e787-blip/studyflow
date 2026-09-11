@@ -1698,14 +1698,17 @@
        to back it - see the aiSeqQs injector below. History and geography ask
        for one in their schema; science now does too. */
 
-    // Sentence Builder — language subjects only
-    if (isLanguage) {
-      var sentenceQs = (day.questions || []).filter(function(q){ return q.type === 'sentence' && Array.isArray(q.words) && q.words.length >= 3; });
-      sentenceQs.forEach(function(q, i) {
-        var insertAt7 = injectSpread(i, sentenceQs.length, 0);
-        sessionCards.splice(insertAt7, 0, { type: 'sentence', q: q });
-      });
-    }
+    /* Sentence builder — ALL subjects. This was gated on isLanguage, and the
+       gate silently discarded every sentence question on any other subject:
+       English grammar asks for three of them, and a learner revising comma
+       splices got none of the three. A question of type `sentence` exists only
+       because a schema asked for one, so the injector places it wherever it
+       came from. The words check below still skips a malformed card. */
+    var sentenceQs = (day.questions || []).filter(function(q){ return q.type === 'sentence' && Array.isArray(q.words) && q.words.length >= 3; });
+    sentenceQs.forEach(function(q, i) {
+      var insertAt7 = injectSpread(i, sentenceQs.length, 0);
+      sessionCards.splice(insertAt7, 0, { type: 'sentence', q: q });
+    });
 
     // Classify questions — ALL subjects (science, history, geography, cs, psychology, economics)
     var classifyQs = (day.questions || []).filter(function(q){ return q.type === 'classify' && q.categoryA && q.categoryB && Array.isArray(q.itemsA) && Array.isArray(q.itemsB); });
