@@ -1008,11 +1008,28 @@
   .reveal.visible { opacity: 1; transform: none; }
 
   /* Reveal from left */
-  /* The reveal animations start 48px off to one side, which is 48px of
-     horizontal scroll on every screen until they land - and on a phone that
-     reads as the page being broken. The transform is transient by design, so
-     clipping the axis is the fix rather than shrinking the motion. */
-  html, body { overflow-x: hidden; }
+  /* The two reveal animations start 48px off to one side, which showed up as
+     48px of horizontal scroll on every width until they landed.
+
+     Clipped HERE, on the one section that contains them, and deliberately NOT
+     on html/body. An overflow value on html or body promotes the other axis
+     to `auto`, which makes it a scroll container - and a scroll container
+     between a position:sticky element and the viewport stops it sticking.
+     This page has two sections that depend on that (#ws and #fs, pinned while
+     their 600vh parents scroll past), and putting overflow-x:hidden on body
+     killed both. The comment on #fo already said "no overflow property".
+
+     #how contains no sticky descendant, so clipping it is free. */
+  #how { overflow-x: clip; }
+
+  /* The three school tiers were an inline grid-template-columns:1fr 1fr 1fr
+     with no breakpoint, and an inline style cannot be answered by a media
+     query - so on a phone the three cards kept their columns, measured about
+     468px inside a 338px container, and pushed the whole page sideways. The
+     "School - $299" card sat entirely off the right edge, unreachable. The
+     columns live in the stylesheet now so they can collapse. */
+  .tier-grid { display:grid; grid-template-columns:1fr 1fr 1fr; }
+  @media(max-width:820px){ .tier-grid { grid-template-columns:1fr; } }
 
   .reveal-left {
     opacity: 0;
@@ -2079,7 +2096,7 @@
   <h2 class="section-title" style="text-align:left;">StudyFlow for <em>classrooms</em></h2>
   <p class="section-sub reveal">Give every student in your class the most powerful AI study tool — and track their progress in real time.</p>
 
-  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1.5rem; max-width:900px; margin:3rem auto 0;">
+  <div class="tier-grid" style="gap:1.5rem; max-width:900px; margin:3rem auto 0;">
 
     <!-- TEACHER FREE -->
     <div style="background:linear-gradient(135deg,#4a7cf6,#2851c8); border-radius:24px; padding:2rem; box-shadow:0 16px 48px rgba(74,124,246,.2);">
