@@ -3416,7 +3416,7 @@
         var maxLen = Math.max(top.replace('-','').length, bot.replace('-','').length);
         var pad = function(n){ var s = String(n); while(s.length < maxLen + 1) s = '\u00a0' + s; return s; };
         return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;display:inline-block;min-width:140px;">' +
-          '<div style="' + SERIF + 'font-size:2.2rem;font-weight:700;color:var(--ink);letter-spacing:.05em;white-space:pre;font-variant-numeric:tabular-nums;">' +
+          '<div style="' + SERIF + 'font-size:clamp(1.35rem,6.5vw,2.2rem);font-weight:700;color:var(--ink);letter-spacing:.05em;white-space:pre;font-variant-numeric:tabular-nums;">' +
           '\u00a0' + pad(top) + '<br>' +
           op + pad(bot) + '<br>' +
           '<span style="display:inline-block;border-top:3px solid var(--ink);width:100%;margin:4px 0;"></span><br>' +
@@ -3431,7 +3431,7 @@
       if (nums2.length >= 2) {
         var a = nums2[0], b = nums2[1];
         return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;display:inline-block;min-width:140px;">' +
-          '<div style="' + SERIF + 'font-size:2.2rem;font-weight:700;color:var(--ink);letter-spacing:.05em;white-space:pre;font-variant-numeric:tabular-nums;">' +
+          '<div style="' + SERIF + 'font-size:clamp(1.35rem,6.5vw,2.2rem);font-weight:700;color:var(--ink);letter-spacing:.05em;white-space:pre;font-variant-numeric:tabular-nums;">' +
           '\u00a0\u00a0' + a + '<br>' +
           '×\u00a0' + b + '<br>' +
           '<span style="display:inline-block;border-top:3px solid var(--ink);width:100%;margin:4px 0;"></span><br>' +
@@ -3535,7 +3535,9 @@
 
     // ── FALLBACK: plain display ──
     return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;">' +
-      '<div style="' + SERIF + 'font-size:2.2rem;font-weight:700;color:var(--ink);">' + eq + '</div>' +
+      /* Scales and wraps: a long expression used to run straight off the card. */
+      '<div style="' + SERIF + 'font-size:clamp(1.3rem,6vw,2.2rem);font-weight:700;color:var(--ink);' +
+      'line-height:1.35;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;">' + eq + '</div>' +
       '</div>';
   }
 
@@ -5351,7 +5353,9 @@
         if (ci === blank) {
           return '<td style="padding:.3rem .35rem;border-bottom:1px solid #f1f5f9;">' +
             '<input class="tt-in" data-r="' + ri + '" inputmode="text" ' +
-            'style="width:80px;padding:.35rem .45rem;border:1.5px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:.85rem;background:#fff;color:inherit;"></td>';
+            'style="width:100%;min-width:64px;max-width:130px;padding:.35rem .45rem;border:1.5px solid #cbd5e1;' +
+            'border-radius:8px;font-family:inherit;font-size:.85rem;font-variant-numeric:tabular-nums;' +
+            'background:#fff;color:inherit;"></td>';
         }
         return '<td style="padding:.4rem .55rem;font-size:.85rem;border-bottom:1px solid #f1f5f9;">' + esc(cell) + '</td>';
       }).join('');
@@ -5417,9 +5421,13 @@
     var body = '<div class="q-meta"><span class="q-type-label" style="background:#fff7ed;color:#c2410c;">Estimate</span>' +
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       '<div class="q-text" style="margin-bottom:.8rem;">' + esc(q.question) + '</div>' +
-      '<div style="display:flex;align-items:center;margin-bottom:.6rem;">' +
+      /* Wraps, and the field flexes: a fixed 150px box with the unit beside it
+         pushed a long answer ("3155760000 seconds") past the card edge. */
+      '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:.35rem;margin-bottom:.6rem;">' +
       '<input id="est-in" inputmode="decimal" placeholder="your estimate" ' +
-      'style="width:150px;padding:.55rem .7rem;border:1.5px solid #cbd5e1;border-radius:10px;font-family:inherit;font-size:.95rem;background:#fff;color:inherit;">' + unit + '</div>' +
+      'style="flex:1 1 130px;min-width:110px;max-width:220px;padding:.55rem .7rem;border:1.5px solid #cbd5e1;' +
+      'border-radius:10px;font-family:inherit;font-size:.95rem;font-variant-numeric:tabular-nums;' +
+      'background:#fff;color:inherit;">' + unit + '</div>' +
       '<button class="fill-submit" id="est-check-btn" onclick="checkEstimate()">Check answer</button>' +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Round the numbers to something easy, then adjust.') + '</div></div>' +

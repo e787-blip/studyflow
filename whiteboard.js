@@ -88,10 +88,21 @@
          largest element on the board by a wide margin, not a code snippet
          tucked under the prose. Scales with the viewport so it stays big on a
          phone without overflowing a narrow board. */
-      '.sfwbt-eq{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;',
-        'font-size:clamp(1.9rem,7vw,3rem);line-height:1.25;letter-spacing:-0.02em;font-weight:600;',
-        'color:var(--ink);text-align:center;',
-        'background:var(--soft);border-radius:16px;padding:28px 20px;overflow-x:auto;white-space:pre-wrap;}',
+      /* Matches the house maths visual in lesson.html (buildMathVisual): the
+         theme serif with tabular figures, not monospace. Monospace was off
+         theme - StudyFlow is DM Sans and Instrument Serif throughout - and
+         tabular-nums keeps digits on a common width so columns of numbers
+         line up instead of shimmying.
+
+         It wraps rather than scrolls. overflow-x:auto meant a long equation
+         ran off the right edge with the end of it simply not visible: it
+         looked broken AND hid the answer. Wrapping plus fitEquations() below
+         means nothing is ever cut off. */
+      '.sfwbt-eq{font-family:var(--serif),Georgia,serif;',
+        'font-size:clamp(1.9rem,7vw,3rem);line-height:1.3;letter-spacing:.01em;font-weight:700;',
+        'font-variant-numeric:tabular-nums;color:var(--ink);text-align:center;',
+        'background:var(--soft);border-radius:16px;padding:28px 20px;',
+        'white-space:pre-wrap;overflow-wrap:anywhere;}',
       /* A plain-text `show` is also the point of its beat, just not symbolic:
          bigger than body copy, below the equation. */
       '.sfwbt-show.sfwbt-say{font-size:clamp(1.05rem,3.2vw,1.35rem);line-height:1.5;',
@@ -106,7 +117,8 @@
       '.sfwbt-beat.is-prior .sfwbt-list li{font-size:0.88rem;margin-bottom:5px;}',
       '.sfwbt-tablewrap{overflow-x:auto;}',
       '.sfwbt-table{border-collapse:collapse;width:100%;font-size:0.88rem;}',
-      '.sfwbt-table td,.sfwbt-table th{border-bottom:1px solid var(--border);padding:8px 10px;text-align:left;}',
+      '.sfwbt-table td,.sfwbt-table th{border-bottom:1px solid var(--border);padding:8px 10px;text-align:left;',
+        'font-variant-numeric:tabular-nums;}',
       '.sfwbt-hl{background:var(--blue-light);border-radius:6px;padding:2px 6px;}',
       '.sfwbt-check{margin-top:16px;padding:12px 14px;border-left:3px solid var(--blue);',
         'background:var(--soft);border-radius:0 12px 12px 0;font-size:0.95rem;line-height:1.6;}',
@@ -407,6 +419,44 @@
     }
   }
 
+  /* Shrink an equation until it fits its box. Wrapping alone can leave a long
+     expression broken across four cramped lines; stepping the size down first
+     keeps it readable and keeps any break where the content allows one. The
+     floor stops it shrinking into the body text. */
+  var MAX_EQ_LINES = 3;
+
+  function eqLineCount(el, cs) {
+    var lh = parseFloat(cs.lineHeight);
+    if (!lh) return 1;
+    var inner = el.scrollHeight - parseFloat(cs.paddingTop || 0) - parseFloat(cs.paddingBottom || 0);
+    return Math.max(1, Math.round(inner / lh));
+  }
+
+  function fitEquations(scope) {
+    if (!scope) return;
+    var els = scope.querySelectorAll('.sfwbt-eq');
+    var i, el, cs, size, guard, floorPx = 16;
+    for (i = 0; i < els.length; i++) {
+      el = els[i];
+      el.style.fontSize = '';                       /* back to the clamp */
+      cs = global.getComputedStyle(el);
+      size = parseFloat(cs.fontSize) || 30;
+      guard = 0;
+      /* Shrink on LINE COUNT, not just overflow. The box has no fixed height,
+         so it simply grows and nothing ever "overflows" - an 85-character
+         expression rendered as nine cramped lines at full display size, which
+         does not fall off the card but looks broken. Three lines is the limit;
+         below the floor it stops and wraps instead, which is still legible. */
+      while (guard < 40 && size > floorPx &&
+             (el.scrollWidth > el.clientWidth + 1 || eqLineCount(el, cs) > MAX_EQ_LINES)) {
+        size -= 2;
+        el.style.fontSize = size + 'px';
+        cs = global.getComputedStyle(el);
+        guard++;
+      }
+    }
+  }
+
   /* ── THE BOARD ──────────────────────────────────────────────────────────*/
   function Board(day, mount) {
     this.day = day || {};
@@ -474,6 +524,7 @@
   Board.prototype.paint = function () {
     this.mount.innerHTML = this.html();
     this.bind();
+    fitEquations(doc.getElementById('sfwbt-board'));
     this.animateCurrent();
   };
 
