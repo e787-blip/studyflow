@@ -931,6 +931,11 @@
   </div>
 </div>
 
+<!-- Whiteboard teaching mode. Loaded before the session scripts so
+     window.Whiteboard exists by the time a lesson card renders. It is
+     optional: lesson.html falls back to the static lesson body if this
+     file fails to load. -->
+<script src="/whiteboard.js"></script>
 <script>
 
   /* ── PER-ACCOUNT STORAGE NAMESPACE ─────────────────────────────────────
@@ -993,6 +998,18 @@
 
   // TIER 3: SM-2 Algorithm — per question adaptive scheduling
   // Stores: { question_hash: { easiness, interval, repetitions, nextReview } }
+  /* Share text must name a real host, so it cannot be relativised like the
+     navigation was - but it also must not always name the Vercel copy. A
+     share sent from GitHub Pages or a custom domain should point back to the
+     host the learner is actually on. */
+  function sfShareHost() {
+    try {
+      var h = window.location && window.location.host;
+      if (h && h.indexOf('localhost') === -1 && h.indexOf('127.0.0.1') === -1) return h;
+    } catch (e) {}
+    return 'studyflow-ten-vert.vercel.app';
+  }
+
   function getQuestionHash(q) {
     var str = (q.question || '').substring(0, 30);
     var hash = 0;
@@ -2406,6 +2423,16 @@
     }
   }
 
+  /* Set by the lesson branch, consumed immediately after sc.innerHTML is
+     assigned. A module-level flag rather than a return value because
+     renderCardInner builds a string and commits it in one place. */
+  var pendingWhiteboardDay = null;
+
+  function global_hasWhiteboard() {
+    return !!(window.Whiteboard && typeof window.Whiteboard.render === 'function' &&
+              typeof window.Whiteboard.deriveBeats === 'function');
+  }
+
   function renderCardInner(card) {
     var sc = document.getElementById('session-card');
     var html = '';
@@ -2541,7 +2568,23 @@
           '</div>';
       }
 
-      html = buildCard('Today\'s Lesson', day.title || '', false, lessonBody, 'Read carefully', 'Got it →', false);
+      /* Whiteboard teaching mode replaces the static lesson card: the same
+         chrome, but the explanation is built one beat at a time instead of
+         arriving as a finished wall of text. The body assembled above stays
+         as the fallback and is used verbatim whenever whiteboard.js is not
+         loaded, or derives no beats - an old plan must never see a blank
+         card. The mount is filled after sc.innerHTML is committed, below. */
+      var wbBeats = null;
+      if (global_hasWhiteboard()) {
+        try { wbBeats = window.Whiteboard.deriveBeats(day); } catch (e) { wbBeats = null; }
+      }
+      if (wbBeats && wbBeats.length) {
+        pendingWhiteboardDay = day;
+        html = buildCard('Today\'s Lesson', day.title || '', false,
+          '<div id="wb-mount"></div>', 'Step through it', 'Got it →', false);
+      } else {
+        html = buildCard('Today\'s Lesson', day.title || '', false, lessonBody, 'Read carefully', 'Got it →', false);
+      }
     }
     else if (card.type === 'terms') {
       var termsHtml = '<div class="terms-list">';
@@ -2680,6 +2723,23 @@
     else { endSession(); return; }
 
     sc.innerHTML = html;
+
+    /* The whiteboard needs a mounted element, so it runs after the card HTML
+       is committed. If render() declines for any reason the card is rebuilt
+       with the static lesson body - the learner never sees an empty board. */
+    if (pendingWhiteboardDay) {
+      var wbDay = pendingWhiteboardDay;
+      pendingWhiteboardDay = null;
+      var wbMount = sc.querySelector('#wb-mount');
+      var wbOk = false;
+      try {
+        if (wbMount && global_hasWhiteboard()) wbOk = window.Whiteboard.render(wbDay, wbMount);
+      } catch (e) { wbOk = false; }
+      if (!wbOk && wbMount) {
+        wbMount.innerHTML = '<div class="content-text">' + formatContent(wbDay.content || '') + '</div>';
+      }
+    }
+
     sc.style.animation = 'none';
     void sc.offsetWidth;
     sc.style.animation = 'fadeUp .4s cubic-bezier(0.16,1,.3,1) both';
@@ -6129,7 +6189,7 @@
 
     // Share results button
     var shareSubject = plan ? plan.subject || 'my subject' : 'my subject';
-    var shareText = 'I just scored ' + pct + '% studying ' + shareSubject + ' on StudyFlow! Building my streak one day at a time. Try it free: studyflow-ten-vert.vercel.app';
+    var shareText = 'I just scored ' + pct + '% studying ' + shareSubject + ' on StudyFlow! Building my streak one day at a time. Try it free: ' + sfShareHost();
     var shareHtml = '<button onclick="shareSession(\'' + pct + '\',\'' + esc(shareSubject) + '\')" style="width:100%;padding:.85rem;background:var(--soft);border:1.5px solid var(--border);border-radius:14px;font-family:var(--sans);font-size:0.9rem;font-weight:600;color:var(--ink);cursor:pointer;margin-bottom:.75rem;display:flex;align-items:center;justify-content:center;gap:.6rem;transition:all .2s;" onmouseover="this.style.borderColor=\'var(--blue)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>' +
       'Share my score</button>';
@@ -6234,7 +6294,7 @@
   }
 
   function shareSession(pct, subject) {
-    var text = 'Just scored ' + pct + '% studying ' + subject + ' with StudyFlow! Building my streak one day at a time. Try it free \u2192 studyflow-ten-vert.vercel.app';
+    var text = 'Just scored ' + pct + '% studying ' + subject + ' with StudyFlow! Building my streak one day at a time. Try it free \u2192 ' + sfShareHost();
     if (navigator.share) {
       navigator.share({ title: 'StudyFlow — ' + pct + '% accuracy', text: text });
     } else {
@@ -8567,6 +8627,10 @@
   // ── CURATED DIAGRAMS — hand-drawn templates for common science topics ──
   // Returns null when the topic has no template; generateDiagramSVG() below
   // then falls back to building one from the topic itself.
+  /* whiteboard.js is a separate file and cannot see this scope. Exposing the
+     existing implementation keeps ONE diagram system in the app, per the
+     "reuse what exists" rule. Assigned after definition, at the end of the
+     diagram section below. */
   function curatedDiagramSVG(desc) {
     /* Hyphens and underscores are flattened to spaces before matching.
 
@@ -9510,6 +9574,11 @@
      Step 3 is the point: it is drawn from THIS lesson's material, so two
      lessons never get the same picture, and a lesson is never left without
      one. Only when a day carries no structure at all does this return null. */
+
+
+  /* whiteboard.js lives in its own file and cannot reach this scope.
+     Expose rather than duplicate - there must be one diagram system. */
+  window.generateDiagramSVG = generateDiagramSVG;
 
   function dgClean(v) {
     return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();

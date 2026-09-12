@@ -1390,10 +1390,17 @@
     if (!selectedGoal) { sfNotice('Please select your goal!'); return; }
     if (!selectedDifficulty) { sfNotice('Please select a difficulty!'); return; }
 
-    var notes = fileContent || document.getElementById('notes-input').value;
-    if (!notes.trim()) { sfNotice('Please upload a file or paste your notes!'); goToStep(1); return; }
-    var deadline = document.getElementById('deadline-input').value;
-    if (!deadline) { sfNotice('Please enter your exam date!'); return; }
+    /* Choosing a goal or a difficulty re-renders the wizard, which can replace
+       these inputs - so by the time generatePlan runs, getElementById may
+       return null and `.value` throws, killing the click with nothing shown to
+       the learner. Read defensively and fall back to the same notice the empty
+       case uses. */
+    var notesEl = document.getElementById('notes-input');
+    var notes = fileContent || (notesEl ? notesEl.value : '');
+    if (!notes || !notes.trim()) { sfNotice('Please upload a file or paste your notes!'); goToStep(1); return; }
+    var deadlineEl = document.getElementById('deadline-input');
+    var deadline = deadlineEl ? deadlineEl.value : '';
+    if (!deadline) { sfNotice('Please enter your exam date!'); goToStep(2); return; }
 
     // Check plan count limits
     var allPlans = JSON.parse(SFStore.getItem('studyflow_plans') || '[]');
@@ -2908,6 +2915,27 @@
            for before. The schema shows their shape; this says what belongs in
            them, because a two-part question whose Part B does not actually
            justify Part A is the one failure that looks fine in the JSON. */
+        /* Built on Rosenshine's principles and Mayer's multimedia principles -
+           see research/TEACHING-RESEARCH.md. Small steps, model the thinking,
+           signal what matters, check understanding, and say nothing twice. */
+        'WHITEBOARD (field "whiteboard") - 4 to 7 beats that BUILD the explanation in order,\n' +
+        '  the way a teacher fills a board. Each beat: "headline" under 8 words, "say" one or\n' +
+        '  two plain sentences, optional "show" and optional "checkpoint".\n' +
+        '  SMALL STEPS: one idea per beat. Beat 1 starts from something the student already\n' +
+        '    knows or the problem to be solved; the last beat lands the conclusion.\n' +
+        '  MODEL IT: at least ONE beat must show the actual worked move in "show" - the real\n' +
+        '    equation, the real trace, the real example with real values. Not a description\n' +
+        '    of one, and not the answer alone: show the step that gets there.\n' +
+        '  SHOW, DO NOT ONLY TELL: most beats should carry a "show"\n' +
+        '    {"kind":"text|equation|diagram|arrow|highlight|list|table","value":...}.\n' +
+        '    For "list" and "table", "value" is an array; for "table" the first row is headers.\n' +
+        '  SIGNAL: use kind "highlight" once, on the single part that matters most.\n' +
+        '  CHECK UNDERSTANDING: give MOST beats a "checkpoint" - one short question the\n' +
+        '    student should be able to answer in their head before moving on. It must be\n' +
+        '    answerable from the beat itself.\n' +
+        '  SAY NOTHING TWICE: the headline must not restate the "say" sentence, and the\n' +
+        '    whiteboard must not restate "content" - it is how the student gets there, not\n' +
+        '    a summary of it. Cut anything that is not carrying the explanation.\n' +
         '\nTHE SIX EXTENDED FORMATS - what goes in each field:\n' +
         'twopart: Part A is the question; "reasons" are four explanations, and reasonIndex\n' +
         '  must be the one that genuinely justifies the option at correctIndex. The other\n' +
@@ -2952,6 +2980,7 @@
         '\nFINAL CHECK: Before outputting, reread every question you wrote. Verify each one is about "' + subject + '". Replace anything that is not.\n' +
         '\nOUTPUT: ONLY valid compact JSON. No markdown. Replace ALL empty strings with REAL content.\n\n' +
         '{"title":"","microTopic":"","briefing":"","content":"","steps":[],"diagram":{"type":"none","label":""},"concepts":[],' +
+        '"whiteboard":[{"beat":1,"headline":"","say":"","show":{"kind":"text","value":""},"checkpoint":""}],' +
         /* The opening whiteboard is built from these three. Without them in the
            schema the model never returned them, so the board had nothing to
            show and silently did not render. */
@@ -2991,6 +3020,27 @@
           day.steps      = Array.isArray(day.steps)     ? day.steps     : [];
           day.concepts   = Array.isArray(day.concepts)  ? day.concepts  : [];
           day.diagram    = day.diagram    || { type: 'none', label: '' };
+          /* A malformed whiteboard must be DROPPED, not repaired into
+             nonsense: whiteboard.js derives beats from steps/content/concepts
+             whenever the field is absent, and that fallback is better than a
+             half-valid beat list. Anything that is not an array of objects
+             carrying a headline or a say is discarded wholesale. */
+          (function () {
+            if (!Array.isArray(day.whiteboard)) { delete day.whiteboard; return; }
+            var kept = day.whiteboard.filter(function (b) {
+              if (!b || typeof b !== 'object') return false;
+              var hasText = (typeof b.headline === 'string' && b.headline.trim()) ||
+                            (typeof b.say === 'string' && b.say.trim());
+              if (!hasText) return false;
+              if (b.show && typeof b.show === 'object') {
+                var K = { text:1, equation:1, diagram:1, arrow:1, highlight:1, list:1, table:1 };
+                if (!K[String(b.show.kind || '').toLowerCase()]) delete b.show;
+              } else if (b.show) { delete b.show; }
+              return true;
+            });
+            if (kept.length < 2) delete day.whiteboard;   /* one beat is not a board */
+            else day.whiteboard = kept.slice(0, 9);
+          })();
           day.microTopic = day.microTopic || '';
           // New pedagogical fields — keep only fully-populated entries so the
           // lesson renderer never has to display a half-empty card.
