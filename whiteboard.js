@@ -72,9 +72,7 @@
       '.sfwbt-phase{display:flex;align-items:center;gap:8px;margin-bottom:14px;}',
       '.sfwbt-chip{font-size:0.64rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;',
         'padding:.28rem .6rem;border-radius:999px;background:var(--blue-light);color:var(--blue);}',
-      '.sfwbt-chip.is-practice{background:#d9f6ee;color:#12866c;}',
       '.sfwbt-phase-note{font-size:0.72rem;color:var(--muted);}',
-      /* Guided practice */
       '.sfwbt-pq{font-size:1.02rem;font-weight:600;line-height:1.5;margin:0 0 12px;}',
       '.sfwbt-opt{display:block;width:100%;text-align:left;background:var(--white);',
         'border:1.5px solid var(--border);border-radius:12px;padding:.8rem .9rem;margin-bottom:.5rem;',
@@ -320,61 +318,32 @@
     } catch (e) { return null; }
   }
 
-  function equationsFrom(day) {
-    var qs = (day && day.questions) || [], out = [], i;
-    if (Object.prototype.toString.call(qs) !== '[object Array]') return out;
-    for (i = 0; i < qs.length; i++) {
-      var q = qs[i];
-      if (!q || q.type !== 'bigequation') continue;
-      var eq = clean(q.equation);
-      /* Never the answer - the learner is about to be asked this. */
-      if (eq) out.push(eq);
-    }
-    return out;
-  }
-
   function addVisuals(day, out) {
     if (!out.length) return out;
 
-    /* Beat 1 gets the roadmap: every step at once, so the learner can see the
-       shape of the procedure before walking it. */
+    /* ONE visual, and only where it genuinely describes the beat.
+
+       This used to deal the day's equations out to beats in order, which is
+       how the board ended up saying "word problems teach you to translate
+       English into equations" above a box reading 3x = 18, and "by mastering
+       these steps you can solve problems in budgeting" above 4(x + 2). The
+       equations were real, but they had nothing to do with the sentences they
+       sat under - the pairing was just array order. An equation that does not
+       belong to its sentence is worse than no equation: the learner tries to
+       connect them and cannot.
+
+       A model-authored whiteboard carries its own `show` per beat, which is
+       the walkthrough proper. All this adds is the roadmap - the day's own
+       steps, drawn as a flow - because that IS a faithful picture of the
+       beats it sits above. */
     var stepLabels = [], i;
     for (i = 0; i < out.length; i++) {
       var lab = clean(out[i].headline) || clean(out[i].say);
       if (lab) stepLabels.push(lab.length > 38 ? lab.slice(0, 36) + '…' : lab);
     }
-    if (!out[0].show && stepLabels.length >= 2) {
+    if (!out[0].show && stepLabels.length >= 3) {
       out[0].show = diagramFor({ type: 'custom', layout: 'flow',
                                  title: '', items: stepLabels.slice(0, 6) });
-    }
-
-    /* Worked lines on the middle beats, from the day's own equations. */
-    var eqs = equationsFrom(day);
-    for (i = 1; i < out.length && eqs.length; i++) {
-      if (out[i].show) continue;
-      var eq = eqs.shift();
-      if (eq) out[i].show = { kind: 'equation', value: eq };
-    }
-
-    /* Still bare, and the day has vocabulary: a hub of what it rests on. */
-    if (!out[out.length - 1].show) {
-      /* whiteboard.js has no list() helper - that name belongs to the other
-         module. A ReferenceError here was swallowed by lesson.html's try/catch
-         around deriveBeats, so EVERY board silently fell back to the static
-         lesson body and the whiteboard simply stopped appearing. */
-      var terms = [], kts = (Object.prototype.toString.call(day.keyTerms) === '[object Array]') ? day.keyTerms : [];
-      for (i = 0; i < kts.length && terms.length < 5; i++) {
-        var k = kts[i];
-        var t = typeof k === 'string' ? clean(k) : clean(k && (k.term || k.title));
-        if (t) terms.push(t);
-      }
-      if (terms.length >= 3) {
-        out[out.length - 1].show = diagramFor({
-          type: 'custom', layout: 'concept',
-          center: clean(day.title).replace(/^[^:]*:\s*/, '') || 'This topic',
-          items: terms
-        });
-      }
     }
     return out;
   }
@@ -586,28 +555,6 @@
   }
 
   /* ── THE BOARD ──────────────────────────────────────────────────────────*/
-  /* Guided practice, built from the beats themselves.
-
-     Pearson and Gallagher's gradual release runs I do -> we do -> you do, and
-     the board was only ever doing "I do": it modelled the steps and stopped.
-     Renkl and Atkinson's fading work says the transition should be a
-     completion problem - the learner supplies the steps that were shown.
-
-     So after the modelled run, the same procedure comes back with the steps
-     hidden and the learner chooses what comes next. It needs no new data: the
-     distractors are the lesson's own later steps, which is exactly the
-     confusion worth testing - knowing the moves is not knowing their order. */
-  function buildPractice(beats) {
-    var steps = [], i;
-    for (i = 0; i < beats.length; i++) {
-      var label = clean(beats[i].headline) || clean(beats[i].say);
-      if (label) steps.push({ label: label, say: clean(beats[i].say), idx: steps.length });
-    }
-    /* Two steps cannot make an ordering question worth asking. */
-    if (steps.length < 3) return null;
-    return { steps: steps, at: 0, wrong: 0 };
-  }
-
   function Board(day, mount) {
     this.day = day || {};
     this.mount = mount;
@@ -615,9 +562,6 @@
     this.index = 0;
     this.busy = false;
     this.keyHandler = null;
-    this.practice = buildPractice(this.beats);
-    this.phase = 'teach';          /* teach -> practice */
-    this.chosen = null;            /* the option picked on the current step */
   }
 
   Board.prototype.destroy = function () {
@@ -627,88 +571,25 @@
 
   /* Which of the three phases the learner is in, in their words not ours. */
   Board.prototype.phaseChip = function () {
-    if (this.phase === 'practice') {
-      return '<div class="sfwbt-phase"><span class="sfwbt-chip is-practice">Your turn</span>' +
-             '<span class="sfwbt-phase-note">Put the steps in order</span></div>';
-    }
     if (this.index === 0) {
       return '<div class="sfwbt-phase"><span class="sfwbt-chip">What we are learning</span></div>';
     }
-    return '<div class="sfwbt-phase"><span class="sfwbt-chip">Watch me</span>' +
-           '<span class="sfwbt-phase-note">Step ' + this.index + ' of ' + (this.beats.length - 1) + '</span></div>';
-  };
-
-  Board.prototype.practiceHtml = function () {
-    var p = this.practice, done = p.steps.slice(0, p.at), i;
-    var h = this.phaseChip();
-
-    if (done.length) {
-      h += '<div class="sfwbt-sofar"><span class="sfwbt-sofar-tag">So far</span><ol class="sfwbt-list">';
-      for (i = 0; i < done.length; i++) h += '<li>' + esc(done[i].label) + '</li>';
-      h += '</ol></div>';
-    }
-
-    if (p.at >= p.steps.length) {
-      h += '<p class="sfwbt-pq sfwbt-in">That is the whole procedure, in order. You built it yourself.</p>';
-      return h;
-    }
-
-    h += '<p class="sfwbt-pq sfwbt-in">' +
-         (p.at === 0 ? 'Which step comes first?' : 'What comes next?') + '</p>';
-
-    /* Options: the correct next step plus up to three later ones, shuffled
-       once per step so the position is not a tell. */
-    var opts = [p.steps[p.at]], k;
-    for (k = p.at + 1; k < p.steps.length && opts.length < 4; k++) opts.push(p.steps[k]);
-    if (opts.length < 4) {
-      for (k = p.at - 1; k >= 0 && opts.length < 4; k--) opts.push(p.steps[k]);
-    }
-    if (!p.order || p.orderFor !== p.at) {
-      p.order = opts.slice().sort(function () { return Math.random() - 0.5; });
-      p.orderFor = p.at;
-    }
-    for (i = 0; i < p.order.length; i++) {
-      var o = p.order[i];
-      var cls = 'sfwbt-opt';
-      if (this.chosen !== null) {
-        if (o.idx === p.at) cls += ' is-right';
-        else if (o.idx === this.chosen) cls += ' is-wrong';
-        else cls += ' is-dim';
-      }
-      h += '<button type="button" class="' + cls + '" data-idx="' + o.idx + '"' +
-           (this.chosen !== null ? ' disabled' : '') +
-           ' onclick="window.__sfwbtPick(' + o.idx + ')">' + esc(o.label) + '</button>';
-    }
-    if (this.chosen !== null) {
-      var right = this.chosen === p.at;
-      h += '<div class="sfwbt-why sfwbt-in">' +
-           (right ? '' : 'Not yet — that step comes later. ') +
-           esc(p.steps[p.at].say || p.steps[p.at].label) + '</div>';
-    }
-    return h;
+    return '<div class="sfwbt-phase"><span class="sfwbt-chip">Step ' + this.index +
+           ' of ' + (this.beats.length - 1) + '</span></div>';
   };
 
   Board.prototype.html = function () {
     var i, h = '<div class="sfwbt">';
     h += '<div class="sfwbt-board" id="sfwbt-board">';
-    if (this.phase === 'practice') {
-      h += this.practiceHtml();
-    } else {
-      h += this.phaseChip();
-      for (i = 0; i <= this.index && i < this.beats.length; i++) {
-        h += beatHtml(this.beats[i], i, i === this.index);
-      }
+    h += this.phaseChip();
+    for (i = 0; i <= this.index && i < this.beats.length; i++) {
+      h += beatHtml(this.beats[i], i, i === this.index);
     }
     h += '</div>';
-    /* One rail across both phases, so the learner can see that the lesson does
-       not end when the modelling does. */
-    var pSteps = this.practice ? this.practice.steps.length : 0;
-    var total = this.beats.length + pSteps;
-    var doneTo = this.phase === 'practice' ? this.beats.length + this.practice.at : this.index;
     h += '<div class="sfwbt-rail" role="progressbar" aria-valuemin="1" aria-valuemax="' +
-         total + '" aria-valuenow="' + (doneTo + 1) + '">';
-    for (i = 0; i < total; i++) {
-      h += '<span class="sfwbt-seg' + (i <= doneTo ? ' is-done' : '') + '"></span>';
+         this.beats.length + '" aria-valuenow="' + (this.index + 1) + '">';
+    for (i = 0; i < this.beats.length; i++) {
+      h += '<span class="sfwbt-seg' + (i <= this.index ? ' is-done' : '') + '"></span>';
     }
     h += '</div>';
     h += '<div class="sfwbt-controls">' +
@@ -772,7 +653,6 @@
   };
 
   Board.prototype.replay = function () {
-    if (this.phase === 'practice') this.chosen = null;
     this.paint();
   };
 
@@ -855,51 +735,22 @@
     var last = self.index >= self.beats.length - 1;
 
     if (back) {
-      back.disabled = self.phase === 'teach' && self.index === 0;
-      back.onclick = function () {
-        if (self.phase === 'practice') {
-          if (self.practice.at > 0 || self.chosen !== null) {
-            if (self.chosen !== null) { self.chosen = null; }
-            else { self.practice.at--; }
-          } else {
-            self.phase = 'teach';       /* back into the modelled run */
-          }
-          self.paint();
-          return;
-        }
-        self.go(-1);
-      };
+      back.disabled = self.index === 0;
+      back.onclick = function () { self.go(-1); };
     }
     if (replay) replay.onclick = function () { self.replay(); };
     if (explain) explain.onclick = function () { self.explain(); };
     if (next) {
       next.disabled = false;
-      if (self.phase === 'practice') {
-        var finished = self.practice.at >= self.practice.steps.length;
-        next.textContent = finished ? 'Done →' : 'Next →';
-        /* Until they have answered, Next would skip the question. */
-        next.disabled = !finished && self.chosen === null;
-        next.onclick = function () {
-          if (finished) {
-            if (typeof global.showNextCard === 'function') global.showNextCard();
-            return;
-          }
-          self.practice.at++;
-          self.chosen = null;
-          self.paint();
-        };
-      } else {
-        var intoPractice = last && !!self.practice;
-        next.textContent = intoPractice ? 'Your turn →' : (last ? 'Done →' : 'Next →');
-        next.onclick = function () {
-          if (intoPractice) { self.phase = 'practice'; self.chosen = null; self.paint(); return; }
-          if (last) {
-            if (typeof global.showNextCard === 'function') global.showNextCard();
-            return;
-          }
-          self.go(1);
-        };
-      }
+      next.textContent = last ? 'Done →' : 'Next →';
+      next.onclick = function () {
+        if (last) {
+          /* hand control back to the session's own card flow */
+          if (typeof global.showNextCard === 'function') global.showNextCard();
+          return;
+        }
+        self.go(1);
+      };
     }
 
     if (!self.keyHandler) {
@@ -918,16 +769,6 @@
       };
       doc.addEventListener('keydown', self.keyHandler);
     }
-  };
-
-  /* Bound globally because the option buttons are rebuilt on every paint and
-     inline onclick is how the rest of lesson.html wires its cards. */
-  global.__sfwbtPick = function (idx) {
-    var b = global.__sfwbtActive;
-    if (!b || b.phase !== 'practice' || b.chosen !== null) return;
-    b.chosen = idx;
-    if (idx !== b.practice.at) b.practice.wrong++;
-    b.paint();
   };
 
   /* ── PUBLIC ─────────────────────────────────────────────────────────────*/

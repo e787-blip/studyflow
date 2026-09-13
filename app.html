@@ -2915,27 +2915,27 @@
            for before. The schema shows their shape; this says what belongs in
            them, because a two-part question whose Part B does not actually
            justify Part A is the one failure that looks fine in the JSON. */
-        /* Built on Rosenshine's principles and Mayer's multimedia principles -
-           see research/TEACHING-RESEARCH.md. Small steps, model the thinking,
-           signal what matters, check understanding, and say nothing twice. */
-        'WHITEBOARD (field "whiteboard") - 4 to 7 beats that BUILD the explanation in order,\n' +
-        '  the way a teacher fills a board. Each beat: "headline" under 8 words, "say" one or\n' +
-        '  two plain sentences, optional "show" and optional "checkpoint".\n' +
-        '  SMALL STEPS: one idea per beat. Beat 1 starts from something the student already\n' +
-        '    knows or the problem to be solved; the last beat lands the conclusion.\n' +
-        '  MODEL IT: at least ONE beat must show the actual worked move in "show" - the real\n' +
-        '    equation, the real trace, the real example with real values. Not a description\n' +
-        '    of one, and not the answer alone: show the step that gets there.\n' +
-        '  SHOW, DO NOT ONLY TELL: most beats should carry a "show"\n' +
-        '    {"kind":"text|equation|diagram|arrow|highlight|list|table","value":...}.\n' +
-        '    For "list" and "table", "value" is an array; for "table" the first row is headers.\n' +
-        '  SIGNAL: use kind "highlight" once, on the single part that matters most.\n' +
-        '  CHECK UNDERSTANDING: give MOST beats a "checkpoint" - one short question the\n' +
-        '    student should be able to answer in their head before moving on. It must be\n' +
-        '    answerable from the beat itself.\n' +
-        '  SAY NOTHING TWICE: the headline must not restate the "say" sentence, and the\n' +
-        '    whiteboard must not restate "content" - it is how the student gets there, not\n' +
-        '    a summary of it. Cut anything that is not carrying the explanation.\n' +
+        /* Rosenshine: model the thinking, small steps, check understanding.
+           The hard requirement is ONE problem carried all the way through -
+           without it the model wrote general prose about the topic and the
+           board became paragraphs with unrelated expressions beside them. */
+        'WHITEBOARD (field "whiteboard") - a WORKED WALKTHROUGH of ONE problem, 4 to 7 beats.\n' +
+        '  Pick a single concrete example from the notes - one equation, one passage, one\n' +
+        '  case - and SOLVE IT STEP BY STEP across the beats. Every beat moves that same\n' +
+        '  example one step further. Do not write general commentary about the topic, and\n' +
+        '  do not switch to a different example halfway through.\n' +
+        '  Beat 1: state the problem and what we are trying to find.\n' +
+        '  Middle beats: ONE move each, with the result of that move in "show".\n' +
+        '  Last beat: the answer, and how to check it.\n' +
+        '  Each beat: "headline" under 8 words naming the move ("Subtract 3 from both\n' +
+        '  sides"), "say" one or two sentences explaining WHY that move, and "show"\n' +
+        '  {"kind":"equation|text|list|table|diagram","value":...} holding the example AS IT\n' +
+        '  NOW STANDS after that move. For "list"/"table", "value" is an array.\n' +
+        '  The "show" must be the SAME problem at every beat - 2x + 3 = 11, then 2x = 8,\n' +
+        '  then x = 4. If a beat has no new state to show, leave "show" out entirely\n' +
+        '  rather than putting an unrelated expression there.\n' +
+        '  Give most beats a "checkpoint": one short question answerable from that beat.\n' +
+        '  The headline must not restate the "say", and none of it may restate "content".\n' +
         '\nTHE SIX EXTENDED FORMATS - what goes in each field:\n' +
         'twopart: Part A is the question; "reasons" are four explanations, and reasonIndex\n' +
         '  must be the one that genuinely justifies the option at correctIndex. The other\n' +
