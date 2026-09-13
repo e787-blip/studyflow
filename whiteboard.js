@@ -303,10 +303,86 @@
              show: show || null, checkpoint: checkpoint || '' };
   }
 
+  /* Derived beats carry no `show` at all, so an old plan got a board of pure
+     prose - and prose is the thing a whiteboard is supposed to replace. These
+     build visuals out of what the day already has, through the app's existing
+     diagram kit (window.generateDiagramSVG) rather than drawing anything new.
+
+     Nothing is invented: a roadmap is the day's own steps, a worked line is an
+     equation from the day's own questions, a hub is the day's own key terms.
+     Where the material has no shape, the beat keeps no visual - a wrong
+     picture teaches worse than none. */
+  function diagramFor(spec) {
+    try {
+      if (typeof global.generateDiagramSVG !== 'function') return null;
+      var svg = global.generateDiagramSVG(spec);
+      return svg ? { kind: 'diagram', value: svg, _raw: true } : null;
+    } catch (e) { return null; }
+  }
+
+  function equationsFrom(day) {
+    var qs = (day && day.questions) || [], out = [], i;
+    if (Object.prototype.toString.call(qs) !== '[object Array]') return out;
+    for (i = 0; i < qs.length; i++) {
+      var q = qs[i];
+      if (!q || q.type !== 'bigequation') continue;
+      var eq = clean(q.equation);
+      /* Never the answer - the learner is about to be asked this. */
+      if (eq) out.push(eq);
+    }
+    return out;
+  }
+
+  function addVisuals(day, out) {
+    if (!out.length) return out;
+
+    /* Beat 1 gets the roadmap: every step at once, so the learner can see the
+       shape of the procedure before walking it. */
+    var stepLabels = [], i;
+    for (i = 0; i < out.length; i++) {
+      var lab = clean(out[i].headline) || clean(out[i].say);
+      if (lab) stepLabels.push(lab.length > 38 ? lab.slice(0, 36) + '…' : lab);
+    }
+    if (!out[0].show && stepLabels.length >= 2) {
+      out[0].show = diagramFor({ type: 'custom', layout: 'flow',
+                                 title: '', items: stepLabels.slice(0, 6) });
+    }
+
+    /* Worked lines on the middle beats, from the day's own equations. */
+    var eqs = equationsFrom(day);
+    for (i = 1; i < out.length && eqs.length; i++) {
+      if (out[i].show) continue;
+      var eq = eqs.shift();
+      if (eq) out[i].show = { kind: 'equation', value: eq };
+    }
+
+    /* Still bare, and the day has vocabulary: a hub of what it rests on. */
+    if (!out[out.length - 1].show) {
+      /* whiteboard.js has no list() helper - that name belongs to the other
+         module. A ReferenceError here was swallowed by lesson.html's try/catch
+         around deriveBeats, so EVERY board silently fell back to the static
+         lesson body and the whiteboard simply stopped appearing. */
+      var terms = [], kts = (Object.prototype.toString.call(day.keyTerms) === '[object Array]') ? day.keyTerms : [];
+      for (i = 0; i < kts.length && terms.length < 5; i++) {
+        var k = kts[i];
+        var t = typeof k === 'string' ? clean(k) : clean(k && (k.term || k.title));
+        if (t) terms.push(t);
+      }
+      if (terms.length >= 3) {
+        out[out.length - 1].show = diagramFor({
+          type: 'custom', layout: 'concept',
+          center: clean(day.title).replace(/^[^:]*:\s*/, '') || 'This topic',
+          items: terms
+        });
+      }
+    }
+    return out;
+  }
+
   function deriveBeats(day) {
     day = day || {};
     var beats = normalizeBeats(day.whiteboard);
-    if (beats.length) return beats;
+    if (beats.length) return addVisuals(day, beats);
 
     var i, s, out = [];
 
@@ -320,7 +396,7 @@
         if (!label) continue;
         out.push(mkBeat(out.length + 1, headlineFrom(label, 'Step ' + (out.length + 1)), detail || label));
       }
-      if (out.length >= 2) return out;
+      if (out.length >= 2) return addVisuals(day, out);
       out = [];
     }
 
@@ -330,7 +406,7 @@
       for (i = 0; i < sents.length && out.length < 6; i++) {
         out.push(mkBeat(out.length + 1, headlineFrom(sents[i], 'Idea ' + (out.length + 1)), sents[i]));
       }
-      return out;
+      return addVisuals(day, out);
     }
 
     /* 3. concepts */
@@ -344,7 +420,7 @@
         out.push(mkBeat(out.length + 1, headlineFrom(nm, 'Concept'), df || nm, null,
                         (typeof c === 'object' && c) ? clean(c.misconception) : ''));
       }
-      if (out.length) return out;
+      if (out.length) return addVisuals(day, out);
     }
 
     /* 4. keyTerms, last resort - still better than an empty board */
@@ -357,15 +433,15 @@
         if (!term) continue;
         out.push(mkBeat(out.length + 1, headlineFrom(term, 'Key term'), def || term));
       }
-      if (out.length) return out;
+      if (out.length) return addVisuals(day, out);
     }
 
     /* 5. nothing usable: one honest beat rather than a blank board */
     var title = clean(day.title) || 'Today’s lesson';
-    return [{ beat: 1, headline: headlineFrom(title, 'Today’s lesson'),
+    return addVisuals(day, [{ beat: 1, headline: headlineFrom(title, 'Today’s lesson'),
               say: clean(day.content) || clean(day.briefing) ||
                    'Let’s work through this topic together.',
-              show: null, checkpoint: '' }];
+              show: null, checkpoint: '' }]);
   }
 
   /* ── SHOW RENDERING ─────────────────────────────────────────────────────
@@ -402,9 +478,16 @@
 
     if (k === 'diagram') {
       var svg = null;
-      try {
-        if (typeof global.generateDiagramSVG === 'function') svg = global.generateDiagramSVG(v);
-      } catch (e) { svg = null; }
+      /* addVisuals() already resolved its diagrams through the kit and marked
+         them _raw, so they must not be passed back through it as if they were
+         a spec - that returns null and the beat silently loses its picture. */
+      if (show._raw && typeof v === 'string' && v.indexOf('<svg') > -1) {
+        svg = v;
+      } else {
+        try {
+          if (typeof global.generateDiagramSVG === 'function') svg = global.generateDiagramSVG(v);
+        } catch (e) { svg = null; }
+      }
       if (svg) return '<div class="sfwbt-show sfwbt-diagram sfwbt-in">' + svg + '</div>';
       return '<div class="sfwbt-show sfwbt-eq sfwbt-in">' + esc(v) + '</div>';
     }
@@ -643,6 +726,16 @@
     if (!board) return;
     var current = board.querySelector('.sfwbt-beat.is-current');
     if (!current) return;
+
+    /* Earlier beats are HISTORY: they were revealed on their own turn and must
+       be shown at their final state immediately. Only the current beat gets
+       marked, so every prior beat sat at opacity 0 - present in the layout,
+       taking up its full height, drawn as nothing. The board therefore grew a
+       tall blank area and pushed the one visible beat further down the card
+       with every press of Next. That is the "text keeps going down" bug: the
+       text was not moving, the invisible beats above it were piling up. */
+    var prior = board.querySelectorAll('.sfwbt-beat:not(.is-current) .sfwbt-in');
+    for (var p = 0; p < prior.length; p++) prior[p].classList.add('is-on');
 
     if (reduced()) {
       var all = current.querySelectorAll('.sfwbt-in');
