@@ -3261,8 +3261,35 @@
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
   // ── BIG EQUATION — smart visual renderer, auto-detects topic from equation ──
+  /* Does `equation` actually describe the same problem as `question`?
+
+     The card header shows q.question, but the topic detector and the visual
+     both read q.equation. When the model returns an equation that disagrees
+     with its own question - a bare "2 + 3" under "Evaluate: 2x + 5 when
+     x = 3" - the card asked for one thing and DREW another: a stacked column
+     sum of 2 + 3 above a box that graded against 11. A learner who answered
+     the picture was told they were wrong.
+
+     The signal that matters is a variable. If the question carries a variable
+     term or a substitution and the equation carries no letters at all, the
+     equation is not about the same problem and must not drive the card. */
+  function equationMatchesQuestion(eq, question) {
+    var qt = String(question || ''), et = String(eq || '');
+    if (!qt || !et) return true;
+    var qHasVar = /\b\d+\s*[a-z]\b/i.test(qt) ||
+                  /\b(?:when|if|given|for)\b[^.]*\b[a-z]\s*=/i.test(qt);
+    var eHasLetter = /[a-z]/i.test(et.replace(/\b(?:when|and|then|is|the|of|for|if|given)\b/gi, ''));
+    if (qHasVar && !eHasLetter) return false;
+    return true;
+  }
+
   function renderBigEquation(q) {
     var eq = (q.equation || q.question || '').trim();
+    /* Mismatch: fall back to the question, which is what the learner is being
+       shown and graded on. A plainer card beats a contradictory one. */
+    if (q.equation && !equationMatchesQuestion(q.equation, q.question)) {
+      eq = String(q.question || '').trim();
+    }
     var ans = q.answer || '';
     var diff = (q.difficulty || 'Medium');
     var diffClass = diff.toLowerCase();
@@ -3310,6 +3337,10 @@
     }
 
     var visual = buildMathVisual(topic, eq, q);
+    /* clean() is not in scope here - it lives inside other functions further
+       down the file - so normalise locally. */
+    var eqNorm = String(eq || '').replace(/\s+/g, ' ').trim();
+    var titleNorm = String(topic.title || '').replace(/\s+/g, ' ').trim();
 
     var body =
       '<div class="q-meta">' +
@@ -3406,6 +3437,24 @@
   function buildMathVisual(topic, eq, q) {
     var SERIF = 'font-family:\'Georgia\',serif;';
     var BOX = 'padding:.9rem 1.1rem;background:var(--soft);border-radius:14px;border:2px solid var(--border);';
+
+    /* The column layouts below take the first two numbers they can find
+       anywhere in the string and stack them. That is only honest when the
+       expression really is one number OP one number. Given "Evaluate: 2x + 5
+       when x = 3" it produced a column sum of two unrelated digits - a picture
+       of a different problem, sitting above the question it contradicted.
+       Anything with a letter in it, or with more than two numbers, gets no
+       column visual: the card still shows the question, which is correct if
+       plainer. */
+    function isPlainArithmetic(text) {
+      var t = String(text || '').trim().replace(/^[^0-9\-]*/, '').replace(/[=?\s]+$/, '');
+      return /^-?\d+(?:\.\d+)?\s*[+\-−*×xX/÷]\s*-?\d+(?:\.\d+)?$/.test(t);
+    }
+    if (!isPlainArithmetic(eq) &&
+        (topic.id === 'add' || topic.id === 'subtract' ||
+         topic.id === 'multiply' || topic.id === 'divide')) {
+      return '';
+    }
 
     // ── ADDITION: vertical stacked format ──
     if (topic.id === 'add' || topic.id === 'subtract') {
@@ -3535,9 +3584,13 @@
 
     // ── FALLBACK: plain display ──
     return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;">' +
-      /* Scales and wraps: a long expression used to run straight off the card. */
-      '<div style="' + SERIF + 'font-size:clamp(1.3rem,6vw,2.2rem);font-weight:700;color:var(--ink);' +
-      'line-height:1.35;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;">' + eq + '</div>' +
+      /* Scales and wraps: a long expression used to run straight off the card.
+         Suppressed when it would only repeat the header - which happens when
+         the equation fell back to the question because the two disagreed. */
+      (eqNorm && eqNorm !== titleNorm
+        ? '<div style="' + SERIF + 'font-size:clamp(1.3rem,6vw,2.2rem);font-weight:700;color:var(--ink);' +
+          'line-height:1.35;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;">' + eq + '</div>'
+        : '') +
       '</div>';
   }
 

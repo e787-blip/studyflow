@@ -60,10 +60,39 @@
     var css = [
       '.sfwbt{display:block;}',
       /* board surface: the only elevated thing on the card */
+      /* Sizes to its content. A fixed 16:10 aspect meant a short first beat sat
+         in a tall empty rectangle - two lines of text and then several hundred
+         pixels of nothing, which is what made the card look broken. A minimum
+         keeps it from jumping about between short beats; it grows from there. */
       '.sfwbt-board{position:relative;background:var(--white);border:1.5px solid var(--border);',
-        'border-radius:20px;padding:24px;overflow:hidden;',
-        'aspect-ratio:16/10;overflow-y:auto;}',
-      '@supports not (aspect-ratio:16/10){.sfwbt-board{min-height:320px;}}',
+        'border-radius:20px;padding:24px;min-height:210px;max-height:min(62vh,560px);',
+        'overflow-y:auto;}',
+      /* Phase chip: the learner should always know which of the three phases
+         they are in - modelled, guided, or on their own. */
+      '.sfwbt-phase{display:flex;align-items:center;gap:8px;margin-bottom:14px;}',
+      '.sfwbt-chip{font-size:0.64rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;',
+        'padding:.28rem .6rem;border-radius:999px;background:var(--blue-light);color:var(--blue);}',
+      '.sfwbt-chip.is-practice{background:#d9f6ee;color:#12866c;}',
+      '.sfwbt-phase-note{font-size:0.72rem;color:var(--muted);}',
+      /* Guided practice */
+      '.sfwbt-pq{font-size:1.02rem;font-weight:600;line-height:1.5;margin:0 0 12px;}',
+      '.sfwbt-opt{display:block;width:100%;text-align:left;background:var(--white);',
+        'border:1.5px solid var(--border);border-radius:12px;padding:.8rem .9rem;margin-bottom:.5rem;',
+        'font-family:var(--sans),sans-serif;font-size:0.93rem;line-height:1.45;color:var(--ink);',
+        'cursor:pointer;min-height:48px;transition:border-color .18s ' + EASE + ',background .18s ' + EASE + ';}',
+      '.sfwbt-opt:hover:not(:disabled){border-color:var(--blue);background:var(--blue-light);}',
+      '.sfwbt-opt:disabled{cursor:default;}',
+      '.sfwbt-opt.is-right{border-color:#10b981;background:#ecfdf5;}',
+      '.sfwbt-opt.is-wrong{border-color:#ef4444;background:#fef2f2;}',
+      '.sfwbt-opt.is-dim{opacity:.45;}',
+      '.sfwbt-sofar{background:var(--soft);border-radius:12px;padding:12px 14px;margin-bottom:14px;}',
+      '.sfwbt-sofar-tag{display:block;font-size:0.64rem;font-weight:800;letter-spacing:.08em;',
+        'text-transform:uppercase;color:var(--muted);margin-bottom:.35rem;}',
+      '.sfwbt-sofar li{font-size:0.9rem;line-height:1.6;margin-bottom:3px;}',
+      '.sfwbt-why{margin-top:10px;font-size:0.88rem;line-height:1.55;color:var(--ink);',
+        'background:var(--soft);border-left:3px solid var(--blue);border-radius:0 10px 10px 0;padding:10px 12px;}',
+      'body.dark .sfwbt-opt{background:#1e2336;border-color:#222840;color:#e8eeff;}',
+      'body.dark .sfwbt-sofar,body.dark .sfwbt-why{background:#1e2336;}',
       '.sfwbt-beat{margin-bottom:16px;}',
       '.sfwbt-beat:last-child{margin-bottom:0;}',
       /* the core mechanic: history stays visible but subordinate */
@@ -215,11 +244,7 @@
       /* Redundancy principle: a headline that merely restates the sentence
          below it is the same information twice. Drop the headline and keep the
          sentence, which carries more. */
-      if (headline && say) {
-        var hKey = headline.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
-        var sKey = say.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
-        if (hKey && (sKey === hKey || sKey.indexOf(hKey) === 0)) headline = '';
-      }
+      headline = dedupeHeadline(headline, say);
       out.push({
         beat: out.length + 1,
         headline: headline,
@@ -255,6 +280,29 @@
     return words.slice(0, 7).join(' ').replace(/[.:;,]+$/, '') + '…';
   }
 
+  /* The redundancy guard, applied EVERYWHERE a beat is built rather than only
+     to model-supplied ones. The fallback paths used headlineFrom(sentence) as
+     the headline and the same sentence as the body, so a derived beat read:
+
+       Algebra is the branch of mathematics that…
+       Algebra is the branch of mathematics that uses letters (variables) to…
+
+     which is the same sentence twice, once truncated. A headline that is a
+     prefix or a truncation of its own sentence is dropped. */
+  function dedupeHeadline(headline, say) {
+    if (!headline || !say) return headline;
+    var h = headline.replace(/[….]+$/, '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+    var y = say.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+    if (!h) return headline;
+    if (y === h || y.indexOf(h) === 0) return '';
+    return headline;
+  }
+
+  function mkBeat(n, headline, say, show, checkpoint) {
+    return { beat: n, headline: dedupeHeadline(headline, say), say: say,
+             show: show || null, checkpoint: checkpoint || '' };
+  }
+
   function deriveBeats(day) {
     day = day || {};
     var beats = normalizeBeats(day.whiteboard);
@@ -270,8 +318,7 @@
         var label = typeof s === 'string' ? clean(s) : clean(s && (s.step || s.title || s.label));
         var detail = typeof s === 'string' ? '' : clean(s && (s.action || s.why || s.detail || s.body));
         if (!label) continue;
-        out.push({ beat: out.length + 1, headline: headlineFrom(label, 'Step ' + (out.length + 1)),
-                   say: detail || label, show: null, checkpoint: '' });
+        out.push(mkBeat(out.length + 1, headlineFrom(label, 'Step ' + (out.length + 1)), detail || label));
       }
       if (out.length >= 2) return out;
       out = [];
@@ -281,8 +328,7 @@
     var sents = splitSentences(day.content);
     if (sents.length >= 2) {
       for (i = 0; i < sents.length && out.length < 6; i++) {
-        out.push({ beat: out.length + 1, headline: headlineFrom(sents[i], 'Idea ' + (out.length + 1)),
-                   say: sents[i], show: null, checkpoint: '' });
+        out.push(mkBeat(out.length + 1, headlineFrom(sents[i], 'Idea ' + (out.length + 1)), sents[i]));
       }
       return out;
     }
@@ -295,8 +341,8 @@
         var nm = typeof c === 'string' ? clean(c) : clean(c && (c.name || c.title || c.label));
         var df = typeof c === 'string' ? '' : clean(c && (c.definition || c.why || c.description));
         if (!nm) continue;
-        out.push({ beat: out.length + 1, headline: headlineFrom(nm, 'Concept'), say: df || nm,
-                   show: null, checkpoint: typeof c === 'object' && c ? clean(c.misconception) : '' });
+        out.push(mkBeat(out.length + 1, headlineFrom(nm, 'Concept'), df || nm, null,
+                        (typeof c === 'object' && c) ? clean(c.misconception) : ''));
       }
       if (out.length) return out;
     }
@@ -309,8 +355,7 @@
         var term = typeof k === 'string' ? clean(k) : clean(k && k.term);
         var def = typeof k === 'string' ? '' : clean(k && k.definition);
         if (!term) continue;
-        out.push({ beat: out.length + 1, headline: headlineFrom(term, 'Key term'),
-                   say: def || term, show: null, checkpoint: '' });
+        out.push(mkBeat(out.length + 1, headlineFrom(term, 'Key term'), def || term));
       }
       if (out.length) return out;
     }
@@ -458,6 +503,28 @@
   }
 
   /* ── THE BOARD ──────────────────────────────────────────────────────────*/
+  /* Guided practice, built from the beats themselves.
+
+     Pearson and Gallagher's gradual release runs I do -> we do -> you do, and
+     the board was only ever doing "I do": it modelled the steps and stopped.
+     Renkl and Atkinson's fading work says the transition should be a
+     completion problem - the learner supplies the steps that were shown.
+
+     So after the modelled run, the same procedure comes back with the steps
+     hidden and the learner chooses what comes next. It needs no new data: the
+     distractors are the lesson's own later steps, which is exactly the
+     confusion worth testing - knowing the moves is not knowing their order. */
+  function buildPractice(beats) {
+    var steps = [], i;
+    for (i = 0; i < beats.length; i++) {
+      var label = clean(beats[i].headline) || clean(beats[i].say);
+      if (label) steps.push({ label: label, say: clean(beats[i].say), idx: steps.length });
+    }
+    /* Two steps cannot make an ordering question worth asking. */
+    if (steps.length < 3) return null;
+    return { steps: steps, at: 0, wrong: 0 };
+  }
+
   function Board(day, mount) {
     this.day = day || {};
     this.mount = mount;
@@ -465,6 +532,9 @@
     this.index = 0;
     this.busy = false;
     this.keyHandler = null;
+    this.practice = buildPractice(this.beats);
+    this.phase = 'teach';          /* teach -> practice */
+    this.chosen = null;            /* the option picked on the current step */
   }
 
   Board.prototype.destroy = function () {
@@ -472,17 +542,90 @@
     this.keyHandler = null;
   };
 
+  /* Which of the three phases the learner is in, in their words not ours. */
+  Board.prototype.phaseChip = function () {
+    if (this.phase === 'practice') {
+      return '<div class="sfwbt-phase"><span class="sfwbt-chip is-practice">Your turn</span>' +
+             '<span class="sfwbt-phase-note">Put the steps in order</span></div>';
+    }
+    if (this.index === 0) {
+      return '<div class="sfwbt-phase"><span class="sfwbt-chip">What we are learning</span></div>';
+    }
+    return '<div class="sfwbt-phase"><span class="sfwbt-chip">Watch me</span>' +
+           '<span class="sfwbt-phase-note">Step ' + this.index + ' of ' + (this.beats.length - 1) + '</span></div>';
+  };
+
+  Board.prototype.practiceHtml = function () {
+    var p = this.practice, done = p.steps.slice(0, p.at), i;
+    var h = this.phaseChip();
+
+    if (done.length) {
+      h += '<div class="sfwbt-sofar"><span class="sfwbt-sofar-tag">So far</span><ol class="sfwbt-list">';
+      for (i = 0; i < done.length; i++) h += '<li>' + esc(done[i].label) + '</li>';
+      h += '</ol></div>';
+    }
+
+    if (p.at >= p.steps.length) {
+      h += '<p class="sfwbt-pq sfwbt-in">That is the whole procedure, in order. You built it yourself.</p>';
+      return h;
+    }
+
+    h += '<p class="sfwbt-pq sfwbt-in">' +
+         (p.at === 0 ? 'Which step comes first?' : 'What comes next?') + '</p>';
+
+    /* Options: the correct next step plus up to three later ones, shuffled
+       once per step so the position is not a tell. */
+    var opts = [p.steps[p.at]], k;
+    for (k = p.at + 1; k < p.steps.length && opts.length < 4; k++) opts.push(p.steps[k]);
+    if (opts.length < 4) {
+      for (k = p.at - 1; k >= 0 && opts.length < 4; k--) opts.push(p.steps[k]);
+    }
+    if (!p.order || p.orderFor !== p.at) {
+      p.order = opts.slice().sort(function () { return Math.random() - 0.5; });
+      p.orderFor = p.at;
+    }
+    for (i = 0; i < p.order.length; i++) {
+      var o = p.order[i];
+      var cls = 'sfwbt-opt';
+      if (this.chosen !== null) {
+        if (o.idx === p.at) cls += ' is-right';
+        else if (o.idx === this.chosen) cls += ' is-wrong';
+        else cls += ' is-dim';
+      }
+      h += '<button type="button" class="' + cls + '" data-idx="' + o.idx + '"' +
+           (this.chosen !== null ? ' disabled' : '') +
+           ' onclick="window.__sfwbtPick(' + o.idx + ')">' + esc(o.label) + '</button>';
+    }
+    if (this.chosen !== null) {
+      var right = this.chosen === p.at;
+      h += '<div class="sfwbt-why sfwbt-in">' +
+           (right ? '' : 'Not yet — that step comes later. ') +
+           esc(p.steps[p.at].say || p.steps[p.at].label) + '</div>';
+    }
+    return h;
+  };
+
   Board.prototype.html = function () {
     var i, h = '<div class="sfwbt">';
     h += '<div class="sfwbt-board" id="sfwbt-board">';
-    for (i = 0; i <= this.index && i < this.beats.length; i++) {
-      h += beatHtml(this.beats[i], i, i === this.index);
+    if (this.phase === 'practice') {
+      h += this.practiceHtml();
+    } else {
+      h += this.phaseChip();
+      for (i = 0; i <= this.index && i < this.beats.length; i++) {
+        h += beatHtml(this.beats[i], i, i === this.index);
+      }
     }
     h += '</div>';
+    /* One rail across both phases, so the learner can see that the lesson does
+       not end when the modelling does. */
+    var pSteps = this.practice ? this.practice.steps.length : 0;
+    var total = this.beats.length + pSteps;
+    var doneTo = this.phase === 'practice' ? this.beats.length + this.practice.at : this.index;
     h += '<div class="sfwbt-rail" role="progressbar" aria-valuemin="1" aria-valuemax="' +
-         this.beats.length + '" aria-valuenow="' + (this.index + 1) + '">';
-    for (i = 0; i < this.beats.length; i++) {
-      h += '<span class="sfwbt-seg' + (i <= this.index ? ' is-done' : '') + '"></span>';
+         total + '" aria-valuenow="' + (doneTo + 1) + '">';
+    for (i = 0; i < total; i++) {
+      h += '<span class="sfwbt-seg' + (i <= doneTo ? ' is-done' : '') + '"></span>';
     }
     h += '</div>';
     h += '<div class="sfwbt-controls">' +
@@ -535,7 +678,10 @@
     this.paint();
   };
 
-  Board.prototype.replay = function () { this.paint(); };
+  Board.prototype.replay = function () {
+    if (this.phase === 'practice') this.chosen = null;
+    this.paint();
+  };
 
   Board.prototype.msg = function (text) {
     var m = doc.getElementById('sfwbt-msg');
@@ -615,20 +761,52 @@
     var explain = doc.getElementById('sfwbt-explain');
     var last = self.index >= self.beats.length - 1;
 
-    if (back) { back.disabled = self.index === 0; back.onclick = function () { self.go(-1); }; }
+    if (back) {
+      back.disabled = self.phase === 'teach' && self.index === 0;
+      back.onclick = function () {
+        if (self.phase === 'practice') {
+          if (self.practice.at > 0 || self.chosen !== null) {
+            if (self.chosen !== null) { self.chosen = null; }
+            else { self.practice.at--; }
+          } else {
+            self.phase = 'teach';       /* back into the modelled run */
+          }
+          self.paint();
+          return;
+        }
+        self.go(-1);
+      };
+    }
     if (replay) replay.onclick = function () { self.replay(); };
     if (explain) explain.onclick = function () { self.explain(); };
     if (next) {
       next.disabled = false;
-      next.textContent = last ? 'Done →' : 'Next →';
-      next.onclick = function () {
-        if (last) {
-          /* hand control back to the session's own card flow */
-          if (typeof global.showNextCard === 'function') global.showNextCard();
-          return;
-        }
-        self.go(1);
-      };
+      if (self.phase === 'practice') {
+        var finished = self.practice.at >= self.practice.steps.length;
+        next.textContent = finished ? 'Done →' : 'Next →';
+        /* Until they have answered, Next would skip the question. */
+        next.disabled = !finished && self.chosen === null;
+        next.onclick = function () {
+          if (finished) {
+            if (typeof global.showNextCard === 'function') global.showNextCard();
+            return;
+          }
+          self.practice.at++;
+          self.chosen = null;
+          self.paint();
+        };
+      } else {
+        var intoPractice = last && !!self.practice;
+        next.textContent = intoPractice ? 'Your turn →' : (last ? 'Done →' : 'Next →');
+        next.onclick = function () {
+          if (intoPractice) { self.phase = 'practice'; self.chosen = null; self.paint(); return; }
+          if (last) {
+            if (typeof global.showNextCard === 'function') global.showNextCard();
+            return;
+          }
+          self.go(1);
+        };
+      }
     }
 
     if (!self.keyHandler) {
@@ -647,6 +825,16 @@
       };
       doc.addEventListener('keydown', self.keyHandler);
     }
+  };
+
+  /* Bound globally because the option buttons are rebuilt on every paint and
+     inline onclick is how the rest of lesson.html wires its cards. */
+  global.__sfwbtPick = function (idx) {
+    var b = global.__sfwbtActive;
+    if (!b || b.phase !== 'practice' || b.chosen !== null) return;
+    b.chosen = idx;
+    if (idx !== b.practice.at) b.practice.wrong++;
+    b.paint();
   };
 
   /* ── PUBLIC ─────────────────────────────────────────────────────────────*/
