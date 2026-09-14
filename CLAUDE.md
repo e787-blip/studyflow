@@ -114,6 +114,24 @@ Every type has a renderer (`renderFill`, `renderBigEquation`, `renderPassage`,
 `app.html`, `SPECIAL_TYPES` + `SPECIAL_TYPES_PRETEST`, an injector in
 `buildQueue`, and a renderer plus its dispatch case.
 
+### `workedExample` — generated with the lesson
+
+`app.html`'s prompt asks for one on every day, and its validator keeps it only
+when at least two steps carry a real line:
+
+```json
+"workedExample": { "problem": "", "steps": [ {"title":"", "line":"", "why":""} ] }
+```
+
+`line` is printed large, so it is capped at 40 characters in the prompt. The
+prompt also states the rule the whole feature rests on: **the example must not
+be any of the day's questions, or share their numbers or answers.**
+
+Three files move together here: the prompt text, the output schema string, and
+the validator. Add the field to the prompt but not the schema string and the
+model never returns it — silently, because `workedFor` just falls through to
+the day's steps and the board still looks fine.
+
 ### Subject classification
 
 `resolveSubjectType(plan, day)` is the single source of truth. It honours a saved
@@ -246,6 +264,20 @@ worked solutions to the first two questions the learner was about to be asked.
 Worked lines with answers belong on `fromWrongAnswer`, where the learner has
 already committed to an answer.
 
+**The opening board now works a full solution, answer and all — and the
+invariant still holds, because the problem is not one of theirs.**
+`buildParallelMath` synthesises a problem of the same form with different
+numbers. The learner sees the whole method; none of their own questions are
+spent. See "The parallel maths example" below.
+
+Where the line sits, so this is not re-litigated: the invariant is about a
+**computed result** the learner is about to produce, not about vocabulary. A
+photosynthesis lesson says "glucose" and one of its fill questions has "glucose"
+as the answer — the lesson card and the key-terms card print it too. Teaching
+the thing the day is about is the app, not a leak. What must never appear is a
+question's stem next to its own answer, or the worked result of a problem in the
+queue.
+
 ### 8. A question belongs to its subject, and must be framed as its subject
 
 Two things used to drag questions out of their own subject:
@@ -345,6 +377,43 @@ Two ordering traps in `dgLayoutFor`, both already fixed, both easy to reintroduc
   out as a row of plain boxes. It now only trims when the clause contains
   letters.
 
+### `SFStepVisual` — a picture for ONE step
+
+`diagramForDay` draws the lesson. `SFStepVisual.forStep(step, ctx)` draws a
+single step of a worked example, so a four-step walkthrough gets four different
+pictures rather than the same diagram four times.
+
+Four parametric builders, chosen from what the step actually contains:
+
+| Builder | When | Built from |
+|---|---|---|
+| `balance` | an equation, on a quantitative subject | the two sides, drawn as scales that stay level |
+| `jumpLine` | one arithmetic move | the two numbers, as a jump along a line |
+| `angleArc` | a named angle | its real measure |
+| `inOut` | the step names what goes in and what comes out | the nouns either side of the verb |
+| `progressStrip` | anything else | the real step labels, with this one lit |
+
+All of them return null rather than draw an empty frame.
+
+**The 21 curated templates are deliberately NOT in this chain.** Their patterns
+are written to match a whole day's topic string, so against one sentence they
+fire on a stray word: "it excites electrons and starts the chain" matched the
+atom template, and a step about chlorophyll absorbing light was illustrated with
+a Bohr model of carbon. It read as a plausible science picture, which is exactly
+what made it wrong. They are also drawn 420 units wide with 8px labels, and the
+panel slot is half that. They still reach the learner on the lesson card, via
+`diagramForDay` — which is where a topic-level drawing belongs.
+
+Two traps already fixed in these builders:
+
+- **`angleArc` fits its viewBox to the geometry**, rather than shrinking the ray
+  to fit a fixed frame. The fixed-frame version squeezed an obtuse angle's
+  second ray to a stub and pushed its label off the left edge, where it was
+  simply invisible — the picture still drew, it was just missing a label.
+- **`jumpLine`'s arrowhead follows the curve's tangent** (`P1 - C` on a
+  quadratic), and its control point is solved from the peak height wanted
+  (`cy = 2*peak - AX`), not eyeballed. Same family as the wave-crest bug below.
+
 `curatedDiagramSVG` holds 21 hand-drawn templates: brain, neuron, atom,
 supply-demand, dna, ecosystem, water-cycle, mitosis, memory-model,
 plate-tectonics, photosynthesis, forces, wave, circuit, number-line, fractions,
@@ -379,8 +448,8 @@ Three entry points:
 | Lesson-card replacement | `fromDay(day)` | **Returns null on every subject — dormant.** Pre-existing, falls back safely to the normal lesson card. |
 | Wrong-answer walkthrough | `fromWrongAnswer(q, day)` | Active |
 
-11 scenes: `hero`, `brief`, `map`, `chart`, `pyramid`, `steps`, `cycle`,
-`compare`, `timeline`, `parts`, `equation`.
+12 scenes: `hero`, `brief`, `map`, `chart`, `pyramid`, `steps`, `cycle`,
+`compare`, `timeline`, `parts`, `equation`, **`worked`**.
 
 `briefFor` picks a scene by subject and topic keywords. Two things are required
 for a scene to build: the right `type` **and** the data that scene reads. Setting
@@ -391,13 +460,86 @@ scene-specific field (`places`, `lines`, `center`).
 `Scene.map` needs real geographic names — it does a gazetteer coordinate lookup
 and returns null if under ~60% resolve. That's correct; the fallback handles it.
 
-Current per-subject layouts: geography → map, history → timeline, science → cycle
-or parts, math → equation (real equations from the day, no answers), cs/psychology
-→ steps, economics → compare, rest → brief.
-
 **Critical:** the card handler skips to the next card when `render()` returns
 falsy. A scene that builds but returns false shows the learner *nothing*, with no
 error. Always verify `render()` returns true, not just that `build()` works.
+
+### `Scene.worked` — the sideways worked example
+
+The opening board, and the wrong-answer walkthrough. It runs **across, not
+down**: the active step sits in the middle, the previous one stays half-visible
+at the left edge, the next waits as an empty ghost card at the right, and
+advancing slides the whole track.
+
+Every panel carries its own picture, built by `SFStepVisual` from that step's
+own words.
+
+What it replaced, and why not to go back:
+
+- `Scene.equation` laid a solution out as a numbered column running **down** the
+  card. Every line was visible at once, so nothing arrived, and a four-step
+  solution had scrolled its first line off the top by the end. It is a printed
+  answer, not a walkthrough. `Scene.equation` still exists but nothing reaches
+  it — `working`/`solve`/`math` all alias to `worked` now.
+- The board is **`manual: true`** — no autoplay. Every other scene reveals on a
+  1.5s timer, which for a worked solution walks off the answer before the
+  learner has read the line. `render()` honours `scene.manual` by showing beat 1
+  and waiting.
+
+Three pieces of plumbing that are easy to break:
+
+- **`onPaint`.** The track slide and the rail fill depend on *which* beat, not
+  on whether a beat has been reached, so they cannot be CSS classes. The scene
+  returns an `onPaint(wrapEl, at)` hook; `build()` must pass it through and
+  `paint()` must call it. Drop it anywhere along that chain and the board still
+  renders — it just silently stops sliding.
+- **`data-sfb-cls`.** `paint()` rewrites each beat element's whole `class`
+  attribute, so a scene-specific class set in `g()` is wiped on the first
+  advance. `g()` stashes it in `data-sfb-cls` and `paint()` puts it back.
+- **`transform-box: fill-box`** on anything scaled. An SVG element's
+  `transform-origin` is the origin of the user space, not its own box, so
+  `scale(.94)` on a panel 700 units to the right throws it off the board instead
+  of shrinking it in place.
+
+Sizing is in viewBox units at `width:100%`, so **W sets the scale**. It is 480
+wide on purpose: at 640 the board was 1:1 on desktop and shrank every label to
+54% on a phone — the reason line came out at 6px. A narrower board scales *up*
+where there is room. Nothing is rasterised, so scaling up is free.
+
+### Where the worked example comes from — `workedFor(day, subject, opts)`
+
+Most specific first:
+
+1. `day.workedExample` — what the model generated with the lesson. **This is
+   the main path in production**; everything below is the safety net for a day
+   where the model omitted it.
+2. **maths: a synthesised parallel problem** — see below.
+3. `day.steps` — the day's own teaching procedure.
+4. `day.concepts` / `pillars` / `keyTerms`, but **only when `opts.concepts`**.
+
+`briefFor` asks for (1–3) first, then tries its own subject scenes (map,
+timeline, cycle, compare…), and only then asks for (4). That ordering matters: a
+geography day is better served by the map its pillars can actually fill than by
+three concept panels, and a dated history day by the timeline. Ask for concepts
+too early and those subjects lose their diagrams.
+
+### The parallel maths example — how invariant 7 survives a worked solution
+
+A worked example that stops before the answer teaches nothing. So the maths
+example is **not one of the day's questions**: `buildParallelMath` reads the
+*form* of the day's `bigequation` questions (`twostep`, `onestep`, `bothsides`,
+`distribute`, `combine`), picks a seed of different numbers, and works that to
+the answer and checks it. `collidesWithDay` rejects any candidate that restates
+something the day is going to ask, and walks to the next seed.
+
+Seeds are chosen so every intermediate value is a whole number. An example that
+lands on 3.4285 teaches arithmetic frustration, not the method.
+
+The pick is stable per day (`hashOf` the title), so the same lesson always opens
+on the same example rather than a different one on every render.
+
+**A regression check that matters:** a maths day must yield four panels whose
+equations appear nowhere in `day.questions`.
 
 ---
 
@@ -444,6 +586,17 @@ What to check after any `buildQueue` or renderer change:
     **no `diagram` field at all** — that is the common case in production
 13. All 11 custom layouts draw, all six `graph` shapes draw, and `bars` / `venn`
     / `matrix` each fall back rather than return null when given wrong data
+14. The opening board is `worked` or a subject scene (`map`, `timeline`,
+    `compare`, `cycle`, `parts`, `steps`) — **never `brief`/`hero`**, which is
+    the identical generic node card every subject used to open on
+15. Every panel of a `worked` board carries a picture, and no `.sfb-wvis` slot
+    is empty
+16. A maths board's equations appear nowhere in `day.questions` (invariant 7,
+    and the reason `collidesWithDay` exists)
+17. `Scene.worked`'s track actually slides — check `onPaint` ran, not just that
+    the beat classes changed
+18. The board does not overflow at 375px, and its reason line is still legible
+    there (it is the smallest text on the card)
 
 Verify by executing the code, not by reading it. Several bugs here looked correct
 on inspection and only showed up when the queue was actually built — and two
@@ -474,6 +627,20 @@ frontend and `api/*.js` together. There is no build step, so a push is the deplo
 
 - **`fromDay` is dormant** — the whiteboard never replaces the lesson card.
 - `index.html` has not been reviewed yet. That was the next task (hero section).
+- **`workedExample` has not been seen from a real model run.** The prompt, the
+  schema and the validator are in place; the fallback chain is tested against
+  fixtures, and the primary path is tested against a hand-written payload of
+  the shape the prompt asks for (`workedFor` prefers it, `briefFor` prefers it
+  over its own subject scene, per-step `visual` specs draw, and six malformed
+  shapes fall back without throwing). What is still unverified is the *model*:
+  no generated plan has come back carrying the field yet. Check the first one
+  for step `line` lengths, and for whether it honours "not one of the questions
+  below" — that rule is prompt-enforced only, with no validator behind it.
+- **Concept-only days lean on `progressStrip`.** When a day has concepts but no
+  procedure, most panels get the strip, because a single term genuinely has
+  little to draw. A model-supplied `workedExample` is what fixes those days.
+- `Scene.equation` is now unreachable — kept, with a note, in case the vertical
+  form is ever wanted again.
 
 ## Conventions
 

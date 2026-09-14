@@ -9174,6 +9174,652 @@
     return null;
   }
 
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     SFStepVisual — a picture for ONE step of a worked example.
+
+     diagramForDay draws the lesson as a whole. This draws a single step of the
+     working, from that step's own words, so a four-step walkthrough gets four
+     different pictures rather than the same diagram four times.
+
+     Four parametric builders, chosen from what the step actually contains:
+
+       balance    an equation as a pair of scales, with the operation being
+                  applied to both sides written underneath. This is the whole
+                  idea of solving an equation, drawn.
+       jumpLine   one arithmetic move as a jump along a number line.
+       angleArc   a named angle, drawn at its real measure.
+       inOut      what goes in, what happens, what comes out.
+
+     Then the 21 curated templates and the full kit, matched against the step
+     text, and finally progressStrip — the procedure with this step lit. That
+     last one is a fallback but not a placeholder: it is built from the real
+     step labels and it changes on every step.
+
+     Everything returns a complete <svg> string or null. NEVER an empty frame:
+     a step with nothing drawable gets no picture and the panel gives the words
+     more room instead.
+     ══════════════════════════════════════════════════════════════════════════ */
+  var SFStepVisual = (function () {
+    'use strict';
+
+    var LF = "font-family:'DM Sans',system-ui,-apple-system,sans-serif;";
+    var INK = '#1a1d2e', MUTED = '#6b7280', RULE = '#cbd5e1';
+    var BLUE = '#4a7cf6', BLUE_F = '#eaf1ff', BLUE_T = '#1e40af';
+    var GOLD = '#f59e0b', GOLD_F = '#fff5e5', GOLD_T = '#92400e';
+    var TEAL = '#38bfa1', TEAL_F = '#e6faf5', TEAL_T = '#065f46';
+
+    function sv(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+    function cl(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim(); }
+    function r1(n) { return Math.round(Number(n) * 10) / 10; }
+    function isArr(v) { return Object.prototype.toString.call(v) === '[object Array]'; }
+
+    /* Real DM Sans metrics when the kit is present, a rough estimate when it
+       is not. Only used to shrink text that would overflow its box. */
+    function measure(s, size, weight) {
+      if (typeof SFDiagramKit !== 'undefined' && SFDiagramKit.measure) {
+        return SFDiagramKit.measure(s, size, weight);
+      }
+      return String(s == null ? '' : s).length * size * 0.58;
+    }
+
+    /** Largest size at or below `size` that fits `s` into `maxW`, floored. */
+    function fitSize(s, maxW, size, weight, floor) {
+      var w = measure(s, size, weight);
+      if (w <= maxW) return size;
+      var scaled = size * (maxW / w);
+      return Math.max(floor || 9, Math.floor(scaled * 10) / 10);
+    }
+
+    function open(w, h) {
+      return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" ' +
+        'style="display:block;' + LF + '">';
+    }
+
+    function T(x, y, s, o) {
+      o = o || {};
+      return '<text x="' + r1(x) + '" y="' + r1(y) + '" text-anchor="' +
+        (o.anchor || 'middle') + '" font-size="' + (o.size || 11) +
+        '" font-weight="' + (o.weight || 600) + '" fill="' + (o.fill || INK) +
+        '">' + sv(s) + '</text>';
+    }
+
+    /* ── 1. BALANCE ────────────────────────────────────────────────────────
+       An equation is a claim that two things weigh the same. Drawing it as a
+       level beam says that in one picture, and the caption underneath says
+       what is being done to BOTH pans - which is the rule learners break.
+
+       The beam stays level on purpose. A tilted scale would say the equation
+       is false. */
+    function balance(lhs, rhs, note) {
+      lhs = cl(lhs); rhs = cl(rhs);
+      if (!lhs || !rhs) return null;
+      if (lhs.length > 26 || rhs.length > 26) return null;
+
+      var W = 330, H = note ? 186 : 164;
+      var PAN_W = 122, PAN_H = 46;
+      var LX = 84, RX = 246, BEAM_Y = 54, PAN_Y = 78;
+
+      var ls = fitSize(lhs, PAN_W - 18, 17, 700, 10);
+      var rs = fitSize(rhs, PAN_W - 18, 17, 700, 10);
+      /* One size across both pans: two different sizes would read as one side
+         mattering more than the other, which is the opposite of the point. */
+      var fs = Math.min(ls, rs);
+
+      var o = open(W, H);
+      /* Stand: pillar, foot, beam. */
+      o += '<path d="M' + (W / 2) + ' ' + BEAM_Y + ' L' + (W / 2 - 19) + ' 136 L' +
+        (W / 2 + 19) + ' 136 Z" fill="#eef2f9" stroke="' + RULE + '" stroke-width="1.6" stroke-linejoin="round"/>';
+      o += '<rect x="' + (W / 2 - 42) + '" y="136" width="84" height="8" rx="4" fill="' + RULE + '"/>';
+      o += '<line x1="' + LX + '" y1="' + BEAM_Y + '" x2="' + RX + '" y2="' + BEAM_Y +
+        '" stroke="' + INK + '" stroke-width="3.4" stroke-linecap="round"/>';
+      o += '<circle cx="' + (W / 2) + '" cy="' + BEAM_Y + '" r="5.5" fill="' + INK + '"/>';
+
+      /* Hangers and pans. */
+      var side = [[LX, BLUE, BLUE_F, BLUE_T, lhs], [RX, BLUE, BLUE_F, BLUE_T, rhs]];
+      for (var i = 0; i < side.length; i++) {
+        var cx = side[i][0];
+        o += '<line x1="' + cx + '" y1="' + BEAM_Y + '" x2="' + cx + '" y2="' + PAN_Y +
+          '" stroke="' + RULE + '" stroke-width="1.6"/>';
+        o += '<rect x="' + (cx - PAN_W / 2) + '" y="' + PAN_Y + '" width="' + PAN_W +
+          '" height="' + PAN_H + '" rx="11" fill="' + side[i][2] + '" stroke="' +
+          side[i][1] + '" stroke-width="1.8"/>';
+        o += T(cx, PAN_Y + PAN_H / 2 + fs * 0.35, side[i][4],
+               { size: fs, weight: 700, fill: side[i][3] });
+      }
+
+      /* The equals sign sits between the pans, on their centre line. */
+      o += T(W / 2, PAN_Y + PAN_H / 2 + 6, '=', { size: 18, weight: 700, fill: MUTED });
+
+      if (note) {
+        var ns = fitSize(note, W - 24, 11.5, 600, 8.5);
+        o += T(W / 2, H - 10, note, { size: ns, weight: 600, fill: GOLD_T });
+      }
+      return o + '</svg>';
+    }
+
+    /* ── 2. JUMP LINE ──────────────────────────────────────────────────────
+       One arithmetic move, drawn as a jump. The arc is a quadratic, and a
+       quadratic does NOT pass through its control point: it peaks at
+       0.25*y0 + 0.5*cy + 0.25*y1. The control y below is solved from the
+       peak height wanted, not eyeballed - putting the label at the control
+       point is how the wave template's crest markers ended up on the zero
+       crossings. */
+    function jumpLine(from, to, label) {
+      from = Number(from); to = Number(to);
+      if (!isFinite(from) || !isFinite(to) || from === to) return null;
+      if (Math.abs(from) > 100000 || Math.abs(to) > 100000) return null;
+
+      var W = 330, H = 122, AX = 86, X0 = 30, X1 = 300;
+
+      /* Domain padded either side so neither marker sits on the arrowhead. */
+      var lo = Math.min(from, to), hi = Math.max(from, to);
+      if (lo === hi) return null;
+      var padU = (hi - lo) * 0.18;
+      lo -= padU; hi += padU;
+      function px(v) { return X0 + (v - lo) / (hi - lo) * (X1 - X0); }
+
+      var xa = px(from), xb = px(to);
+      var o = open(W, H);
+
+      /* Axis with an arrowhead at each end. */
+      o += '<line x1="' + X0 + '" y1="' + AX + '" x2="' + X1 + '" y2="' + AX +
+        '" stroke="' + INK + '" stroke-width="2" stroke-linecap="round"/>';
+      o += '<path d="M' + (X1 - 8) + ' ' + (AX - 5) + ' L' + (X1 + 2) + ' ' + AX +
+        ' L' + (X1 - 8) + ' ' + (AX + 5) + ' Z" fill="' + INK + '"/>';
+      o += '<path d="M' + (X0 + 8) + ' ' + (AX - 5) + ' L' + (X0 - 2) + ' ' + AX +
+        ' L' + (X0 + 8) + ' ' + (AX + 5) + ' Z" fill="' + INK + '"/>';
+
+      /* Ticks: the two values, plus zero when it falls between them. */
+      var ticks = [{ v: from, c: MUTED }, { v: to, c: BLUE_T }];
+      if (lo < 0 && hi > 0 && from !== 0 && to !== 0) ticks.push({ v: 0, c: RULE });
+      for (var i = 0; i < ticks.length; i++) {
+        var tx = px(ticks[i].v);
+        o += '<line x1="' + r1(tx) + '" y1="' + (AX - 6) + '" x2="' + r1(tx) + '" y2="' +
+          (AX + 6) + '" stroke="' + ticks[i].c + '" stroke-width="2"/>';
+        o += T(tx, AX + 22, String(ticks[i].v), { size: 12, weight: 700, fill: ticks[i].c });
+      }
+
+      /* Start dot, then the jump. Peak height 36 above the axis. */
+      var peak = AX - 36;
+      /* peak = 0.25*AX + 0.5*cy + 0.25*AX, so cy = 2*peak - AX. The control
+         point sits twice as far from the axis as the crest does. */
+      var cy = 2 * peak - AX;
+      o += '<circle cx="' + r1(xa) + '" cy="' + AX + '" r="4.5" fill="' + MUTED + '"/>';
+      o += '<path d="M' + r1(xa) + ' ' + AX + ' Q' + r1((xa + xb) / 2) + ' ' + r1(cy) +
+        ' ' + r1(xb) + ' ' + AX + '" fill="none" stroke="' + BLUE +
+        '" stroke-width="2.4" stroke-linecap="round"/>';
+      /* Arrowhead along the curve's own tangent. A quadratic's tangent at the
+         end is P1 - C, so the head points the way the jump is actually
+         travelling - an axis-aligned head drawn at a plausible angle sat
+         across the curve instead of on it. */
+      var tx2 = xb - (xa + xb) / 2, ty2 = AX - cy;
+      var tl = Math.sqrt(tx2 * tx2 + ty2 * ty2) || 1;
+      var ux = tx2 / tl, uy = ty2 / tl;         // unit tangent
+      var hx = xb - ux * 11, hy = AX - uy * 11; // base of the head
+      var nx = -uy, ny = ux;                    // unit normal
+      o += '<path d="M' + r1(xb) + ' ' + r1(AX) + ' L' + r1(hx + nx * 5) + ' ' +
+        r1(hy + ny * 5) + ' L' + r1(hx - nx * 5) + ' ' + r1(hy - ny * 5) +
+        ' Z" fill="' + BLUE + '"/>';
+      o += '<circle cx="' + r1(xb) + '" cy="' + AX + '" r="4" fill="' + BLUE + '"/>';
+
+      if (cl(label)) {
+        var ls = fitSize(cl(label), 150, 12.5, 700, 9);
+        o += T((xa + xb) / 2, peak - 9, cl(label), { size: ls, weight: 700, fill: BLUE_T });
+      }
+      return o + '</svg>';
+    }
+
+    /* ── 3. ANGLE ARC ──────────────────────────────────────────────────────
+       An angle drawn at the measure it actually names. The ray length is
+       solved from the angle so the far end lands inside the frame - a fixed
+       length puts a 90-degree ray off the top of the viewBox, which reads as
+       correct in the source and is clipped on screen.
+
+       A right angle gets the square marker, not an arc, because that is the
+       convention every textbook uses. */
+    function angleArc(deg, label, rayA, rayB) {
+      deg = Number(deg);
+      if (!isFinite(deg) || deg <= 0 || deg >= 180) return null;
+
+      var rad = deg * Math.PI / 180;
+      var c = Math.cos(rad), s2 = Math.sin(rad);
+      var L = 152, R = Math.abs(deg - 90) < 0.5 ? 22 : 44, PAD = 14;
+
+      /* Work in a maths frame first - vertex at the origin, y upward - then
+         fit the viewBox around whatever that produced. A fixed viewBox with
+         a shrinking ray was the earlier approach, and on an obtuse angle it
+         squeezed the second ray to a stub and pushed its label off the left
+         edge, where it was simply invisible. Nothing reported it: the picture
+         still drew, it was just missing a label. */
+      var pts = [[0, 0], [L, 0], [L * c, L * s2]];
+      var i, a;
+      for (i = 0; i <= 12; i++) {           // the arc itself
+        a = rad * i / 12;
+        pts.push([R * Math.cos(a), R * Math.sin(a)]);
+      }
+
+      var meas = cl(label) || (Math.round(deg * 10) / 10) + '\u00b0';
+      var MS = 15;
+      var half = rad / 2, LR = R + 26;
+      var mx = LR * Math.cos(half), my = LR * Math.sin(half);
+      var mw = measure(meas, MS, 700);
+      pts.push([mx - mw / 2, my - MS * 0.5]); pts.push([mx + mw / 2, my + MS * 0.8]);
+
+      /* Ray names, each anchored so the text grows AWAY from its own ray -
+         default anchoring runs right from x, which walks the label back along
+         the line it is naming. */
+      var RS = 11, labels = [];
+      if (cl(rayA)) {
+        var aw = measure(cl(rayA), RS, 600);
+        labels.push({ t: cl(rayA), x: L - 4, y: -18, anchor: 'end' });
+        pts.push([L - 4 - aw, -18 - RS]); pts.push([L - 4, -18 + 4]);
+      }
+      if (cl(rayB)) {
+        var bw = measure(cl(rayB), RS, 600);
+        var left = c < -0.1;
+        var bx = L * c + (left ? -6 : 6), by = L * s2 + 9;
+        labels.push({ t: cl(rayB), x: bx, y: by, anchor: left ? 'end' : 'start' });
+        pts.push([left ? bx - bw : bx, by - RS]); pts.push([left ? bx : bx + bw, by + 4]);
+      }
+
+      var minX = pts[0][0], maxX = pts[0][0], minY = pts[0][1], maxY = pts[0][1];
+      for (i = 1; i < pts.length; i++) {
+        if (pts[i][0] < minX) minX = pts[i][0];
+        if (pts[i][0] > maxX) maxX = pts[i][0];
+        if (pts[i][1] < minY) minY = pts[i][1];
+        if (pts[i][1] > maxY) maxY = pts[i][1];
+      }
+      var W = maxX - minX + PAD * 2, H = maxY - minY + PAD * 2;
+      var VX = PAD - minX, VY = PAD + maxY;      // where the vertex lands
+      function X(v) { return r1(VX + v); }
+      function Y(v) { return r1(VY - v); }       // maths y up, screen y down
+
+      var o = open(r1(W), r1(H));
+      o += '<line x1="' + X(0) + '" y1="' + Y(0) + '" x2="' + X(L) + '" y2="' + Y(0) +
+        '" stroke="' + INK + '" stroke-width="2.4" stroke-linecap="round"/>';
+      o += '<line x1="' + X(0) + '" y1="' + Y(0) + '" x2="' + X(L * c) + '" y2="' +
+        Y(L * s2) + '" stroke="' + INK + '" stroke-width="2.4" stroke-linecap="round"/>';
+
+      if (Math.abs(deg - 90) < 0.5) {
+        /* The square marker, which is what every textbook draws for a right
+           angle. An arc here would read as "about ninety". */
+        o += '<path d="M' + X(R) + ' ' + Y(0) + ' L' + X(R) + ' ' + Y(R) + ' L' + X(0) +
+          ' ' + Y(R) + '" fill="none" stroke="' + BLUE + '" stroke-width="2.2"/>';
+      } else {
+        /* Sweep flag 0: from the base ray anticlockwise on screen, because
+           SVG's y runs downward. */
+        o += '<path d="M' + X(0) + ' ' + Y(0) + ' L' + X(R) + ' ' + Y(0) + ' A' + r1(R) +
+          ' ' + r1(R) + ' 0 0 0 ' + X(R * c) + ' ' + Y(R * s2) + ' Z" fill="' + BLUE +
+          '" fill-opacity=".10"/>';
+        o += '<path d="M' + X(R) + ' ' + Y(0) + ' A' + r1(R) + ' ' + r1(R) + ' 0 0 0 ' +
+          X(R * c) + ' ' + Y(R * s2) + '" fill="none" stroke="' + BLUE +
+          '" stroke-width="2.2"/>';
+      }
+
+      /* The measure sits on the bisector, R+26 out: that clears both rays by
+         (R+26)*sin(deg/2), which is over 18px for every angle this draws. */
+      o += T(VX + mx, VY - my + 5, meas, { size: MS, weight: 700, fill: BLUE_T });
+      for (i = 0; i < labels.length; i++) {
+        o += T(VX + labels[i].x, VY - labels[i].y, labels[i].t,
+               { anchor: labels[i].anchor, size: RS, weight: 600, fill: MUTED });
+      }
+      o += '<circle cx="' + X(0) + '" cy="' + Y(0) + '" r="3.6" fill="' + INK + '"/>';
+      return o + '</svg>';
+    }
+
+    /* ── 4. IN / OUT ───────────────────────────────────────────────────────
+       What goes in, what happens, what comes out. Photosynthesis, a chemical
+       reaction, a function, a market - anything the notes describe as taking
+       things and producing things.
+
+       Declines without at least one input AND one output: a box with arrows
+       pointing at nothing is a frame, not a diagram. */
+    function inOut(inputs, centre, outputs) {
+      inputs = isArr(inputs) ? inputs : [];
+      outputs = isArr(outputs) ? outputs : [];
+      centre = cl(centre);
+      var ins = [], outs = [], i;
+      for (i = 0; i < inputs.length && ins.length < 3; i++) {
+        if (cl(inputs[i])) ins.push(cl(inputs[i]).slice(0, 18));
+      }
+      for (i = 0; i < outputs.length && outs.length < 3; i++) {
+        if (cl(outputs[i])) outs.push(cl(outputs[i]).slice(0, 18));
+      }
+      if (!ins.length || !outs.length || !centre) return null;
+
+      var W = 372, H = 176, MID = 88;
+      var BW = 108, BH = 84, BX = (W - BW) / 2, BY = MID - BH / 2;
+      var CHIP_W = 104, CHIP_H = 28, GAP = 10;
+
+      function column(list, x, colour, fill, textCol, toBox) {
+        var total = list.length * CHIP_H + (list.length - 1) * GAP;
+        var y0 = MID - total / 2, out = '', k;
+        for (k = 0; k < list.length; k++) {
+          var cy = y0 + k * (CHIP_H + GAP) + CHIP_H / 2;
+          out += '<rect x="' + x + '" y="' + r1(cy - CHIP_H / 2) + '" width="' + CHIP_W +
+            '" height="' + CHIP_H + '" rx="8" fill="' + fill + '" stroke="' + colour +
+            '" stroke-width="1.5"/>';
+          var fs = fitSize(list[k], CHIP_W - 12, 11, 600, 8);
+          out += T(x + CHIP_W / 2, cy + fs * 0.35, list[k],
+                   { size: fs, weight: 600, fill: textCol });
+          /* Arrow from the chip edge to the box edge, or the reverse. */
+          var sx = toBox ? x + CHIP_W + 3 : BX + BW + 3;
+          var ex = toBox ? BX - 5 : x - 5;
+          var ey = toBox ? MID : cy;
+          var sy = toBox ? cy : MID;
+          out += '<path d="M' + r1(sx) + ' ' + r1(sy) + ' C' + r1((sx + ex) / 2) + ' ' +
+            r1(sy) + ' ' + r1((sx + ex) / 2) + ' ' + r1(ey) + ' ' + r1(ex) + ' ' + r1(ey) +
+            '" fill="none" stroke="' + colour + '" stroke-width="1.7" opacity=".75"/>';
+          var dir = toBox ? 1 : -1;
+          out += '<path d="M' + r1(ex) + ' ' + r1(ey) + ' l' + (-6 * dir) + ' -4 l0 8 Z" fill="' + colour + '"/>';
+        }
+        return out;
+      }
+
+      var o = open(W, H);
+      o += column(ins, 6, TEAL, TEAL_F, TEAL_T, true);
+      o += column(outs, W - CHIP_W - 6, GOLD, GOLD_F, GOLD_T, false);
+      o += '<rect x="' + BX + '" y="' + BY + '" width="' + BW + '" height="' + BH +
+        '" rx="14" fill="' + BLUE_F + '" stroke="' + BLUE + '" stroke-width="2.2"/>';
+
+      /* The centre label wraps rather than shrinking to nothing. */
+      var words = centre.split(' '), lines = [], cur = '';
+      for (i = 0; i < words.length; i++) {
+        var trial = cur ? cur + ' ' + words[i] : words[i];
+        if (cur && measure(trial, 12.5, 700) > BW - 14) { lines.push(cur); cur = words[i]; }
+        else cur = trial;
+        if (lines.length === 3) { cur = ''; break; }
+      }
+      if (cur) lines.push(cur);
+      var lh = 15, y = MID - (lines.length - 1) * lh / 2 + 4;
+      for (i = 0; i < lines.length; i++) {
+        var cs = fitSize(lines[i], BW - 12, 12.5, 700, 9);
+        o += T(W / 2, y + i * lh, lines[i], { size: cs, weight: 700, fill: BLUE_T });
+      }
+
+      o += T(6 + CHIP_W / 2, 14, 'IN', { size: 9, weight: 700, fill: TEAL_T });
+      o += T(W - 6 - CHIP_W / 2, 14, 'OUT', { size: 9, weight: 700, fill: GOLD_T });
+      return o + '</svg>';
+    }
+
+    /* ── 5. PROGRESS STRIP ─────────────────────────────────────────────────
+       The whole procedure with this step lit. The fallback, but drawn from
+       the real step labels, so it says something true and it changes on every
+       step. Needs two steps: a strip of one is a box. */
+    function progressStrip(labels, active, caption) {
+      labels = isArr(labels) ? labels : [];
+      var items = [], i;
+      for (i = 0; i < labels.length && items.length < 5; i++) {
+        if (cl(labels[i])) items.push(cl(labels[i]));
+      }
+      if (items.length < 2) return null;
+
+      var W = 344, H = caption ? 132 : 108, n = items.length;
+      var GAP = 12, BW = (W - 20 - GAP * (n - 1)) / n, BH = 54, BY = 30;
+      var o = open(W, H);
+
+      for (i = 0; i < n; i++) {
+        var x = 10 + i * (BW + GAP), on = (i === active);
+        if (i > 0) {
+          o += '<path d="M' + r1(x - GAP + 2) + ' ' + (BY + BH / 2) + ' L' + r1(x - 3) + ' ' +
+            (BY + BH / 2) + '" stroke="' + RULE + '" stroke-width="1.6"/>';
+          o += '<path d="M' + r1(x - 3) + ' ' + (BY + BH / 2) + ' l-5 -3.5 l0 7 Z" fill="' + RULE + '"/>';
+        }
+        o += '<rect x="' + r1(x) + '" y="' + BY + '" width="' + r1(BW) + '" height="' + BH +
+          '" rx="11" fill="' + (on ? BLUE_F : '#f5f7fb') + '" stroke="' + (on ? BLUE : RULE) +
+          '" stroke-width="' + (on ? 2.2 : 1.4) + '"/>';
+
+        /* Two lines maximum, then an ellipsis - a strip that wraps to four
+           lines stops being a strip. */
+        var words = items[i].split(' '), lines = [], cur = '';
+        for (var k = 0; k < words.length; k++) {
+          var trial = cur ? cur + ' ' + words[k] : words[k];
+          if (cur && measure(trial, 10, on ? 700 : 600) > BW - 12) {
+            lines.push(cur); cur = words[k];
+            if (lines.length === 2) { cur = ''; break; }
+          } else cur = trial;
+        }
+        if (cur) lines.push(cur);
+        if (!lines.length) lines = [items[i]];
+        var y = BY + BH / 2 - (lines.length - 1) * 6 + 3.5;
+        for (k = 0; k < lines.length; k++) {
+          var fs = fitSize(lines[k], BW - 10, 10, on ? 700 : 600, 7.5);
+          o += T(x + BW / 2, y + k * 12, lines[k],
+                 { size: fs, weight: on ? 700 : 600, fill: on ? BLUE_T : MUTED });
+        }
+        o += '<circle cx="' + r1(x + BW / 2) + '" cy="' + (BY - 11) + '" r="7.5" fill="' +
+          (on ? BLUE : '#e6eaf2') + '"/>';
+        o += T(x + BW / 2, BY - 7.5, String(i + 1),
+               { size: 9, weight: 700, fill: on ? '#ffffff' : MUTED });
+      }
+      if (caption) {
+        var cs = fitSize(cl(caption), W - 24, 11, 600, 8.5);
+        o += T(W / 2, H - 10, cl(caption), { size: cs, weight: 600, fill: MUTED });
+      }
+      return o + '</svg>';
+    }
+
+    /* ── reading a step ────────────────────────────────────────────────────
+       Everything below decides WHICH picture, from the step's own words. */
+
+    /* "3x + 7 = 22" -> {lhs:'3x + 7', rhs:'22'}. One equals sign only, both
+       sides non-empty, and no fill-in blank - a prompt is not an equation. */
+    function splitEquation(text) {
+      var t = cl(text);
+      if (!t || /_{2,}/.test(t)) return null;
+      var idx = t.indexOf('=');
+      if (idx <= 0 || idx === t.length - 1) return null;
+      if (t.indexOf('=', idx + 1) !== -1) return null;
+      var lhs = cl(t.slice(0, idx)), rhs = cl(t.slice(idx + 1));
+      if (!lhs || !rhs) return null;
+      /* Reject prose that happens to contain an equals sign. Algebra is
+         single-letter variables and the odd named function; a side carrying a
+         four-letter word is a sentence, and drawing a sentence in the pans of
+         a balance says the scale is weighing words.
+
+         balance() also caps each side at 26 characters, so a long sentence
+         was already declined downstream - but only by accident of length. A
+         short one ("cost = price") would have got through. */
+      if (lhs.split(' ').length > 5 || rhs.split(' ').length > 5) return null;
+      var WORDY = /[A-Za-z]{4,}/;
+      if (WORDY.test(lhs.replace(/\b(sqrt|sin|cos|tan|log)\b/gi, '')) ||
+          WORDY.test(rhs.replace(/\b(sqrt|sin|cos|tan|log)\b/gi, ''))) return null;
+      if (!/[0-9a-zA-Z)]/.test(lhs) || !/[0-9a-zA-Z)]/.test(rhs)) return null;
+      return { lhs: lhs, rhs: rhs };
+    }
+
+    /* The operation applied to both sides, said in as few words as possible.
+       Only returns something when the words really name an operation - a
+       generic "simplify the left" is not a both-sides move. */
+    function bothSidesNote(why) {
+      var t = cl(why).toLowerCase();
+      if (!t) return '';
+      /* A symbol and a number, not a sentence. The panel already prints the
+         reason in full underneath, so a caption repeating it made the card say
+         the same thing twice in two sizes. */
+      var m = t.match(/\b(add|subtract|multiply|divide)\b[^.,;]{0,24}?(-?\d+(?:\.\d+)?)/);
+      if (!m) return '';
+      var op = { add: '+', subtract: '−', multiply: '×', divide: '÷' }[m[1]];
+      if (!op) return '';
+      return op + ' ' + m[2] + '  on both sides';
+    }
+
+    /* "17 - 3 = 14" or "subtract 3 from 17" -> a jump from 17 to 14. */
+    function arithmeticMove(text) {
+      var t = cl(text);
+      var m = t.match(/(-?\d+(?:\.\d+)?)\s*([+−-])\s*(\d+(?:\.\d+)?)\s*=\s*(-?\d+(?:\.\d+)?)/);
+      if (m) {
+        var a = Number(m[1]), b = Number(m[3]), res = Number(m[4]);
+        var sign = m[2] === '+' ? '+' : '−';
+        return { from: a, to: res, label: sign + ' ' + b };
+      }
+      return null;
+    }
+
+    /* Words that name what a process takes and what it gives back. */
+    var IN_WORDS = /\b(?:from|using|uses|requires?|needs?|takes? in|absorbs?|inputs?|given|with)\b/i;
+    var OUT_WORDS = /\b(?:produces?|yields?|releases?|makes?|gives?|creates?|forms?|builds?|converts?|transforms?|turns?|outputs?|results? in|into)\b/i;
+
+    /** Split "A and B into C and D" style prose into two named lists. */
+    function inOutFrom(text) {
+      var t = cl(text);
+      if (!t) return null;
+      var left, right;
+
+      /* "X builds GLUCOSE from CARBON DIOXIDE" states the output first. Tested
+         before the forward pattern, because the forward one also matches it
+         and gets the two sides exactly backwards - it would have drawn carbon
+         dioxide coming OUT of photosynthesis. */
+      var rev = t.match(/\b(?:produces?|yields?|releases?|makes?|builds?|creates?|forms?|converts?|generates?)\s+(.{2,60}?)\s+\bfrom\b\s+(.{2,60})$/i);
+      if (rev) { right = rev[1]; left = rev[2]; }
+      else {
+        var m = t.match(/^(.*?)\b(?:into|to produce|producing|produces|yields?|releases?|makes?|gives?|creates?|forms?|builds?|converts?|transforms?)\b(.*)$/i);
+        if (!m) return null;
+        left = m[1]; right = m[2];
+      }
+      function split(s) {
+        var out = [], raw = String(s).split(/\s*(?:,|\band\b|\+|\bplus\b)\s*/i), k, v;
+        for (k = 0; k < raw.length; k++) {
+          v = cl(raw[k]).replace(/^(?:the|a|an|is|are|be|being|it|they|which|that|of|in|on)\s+/i, '');
+          /* "Water is broken" is the verb phrase, not the input. Keep the
+             head noun so the chip reads as a thing rather than a clause. */
+          v = v.replace(/\s+(?:is|are|was|were|gets?|gets|becomes?|gets turned|turns?)\s+.*$/i, '');
+          v = v.replace(/[.;:]+$/, '');
+          /* A clause, not a label. */
+          if (v && v.length <= 22 && v.split(' ').length <= 3 && /[a-z]/i.test(v)) out.push(v);
+        }
+        return out;
+      }
+      var ins = split(left), outs = split(right);
+      if (!ins.length || !outs.length) return null;
+      return { ins: ins.slice(-3), outs: outs.slice(0, 3) };
+    }
+
+    /* Nest a finished <svg> inside another one. The root's own width/height/
+       style would fight the slot it is being placed into, so they go and the
+       viewBox does the scaling. */
+    function nest(svg, x, y, w, h) {
+      if (!svg || typeof svg !== 'string') return '';
+      var m = svg.match(/^\s*<svg\b([^>]*)>/i);
+      if (!m) return '';
+      var attrs = m[1];
+      var vb = attrs.match(/viewBox\s*=\s*"([^"]*)"/i);
+      var head = '<svg x="' + r1(x) + '" y="' + r1(y) + '" width="' + r1(w) +
+        '" height="' + r1(h) + '" preserveAspectRatio="xMidYMid meet"' +
+        (vb ? ' viewBox="' + vb[1] + '"' : '') + '>';
+      return head + svg.slice(m[0].length);
+    }
+
+    /**
+     * A picture for one step, or null.
+     *
+     *   step: { line, why, visual }   ctx: { subject, topic, quantitative,
+     *                                        labels, index }
+     *
+     * Ordered most specific first. A picture built from THIS step beats a
+     * template matched on the topic, which beats the procedure strip.
+     */
+    function forStep(step, ctx) {
+      step = step || {}; ctx = ctx || {};
+      var line = cl(step.line), why = cl(step.why);
+      var text = cl(line + ' ' + why);
+      if (!text) return null;
+      var svg = null;
+
+      /* 0. A spec the model supplied for this step. */
+      if (step.visual && typeof step.visual === 'object' &&
+          typeof SFDiagramKit !== 'undefined') {
+        try { svg = SFDiagramKit.fromSpec(step.visual); } catch (e) { svg = null; }
+        if (svg) return svg;
+      }
+
+      /* 1. An equation on a quantitative subject: draw the balance. Gated on
+            the subject because "E = mc^2" quoted in a history lesson is not a
+            step of algebra being worked. */
+      if (ctx.quantitative) {
+        var eq = splitEquation(line);
+        if (eq) {
+          svg = balance(eq.lhs, eq.rhs, bothSidesNote(why));
+          if (svg) return svg;
+        }
+      }
+
+      /* 2. A named angle, at its real measure. */
+      var ang = text.match(/(\d{1,3}(?:\.\d+)?)\s*(?:°|degrees?\b)/i);
+      if (ang && /\bangle|\bdegrees?\b|°|triangle|rotat|turn\b|bearing/i.test(text)) {
+        svg = angleArc(Number(ang[1]), null, null, null);
+        if (svg) return svg;
+      }
+
+      /* 3. One arithmetic move, as a jump along the line. */
+      if (ctx.quantitative) {
+        var mv = arithmeticMove(text);
+        if (mv) {
+          svg = jumpLine(mv.from, mv.to, mv.label);
+          if (svg) return svg;
+        }
+      }
+
+      /* 4. Inputs and outputs, when the step actually names both.
+
+            Both halves are tried. Reading only the reason meant "Water is
+            broken into oxygen, protons and electrons" - a step that names its
+            inputs and its outputs in one sentence - was checked against "It
+            replaces the electrons chlorophyll lost" instead, found no pivot,
+            and fell through to the generic strip. */
+      if (OUT_WORDS.test(text)) {
+        var io = inOutFrom(line) || inOutFrom(why);
+        if (io) {
+          var hub = cl(step.title) || cl(ctx.topic) || '';
+          if (hub.length > 22) hub = hub.slice(0, 20).replace(/\s\S*$/, '');
+          svg = inOut(io.ins, hub || 'This step', io.outs);
+          if (svg) return svg;
+        }
+      }
+
+      /* 5. The procedure, with this step lit.
+
+            The 21 curated templates were tried here once, between in/out and
+            this, and they are deliberately NOT any more. Their patterns are
+            written to match a whole day's topic string, so against one
+            sentence they fire on a single stray word: "it excites electrons
+            and starts the chain" matched the atom template, and a step about
+            chlorophyll absorbing light was illustrated with a Bohr model of
+            carbon. It read as a plausible science picture, which is exactly
+            what made it wrong - a diagram that says something the step does
+            not.
+
+            They are also drawn for a full-width lesson card, 420 units across
+            with shell labels at 8px, and the panel slot here is half that.
+
+            The curated templates still reach the learner, on the lesson card,
+            through diagramForDay - which is where a topic-level drawing
+            belongs. Everything this function draws is built from the step. */
+      svg = progressStrip(ctx.labels, ctx.index, '');
+      return svg || null;
+    }
+
+    return {
+      forStep: forStep,
+      balance: balance,
+      jumpLine: jumpLine,
+      angleArc: angleArc,
+      inOut: inOut,
+      progressStrip: progressStrip,
+      nest: nest,
+      splitEquation: splitEquation,
+      arithmeticMove: arithmeticMove,
+      inOutFrom: inOutFrom,
+      bothSidesNote: bothSidesNote
+    };
+  })();
+
+
   function formatContent(content) {
     if (!content) return '';
     // TIER 3: Dual coding — [DIAGRAM: description] renders as real SVG or visual callout
@@ -9492,9 +10138,13 @@ var SFBoard = (function () {
 
   /* Every drawn element belongs to a beat. data-beat drives the reveal and
      the tap targets; beat 0 is always-on scaffolding. */
+  /* paint() rewrites this element's whole class attribute on every beat
+     change, so a scene-specific class set here would be wiped on the first
+     advance. data-sfb-cls is the copy paint() reads it back from. */
   function g(beat, inner, cls) {
-    return '<g class="sfb-b' + (cls ? ' ' + cls : '') + '" data-beat="' + beat + '">' +
-      inner + '</g>';
+    return '<g class="sfb-b' + (cls ? ' ' + cls : '') + '"' +
+      (cls ? ' data-sfb-cls="' + esc(cls) + '"' : '') +
+      ' data-beat="' + beat + '">' + inner + '</g>';
   }
 
   function text(x, y, s, o) {
@@ -9720,6 +10370,30 @@ var SFBoard = (function () {
     for (i = 0; i < list.length && out.length < (max || 6); i++) {
       p = pair(list[i]);
       if (p) out.push(p);
+    }
+    return out;
+  }
+
+  /* One step of a worked example, from whatever shape it arrived in:
+     a bare string, {line, why}, or the day's own {step, action, why}. */
+  function workedSteps(raw, max) {
+    var out = [], i, s, line, why;
+    if (!isArr(raw)) return out;
+    for (i = 0; i < raw.length && out.length < (max || 6); i++) {
+      s = raw[i];
+      if (typeof s === 'string') { line = clean(s); why = ''; }
+      else if (s && typeof s === 'object') {
+        line = clean(s.line || s.label || s.a || s.equation || s.step || s.title);
+        why = clean(s.why || s.detail || s.b || s.action || s.reason || s.note);
+        /* A step that carried only prose still has something to show. */
+        if (!line && why) { line = why; why = ''; }
+      } else continue;
+      if (!line) continue;
+      out.push({
+        line: line, why: why,
+        title: clean(s && s.title && s.title !== line ? s.title : (s && s.step) || ''),
+        visual: (s && s.visual) || null
+      });
     }
     return out;
   }
@@ -10028,7 +10702,17 @@ var SFBoard = (function () {
     return { svg: svgOpen(w, h2) + o + '</svg>', beats: n, w: w, h: h2 };
   };
 
-  /* EQUATION — worked steps, one line per beat, with optional reasons. */
+  /* EQUATION — worked steps as a numbered column running DOWN the card.
+
+     Nothing reaches this any more. It was the opening board and the
+     wrong-answer walkthrough; both now use Scene.worked, which runs across and
+     reveals one step at a time. The column showed every line of a solution at
+     once, so nothing arrived and a four-step solution had scrolled its first
+     line off the top by the end - a printed answer rather than a walkthrough.
+
+     Kept, not deleted, in case the vertical form is ever wanted for something
+     genuinely list-shaped. 'equation' still resolves here if a spec asks for
+     it by name; 'working', 'solve' and 'math' alias to 'worked'. */
   Scene.equation = function (spec) {
     var raw = spec.lines || spec.items || spec.steps;
     var items = pairs(raw, 8);
@@ -10589,7 +11273,207 @@ var SFBoard = (function () {
     return { svg: svgOpen(W2, h) + o + '</svg>', beats: n, w: W2, h: h };
   };
 
-  var TYPES = ['hero', 'brief', 'map', 'chart', 'pyramid', 'steps', 'cycle', 'compare', 'timeline', 'parts', 'equation'];
+  /* WORKED — one example, worked forward, one panel at a time, SIDEWAYS.
+
+     The board used to lay a worked solution out as a numbered column running
+     down the card (Scene.equation). It read as a wall of algebra: every line
+     visible at once, nothing to arrive, and by step four the learner had
+     scrolled the first line off the top.
+
+     This runs across instead. The active step sits in the middle of the
+     board, the step before stays half-visible at the left edge so the chain
+     is still legible, and the next one is waiting at the right. Advancing
+     slides the whole track; the arriving panel lifts in and its parts land in
+     order - headline, picture, reason.
+
+     Every panel carries its own picture, built by SFStepVisual from THAT
+     step's words, so an equation gets a balance, an angle gets the angle, a
+     process gets its inputs and outputs. A step with nothing drawable gets no
+     picture and its words take the room instead - never an empty frame. */
+  Scene.worked = function (spec) {
+    var steps = workedSteps(spec.steps || spec.items || spec.lines, 6);
+    if (steps.length < 2) return null;
+
+    var n = steps.length, i, k;
+    /* These are viewBox units, and the board is drawn at width:100%, so they
+       set the SCALE as much as the size: a unit is 1.3px on a 630px card and
+       0.7px on a 375px phone.
+
+       The first version used W=640, which made the board 1:1 on desktop and
+       shrank every label to 54% on a phone - the reason line came out at 6px.
+       A narrower board scales UP on desktop, where there is room, and down
+       far less on mobile. Nothing is rasterised, so scaling up costs nothing. */
+    var W = 480, PW = 336, GAP = 20, PH = 320;
+    var HEAD = 46, PANEL_Y = HEAD + 6;
+    var H = PANEL_Y + PH + 14;
+    var CENTRE = (W - PW) / 2;
+
+    var problem = clean(spec.problem || spec.equation);
+    var kicker = clean(spec.kicker) || 'Worked example';
+
+    /* Context for the picture chooser: it reads the step's own words first,
+       and falls back to the topic and the list of step names. */
+    var labels = [];
+    for (i = 0; i < n; i++) labels.push(steps[i].title || steps[i].line);
+    var ctx = {
+      subject: clean(spec.subject), topic: clean(spec.topic || spec.title),
+      quantitative: !!spec.quantitative, labels: labels, index: 0
+    };
+
+    /* ── header: what is being worked, and how far in ── */
+    var RAIL_W = 84, RAIL_X = W - PAD - RAIL_W;
+    var o = '', head = '';
+    head += text(PAD, 20, kicker.toUpperCase(),
+                 { anchor: 'start', size: 9.5, weight: 700, fill: MUTED });
+    if (problem) {
+      var ps = TITLE + 4;
+      while (ps > 12 && measure(problem, ps, 700) > W - PAD * 2 - RAIL_W - 14) ps -= 0.5;
+      head += text(PAD, 40, problem, { anchor: 'start', size: ps, weight: 700, fill: INK });
+    }
+    /* Rail: full width, scaled from JS. Transforming a rect is reliable in a
+       way that transitioning its width attribute is not. */
+    head += '<rect x="' + RAIL_X + '" y="16" width="' + RAIL_W +
+      '" height="5" rx="2.5" fill="' + RULE + '"/>';
+    head += '<rect class="sfb-wrail" data-sfb-rail x="' + RAIL_X + '" y="16" width="' +
+      RAIL_W + '" height="5" rx="2.5" fill="' + ACCENT + '"/>';
+    o += g(0, head);
+
+    /* ── panels ── */
+    var HS = TITLE + 7, RS = BODY + 1.5;
+    var track = '';
+    for (i = 0; i < n; i++) {
+      var px = i * (PW + GAP);
+      var st = steps[i], t = tone(i), last = (i === n - 1);
+
+      /* Three lines, not two. A procedural step reads as a sentence - "Water
+         is broken into oxygen, protons and electrons" - and capping at two
+         cut it to "...protons and…" directly above a diagram naming all
+         three. The visual slot below adapts to whatever height this takes. */
+      var hl = wrap(st.line, PW - 46, HS, 700, 3);
+      /* One very long token cannot be wrapped, only shrunk. */
+      var hs = HS;
+      while (hs > 12 && widest(hl, hs, 700) > PW - 46) hs -= 0.5;
+      var headTop = 52, headH = hl.length * hs * 1.22;
+
+      var rl = st.why ? wrap(st.why, PW - 40, RS, 400, 3) : [];
+      var reasonH = rl.length ? rl.length * RS * 1.45 : 0;
+
+      var vTop = headTop + headH + 12;
+      var vBot = PH - 16 - (reasonH ? reasonH + 14 : 0);
+      var vH = vBot - vTop;
+
+      var inner = '';
+      /* Card. The shadow is drawn on the card, not the group, so the dimmed
+         past panels dim their shadow with them. */
+      inner += '<rect x="6" y="6" width="' + PW + '" height="' + PH +
+        '" rx="20" fill="' + NAVY + '" opacity=".07"/>';
+      inner += '<rect class="sfb-wcard" x="0" y="0" width="' + PW + '" height="' + PH +
+        '" rx="20" fill="#FFFFFF" stroke="' + (last ? ACCENT : RULE) +
+        '" stroke-width="' + (last ? 2.2 : 1.6) + '"/>';
+      if (last) {
+        inner += '<rect x="0" y="0" width="' + PW + '" height="' + PH +
+          '" rx="20" fill="' + ACCENT_SOFT + '" opacity=".55"/>';
+      }
+
+      /* Step badge. */
+      inner += '<circle cx="30" cy="30" r="14" fill="' + (last ? ACCENT : t.fill) +
+        '" stroke="' + (last ? ACCENT : t.line) + '" stroke-width="1.6"/>';
+      inner += text(30, 34.5, String(i + 1),
+                    { size: SMALL + 1.5, weight: 700, fill: last ? '#FFFFFF' : t.ink });
+      if (st.title && st.title !== st.line) {
+        inner += text(54, 34.5, st.title.slice(0, 26),
+                      { anchor: 'start', size: SMALL, weight: 700, fill: MUTED });
+      }
+
+      /* Headline - the line itself, as large as it will go. */
+      var hg = '';
+      for (k = 0; k < hl.length; k++) {
+        hg += text(PW / 2, headTop + hs * 0.82 + k * hs * 1.22, hl[k],
+                   { size: hs, weight: 700, fill: last ? '#8A5E15' : INK });
+      }
+      inner += '<g class="sfb-wline">' + hg + '</g>';
+
+      /* Picture. Skipped rather than squeezed: under 76 units tall it would
+         be a thumbnail of a diagram, which teaches nothing. */
+      if (vH >= 76 && typeof SFStepVisual !== 'undefined') {
+        ctx.index = i;
+        var vis = null;
+        try { vis = SFStepVisual.forStep(st, ctx); } catch (e) { vis = null; }
+        if (vis) {
+          inner += '<g class="sfb-wvis">' +
+            SFStepVisual.nest(vis, 16, vTop, PW - 32, vH) + '</g>';
+        }
+      }
+
+      /* Reason, along the bottom. */
+      if (rl.length) {
+        var rg = '';
+        for (k = 0; k < rl.length; k++) {
+          rg += text(PW / 2, PH - 16 - reasonH + RS * 1.05 + k * RS * 1.45, rl[k],
+                     { size: RS, weight: 400, fill: MUTED });
+        }
+        inner += '<g class="sfb-wwhy">' + rg + '</g>';
+      }
+
+      /* Arrow into this panel from the one before, drawn in the gap. */
+      var link = '';
+      if (i > 0) {
+        link = '<g class="sfb-wlink"><path d="M' + r1(px - GAP + 3) + ' ' +
+          (PANEL_Y + PH / 2) + ' L' + r1(px - 7) + ' ' + (PANEL_Y + PH / 2) +
+          '" stroke="' + ACCENT + '" stroke-width="2.4" stroke-linecap="round"/>' +
+          '<path d="M' + r1(px - 7) + ' ' + (PANEL_Y + PH / 2) + ' l-6 -4.5 l0 9 Z" fill="' +
+          ACCENT + '"/></g>';
+      }
+
+      track += '<g class="sfb-b sfb-wp" data-sfb-cls="sfb-wp" data-beat="' + (i + 1) +
+        '">' + link + '<g transform="translate(' + r1(px) + ' ' + PANEL_Y + ')">' +
+        inner + '</g></g>';
+    }
+
+    /* Edge fade. Without it the panel sliding out of view is cut off dead at
+       the viewBox edge, which turns the previous step into a column of
+       half-words rather than a card receding. A mask fades the content
+       itself, so it works on any page background and in dark mode.
+
+       The ids carry the arrowhead marker's prefix on purpose: build() rewrites
+       that string once per render, so two boards on one page cannot end up
+       sharing a mask. */
+    o += '<defs><linearGradient id="sfbTipWFade" x1="0" y1="0" x2="1" y2="0">' +
+      '<stop offset="0" stop-color="#000"/><stop offset=".075" stop-color="#fff"/>' +
+      '<stop offset=".925" stop-color="#fff"/><stop offset="1" stop-color="#000"/>' +
+      '</linearGradient><mask id="sfbTipWMask" maskUnits="userSpaceOnUse" x="0" y="0" ' +
+      'width="' + W + '" height="' + H + '"><rect x="0" y="0" width="' + W +
+      '" height="' + H + '" fill="url(#sfbTipWFade)"/></mask></defs>';
+    /* The mask sits on a STATIC wrapper. On the track itself the mask region
+       would travel with the track and fade nothing. */
+    o += '<g mask="url(#sfbTipWMask)"><g class="sfb-wtrack" data-sfb-track>' +
+      track + '</g></g>';
+
+    return {
+      svg: svgOpen(W, H) + o + '</svg>', beats: n, w: W, h: H,
+      /* No autoplay. Every other scene reveals its beats on a timer, which
+         suits a diagram being annotated - but a worked solution advancing
+         itself every 1.5s walks off the answer before the learner has read
+         the line, and the track had already slid to the last panel by the
+         time they looked up. The learner sets the pace here. */
+      manual: true,
+      /* Called by the player on every beat change. The track slide and the
+         rail fill are the two things that cannot be expressed as a per-beat
+         class, because both depend on WHICH beat rather than merely whether
+         one has been reached. */
+      onPaint: function (wrapEl, at) {
+        var idx = Math.max(1, Math.min(n, at)) - 1;
+        var tr = wrapEl.querySelector('[data-sfb-track]');
+        if (tr) {
+          tr.style.transform = 'translateX(' + r1(CENTRE - idx * (PW + GAP)) + 'px)';
+        }
+        var rail = wrapEl.querySelector('[data-sfb-rail]');
+        if (rail) rail.style.transform = 'scaleX(' + r1((idx + 1) / n) + ')';
+      }
+    };
+  };
+
+  var TYPES = ['hero', 'brief', 'map', 'chart', 'pyramid', 'steps', 'cycle', 'compare', 'timeline', 'parts', 'equation', 'worked'];
 
   var ALIAS = {
     overview: 'hero', intro: 'hero', summary: 'hero', brief: 'hero',
@@ -10606,7 +11490,11 @@ var SFBoard = (function () {
     chronology: 'timeline', history: 'timeline', dates: 'timeline', events: 'timeline',
     structure: 'parts', anatomy: 'parts', components: 'parts', labelled: 'parts',
     labeled: 'parts', concept: 'parts', web: 'parts', map: 'parts',
-    math: 'equation', formula: 'equation', working: 'equation', solve: 'equation'
+    math: 'equation', formula: 'equation',
+    /* 'working'/'solve' now mean the sideways worked example, which is what
+       both words describe: a problem being worked, step by step. */
+    working: 'worked', solve: 'worked', workedexample: 'worked',
+    example: 'worked', walkthrough: 'worked'
   };
 
   function resolveType(v) {
@@ -10745,7 +11633,11 @@ var SFBoard = (function () {
 
     return {
       svg: svgOut, html: out.html || '', beats: out.beats, w: out.w, h: out.h,
-      type: type, title: clean(spec.title || spec.label)
+      type: type, title: clean(spec.title || spec.label),
+      /* A scene that needs to move something on every beat hands back a hook.
+         Dropping it here is how the sideways track silently stopped sliding. */
+      onPaint: typeof out.onPaint === 'function' ? out.onPaint : null,
+      manual: !!out.manual
     };
   }
 
@@ -10820,6 +11712,72 @@ var SFBoard = (function () {
   '.sfb-b.is-tap{cursor:pointer;}' +
   '.sfb-b.is-tap:hover .sfb-card{stroke-width:2.4;}' +
 
+  /* ── the sideways worked example ──────────────────────────────────────
+     The track carries every panel; advancing a beat translates it so the
+     active panel lands in the middle of the board. The easing overshoots a
+     few percent and settles, which is what makes the move feel like a card
+     being dealt rather than a scroll position changing.
+
+     transform-box:fill-box is not optional on the scaled pieces. Without it
+     an SVG element's transform-origin is the origin of the user space, not
+     the element's own box, so `scale(.94)` on a panel 700 units to the right
+     throws it off the board instead of shrinking it in place. */
+  '.sfb-wtrack{transition:transform .58s cubic-bezier(.33,1.14,.52,1);}' +
+  '.sfb-wrail{transform-box:fill-box;transform-origin:left center;' +
+    'transform:scaleX(0);transition:transform .5s cubic-bezier(.22,.61,.36,1);}' +
+
+  /* A panel that has not been reached is invisible but still laid out, so the
+     track geometry never depends on how far in the learner is. */
+  '.sfb .sfb-b.sfb-wp{opacity:0;transform-box:fill-box;transform-origin:center center;}' +
+  /* A step not yet reached shows as an empty card at the edge of the board:
+     the learner can see another one is coming and where it will arrive, which
+     is what makes the sideways move read as a sequence rather than a jump.
+     Its CONTENTS stay hidden - a worked example that lets you read ahead to
+     the answer is just an answer. */
+  '.sfb .sfb-b.sfb-wp.is-ahead{opacity:.2;}' +
+  '.sfb .sfb-wp.is-ahead .sfb-wline,.sfb .sfb-wp.is-ahead .sfb-wvis,' +
+    '.sfb .sfb-wp.is-ahead .sfb-wwhy,.sfb .sfb-wp.is-ahead .sfb-wlink{opacity:0;}' +
+  /* The board draws its own cards, so the container must not draw another
+     one around them. */
+  '.sfb-t-worked .whiteboard-preview{box-shadow:none;border-radius:0;}' +
+  '.sfb .sfb-b.sfb-wp.is-in{opacity:1;animation:sfbPanelIn .52s cubic-bezier(.22,.68,.3,1) both;}' +
+  /* Steps already taken stay legible at the edge of the board - they are the
+     chain the current step follows from - but they must not compete. */
+  '.sfb .sfb-b.sfb-wp.is-past{opacity:.4;animation:none;transform:scale(.965);' +
+    'transition:opacity .4s ease,transform .4s ease;}' +
+  '.sfb .sfb-b.sfb-wp.is-now{opacity:1;}' +
+  '@keyframes sfbPanelIn{0%{opacity:0;transform:translateX(30px) scale(.93);}' +
+    '60%{opacity:1;}100%{opacity:1;transform:none;}}' +
+
+  /* Inside the arriving panel the parts land in order, so the eye reads the
+     line, then the picture, then the reason - rather than all three at once. */
+  /* Delays stay short on purpose. `both` holds the opening frame during the
+     delay, so a long one is a window in which the panel is genuinely blank -
+     and a throttled or backgrounded tab can sit in that window. Under 0.16s
+     the stagger still reads as an order without ever looking empty. */
+  '.sfb .sfb-wp.is-now .sfb-wline{animation:sfbRise .4s cubic-bezier(.22,.68,.3,1) both;}' +
+  '.sfb .sfb-wp.is-now .sfb-wvis{animation:sfbBloom .46s cubic-bezier(.22,.68,.3,1) .08s both;}' +
+  '.sfb .sfb-wp.is-now .sfb-wwhy{animation:sfbRise .4s cubic-bezier(.22,.68,.3,1) .16s both;}' +
+  '.sfb .sfb-wline,.sfb .sfb-wvis,.sfb .sfb-wwhy{transform-box:fill-box;' +
+    'transform-origin:center center;}' +
+  '@keyframes sfbRise{from{opacity:0;transform:translateY(9px);}to{opacity:1;transform:none;}}' +
+  '@keyframes sfbBloom{from{opacity:0;transform:scale(.9);}to{opacity:1;transform:none;}}' +
+
+  /* The arrow from the previous step draws itself along its own length. */
+  '.sfb .sfb-wp .sfb-wlink{opacity:0;}' +
+  '.sfb .sfb-wp.is-in .sfb-wlink{opacity:1;animation:sfbDraw .42s ease .1s both;}' +
+  '@keyframes sfbDraw{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:none;}}' +
+  '.sfb .sfb-wp .sfb-wlink{transform-box:fill-box;transform-origin:center;}' +
+
+  /* Reduced motion keeps every panel, the slide and the reveal - just without
+     the movement. Nothing is hidden that would otherwise be readable. */
+  '@media (prefers-reduced-motion:reduce){' +
+    '.sfb-wtrack,.sfb-wrail{transition:none;}' +
+    '.sfb .sfb-b.sfb-wp.is-in,.sfb .sfb-wp.is-now .sfb-wline,' +
+    '.sfb .sfb-wp.is-now .sfb-wvis,.sfb .sfb-wp.is-now .sfb-wwhy,' +
+    '.sfb .sfb-wp.is-in .sfb-wlink{animation:none;}' +
+    '.sfb .sfb-b.sfb-wp.is-past{transform:none;}}' +
+
   '.sfb-bar{display:flex;align-items:center;gap:8px;margin-top:10px;}' +
   '.sfb-btn{appearance:none;border:1px solid ' + RULE + ';background:#fff;color:' + INK + ';' +
     'border-radius:9px;height:34px;min-width:34px;padding:0 11px;font:inherit;font-size:13px;' +
@@ -10837,6 +11795,14 @@ var SFBoard = (function () {
   '.sfb-dot.is-done{background:#b9c4d6;}' +
   '.sfb-dot.is-now{background:' + ACCENT + ';}' +
   '.sfb-dot:focus-visible{outline:2px solid ' + ACCENT + ';outline-offset:2px;}' +
+
+  /* The board's cards stay light in dark mode - a sheet of paper on a dark
+     desk, which is how the rest of this module already draws itself - but the
+     chrome around them is page-level text and has to follow the theme. It was
+     navy on near-black, so the board's own title was barely readable. */
+  'body.dark .sfb{color:#E8ECF4;}' +
+  'body.dark .sfb-title{color:#E8ECF4;}' +
+  'body.dark .sfb-count,body.dark .sfb-prose .content-text{color:#A9B4C6;}' +
 
   '@media (prefers-reduced-motion:reduce){.sfb-b{transition:none;}}' +
   '@media (max-width:520px){.sfb-btn span{display:none;}.sfb-dot{width:16px;}}';
@@ -10871,7 +11837,7 @@ var SFBoard = (function () {
     } catch (e) { reduced = false; }
 
     var wrapEl = doc.createElement('div');
-    wrapEl.className = 'sfb';
+    wrapEl.className = 'sfb' + (scene.type ? ' sfb-t-' + scene.type : '');
 
     var head = '';
     if (scene.title) {
@@ -10910,8 +11876,11 @@ var SFBoard = (function () {
         var b = parseInt(el.getAttribute('data-beat'), 10) || 0;
         if (b === 0) continue;
         var cls = 'sfb-b is-tap';
+        var extra = el.getAttribute('data-sfb-cls');
+        if (extra) cls += ' ' + extra;
         if (b < at) cls += ' is-in is-past';
         else if (b === at) cls += ' is-in is-now';
+        else cls += ' is-ahead';
         el.setAttribute('class', cls);
         el.setAttribute('aria-hidden', b > at ? 'true' : 'false');
       }
@@ -10928,6 +11897,11 @@ var SFBoard = (function () {
           : '<span>Next</span>&#8594;';
       }
       if (countEl) countEl.textContent = Math.max(at, 1) + ' / ' + scene.beats;
+      /* Whatever the scene needs to move itself. Guarded: a throwing hook must
+         not take the whole board down with it. */
+      if (scene.onPaint) {
+        try { scene.onPaint(wrapEl, at, scene); } catch (e) { /* board still usable */ }
+      }
     }
 
     function go(n, human) {
@@ -10940,6 +11914,10 @@ var SFBoard = (function () {
     function stop() { if (timer) { clearInterval(timer); timer = null; } }
 
     function autoplay() {
+      /* A manual scene opens on its first beat and waits. Revealing every
+         beat at once - what the two branches below do - is meaningless for a
+         scene that can only show one panel at a time anyway. */
+      if (scene.manual) { go(1); return; }
       if (reduced || opts.autoplay === false) { go(scene.beats); return; }
       go(1);
       timer = setInterval(function () {
@@ -11113,6 +12091,347 @@ var SFBoard = (function () {
     return SFBoard.build(spec) ? spec : null;
   }
 
+  /* ── THE WORKED EXAMPLE ──────────────────────────────────────────────────
+     One problem, worked all the way through, built from the day the moment
+     the lesson is generated. Every subject gets one: maths gets algebra with
+     a balance at each step, a procedural topic gets its own procedure, a
+     conceptual one gets its ideas taken in order. The scene draws the
+     pictures; everything here decides WHAT is being worked.
+
+     THE RULE THAT SHAPES ALL OF THIS: the opening board must never show the
+     answer to a question the learner is about to be asked (invariant 7). A
+     worked example whose working stops before the answer teaches nothing, so
+     the maths example is not one of the day's questions at all - it is a
+     PARALLEL problem, the same form with different numbers, worked to the
+     end and checked. The learner sees the whole method; none of their own
+     answers are spent. buildParallelMath is where that happens, and
+     collidesWithDay is what guarantees it.
+     ──────────────────────────────────────────────────────────────────────── */
+
+  /* Stable per-day pick, so the same lesson always opens on the same example
+     rather than a different one on every render. */
+  function hashOf(s) {
+    var h = 0, i;
+    s = String(s == null ? '' : s);
+    for (i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+    return Math.abs(h);
+  }
+
+  /* Which shape of problem is this? Read off the equation itself, since the
+     question stem ("Solve for x") says the same thing for all of them. */
+  function equationForm(eq) {
+    var t = clean(eq).replace(/\s+/g, '');
+    if (!t || /_{2,}/.test(t)) return '';
+    var half = t.split('=');
+    if (half.length === 2) {
+      var L = half[0], R = half[1];
+      if (!L || !R) return '';
+      if (/[a-z]/i.test(L) && /[a-z]/i.test(R)) return 'bothsides';
+      var withVar = /[a-z]/i.test(L) ? L : R;
+      if (/\d\(/.test(withVar)) return 'distribute';
+      if (/[+\-]/.test(withVar.replace(/^-/, ''))) return 'twostep';
+      return 'onestep';
+    }
+    if (half.length > 2) return '';
+    /* No equals sign: an expression to simplify or evaluate. */
+    if ((t.match(/[a-z]/gi) || []).length >= 2) return 'combine';
+    if (/\(/.test(t)) return 'distribute';
+    return '';
+  }
+
+  /* Whole-number workings only. An example that lands on 3.4285 teaches
+     arithmetic frustration, not the method. Every seed below divides out. */
+  var WORKED_SEEDS = {
+    twostep:    [[2, 5, 17], [3, 7, 22], [4, 3, 19], [5, 6, 26], [2, 9, 23], [6, 4, 28]],
+    onestep:    [[7, 15], [9, 24], [6, 20], [12, 30], [8, 21]],
+    bothsides:  [[5, 3, 2, 12], [4, 7, 2, 15], [6, 2, 3, 14], [7, 1, 4, 13]],
+    distribute: [[3, 4, 27], [2, 5, 18], [4, 2, 28], [5, 3, 40]],
+    combine:    [[7, 4, 2], [5, 3, 2], [9, 2, 4], [6, 5, 3]]
+  };
+
+  /* Normalised text of every equation and stem the day will actually ask, so
+     a synthesised example can be checked against all of them. */
+  function dayEquationSet(day) {
+    var seen = {}, qs = list(day && day.questions), i, q, k;
+    for (i = 0; i < qs.length; i++) {
+      q = qs[i] || {};
+      for (k = 0; k < 3; k++) {
+        var v = k === 0 ? q.equation : (k === 1 ? q.question : q.answer);
+        v = clean(v).replace(/\s+/g, '').toLowerCase();
+        if (v) seen[v] = 1;
+      }
+    }
+    return seen;
+  }
+
+  function collidesWithDay(seen, line) {
+    var t = clean(line).replace(/\s+/g, '').toLowerCase();
+    return !!(t && seen[t]);
+  }
+
+  /* Build the worked steps for one form from one seed, or null. */
+  function mathStepsFor(form, seed) {
+    var a, b, c, d, x, s;
+    if (form === 'twostep') {
+      a = seed[0]; b = seed[1]; c = seed[2]; x = (c - b) / a;
+      if (x !== Math.round(x) || x <= 0) return null;
+      return {
+        problem: a + 'x + ' + b + ' = ' + c,
+        steps: [
+          { title: 'The problem', line: a + 'x + ' + b + ' = ' + c,
+            why: 'x has two things done to it: multiplied by ' + a + ', then ' + b + ' added. Undo them in reverse.' },
+          { title: 'Undo the adding', line: a + 'x = ' + (c - b),
+            why: 'Subtract ' + b + ' from both sides. Taking the same amount off each pan keeps the scale level.' },
+          { title: 'Undo the multiplying', line: 'x = ' + x,
+            why: 'Divide both sides by ' + a + '. That leaves x on its own, which is what solving means.' },
+          { title: 'Check it', line: a + '(' + x + ') + ' + b + ' = ' + c,
+            why: 'Put ' + x + ' back into the original. Both sides come to ' + c + ', so it is right.' }
+        ]
+      };
+    }
+    if (form === 'onestep') {
+      b = seed[0]; c = seed[1]; x = c - b;
+      return {
+        problem: 'x + ' + b + ' = ' + c,
+        steps: [
+          { title: 'The problem', line: 'x + ' + b + ' = ' + c,
+            why: 'Only one thing has been done to x: ' + b + ' was added. So only one move is needed.' },
+          { title: 'Undo the adding', line: 'x = ' + x,
+            why: 'Subtract ' + b + ' from both sides. What you take off one side you take off the other.' },
+          { title: 'Check it', line: x + ' + ' + b + ' = ' + c,
+            why: 'Substituting ' + x + ' back in gives ' + c + ', which is what the equation claimed.' }
+        ]
+      };
+    }
+    if (form === 'bothsides') {
+      a = seed[0]; b = seed[1]; c = seed[2]; d = seed[3];
+      if (a === c) return null;
+      x = (d - b) / (a - c);
+      if (x !== Math.round(x) || x <= 0) return null;
+      return {
+        problem: a + 'x + ' + b + ' = ' + c + 'x + ' + d,
+        steps: [
+          { title: 'The problem', line: a + 'x + ' + b + ' = ' + c + 'x + ' + d,
+            why: 'x appears on both sides. Get every x onto one side before anything else.' },
+          { title: 'Collect the x terms', line: (a - c) + 'x + ' + b + ' = ' + d,
+            why: 'Subtract ' + c + 'x from both sides. ' + a + 'x − ' + c + 'x leaves ' + (a - c) + 'x.' },
+          { title: 'Undo the adding', line: (a - c) + 'x = ' + (d - b),
+            why: 'Subtract ' + b + ' from both sides, exactly as in a two-step equation.' },
+          { title: 'Undo the multiplying', line: 'x = ' + x,
+            why: 'Divide both sides by ' + (a - c) + '.' },
+          { title: 'Check it', line: a + '(' + x + ') + ' + b + ' = ' + (a * x + b),
+            why: 'The other side is ' + c + '(' + x + ') + ' + d + ' = ' + (c * x + d) + '. They match, so x = ' + x + '.' }
+        ]
+      };
+    }
+    if (form === 'distribute') {
+      a = seed[0]; b = seed[1]; c = seed[2]; x = (c - a * b) / a;
+      if (x !== Math.round(x) || x <= 0) return null;
+      return {
+        problem: a + '(x + ' + b + ') = ' + c,
+        steps: [
+          { title: 'The problem', line: a + '(x + ' + b + ') = ' + c,
+            why: 'The bracket is multiplied as a whole, so nothing can come out of it until it is expanded.' },
+          { title: 'Expand the bracket', line: a + 'x + ' + (a * b) + ' = ' + c,
+            why: 'Multiply ' + a + ' by EACH term inside: ' + a + '×x and ' + a + '×' + b + '. Multiplying only the first term is the usual slip.' },
+          { title: 'Undo the adding', line: a + 'x = ' + (c - a * b),
+            why: 'Subtract ' + (a * b) + ' from both sides.' },
+          { title: 'Undo the multiplying', line: 'x = ' + x,
+            why: 'Divide both sides by ' + a + '.' },
+          { title: 'Check it', line: a + '(' + x + ' + ' + b + ') = ' + c,
+            why: 'Inside the bracket is ' + (x + b) + ', and ' + a + ' × ' + (x + b) + ' = ' + c + '.' }
+        ]
+      };
+    }
+    if (form === 'combine') {
+      a = seed[0]; b = seed[1]; c = seed[2]; s = a + b - c;
+      if (s <= 0) return null;
+      return {
+        problem: a + 'x + ' + b + 'x − ' + c + 'x',
+        steps: [
+          { title: 'The problem', line: a + 'x + ' + b + 'x − ' + c + 'x',
+            why: 'There is no equals sign, so nothing is being solved. This is asking for the same expression, written shorter.' },
+          { title: 'Spot the like terms', line: '(' + a + ' + ' + b + ' − ' + c + ')x',
+            why: 'All three terms carry the same x, so they can be combined. Only the numbers in front change.' },
+          { title: 'Add the coefficients', line: s + 'x',
+            why: a + ' + ' + b + ' − ' + c + ' = ' + s + '. The x stays exactly as it was — it is not multiplied out.' }
+        ]
+      };
+    }
+    return null;
+  }
+
+  /**
+   * A maths worked example for this day: the SAME FORM as the day's own
+   * questions, with DIFFERENT numbers, worked to the answer and checked.
+   *
+   * It is deliberately not one of the day's questions. Working one of those
+   * on the opening card would hand the learner an answer before they had
+   * attempted it - see invariant 7. Working a parallel problem shows the
+   * whole method and costs them nothing.
+   */
+  function buildParallelMath(day) {
+    var qs = list(day && day.questions), i;
+    var counts = {}, best = '', bestN = 0;
+    for (i = 0; i < qs.length; i++) {
+      var q = qs[i] || {};
+      if (q.type !== 'bigequation') continue;
+      var f = equationForm(q.equation) || equationForm(q.question);
+      if (!f || !WORKED_SEEDS[f]) continue;
+      counts[f] = (counts[f] || 0) + 1;
+      if (counts[f] > bestN) { bestN = counts[f]; best = f; }
+    }
+    /* No equations to read the shape off - a maths day can still be about
+       method. Take the form from what the day says it is teaching. */
+    if (!best) {
+      var t = (clean(day && day.title) + ' ' + clean(day && day.microTopic) + ' ' +
+               clean(day && day.content)).toLowerCase();
+      if (/both sides|variables on both/.test(t)) best = 'bothsides';
+      else if (/distribut|expand|bracket|parenthes/.test(t)) best = 'distribute';
+      else if (/like terms|simplif|combin/.test(t)) best = 'combine';
+      else if (/two.step|multi.step|equation/.test(t)) best = 'twostep';
+      else if (/one.step|inverse|isolat|solv/.test(t)) best = 'onestep';
+    }
+    if (!best || !WORKED_SEEDS[best]) return null;
+
+    /* Walk the seeds from a day-stable starting point, taking the first that
+       does not restate something the day is going to ask. */
+    var seeds = WORKED_SEEDS[best];
+    var seen = dayEquationSet(day);
+    var start = hashOf(clean(day && day.title) + best) % seeds.length;
+    for (i = 0; i < seeds.length; i++) {
+      var built = mathStepsFor(best, seeds[(start + i) % seeds.length]);
+      if (!built) continue;
+      var clash = false;
+      for (var k = 0; k < built.steps.length; k++) {
+        if (collidesWithDay(seen, built.steps[k].line)) { clash = true; break; }
+      }
+      if (collidesWithDay(seen, built.problem)) clash = true;
+      if (!clash) return built;
+    }
+    return null;
+  }
+
+  /* A worked example the model supplied for this day, normalised. */
+  function modelWorked(day) {
+    var w = day && (day.workedExample || day.worked);
+    if (!w || typeof w !== 'object') return null;
+    var raw = list(w.steps || w.lines || w.items), out = [], i;
+    for (i = 0; i < raw.length && out.length < 6; i++) {
+      var s = raw[i];
+      var line = typeof s === 'string' ? clean(s)
+               : clean(s && (s.line || s.step || s.equation || s.label));
+      var why = typeof s === 'string' ? ''
+              : clean(s && (s.why || s.detail || s.action || s.reason));
+      if (!line && why) { line = why; why = ''; }
+      if (!line) continue;
+      out.push({ line: line, why: why, title: clean(s && s.title), visual: (s && s.visual) || null });
+    }
+    if (out.length < 2) return null;
+    return { problem: clean(w.problem || w.question || w.title), steps: out };
+  }
+
+  /* The day's own teaching procedure, walked one step at a time. */
+  function procedureWorked(day) {
+    var ds = list(day && day.steps), out = [], i;
+    for (i = 0; i < ds.length && out.length < 6; i++) {
+      var s = ds[i] || {};
+      var name = clean(s.step || s.title || s.label);
+      var act = clean(s.action || s.body || s.detail);
+      var why = clean(s.why || s.reason);
+      var line = act || name;
+      if (!line) continue;
+      out.push({
+        title: act && name ? name : '',
+        line: line,
+        why: why || (act && name ? '' : clean(s.action)),
+        visual: s.visual || null
+      });
+    }
+    return out.length >= 2 ? { problem: '', steps: out } : null;
+  }
+
+  /* Concepts, taken in order. Not a procedure, but it is still one idea at a
+     time with a reason attached, which is the shape the board wants. */
+  function conceptWorked(day) {
+    var cs = list(day && day.concepts), out = [], i, c;
+    for (i = 0; i < cs.length && out.length < 5; i++) {
+      c = cs[i] || {};
+      if (typeof c === 'string') { out.push({ line: clean(c), why: '' }); continue; }
+      var name = clean(c.name || c.title || c.label || c.term);
+      var def = clean(c.definition || c.description || c.body || c.detail);
+      if (!name && !def) continue;
+      /* Why it matters ahead of what it means. The definition is already on
+         the lesson card and the key-terms card, so repeating it here spends a
+         panel saying nothing new - and where a fill question is built from
+         that same definition, the board ends up printing the question and its
+         answer side by side ("Watershed" / "the land drained by one river
+         system"). The reason is the part a learner cannot look up. */
+      out.push({ title: '', line: name || def, why: clean(c.why) || (name ? def : '') });
+    }
+    if (out.length >= 2) return { problem: '', steps: out };
+
+    var ps = list(day && day.pillars), i2;
+    for (i2 = 0; i2 < ps.length && out.length < 4; i2++) {
+      var p = ps[i2] || {};
+      var lab = typeof p === 'string' ? clean(p) : clean(p.label || p.title || p.name);
+      var det = typeof p === 'string' ? '' : clean(p.detail || p.body || p.note);
+      if (lab) out.push({ line: lab, why: det });
+    }
+    if (out.length >= 2) return { problem: '', steps: out };
+
+    var kt = list(day && day.keyTerms);
+    for (i2 = 0; i2 < kt.length && out.length < 4; i2++) {
+      var t = kt[i2] || {};
+      if (clean(t.term)) out.push({ line: clean(t.term), why: clean(t.definition) });
+    }
+    return out.length >= 2 ? { problem: '', steps: out } : null;
+  }
+
+  /**
+   * The opening worked example for a day, or null.
+   *
+   * Sources, most specific first. Each is built from the lesson itself, so
+   * the board is about what today is about - which is the whole point of
+   * generating it with the lesson rather than picking from a library.
+   */
+  function workedFor(day, subject, opts) {
+    day = day || {};
+    opts = opts || {};
+    var topic = clean(day.title) || clean(subject);
+    if (!topic) return null;
+
+    var subj = (clean(subject) + ' ' + topic + ' ' + clean(day.microTopic)).toLowerCase();
+    var quantitative = /\bmath|maths|algebra|arithmetic|equation|calculus|geometr|trigonometr|fraction|decimal|percentage|\bsolve\b/.test(subj);
+
+    var built = modelWorked(day);
+    var kicker = 'Worked example';
+
+    if (!built && quantitative) built = buildParallelMath(day);
+    if (!built) { built = procedureWorked(day); if (built) kicker = 'How it works'; }
+    /* Concepts are the weakest source: a list of terms is not a worked
+       anything, and each panel can only be drawn as "where you are in the
+       list". briefFor therefore asks for it only after its own subject scenes
+       have declined - a geography day is better served by the map its pillars
+       can actually fill, and a dated history day by the timeline. */
+    if (!built && opts.concepts) {
+      built = conceptWorked(day);
+      if (built) kicker = 'The idea, step by step';
+    }
+    if (!built) return null;
+
+    return {
+      type: 'worked',
+      kicker: kicker,
+      problem: built.problem,
+      steps: built.steps,
+      title: topic,
+      topic: topic,
+      subject: clean(subject) || topic,
+      quantitative: quantitative
+    };
+  }
+
   /** Build the opening whiteboard for a session, or null.
       Uses whatever the lesson supplies; falls back to the day's own prose so a
       session still opens with something real rather than a blank board. */
@@ -11120,6 +12439,18 @@ var SFBoard = (function () {
     day = day || {};
     var topic = clean(day.title) || clean(subject);
     if (!topic) return null;
+
+    /* A worked example first, on every subject. It is the one opening card
+       that shows a method rather than listing claims about a method, and it
+       is built from this day's own material - so prefer it whenever the day
+       carries enough to build one. Everything below is the fallback for a day
+       that does not: a bare topic with no steps, no concepts and no terms.
+
+       The scene it resolves to draws across rather than down, one panel at a
+       time. The vertical numbered stack this replaced showed every line of a
+       solution at once, which is not a walkthrough, it is a printed answer. */
+    var worked = workedFor(day, subject, { concepts: false });
+    if (worked && SFBoard.build(worked)) return worked;
 
     var pillars = [], i;
     var raw = list(day.pillars || day.corePillars || day.keyPoints || day.takeaways);
@@ -11263,6 +12594,15 @@ var SFBoard = (function () {
       }
 
       if (boardType !== 'brief') extra.items = labels;
+    }
+
+    /* Nothing above matched a scene that suits this subject, so there is no
+       map, timeline or cycle to be had. A walk through the day's own concepts
+       one at a time beats the generic hero card, which is what 'brief' means:
+       the same arrangement of nodes every subject used to get. */
+    if (boardType === 'brief') {
+      var conceptWalk = workedFor(day, subject, { concepts: true });
+      if (conceptWalk && SFBoard.build(conceptWalk)) return conceptWalk;
     }
 
     var spec = {
@@ -11438,6 +12778,17 @@ var SFBoard = (function () {
      the result plainly. A three-line dump of algebra is technically correct
      but teaches less than the same lines with the reasoning attached. */
   function derivedWorking(q, correct) {
+    /* q.equation FIRST. A bigequation carries its maths in `equation` and only
+       an instruction in `question` - "Solve for x" - so reading the stem alone
+       found nothing, and the working started at the SECOND line. Every maths
+       walkthrough was therefore off by one: "3x = 21" was captioned "the
+       equation as given", and the operation that produced each line was
+       attributed to the line after it, so the card that showed x = 7 said
+       "Add 7 to both sides" when the step was dividing by 3.
+
+       It read as correct because each individual caption is a real sentence
+       from the explanation - they were simply attached to the wrong lines. */
+    var fromEq = equationLines(q.equation);
     var fromQ = equationLines(q.question);
     var fromE = equationLines(q.explanation);
     var ops = operationSteps(q.explanation);
@@ -11448,6 +12799,7 @@ var SFBoard = (function () {
       if (!k2 || seen[k2]) return;
       seen[k2] = 1; lines.push(k2);
     }
+    for (i = 0; i < fromEq.length; i++) push(fromEq[i]);
     for (i = 0; i < fromQ.length; i++) push(fromQ[i]);
     for (i = 0; i < fromE.length; i++) push(fromE[i]);
 
@@ -11513,11 +12865,22 @@ var SFBoard = (function () {
       }
     }
 
+    /* Worked calculations go to the sideways board, the same one that opens
+       the session. The learner has just got this wrong; stepping through the
+       fix one line at a time, with the balance drawn at each step, is the
+       whole point - and showing all six lines at once as a numbered column
+       was the thing that made walkthroughs feel like a printed answer key. */
     if (type === 'bigequation' || type === 'wordproblem' || type === 'equation') {
       var work = itemsFromSteps(list(q.working || q.steps || q.lines));
-      if (work.length >= 2) return { type: 'equation', title: title, items: work };
+      if (work.length >= 2) {
+        return { type: 'worked', title: title, kicker: 'Worked through',
+                 problem: clean(q.equation), items: work, quantitative: true };
+      }
       var derived = derivedWorking(q, correct);
-      if (derived) return { type: 'equation', title: title, items: derived };
+      if (derived) {
+        return { type: 'worked', title: title, kicker: 'Worked through',
+                 problem: clean(q.equation), items: derived, quantitative: true };
+      }
     }
 
     /* Any question that is really a calculation gets the worked steps, whatever
@@ -11528,7 +12891,8 @@ var SFBoard = (function () {
           str(q.question) + ' ' + str(q.explanation))) {
       var auto = derivedWorking(q, correct);
       if (auto && auto.length >= 2) {
-        return { type: 'equation', title: title, items: auto };
+        return { type: 'worked', title: title, kicker: 'Worked through',
+                 problem: clean(q.equation), items: auto, quantitative: true };
       }
     }
 
@@ -11618,7 +12982,10 @@ var SFBoard = (function () {
     var work = list(q.working || q.steps);
     if (work.length >= 2) {
       var eq = itemsFromSteps(work);
-      if (eq.length >= 2) return { type: 'equation', title: title, items: eq };
+      if (eq.length >= 2) {
+        return { type: 'worked', title: title, kicker: 'Worked through',
+                 problem: clean(q.equation), items: eq, quantitative: true };
+      }
     }
 
     /* Otherwise walk the reasoning: what was asked, what is true, why.
@@ -11711,6 +13078,7 @@ var SFBoard = (function () {
     destroy: destroy,
     fromDay: fromDay,
     briefFor: briefFor,
+    workedFor: workedFor,
     fromWrongAnswer: fromWrongAnswer,
     adapt: adapt,
     hasSeenTopic: hasSeenTopic,
@@ -11890,8 +13258,22 @@ var SFBoard = (function () {
        the stepped reveal, the tap targets and the Next control. */
     if (card && card.type === 'sfwb-brief' && mount) {
       try {
-        var drewB = w.SFWhiteboard.render(mount, card.lesson, function () { w.showNextCard(); });
+        /* Clear the mount first. SFBoard.render appends, and renderCardInner
+           is what normally overwrites #session-card - but this branch returns
+           before ever reaching it. So the board was drawn UNDERNEATH whatever
+           card had been on screen, and the learner met the whiteboard as a
+           second panel hanging off the bottom of the welcome card, complete
+           with the welcome card's own "Let's go" button still sitting above
+           it. Clearing here is what makes this a card rather than an
+           appendix.
+
+           Cleared only once the board is known to have drawn, so a scene that
+           declines still leaves the previous card intact on the way past. */
+        var holder = w.document.createElement('div');
+        var drewB = w.SFWhiteboard.render(holder, card.lesson, function () { w.showNextCard(); });
         if (!drewB) { w.showNextCard(); return; }
+        mount.innerHTML = '';
+        while (holder.firstChild) mount.appendChild(holder.firstChild);
         scrollTop();
         return;
       } catch (e) {
@@ -11904,9 +13286,14 @@ var SFBoard = (function () {
     if (card && card.type === 'sfwb-explain' && mount) {
       try {
         /* render() returns false when the spec had nothing real to draw. That
-           used to be treated as success, leaving the learner on a blank card. */
-        var drew = w.SFWhiteboard.render(mount, card.lesson, function () { w.showNextCard(); });
+           used to be treated as success, leaving the learner on a blank card.
+           Built off-card and moved in for the same reason as the opening
+           board above: append alone leaves the previous card on screen. */
+        var holderE = w.document.createElement('div');
+        var drew = w.SFWhiteboard.render(holderE, card.lesson, function () { w.showNextCard(); });
         if (!drew) { w.showNextCard(); return; }
+        mount.innerHTML = '';
+        while (holderE.firstChild) mount.appendChild(holderE.firstChild);
         scrollTop();
         return;
       } catch (e) {

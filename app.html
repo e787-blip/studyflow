@@ -2433,6 +2433,23 @@
         '   BAD:  "Order these events..." / "Name the trade route" / "Fill in the blank"\n' +
         '   Never use an instruction or a question as the prompt. The blank must sit inside\n' +
         '   a sentence that reads correctly once the answer is put back in.\n' +
+        '4d. WORKED EXAMPLE (field "workedExample") - required on every day. This is the\n' +
+        '   opening whiteboard: ONE example carried all the way through, one step per panel,\n' +
+        '   and it is the only card in the session that shows a method rather than asserting one.\n' +
+        '   Shape: {"problem":"what is being worked","steps":[{"title":"2-3 words","line":"the step itself","why":"one sentence on why this step"}]}\n' +
+        '   3 to 5 steps. "line" is what the learner should look at - an equation, a state, a\n' +
+        '   short statement. Keep it under 40 characters; it is printed large. "why" is the\n' +
+        '   reasoning, under 120 characters.\n' +
+        '   For a quantitative subject the LAST step must check the result.\n' +
+        '   CRITICAL: the example must NOT be any of the questions below, and must not share\n' +
+        '   their numbers or their answers. The learner attempts those afterwards, and a board\n' +
+        '   that has already worked one of them has spent it. Use a DIFFERENT problem of the\n' +
+        '   same kind - same method, different numbers or a different case.\n' +
+        '   For a non-quantitative subject, work through a real instance: how one specific\n' +
+        '   example of this topic actually plays out, step by step.\n' +
+        '   Each step may carry its own picture as "visual", using the same shapes as field 5:\n' +
+        '   {"layout":"flow|cycle|parts|concept|compare|timeline|hierarchy","title":"","items":[],"center":""}\n' +
+        '   Omit "visual" when the step does not need one - a wrong picture is worse than none.\n' +
 
         '5. diagram: every topic should get one. Use a hand-drawn template when the topic matches one, otherwise build a custom diagram.\n' +
         /* Every name here must match a template in curatedDiagramSVG() in
@@ -2526,6 +2543,11 @@
         '"keyTerms":[{"term":"","definition":""},{"term":"","definition":""},{"term":"","definition":""},{"term":"","definition":""}],' +
         '"misconceptions":[{"believe":"","actually":"","why":""},{"believe":"","actually":"","why":""}],' +
         '"caseStudy":{"title":"","what":"","connection":""},' +
+        /* The opening whiteboard walks this one panel at a time. Without it in
+           the schema the model never returns it, and the board falls back to
+           the day's steps or concepts - which works, but is a procedure or a
+           word list rather than a worked example. */
+        '"workedExample":{"problem":"","steps":[{"title":"","line":"","why":""},{"title":"","line":"","why":""},{"title":"","line":"","why":""}]},' +
         '"visual":{"type":"concept","center":"","items":[]},' +
         '"duration":30,"isFinal":' + isLast + ',"completed":false,"questions":[' + questionSchema + ']}';
 
@@ -2572,6 +2594,33 @@
             day.caseStudy = null;
           }
           day.duration   = day.duration   || 30;
+
+          /* Validate the worked example the opening whiteboard is built from.
+             Kept only when at least two steps carry a real line, because one
+             panel is not a walkthrough - and dropped entirely otherwise, so
+             workedFor falls back to the day's own steps rather than opening
+             the session on a single empty card. */
+          (function () {
+            var we = day.workedExample || day.worked;
+            if (!we || typeof we !== 'object' || !Array.isArray(we.steps)) {
+              day.workedExample = null; return;
+            }
+            var steps = we.steps.map(function (st) {
+              if (typeof st === 'string') return { line: String(st).trim(), why: '' };
+              if (!st || typeof st !== 'object') return null;
+              return {
+                title: String(st.title || '').trim().slice(0, 28),
+                line:  String(st.line || st.step || st.equation || '').trim().slice(0, 90),
+                why:   String(st.why || st.reason || '').trim().slice(0, 200),
+                visual: (st.visual && typeof st.visual === 'object') ? st.visual : null
+              };
+            }).filter(function (st) { return st && st.line.length > 1; }).slice(0, 6);
+            if (steps.length < 2) { day.workedExample = null; return; }
+            day.workedExample = {
+              problem: String(we.problem || we.question || '').trim().slice(0, 90),
+              steps: steps
+            };
+          })();
           // Validate the AI-supplied diagram spec. If the type is unknown or
           // the spec carries no real content, drop it so the whiteboard falls
           // back to inferring a visual from the lesson text instead of
