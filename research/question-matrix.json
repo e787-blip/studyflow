@@ -1,0 +1,4961 @@
+{
+  "version": 1,
+  "generatedAt": "2026-09-12T04:44:06Z",
+  "source": "research/QUESTION-RESEARCH.md",
+  "typeContract": {
+    "emittable": [
+      "bigequation",
+      "classify",
+      "corroborate",
+      "errorspot",
+      "estimate",
+      "fill",
+      "highlight",
+      "matchpairs",
+      "mcq",
+      "passage",
+      "readingset",
+      "scenario",
+      "sentence",
+      "sequence",
+      "tracetable",
+      "truefalse",
+      "twopart",
+      "wordproblem",
+      "write"
+    ],
+    "renderedButNotModelEmitted": [
+      "match",
+      "graph"
+    ],
+    "note": "match is synthesised by lesson.html from day.keyTerms and graph is drawn by renderGraph; neither has a schema fragment in qtpl(), so the prompt cannot ask for them. Everything in `emittable` has both a schema and a renderer."
+  },
+  "proposedNewTypes": [
+    {
+      "type": "venn",
+      "why": "Two overlapping sets with a shared region - supported by the interleaving/discrimination evidence for confusable categories.",
+      "renderingWork": "SFDiagramKit already draws a venn layout for DIAGRAMS, but there is no question card: needs a schema fragment, SPECIAL_TYPES entries, an injector, a renderer with drag-or-select interaction, a grader, and a feynmanConcept case."
+    },
+    {
+      "type": "numberline",
+      "why": "Placing values on a line is the standard representation task for fractions, negatives and inequalities (multiple-representations evidence).",
+      "renderingWork": "curatedDiagramSVG has a number-line template for display only. A question card needs an interactive positional input and tolerance-based grading, closest to the existing estimate grader."
+    },
+    {
+      "type": "labeldiagram",
+      "why": "Labelling a supplied diagram is the dominant biology/geography assessment format and is pure retrieval.",
+      "renderingWork": "Needs hotspot coordinates per template, a drag-or-select renderer, and per-label grading. Highest effort of the three."
+    }
+  ],
+  "subjects": {
+    "math": {
+      "defaultMix": [
+        {
+          "type": "bigequation",
+          "count": 6,
+          "rationale": "Procedures are learned by producing answers, not recognising them; the solving mandate is also a project invariant (MATH_MIX).",
+          "evidence": "strong"
+        },
+        {
+          "type": "wordproblem",
+          "count": 2,
+          "rationale": "Transfer: the same procedure wearing a context.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "errorspot",
+          "count": 1,
+          "rationale": "Worked-example format - study a solution and locate the faulty step. Novice-appropriate (expertise reversal).",
+          "evidence": "moderate"
+        }
+      ],
+      "notes": "Blocking beats interleaving for low-similarity procedures, so do not scatter formats here. Vocabulary formats (fill/match) are gated off by invariant 1.",
+      "subtopics": {
+        "arithmetic": {
+          "mix": [
+            {
+              "type": "bigequation",
+              "count": 6,
+              "rationale": "Fluency comes from repeated production.",
+              "evidence": "strong"
+            },
+            {
+              "type": "wordproblem",
+              "count": 2,
+              "rationale": "Places the operation in a situation.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "errorspot",
+              "count": 1,
+              "rationale": "Common-slip detection.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Order-of-magnitude reasoning is a distinct skill from exact computation.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Solve: ___",
+            "Find the mistake in this working: ___",
+            "Roughly how much is ___ without working it out exactly?"
+          ],
+          "commonMisconceptions": [
+            "A longer decimal is always a bigger number",
+            "Multiplication always makes things bigger"
+          ],
+          "difficultyLadder": {
+            "easy": "recall a fact",
+            "medium": "apply a procedure",
+            "hard": "choose the procedure and justify"
+          }
+        },
+        "prealgebra": {
+          "mix": [
+            {
+              "type": "bigequation",
+              "count": 6,
+              "rationale": "Symbol manipulation is procedural.",
+              "evidence": "strong"
+            },
+            {
+              "type": "wordproblem",
+              "count": 2,
+              "rationale": "Translating words to symbols is the hard part.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "errorspot",
+              "count": 1,
+              "rationale": "Sign errors are the canonical misconception.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Solve for x: ___",
+            "Write an expression for: ___",
+            "Find the mistake: ___"
+          ],
+          "commonMisconceptions": [
+            "The equals sign means 'write the answer next'",
+            "-x is always negative"
+          ],
+          "difficultyLadder": {
+            "easy": "evaluate",
+            "medium": "solve one-step",
+            "hard": "translate a situation"
+          }
+        },
+        "algebra": {
+          "mix": [
+            {
+              "type": "bigequation",
+              "count": 6,
+              "rationale": "~80% solving, per invariant.",
+              "evidence": "strong"
+            },
+            {
+              "type": "wordproblem",
+              "count": 2,
+              "rationale": "Transfer.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "errorspot",
+              "count": 1,
+              "rationale": "Worked example with a planted error.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Solve for x: ___",
+            "Expand or factor: ___",
+            "Find the mistake: ___"
+          ],
+          "commonMisconceptions": [
+            "Squaring both sides never loses solutions",
+            "(a+b)^2 = a^2 + b^2"
+          ],
+          "difficultyLadder": {
+            "easy": "evaluate",
+            "medium": "solve",
+            "hard": "set up from a scenario"
+          }
+        },
+        "geometry": {
+          "mix": [
+            {
+              "type": "bigequation",
+              "count": 5,
+              "rationale": "Compute lengths, areas, angles.",
+              "evidence": "strong"
+            },
+            {
+              "type": "wordproblem",
+              "count": 2,
+              "rationale": "Applied measurement.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "errorspot",
+              "count": 1,
+              "rationale": "Faulty proof step.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Sanity-checking a measurement is a real geometry skill.",
+              "evidence": "weak"
+            }
+          ],
+          "stems": [
+            "Find the missing angle: ___",
+            "Find the area of ___",
+            "Which step of this proof fails?"
+          ],
+          "commonMisconceptions": [
+            "All quadrilaterals with four equal sides are squares",
+            "Area and perimeter scale together"
+          ],
+          "difficultyLadder": {
+            "easy": "identify a shape/property",
+            "medium": "compute",
+            "hard": "justify with a theorem"
+          }
+        },
+        "trigonometry": {
+          "mix": [
+            {
+              "type": "bigequation",
+              "count": 6,
+              "rationale": "Ratio and identity manipulation.",
+              "evidence": "strong"
+            },
+            {
+              "type": "wordproblem",
+              "count": 2,
+              "rationale": "Angle-of-elevation style transfer.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "errorspot",
+              "count": 1,
+              "rationale": "Identity misuse.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Solve for the missing side: ___",
+            "Simplify: ___"
+          ],
+          "commonMisconceptions": [
+            "sin(a+b) = sin a + sin b",
+            "The unit circle only covers 0-90 degrees"
+          ],
+          "difficultyLadder": {
+            "easy": "evaluate a ratio",
+            "medium": "solve a triangle",
+            "hard": "model a situation"
+          }
+        },
+        "precalculus": {
+          "mix": [
+            {
+              "type": "bigequation",
+              "count": 6,
+              "rationale": "Function manipulation.",
+              "evidence": "strong"
+            },
+            {
+              "type": "wordproblem",
+              "count": 2,
+              "rationale": "Modelling.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "errorspot",
+              "count": 1,
+              "rationale": "Domain errors.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Find the domain of ___",
+            "Solve: ___"
+          ],
+          "commonMisconceptions": [
+            "Every function has an inverse",
+            "log(a+b) = log a + log b"
+          ],
+          "difficultyLadder": {
+            "easy": "evaluate",
+            "medium": "transform",
+            "hard": "model and justify"
+          }
+        },
+        "calculus": {
+          "mix": [
+            {
+              "type": "bigequation",
+              "count": 6,
+              "rationale": "Differentiation and integration are procedures.",
+              "evidence": "strong"
+            },
+            {
+              "type": "wordproblem",
+              "count": 2,
+              "rationale": "Rates of change in context.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "errorspot",
+              "count": 1,
+              "rationale": "Chain-rule omissions are the classic slip.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Differentiate: ___",
+            "Evaluate the integral: ___",
+            "Find the mistake in this derivative: ___"
+          ],
+          "commonMisconceptions": [
+            "The derivative is the slope of the function, not of the tangent",
+            "Integration and antidifferentiation are unrelated"
+          ],
+          "difficultyLadder": {
+            "easy": "apply a rule",
+            "medium": "combine rules",
+            "hard": "set up from a rate problem"
+          }
+        },
+        "statistics": {
+          "mix": [
+            {
+              "type": "bigequation",
+              "count": 4,
+              "rationale": "Compute the statistic.",
+              "evidence": "strong"
+            },
+            {
+              "type": "wordproblem",
+              "count": 2,
+              "rationale": "Interpretation in context.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Reasoning to a plausible magnitude.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Answer plus the reason it follows - separates computation from inference.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "errorspot",
+              "count": 1,
+              "rationale": "Misapplied test.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Calculate the ___ for this data",
+            "Which conclusion does this sample support, and why?"
+          ],
+          "commonMisconceptions": [
+            "Correlation implies causation",
+            "A bigger sample makes a biased sample unbiased"
+          ],
+          "difficultyLadder": {
+            "easy": "compute a statistic",
+            "medium": "interpret it",
+            "hard": "judge whether an inference is warranted"
+          }
+        },
+        "probability": {
+          "mix": [
+            {
+              "type": "bigequation",
+              "count": 5,
+              "rationale": "Compute the probability.",
+              "evidence": "strong"
+            },
+            {
+              "type": "wordproblem",
+              "count": 2,
+              "rationale": "Contextual setup.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Probability is where confident wrong reasoning is most common.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "errorspot",
+              "count": 1,
+              "rationale": "Independence errors.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "What is the probability that ___?",
+            "Why is that the probability and not ___?"
+          ],
+          "commonMisconceptions": [
+            "Past results change the next independent outcome (gambler's fallacy)",
+            "Two events that can both happen are independent"
+          ],
+          "difficultyLadder": {
+            "easy": "single-event probability",
+            "medium": "compound events",
+            "hard": "conditional reasoning"
+          }
+        },
+        "discrete": {
+          "mix": [
+            {
+              "type": "bigequation",
+              "count": 4,
+              "rationale": "Counting and logic are procedural.",
+              "evidence": "strong"
+            },
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Ordering a derivation.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Valid vs invalid argument forms are genuinely confusable.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Claim plus justification.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "errorspot",
+              "count": 1,
+              "rationale": "Faulty logical step.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "How many ways can ___?",
+            "Is this argument valid, and why?"
+          ],
+          "commonMisconceptions": [
+            "'If P then Q' means 'if Q then P'",
+            "Permutations and combinations are interchangeable"
+          ],
+          "difficultyLadder": {
+            "easy": "apply a counting rule",
+            "medium": "choose the right rule",
+            "hard": "evaluate an argument"
+          }
+        }
+      }
+    },
+    "science": {
+      "defaultMix": [
+        {
+          "type": "twopart",
+          "count": 1,
+          "rationale": "Two-tier diagnostic: answer plus reason separates understanding from a lucky guess.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "sequence",
+          "count": 2,
+          "rationale": "Processes have a real order to reconstruct.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "classify",
+          "count": 1,
+          "rationale": "Discrimination between confusable categories (interleaving).",
+          "evidence": "moderate"
+        },
+        {
+          "type": "fill",
+          "count": 2,
+          "rationale": "Retrieval of terms in a sentence that fixes their meaning.",
+          "evidence": "strong"
+        },
+        {
+          "type": "mcq",
+          "count": 1,
+          "rationale": "Retrieval; consistent across ages in classroom studies.",
+          "evidence": "strong"
+        },
+        {
+          "type": "estimate",
+          "count": 1,
+          "rationale": "Magnitude reasoning.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "truefalse",
+          "count": 1,
+          "rationale": "Cheap retrieval; good misconception probe.",
+          "evidence": "strong"
+        },
+        {
+          "type": "write",
+          "count": 1,
+          "rationale": "Elaborative interrogation - ask why, not what.",
+          "evidence": "moderate"
+        }
+      ],
+      "notes": "Keep numeric science questions out of wordproblem/bigequation - those are reserved for maths and economics so questions stay inside their own subject.",
+      "subtopics": {
+        "cells": {
+          "mix": [
+            {
+              "type": "sequence",
+              "count": 2,
+              "rationale": "Organelle processes run in order.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "matchpairs",
+              "count": 1,
+              "rationale": "Structure to function is a genuine pairing task.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Answer + mechanism.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Term retrieval in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Misconception probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the mechanism.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Put the stages of ___ in the order they happen",
+            "Which structure does ___, and why that one?"
+          ],
+          "commonMisconceptions": [
+            "Plant cells do not have mitochondria",
+            "Cell membranes are solid barriers"
+          ],
+          "difficultyLadder": {
+            "easy": "name a structure",
+            "medium": "state its function",
+            "hard": "predict the effect of removing it"
+          }
+        },
+        "genetics": {
+          "mix": [
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Prediction plus the rule that licenses it.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Genotype vs phenotype are routinely confused.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Vocabulary in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval and prediction.",
+              "evidence": "strong"
+            },
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Meiosis has a real order.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the inheritance pattern.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "If a heterozygous ___ crosses with ___, predict ___",
+            "Why does that ratio follow?"
+          ],
+          "commonMisconceptions": [
+            "Dominant means most common in a population",
+            "Acquired traits are inherited"
+          ],
+          "difficultyLadder": {
+            "easy": "define a term",
+            "medium": "complete a cross",
+            "hard": "predict and justify a ratio"
+          }
+        },
+        "evolution": {
+          "mix": [
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Explanation plus evidence is the whole skill here.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 1,
+              "rationale": "Two lines of evidence, and whether they agree.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Selection vs drift vs adaptation.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Misconception probe - this topic is dense with them.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the mechanism.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Which explains ___ better, and what evidence supports it?"
+          ],
+          "commonMisconceptions": [
+            "Organisms evolve on purpose to meet a need",
+            "Individuals evolve during their lifetime",
+            "Evolution is 'just a theory' meaning a guess"
+          ],
+          "difficultyLadder": {
+            "easy": "define",
+            "medium": "apply to a case",
+            "hard": "weigh competing explanations"
+          }
+        },
+        "ecology": {
+          "mix": [
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Energy flow and cycles have direction.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Producer/consumer/decomposer.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Predict a knock-on effect and say why.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Population and energy magnitudes.",
+              "evidence": "weak"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the interaction.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "If ___ is removed, predict what happens to ___ and explain why"
+          ],
+          "commonMisconceptions": [
+            "Energy cycles through an ecosystem the way matter does",
+            "Predators are the only thing controlling prey numbers"
+          ],
+          "difficultyLadder": {
+            "easy": "identify a role",
+            "medium": "trace one interaction",
+            "hard": "predict a cascade"
+          }
+        },
+        "humanSystems": {
+          "mix": [
+            {
+              "type": "sequence",
+              "count": 2,
+              "rationale": "Physiological pathways are ordered.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "matchpairs",
+              "count": 1,
+              "rationale": "Organ to function.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Answer plus mechanism.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the pathway.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Trace the path of ___ through ___",
+            "Which organ does ___, and why is it suited to it?"
+          ],
+          "commonMisconceptions": [
+            "Arteries carry oxygenated blood and veins never do",
+            "Digestion only happens in the stomach"
+          ],
+          "difficultyLadder": {
+            "easy": "name the organ",
+            "medium": "order the pathway",
+            "hard": "predict the effect of a blockage"
+          }
+        },
+        "atomicStructure": {
+          "mix": [
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Structure predicts behaviour - the reason tier carries it.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Isotopes vs ions are confused constantly.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval and prediction.",
+              "evidence": "strong"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Mass and charge magnitudes.",
+              "evidence": "weak"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the periodic trend.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Which has the larger ___, and why?"
+          ],
+          "commonMisconceptions": [
+            "Atoms are mostly solid matter",
+            "Electrons orbit like planets"
+          ],
+          "difficultyLadder": {
+            "easy": "read the periodic table",
+            "medium": "apply a trend",
+            "hard": "explain a trend from structure"
+          }
+        },
+        "bonding": {
+          "mix": [
+            {
+              "type": "classify",
+              "count": 2,
+              "rationale": "Ionic vs covalent vs metallic is the canonical confusable set.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Predict a property, justify from bonding.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "matchpairs",
+              "count": 1,
+              "rationale": "Bond type to property.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the property.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Sort these into ___ and ___",
+            "Predict the melting point of ___ and say why"
+          ],
+          "commonMisconceptions": [
+            "Ionic compounds share electrons",
+            "A polar bond always makes a polar molecule"
+          ],
+          "difficultyLadder": {
+            "easy": "identify bond type",
+            "medium": "predict a property",
+            "hard": "explain the property from structure"
+          }
+        },
+        "stoichiometry": {
+          "mix": [
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Mole calculations are an ordered procedure.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "tracetable",
+              "count": 1,
+              "rationale": "Carry the quantity through each conversion - a worked-example format.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Is the answer the right order of magnitude?",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the limiting reagent.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Fill in the running amount at each step",
+            "Roughly how many moles of ___?"
+          ],
+          "commonMisconceptions": [
+            "Coefficients give masses rather than moles",
+            "The limiting reagent is whichever there is least of by mass"
+          ],
+          "difficultyLadder": {
+            "easy": "convert one unit",
+            "medium": "complete a multi-step conversion",
+            "hard": "identify and justify the limiting reagent"
+          }
+        },
+        "reactions": {
+          "mix": [
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Reaction types are confusable.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Mechanism order.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Predict the product and say why.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the driving force.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "What are the products of ___, and what drives it?"
+          ],
+          "commonMisconceptions": [
+            "A catalyst is consumed",
+            "Balancing changes the formulas"
+          ],
+          "difficultyLadder": {
+            "easy": "identify a reaction type",
+            "medium": "predict products",
+            "hard": "explain why it proceeds"
+          }
+        },
+        "thermochem": {
+          "mix": [
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Sign conventions are where confident errors live.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Energy magnitudes.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Endothermic vs exothermic.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the energy flow.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Is ___ endothermic or exothermic, and how do you know?"
+          ],
+          "commonMisconceptions": [
+            "Exothermic means the reaction feels cold",
+            "Energy is created in a reaction"
+          ],
+          "difficultyLadder": {
+            "easy": "classify the reaction",
+            "medium": "read an energy diagram",
+            "hard": "explain the sign convention"
+          }
+        },
+        "kinematics": {
+          "mix": [
+            {
+              "type": "tracetable",
+              "count": 1,
+              "rationale": "Carry position and velocity through each interval.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Predict motion plus the reason.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Magnitude reasoning.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Ordered stages of a motion.",
+              "evidence": "weak"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Prediction.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Fill in the velocity after each second",
+            "What happens to ___ if ___ changes, and why?"
+          ],
+          "commonMisconceptions": [
+            "Heavier objects fall faster",
+            "Zero velocity means zero acceleration"
+          ],
+          "difficultyLadder": {
+            "easy": "read a value",
+            "medium": "compute a change",
+            "hard": "predict and justify"
+          }
+        },
+        "forces": {
+          "mix": [
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Force questions are dense with confident misconceptions.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Balanced vs unbalanced.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Magnitudes.",
+              "evidence": "weak"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Prediction.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the net force.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Which way does ___ accelerate, and why?"
+          ],
+          "commonMisconceptions": [
+            "Motion requires a continuing force",
+            "Action and reaction cancel out"
+          ],
+          "difficultyLadder": {
+            "easy": "name the forces",
+            "medium": "find the net force",
+            "hard": "predict motion and justify"
+          }
+        },
+        "energy": {
+          "mix": [
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Energy transfer chains.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Conservation reasoning.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Magnitudes.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the transfer.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Trace the energy from ___ to ___",
+            "Where does the 'lost' energy go, and why?"
+          ],
+          "commonMisconceptions": [
+            "Energy is used up",
+            "Efficient machines create energy"
+          ],
+          "difficultyLadder": {
+            "easy": "name a store",
+            "medium": "trace a transfer",
+            "hard": "apply conservation"
+          }
+        },
+        "waves": {
+          "mix": [
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Answer plus mechanism.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "matchpairs",
+              "count": 1,
+              "rationale": "Property to definition.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Frequency and wavelength magnitudes.",
+              "evidence": "weak"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the behaviour.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "What happens to ___ when ___ changes, and why?"
+          ],
+          "commonMisconceptions": [
+            "Louder means higher pitch",
+            "Waves carry matter with them"
+          ],
+          "difficultyLadder": {
+            "easy": "label a wave",
+            "medium": "relate two properties",
+            "hard": "predict behaviour at a boundary"
+          }
+        },
+        "electricity": {
+          "mix": [
+            {
+              "type": "tracetable",
+              "count": 1,
+              "rationale": "Carry current and voltage around the circuit.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Predict plus justify.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Series vs parallel.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Prediction.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the circuit behaviour.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Fill in the current at each point",
+            "What happens to the other bulb if ___, and why?"
+          ],
+          "commonMisconceptions": [
+            "Current is used up as it goes round",
+            "Voltage flows through a circuit"
+          ],
+          "difficultyLadder": {
+            "easy": "read a circuit",
+            "medium": "compute a value",
+            "hard": "predict the effect of a change"
+          }
+        },
+        "earthSpace": {
+          "mix": [
+            {
+              "type": "sequence",
+              "count": 2,
+              "rationale": "Cycles and processes have order.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Rock types, weather vs climate.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Explanation plus evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "matchpairs",
+              "count": 1,
+              "rationale": "Process to product.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the cycle.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Put the stages of the ___ cycle in order",
+            "What evidence shows that ___?"
+          ],
+          "commonMisconceptions": [
+            "Weather and climate are the same thing",
+            "Seasons are caused by distance from the Sun"
+          ],
+          "difficultyLadder": {
+            "easy": "name a stage",
+            "medium": "order the cycle",
+            "hard": "explain from evidence"
+          }
+        }
+      }
+    },
+    "history": {
+      "defaultMix": [
+        {
+          "type": "passage",
+          "count": 2,
+          "rationale": "Sourcing and contextualizing require a document on screen (Reading Like a Historian).",
+          "evidence": "moderate"
+        },
+        {
+          "type": "corroborate",
+          "count": 1,
+          "rationale": "The only format that shows two documents, so the only one that can ask for corroboration.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "sequence",
+          "count": 1,
+          "rationale": "Chronology and causal chains have a real order.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "twopart",
+          "count": 1,
+          "rationale": "Claim plus the evidence that licenses it.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "classify",
+          "count": 1,
+          "rationale": "Cause vs consequence, change vs continuity.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "mcq",
+          "count": 1,
+          "rationale": "Retrieval.",
+          "evidence": "strong"
+        },
+        {
+          "type": "fill",
+          "count": 1,
+          "rationale": "Terms in context.",
+          "evidence": "strong"
+        },
+        {
+          "type": "truefalse",
+          "count": 1,
+          "rationale": "Misconception probe.",
+          "evidence": "strong"
+        }
+      ],
+      "notes": "Built on the four Reading Like a Historian skills. Date recall sits at DOK 1 and should not crowd out causation.",
+      "subtopics": {
+        "ancient": {
+          "mix": [
+            {
+              "type": "passage",
+              "count": 2,
+              "rationale": "Sourcing an ancient text.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Chronology.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 1,
+              "rationale": "Two accounts of one event.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Cause vs consequence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Claim + evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Who wrote this, and how does that shape what it claims?",
+            "Do these two sources agree about ___?"
+          ],
+          "commonMisconceptions": [
+            "Ancient peoples were less intelligent",
+            "Empires fell in a single event"
+          ],
+          "difficultyLadder": {
+            "easy": "identify who/when",
+            "medium": "explain a cause",
+            "hard": "weigh two sources"
+          }
+        },
+        "medieval": {
+          "mix": [
+            {
+              "type": "passage",
+              "count": 2,
+              "rationale": "Close reading of a chronicle.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 1,
+              "rationale": "Conflicting accounts.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Order of events.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Continuity vs change.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Claim + evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "What does this chronicler's position suggest about their account?"
+          ],
+          "commonMisconceptions": [
+            "The medieval period was uniformly stagnant",
+            "Feudalism was a single formal system"
+          ],
+          "difficultyLadder": {
+            "easy": "name a feature",
+            "medium": "explain a change",
+            "hard": "judge a source's reliability"
+          }
+        },
+        "earlyModern": {
+          "mix": [
+            {
+              "type": "passage",
+              "count": 2,
+              "rationale": "Sourcing.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 1,
+              "rationale": "Competing perspectives.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Cause + evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Chronology.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Cause vs effect.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Which cause does this source support, and why?"
+          ],
+          "commonMisconceptions": [
+            "Exploration was purely scientific curiosity",
+            "Reformation was a single break"
+          ],
+          "difficultyLadder": {
+            "easy": "identify an event",
+            "medium": "link cause to effect",
+            "hard": "evaluate competing causes"
+          }
+        },
+        "revolutions": {
+          "mix": [
+            {
+              "type": "passage",
+              "count": 2,
+              "rationale": "Perspective and sourcing.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 1,
+              "rationale": "Two sides of the same revolution.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Causal chain.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Cause + evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Long-term vs trigger causes.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Sort these into long-term causes and immediate triggers",
+            "Whose interests does this source serve?"
+          ],
+          "commonMisconceptions": [
+            "Revolutions are caused by one grievance",
+            "Everyone in a society wanted the revolution"
+          ],
+          "difficultyLadder": {
+            "easy": "name a cause",
+            "medium": "order the chain",
+            "hard": "distinguish trigger from underlying cause"
+          }
+        },
+        "industrialization": {
+          "mix": [
+            {
+              "type": "passage",
+              "count": 2,
+              "rationale": "Working-condition testimony.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 1,
+              "rationale": "Owner vs worker accounts.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 2,
+              "rationale": "Who gained and who lost.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Claim + evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the social change.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "What changed for ___, and which source shows it?"
+          ],
+          "commonMisconceptions": [
+            "Industrialisation improved life for everyone at once",
+            "Machines simply replaced all workers"
+          ],
+          "difficultyLadder": {
+            "easy": "name an invention",
+            "medium": "explain an effect",
+            "hard": "compare effects across groups"
+          }
+        },
+        "worldWars": {
+          "mix": [
+            {
+              "type": "passage",
+              "count": 2,
+              "rationale": "Propaganda and testimony need sourcing.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 1,
+              "rationale": "Rival national accounts.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Chronology of escalation.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Cause + evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Cause vs consequence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "What is this poster trying to make its audience do?"
+          ],
+          "commonMisconceptions": [
+            "One assassination caused the First World War",
+            "Civilians were uninvolved"
+          ],
+          "difficultyLadder": {
+            "easy": "name an event",
+            "medium": "explain an escalation",
+            "hard": "assess a source's purpose"
+          }
+        },
+        "coldWar": {
+          "mix": [
+            {
+              "type": "passage",
+              "count": 2,
+              "rationale": "Rhetoric needs contextualizing.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 1,
+              "rationale": "Two blocs, two accounts.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Claim + evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Escalation order.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Proxy vs direct conflict.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "How would each side have described ___ differently?"
+          ],
+          "commonMisconceptions": [
+            "The Cold War had no fighting",
+            "Only two countries were involved"
+          ],
+          "difficultyLadder": {
+            "easy": "name an event",
+            "medium": "explain a strategy",
+            "hard": "compare two framings"
+          }
+        },
+        "modern": {
+          "mix": [
+            {
+              "type": "passage",
+              "count": 2,
+              "rationale": "Contemporary sources still need sourcing.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 1,
+              "rationale": "Competing present-day accounts.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Claim + evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Continuity vs change.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the continuity.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "What has continued from ___, and what has changed?"
+          ],
+          "commonMisconceptions": [
+            "Recent events have no historical causes"
+          ],
+          "difficultyLadder": {
+            "easy": "name a development",
+            "medium": "explain a cause",
+            "hard": "judge continuity vs change"
+          }
+        },
+        "civics": {
+          "mix": [
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "A bill's path is a real ordered process.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "scenario",
+              "count": 1,
+              "rationale": "Apply a rule to a concrete case.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "passage",
+              "count": 2,
+              "rationale": "Founding documents need close reading.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Which branch does what.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Answer plus the clause that licenses it.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Put the stages of ___ in the order they happen",
+            "Which branch has the power to ___, and where does it say so?"
+          ],
+          "commonMisconceptions": [
+            "The President can pass laws",
+            "A veto ends a bill permanently",
+            "The Supreme Court writes laws"
+          ],
+          "difficultyLadder": {
+            "easy": "name a branch or power",
+            "medium": "trace the process",
+            "hard": "apply the rule to a novel case"
+          }
+        },
+        "skills": {
+          "mix": [
+            {
+              "type": "passage",
+              "count": 3,
+              "rationale": "Sourcing, contextualizing and close reading each need a document.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 2,
+              "rationale": "Corroboration is the fourth skill and needs two documents.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Claim plus evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the reasoning.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Who produced this and when, and how does that affect its reliability?",
+            "Where do these two sources disagree?"
+          ],
+          "commonMisconceptions": [
+            "A primary source is automatically more reliable",
+            "Bias makes a source useless"
+          ],
+          "difficultyLadder": {
+            "easy": "identify the author and date",
+            "medium": "explain the context",
+            "hard": "corroborate across sources"
+          }
+        }
+      }
+    },
+    "english": {
+      "defaultMix": [
+        {
+          "type": "readingset",
+          "count": 1,
+          "rationale": "One passage with several questions is the shape comprehension is practised in; separate one-question passages fragment the text.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "highlight",
+          "count": 1,
+          "rationale": "Locating evidence inside the text, not recognising a paraphrase.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "twopart",
+          "count": 1,
+          "rationale": "Evidence-based selected response: answer plus the line that supports it.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "mcq",
+          "count": 1,
+          "rationale": "Retrieval.",
+          "evidence": "strong"
+        },
+        {
+          "type": "fill",
+          "count": 1,
+          "rationale": "Terms in context.",
+          "evidence": "strong"
+        },
+        {
+          "type": "truefalse",
+          "count": 1,
+          "rationale": "Probe.",
+          "evidence": "strong"
+        },
+        {
+          "type": "write",
+          "count": 1,
+          "rationale": "Elaborative interrogation.",
+          "evidence": "moderate"
+        }
+      ],
+      "notes": "Never name a device with no text attached. Reading sets should be 150-220 words with 3 questions.",
+      "subtopics": {
+        "readingComprehension": {
+          "mix": [
+            {
+              "type": "readingset",
+              "count": 2,
+              "rationale": "Two passages, three questions each - the 1-in-4 ratio the format is designed around.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "highlight",
+              "count": 1,
+              "rationale": "Find the sentence that states it.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Answer + text evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Vocabulary in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "What is the main idea of the passage?",
+            "Which sentence best supports that?",
+            "As used in the passage, ___ most nearly means"
+          ],
+          "commonMisconceptions": [
+            "The main idea is always the first sentence",
+            "Inference means guessing"
+          ],
+          "difficultyLadder": {
+            "easy": "locate a stated fact",
+            "medium": "infer from the text",
+            "hard": "evaluate which evidence is strongest"
+          }
+        },
+        "literaryAnalysis": {
+          "mix": [
+            {
+              "type": "readingset",
+              "count": 1,
+              "rationale": "A passage worth analysing, questioned from several angles.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 1,
+              "rationale": "Two critical readings of the same text.",
+              "evidence": "weak"
+            },
+            {
+              "type": "highlight",
+              "count": 1,
+              "rationale": "Find the line that does the work.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Claim + textual evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain what the choice achieves.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "What does ___ achieve in this passage?",
+            "Which line shows it?"
+          ],
+          "commonMisconceptions": [
+            "Symbolism means anything can mean anything",
+            "The author's biography determines the meaning"
+          ],
+          "difficultyLadder": {
+            "easy": "name the device",
+            "medium": "explain its effect here",
+            "hard": "weigh two readings"
+          }
+        },
+        "poetry": {
+          "mix": [
+            {
+              "type": "readingset",
+              "count": 1,
+              "rationale": "A poem is exactly the one-text-many-questions case.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "highlight",
+              "count": 1,
+              "rationale": "Locate the image or turn.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Reading + evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the effect.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Where does the poem turn, and what marks it?"
+          ],
+          "commonMisconceptions": [
+            "Every poem has a hidden message",
+            "Rhyme is what makes it a poem"
+          ],
+          "difficultyLadder": {
+            "easy": "identify form",
+            "medium": "explain an image",
+            "hard": "interpret the whole"
+          }
+        },
+        "rhetoric": {
+          "mix": [
+            {
+              "type": "readingset",
+              "count": 1,
+              "rationale": "An argument to analyse.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 1,
+              "rationale": "Two arguments on one issue.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "highlight",
+              "count": 1,
+              "rationale": "Find the claim or the warrant.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Judgement + evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Ethos/pathos/logos are confusable.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the appeal.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Which appeal is ___ using, and how do you know?"
+          ],
+          "commonMisconceptions": [
+            "Emotional appeals are always fallacious",
+            "A strong claim needs no evidence"
+          ],
+          "difficultyLadder": {
+            "easy": "identify the claim",
+            "medium": "name the appeal",
+            "hard": "judge whether it works"
+          }
+        },
+        "grammar": {
+          "mix": [
+            {
+              "type": "sentence",
+              "count": 3,
+              "rationale": "Production: build or repair a real sentence. Naming the rule is not applying it.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "highlight",
+              "count": 1,
+              "rationale": "Find the faulty clause.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Apply the rule in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Correction + the rule behind it.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Build the sentence from these words",
+            "Which sentence contains the comma splice?"
+          ],
+          "commonMisconceptions": [
+            "A comma marks wherever you would breathe",
+            "Passive voice is always wrong"
+          ],
+          "difficultyLadder": {
+            "easy": "identify the part of speech",
+            "medium": "apply the rule",
+            "hard": "repair and justify"
+          }
+        },
+        "vocabulary": {
+          "mix": [
+            {
+              "type": "fill",
+              "count": 3,
+              "rationale": "A word inside a sentence that fixes its meaning.",
+              "evidence": "strong"
+            },
+            {
+              "type": "matchpairs",
+              "count": 1,
+              "rationale": "Word to meaning, when contexts differ.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "readingset",
+              "count": 1,
+              "rationale": "Vocabulary in context beats isolated pairs.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "As used here, ___ most nearly means",
+            "Use ___ correctly in this sentence"
+          ],
+          "commonMisconceptions": [
+            "A word has one fixed meaning",
+            "Roots always give the modern meaning"
+          ],
+          "difficultyLadder": {
+            "easy": "recall a definition",
+            "medium": "use it in context",
+            "hard": "distinguish near-synonyms"
+          }
+        },
+        "composition": {
+          "mix": [
+            {
+              "type": "write",
+              "count": 3,
+              "rationale": "Composition is production; there is no recognition substitute.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "sentence",
+              "count": 2,
+              "rationale": "Sentence-level craft.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "highlight",
+              "count": 1,
+              "rationale": "Find the thesis or the weak link.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Judgement + reason.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Write a thesis for ___",
+            "Which sentence is the thesis?"
+          ],
+          "commonMisconceptions": [
+            "A conclusion must repeat the introduction",
+            "Longer sentences are better writing"
+          ],
+          "difficultyLadder": {
+            "easy": "identify structure",
+            "medium": "draft a part",
+            "hard": "revise with justification"
+          }
+        }
+      }
+    },
+    "language": {
+      "defaultMix": [
+        {
+          "type": "sentence",
+          "count": 2,
+          "rationale": "Production beats recognition for language.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "fill",
+          "count": 3,
+          "rationale": "Cloze in context is the strongest retrieval format across ages.",
+          "evidence": "strong"
+        },
+        {
+          "type": "matchpairs",
+          "count": 1,
+          "rationale": "Vocabulary pairing when context is not available.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "mcq",
+          "count": 2,
+          "rationale": "Retrieval.",
+          "evidence": "strong"
+        },
+        {
+          "type": "truefalse",
+          "count": 1,
+          "rationale": "Probe.",
+          "evidence": "strong"
+        }
+      ],
+      "notes": "Avoid isolated word-to-word pairs with no sentence around them.",
+      "subtopics": {
+        "vocabularyAcquisition": {
+          "mix": [
+            {
+              "type": "fill",
+              "count": 3,
+              "rationale": "Word in a sentence that fixes meaning.",
+              "evidence": "strong"
+            },
+            {
+              "type": "matchpairs",
+              "count": 2,
+              "rationale": "Themed pairing.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "sentence",
+              "count": 1,
+              "rationale": "Use it in production.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Complete the sentence with the right word",
+            "Match each word to its meaning"
+          ],
+          "commonMisconceptions": [
+            "Every word translates one-to-one",
+            "Cognates always mean the same thing"
+          ],
+          "difficultyLadder": {
+            "easy": "recognise the word",
+            "medium": "use it in a sentence",
+            "hard": "choose between near-synonyms"
+          }
+        },
+        "verbConjugation": {
+          "mix": [
+            {
+              "type": "sentence",
+              "count": 3,
+              "rationale": "Conjugate inside a real sentence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Targeted form practice.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Form + the rule that governs it.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Put ___ into the ___ tense in this sentence",
+            "Why that form and not ___?"
+          ],
+          "commonMisconceptions": [
+            "Irregular verbs follow no pattern",
+            "One past tense covers every past situation"
+          ],
+          "difficultyLadder": {
+            "easy": "recall a form",
+            "medium": "apply in a sentence",
+            "hard": "choose between competing tenses"
+          }
+        },
+        "grammarSyntax": {
+          "mix": [
+            {
+              "type": "sentence",
+              "count": 3,
+              "rationale": "Word order is learned by building.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "highlight",
+              "count": 1,
+              "rationale": "Find the incorrect clause.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Apply the rule.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Reorder these words into a correct sentence"
+          ],
+          "commonMisconceptions": [
+            "Word order matches the learner's first language",
+            "Gender is arbitrary so it can be guessed"
+          ],
+          "difficultyLadder": {
+            "easy": "identify correct order",
+            "medium": "produce a sentence",
+            "hard": "repair and explain"
+          }
+        },
+        "listening": {
+          "mix": [
+            {
+              "type": "readingset",
+              "count": 1,
+              "rationale": "A transcript stands in for audio: one text, several questions.",
+              "evidence": "weak"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Comprehension checks.",
+              "evidence": "strong"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Cloze on the transcript.",
+              "evidence": "strong"
+            },
+            {
+              "type": "highlight",
+              "count": 1,
+              "rationale": "Locate the line that answers it.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "What is the speaker asking for?"
+          ],
+          "commonMisconceptions": [
+            "Understanding every word is required to understand the message"
+          ],
+          "difficultyLadder": {
+            "easy": "catch a key word",
+            "medium": "get the gist",
+            "hard": "infer intent"
+          }
+        },
+        "reading": {
+          "mix": [
+            {
+              "type": "readingset",
+              "count": 1,
+              "rationale": "One passage, several questions.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "highlight",
+              "count": 1,
+              "rationale": "Find the supporting line.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Vocabulary in context.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Comprehension.",
+              "evidence": "strong"
+            },
+            {
+              "type": "sentence",
+              "count": 1,
+              "rationale": "Respond in the language.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "What does the passage say about ___?"
+          ],
+          "commonMisconceptions": [
+            "Reading requires translating word by word"
+          ],
+          "difficultyLadder": {
+            "easy": "locate a fact",
+            "medium": "infer meaning",
+            "hard": "respond in the language"
+          }
+        },
+        "production": {
+          "mix": [
+            {
+              "type": "sentence",
+              "count": 3,
+              "rationale": "Speaking and writing are production.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Extended production.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Scaffolded production.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Choice + reason.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "How would you say ___?",
+            "Which register fits ___, and why?"
+          ],
+          "commonMisconceptions": [
+            "Formal and informal are interchangeable"
+          ],
+          "difficultyLadder": {
+            "easy": "produce a phrase",
+            "medium": "produce a sentence",
+            "hard": "choose register and justify"
+          }
+        },
+        "culture": {
+          "mix": [
+            {
+              "type": "scenario",
+              "count": 2,
+              "rationale": "Cultural knowledge is applied in situations.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "readingset",
+              "count": 1,
+              "rationale": "A cultural text.",
+              "evidence": "weak"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Choice + reason.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "In this situation, what would be appropriate, and why?"
+          ],
+          "commonMisconceptions": [
+            "One country has one uniform culture"
+          ],
+          "difficultyLadder": {
+            "easy": "recall a custom",
+            "medium": "apply it in a situation",
+            "hard": "explain why it differs"
+          }
+        }
+      }
+    },
+    "psychology": {
+      "defaultMix": [
+        {
+          "type": "scenario",
+          "count": 2,
+          "rationale": "Apply a named theory to a concrete case.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "twopart",
+          "count": 1,
+          "rationale": "Answer plus the mechanism - guards against name-dropping.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "classify",
+          "count": 1,
+          "rationale": "Confusable constructs.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "fill",
+          "count": 2,
+          "rationale": "Terms in context.",
+          "evidence": "strong"
+        },
+        {
+          "type": "mcq",
+          "count": 2,
+          "rationale": "Retrieval.",
+          "evidence": "strong"
+        },
+        {
+          "type": "truefalse",
+          "count": 1,
+          "rationale": "Probe.",
+          "evidence": "strong"
+        },
+        {
+          "type": "write",
+          "count": 1,
+          "rationale": "Explain the mechanism.",
+          "evidence": "moderate"
+        }
+      ],
+      "notes": "Avoid 'who discovered it' trivia; a stage name without a prediction is DOK 1 dressed up.",
+      "subtopics": {
+        "researchMethods": {
+          "mix": [
+            {
+              "type": "scenario",
+              "count": 2,
+              "rationale": "Judge a described study.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 1,
+              "rationale": "Two studies that disagree.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Verdict + the flaw that drives it.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Variable types are confused constantly.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "What is wrong with this study, and what can it therefore not show?"
+          ],
+          "commonMisconceptions": [
+            "Correlation implies causation",
+            "A large sample fixes a biased sample",
+            "Anecdotes count as evidence"
+          ],
+          "difficultyLadder": {
+            "easy": "name a variable",
+            "medium": "identify a flaw",
+            "hard": "judge what the study can conclude"
+          }
+        },
+        "biologicalBases": {
+          "mix": [
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Neural transmission is ordered.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "matchpairs",
+              "count": 1,
+              "rationale": "Structure to function.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Answer + mechanism.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the pathway.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Trace what happens when ___",
+            "Which structure is responsible, and why that one?"
+          ],
+          "commonMisconceptions": [
+            "We use 10% of our brain",
+            "One hemisphere controls personality"
+          ],
+          "difficultyLadder": {
+            "easy": "name a structure",
+            "medium": "state its role",
+            "hard": "predict the effect of damage"
+          }
+        },
+        "sensationPerception": {
+          "mix": [
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Transduction is a pathway.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Perception is where confident errors live.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Sensation vs perception.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the illusion.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Why does ___ look ___ even though ___?"
+          ],
+          "commonMisconceptions": [
+            "The eye works like a camera recording reality",
+            "Perception is passive"
+          ],
+          "difficultyLadder": {
+            "easy": "define",
+            "medium": "trace the pathway",
+            "hard": "explain an illusion"
+          }
+        },
+        "learning": {
+          "mix": [
+            {
+              "type": "scenario",
+              "count": 2,
+              "rationale": "Conditioning is diagnosed in cases.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 2,
+              "rationale": "Classical vs operant is the canonical confusion.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Label + justification.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Is this classical or operant conditioning, and what identifies it?"
+          ],
+          "commonMisconceptions": [
+            "Negative reinforcement is punishment",
+            "Reinforcement always means a reward"
+          ],
+          "difficultyLadder": {
+            "easy": "name the process",
+            "medium": "identify it in a case",
+            "hard": "design a schedule and justify"
+          }
+        },
+        "memory": {
+          "mix": [
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Encoding to retrieval is ordered.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Answer + mechanism.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "matchpairs",
+              "count": 1,
+              "rationale": "Store to property.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval - and the topic is retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the failure.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Why did ___ forget ___, in terms of ___?"
+          ],
+          "commonMisconceptions": [
+            "Memory records events like video",
+            "Forgetting means the trace is erased"
+          ],
+          "difficultyLadder": {
+            "easy": "name a store",
+            "medium": "trace the path",
+            "hard": "explain a specific failure"
+          }
+        },
+        "cognition": {
+          "mix": [
+            {
+              "type": "scenario",
+              "count": 2,
+              "rationale": "Heuristics show up in cases.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Bias + why it applies.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Heuristics are confusable.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the reasoning error.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Which bias explains this decision, and how?"
+          ],
+          "commonMisconceptions": [
+            "Biases only affect other people",
+            "More information always improves decisions"
+          ],
+          "difficultyLadder": {
+            "easy": "name the bias",
+            "medium": "spot it in a case",
+            "hard": "explain and counter it"
+          }
+        },
+        "development": {
+          "mix": [
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Stages are ordered.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "scenario",
+              "count": 2,
+              "rationale": "Apply a stage to a described child.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Stage boundaries.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Stage + the behaviour that shows it.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Which stage is this child in, and what behaviour tells you?"
+          ],
+          "commonMisconceptions": [
+            "Development is purely biological",
+            "Stages have hard age cut-offs"
+          ],
+          "difficultyLadder": {
+            "easy": "name the stage",
+            "medium": "match behaviour to stage",
+            "hard": "predict and justify"
+          }
+        },
+        "personality": {
+          "mix": [
+            {
+              "type": "scenario",
+              "count": 2,
+              "rationale": "Traits are applied to cases.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Trait vs type theories.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Explanation + theory.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "matchpairs",
+              "count": 1,
+              "rationale": "Theory to claim.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Compare two theories.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Which theory best explains ___, and why?"
+          ],
+          "commonMisconceptions": [
+            "Personality is fixed at birth",
+            "Type tests are diagnostic"
+          ],
+          "difficultyLadder": {
+            "easy": "name a trait",
+            "medium": "apply a theory",
+            "hard": "compare theories"
+          }
+        },
+        "disorders": {
+          "mix": [
+            {
+              "type": "scenario",
+              "count": 2,
+              "rationale": "Diagnosis is case-based.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Disorders with overlapping symptoms.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Diagnosis + the criterion met.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Which criteria does this case meet, and which does it not?"
+          ],
+          "commonMisconceptions": [
+            "Disorders are visible from behaviour alone",
+            "A diagnosis explains the behaviour"
+          ],
+          "difficultyLadder": {
+            "easy": "name a symptom",
+            "medium": "match to criteria",
+            "hard": "distinguish similar presentations"
+          }
+        },
+        "social": {
+          "mix": [
+            {
+              "type": "scenario",
+              "count": 2,
+              "rationale": "Social effects are demonstrated in situations.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 1,
+              "rationale": "Classic study vs replication.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Effect + mechanism.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Conformity vs obedience vs compliance.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the effect.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Which effect is operating here, and what would reduce it?"
+          ],
+          "commonMisconceptions": [
+            "People who conform are weak-willed",
+            "Bystander effect means people do not care"
+          ],
+          "difficultyLadder": {
+            "easy": "name the effect",
+            "medium": "identify it in a case",
+            "hard": "explain and predict a change"
+          }
+        }
+      }
+    },
+    "geography": {
+      "defaultMix": [
+        {
+          "type": "sequence",
+          "count": 2,
+          "rationale": "Physical processes are ordered.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "twopart",
+          "count": 1,
+          "rationale": "Pattern + the process that produced it.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "estimate",
+          "count": 1,
+          "rationale": "Magnitudes and scale.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "matchpairs",
+          "count": 1,
+          "rationale": "Process to landform.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "classify",
+          "count": 1,
+          "rationale": "Confusable categories.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "fill",
+          "count": 2,
+          "rationale": "Terms.",
+          "evidence": "strong"
+        },
+        {
+          "type": "mcq",
+          "count": 1,
+          "rationale": "Retrieval.",
+          "evidence": "strong"
+        },
+        {
+          "type": "truefalse",
+          "count": 1,
+          "rationale": "Probe.",
+          "evidence": "strong"
+        }
+      ],
+      "notes": "Capital-city trivia is DOK 1 with no transfer; avoid unless the notes are about capitals.",
+      "subtopics": {
+        "physical": {
+          "mix": [
+            {
+              "type": "sequence",
+              "count": 2,
+              "rationale": "Erosion, weathering and cycles have order.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Landform + process.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "matchpairs",
+              "count": 1,
+              "rationale": "Process to feature.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Rates and scales.",
+              "evidence": "weak"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the formation.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Put the stages of ___ in order",
+            "Which process formed ___, and how can you tell?"
+          ],
+          "commonMisconceptions": [
+            "Weathering and erosion are the same",
+            "Rivers only erode downwards"
+          ],
+          "difficultyLadder": {
+            "easy": "name the feature",
+            "medium": "order the process",
+            "hard": "explain formation from evidence"
+          }
+        },
+        "human": {
+          "mix": [
+            {
+              "type": "scenario",
+              "count": 2,
+              "rationale": "Population and settlement pressures are applied.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Pattern + cause.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 2,
+              "rationale": "Push vs pull factors.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Population magnitudes.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the pattern.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Sort these into push and pull factors",
+            "Why are people concentrated in ___?"
+          ],
+          "commonMisconceptions": [
+            "Cities grow only from births",
+            "Migration is always permanent"
+          ],
+          "difficultyLadder": {
+            "easy": "name a factor",
+            "medium": "classify factors",
+            "hard": "explain a distribution"
+          }
+        },
+        "economicGeo": {
+          "mix": [
+            {
+              "type": "scenario",
+              "count": 2,
+              "rationale": "Trade and development in cases.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Economic magnitudes.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Pattern + cause.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Sectors.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Why did industry locate at ___?"
+          ],
+          "commonMisconceptions": [
+            "Development means only GDP",
+            "Resource wealth guarantees prosperity"
+          ],
+          "difficultyLadder": {
+            "easy": "name a sector",
+            "medium": "classify activity",
+            "hard": "explain a location decision"
+          }
+        },
+        "political": {
+          "mix": [
+            {
+              "type": "scenario",
+              "count": 2,
+              "rationale": "Borders and governance in cases.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "corroborate",
+              "count": 1,
+              "rationale": "Two accounts of a territorial dispute.",
+              "evidence": "weak"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Claim + evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Boundary types.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the conflict.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "What kind of boundary is ___, and what problems follow from it?"
+          ],
+          "commonMisconceptions": [
+            "Borders follow natural features",
+            "States and nations are the same thing"
+          ],
+          "difficultyLadder": {
+            "easy": "name a boundary type",
+            "medium": "classify it",
+            "hard": "explain a consequence"
+          }
+        },
+        "cartography": {
+          "mix": [
+            {
+              "type": "estimate",
+              "count": 2,
+              "rationale": "Scale and distance reasoning is the core skill.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "matchpairs",
+              "count": 1,
+              "rationale": "Projection to distortion.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Reading + justification.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Map types.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "highlight",
+              "count": 1,
+              "rationale": "Locate the relevant feature on a described map.",
+              "evidence": "weak"
+            }
+          ],
+          "stems": [
+            "Roughly how far is ___ from ___?",
+            "Which projection suits ___, and why?"
+          ],
+          "commonMisconceptions": [
+            "Every map projection is equally accurate",
+            "Greenland is the size Mercator shows"
+          ],
+          "difficultyLadder": {
+            "easy": "read a symbol",
+            "medium": "use the scale",
+            "hard": "choose a projection and justify"
+          }
+        },
+        "regional": {
+          "mix": [
+            {
+              "type": "matchpairs",
+              "count": 2,
+              "rationale": "Region to characteristic.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Claim + evidence.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Regional groupings.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Compare two regions.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Match each region to the feature that defines it"
+          ],
+          "commonMisconceptions": [
+            "Continents are uniform",
+            "Regional boundaries are fixed"
+          ],
+          "difficultyLadder": {
+            "easy": "locate a region",
+            "medium": "match characteristics",
+            "hard": "compare and explain"
+          }
+        }
+      }
+    },
+    "economics": {
+      "defaultMix": [
+        {
+          "type": "wordproblem",
+          "count": 1,
+          "rationale": "One of two subjects licensed for quantitative formats.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "estimate",
+          "count": 1,
+          "rationale": "Direction and magnitude reasoning.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "twopart",
+          "count": 1,
+          "rationale": "Direction of change + the mechanism.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "scenario",
+          "count": 1,
+          "rationale": "Apply to a market case.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "classify",
+          "count": 1,
+          "rationale": "Confusable concepts.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "fill",
+          "count": 2,
+          "rationale": "Terms.",
+          "evidence": "strong"
+        },
+        {
+          "type": "mcq",
+          "count": 1,
+          "rationale": "Retrieval.",
+          "evidence": "strong"
+        },
+        {
+          "type": "truefalse",
+          "count": 1,
+          "rationale": "Probe.",
+          "evidence": "strong"
+        }
+      ],
+      "notes": "Direction of movement matters more than the exact number. Definition-only questions with no change to reason about are the main failure mode.",
+      "subtopics": {
+        "supplyDemand": {
+          "mix": [
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Which curve shifts and why.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "scenario",
+              "count": 1,
+              "rationale": "A market event.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "wordproblem",
+              "count": 1,
+              "rationale": "Equilibrium computation.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Magnitude of the change.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Shift vs movement along is THE confusion.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "What happens to price and quantity when ___, and why?",
+            "Is this a shift or a movement along the curve?"
+          ],
+          "commonMisconceptions": [
+            "A price change shifts the demand curve",
+            "Supply and quantity supplied are the same"
+          ],
+          "difficultyLadder": {
+            "easy": "read the graph",
+            "medium": "predict the direction",
+            "hard": "explain the mechanism"
+          }
+        },
+        "elasticity": {
+          "mix": [
+            {
+              "type": "wordproblem",
+              "count": 2,
+              "rationale": "Elasticity is computed.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Is it elastic or inelastic, roughly?",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Value + what it implies for revenue.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Elastic vs inelastic goods.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Calculate the elasticity of ___",
+            "What happens to revenue, and why?"
+          ],
+          "commonMisconceptions": [
+            "Elasticity is the slope",
+            "Necessities are always inelastic regardless of timeframe"
+          ],
+          "difficultyLadder": {
+            "easy": "compute",
+            "medium": "interpret the value",
+            "hard": "predict a revenue effect"
+          }
+        },
+        "marketStructures": {
+          "mix": [
+            {
+              "type": "classify",
+              "count": 2,
+              "rationale": "Four structures on two traits - the canonical 2x2.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "scenario",
+              "count": 1,
+              "rationale": "Identify the structure from a case.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Structure + the feature that identifies it.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "matchpairs",
+              "count": 1,
+              "rationale": "Structure to characteristic.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Which market structure is this, and what identifies it?"
+          ],
+          "commonMisconceptions": [
+            "Monopolies can charge any price they like",
+            "Perfect competition is common in reality"
+          ],
+          "difficultyLadder": {
+            "easy": "name the structure",
+            "medium": "classify a case",
+            "hard": "predict pricing behaviour"
+          }
+        },
+        "costs": {
+          "mix": [
+            {
+              "type": "wordproblem",
+              "count": 2,
+              "rationale": "Cost curves are computed.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "tracetable",
+              "count": 1,
+              "rationale": "Carry total, average and marginal cost across output levels.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Decision + the cost concept behind it.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Magnitude.",
+              "evidence": "weak"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Fill in marginal cost at each output level",
+            "Should the firm produce, and on what cost basis?"
+          ],
+          "commonMisconceptions": [
+            "Sunk costs should affect the decision",
+            "Average and marginal cost are interchangeable"
+          ],
+          "difficultyLadder": {
+            "easy": "compute a cost",
+            "medium": "complete the table",
+            "hard": "make and justify a decision"
+          }
+        },
+        "macroIndicators": {
+          "mix": [
+            {
+              "type": "wordproblem",
+              "count": 1,
+              "rationale": "GDP and index computation.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Magnitude of national figures.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Indicator + what it does and does not capture.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Types of unemployment are confusable.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Roughly what is ___?",
+            "What does this indicator miss?"
+          ],
+          "commonMisconceptions": [
+            "GDP measures wellbeing",
+            "Any unemployment is avoidable"
+          ],
+          "difficultyLadder": {
+            "easy": "define the indicator",
+            "medium": "compute it",
+            "hard": "critique what it measures"
+          }
+        },
+        "fiscalMonetary": {
+          "mix": [
+            {
+              "type": "scenario",
+              "count": 2,
+              "rationale": "Policy responses to a described economy.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Policy + the transmission mechanism.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Fiscal vs monetary.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "wordproblem",
+              "count": 1,
+              "rationale": "Multiplier computation.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "What should the central bank do, and how does that reach the economy?"
+          ],
+          "commonMisconceptions": [
+            "Printing money always causes immediate hyperinflation",
+            "Fiscal and monetary policy are the same lever"
+          ],
+          "difficultyLadder": {
+            "easy": "name the tool",
+            "medium": "choose the tool",
+            "hard": "trace the transmission"
+          }
+        },
+        "trade": {
+          "mix": [
+            {
+              "type": "wordproblem",
+              "count": 1,
+              "rationale": "Comparative advantage is computed.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Who should specialise, and why.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "scenario",
+              "count": 1,
+              "rationale": "A trade dispute.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Absolute vs comparative advantage.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Magnitude of gains.",
+              "evidence": "weak"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Who has the comparative advantage in ___, and how do you know?"
+          ],
+          "commonMisconceptions": [
+            "Trade deficits are always harmful",
+            "Absolute advantage determines what to trade"
+          ],
+          "difficultyLadder": {
+            "easy": "read the table",
+            "medium": "compute advantage",
+            "hard": "argue a specialisation"
+          }
+        },
+        "behavioral": {
+          "mix": [
+            {
+              "type": "scenario",
+              "count": 2,
+              "rationale": "Behavioural effects show up in decisions.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Effect + mechanism.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Anchoring vs framing vs loss aversion.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the deviation from rationality.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Which effect explains this choice, and how would you counter it?"
+          ],
+          "commonMisconceptions": [
+            "People are perfectly rational",
+            "Nudges are the same as mandates"
+          ],
+          "difficultyLadder": {
+            "easy": "name the effect",
+            "medium": "identify it in a case",
+            "hard": "design a counter"
+          }
+        },
+        "personalFinance": {
+          "mix": [
+            {
+              "type": "wordproblem",
+              "count": 2,
+              "rationale": "Real figures: interest, budgets, totals.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "Ballpark cost and growth.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "scenario",
+              "count": 1,
+              "rationale": "A financial decision.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Choice + reason.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "What does ___ grow to after ___?",
+            "Roughly how much is ___?"
+          ],
+          "commonMisconceptions": [
+            "Compound and simple interest are similar over time",
+            "Minimum payments clear a debt efficiently"
+          ],
+          "difficultyLadder": {
+            "easy": "compute once",
+            "medium": "compute over time",
+            "hard": "choose between options and justify"
+          }
+        }
+      }
+    },
+    "cs": {
+      "defaultMix": [
+        {
+          "type": "tracetable",
+          "count": 1,
+          "rationale": "Running the procedure by hand is the signature CS format.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "errorspot",
+          "count": 1,
+          "rationale": "Worked example with a planted fault - novice-appropriate.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "twopart",
+          "count": 1,
+          "rationale": "Output + the reason it is that output.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "sequence",
+          "count": 1,
+          "rationale": "Execution order.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "matchpairs",
+          "count": 1,
+          "rationale": "Concept to definition.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "fill",
+          "count": 1,
+          "rationale": "Terms.",
+          "evidence": "strong"
+        },
+        {
+          "type": "mcq",
+          "count": 2,
+          "rationale": "Retrieval.",
+          "evidence": "strong"
+        },
+        {
+          "type": "truefalse",
+          "count": 1,
+          "rationale": "Probe.",
+          "evidence": "strong"
+        }
+      ],
+      "notes": "Syntax trivia a reference would answer is DOK 1 with no transfer.",
+      "subtopics": {
+        "programmingFundamentals": {
+          "mix": [
+            {
+              "type": "tracetable",
+              "count": 2,
+              "rationale": "Trace variables through a loop.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "errorspot",
+              "count": 1,
+              "rationale": "One broken line.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Execution order.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Output + reason.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Prediction.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            }
+          ],
+          "stems": [
+            "Fill in the value of each variable after each pass",
+            "What does this print, and why?"
+          ],
+          "commonMisconceptions": [
+            "= means equality rather than assignment",
+            "A loop condition is checked continuously"
+          ],
+          "difficultyLadder": {
+            "easy": "read a line",
+            "medium": "trace a loop",
+            "hard": "predict output and explain"
+          }
+        },
+        "dataStructures": {
+          "mix": [
+            {
+              "type": "tracetable",
+              "count": 1,
+              "rationale": "Trace the structure's state.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Stack vs queue vs list are confusable.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "matchpairs",
+              "count": 1,
+              "rationale": "Structure to operation cost.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Choice + reason.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "errorspot",
+              "count": 1,
+              "rationale": "Misuse of a structure.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Justify the choice.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Show the structure after each operation",
+            "Which structure suits ___, and why?"
+          ],
+          "commonMisconceptions": [
+            "Arrays and linked lists have the same access cost",
+            "A tree is always balanced"
+          ],
+          "difficultyLadder": {
+            "easy": "name the structure",
+            "medium": "trace operations",
+            "hard": "choose and justify"
+          }
+        },
+        "algorithms": {
+          "mix": [
+            {
+              "type": "tracetable",
+              "count": 1,
+              "rationale": "Trace the algorithm on a concrete input.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "sequence",
+              "count": 1,
+              "rationale": "Step order.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "estimate",
+              "count": 1,
+              "rationale": "How does cost grow - order of magnitude reasoning.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Complexity + why.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "classify",
+              "count": 1,
+              "rationale": "Complexity classes.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Compare two approaches.",
+              "evidence": "moderate"
+            }
+          ],
+          "stems": [
+            "Trace ___ on this input",
+            "Roughly how many steps for n = ___?",
+            "Why is it O(___)?"
+          ],
+          "commonMisconceptions": [
+            "Big-O gives the exact runtime",
+            "A faster machine changes the complexity class"
+          ],
+          "difficultyLadder": {
+            "easy": "name the algorithm",
+            "medium": "trace it",
+            "hard": "reason about growth"
+          }
+        },
+        "theorySystems": {
+          "mix": [
+            {
+              "type": "classify",
+              "count": 2,
+              "rationale": "Layered systems and protocols are confusable.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "matchpairs",
+              "count": 2,
+              "rationale": "Layer to responsibility.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Answer + reason.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "mcq",
+              "count": 2,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "fill",
+              "count": 1,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "highlight",
+              "count": 1,
+              "rationale": "Find the step where the failure occurs.",
+              "evidence": "weak"
+            }
+          ],
+          "stems": [
+            "Which layer handles ___, and why there?"
+          ],
+          "commonMisconceptions": [
+            "The internet and the web are the same",
+            "HTTPS encrypts the destination address"
+          ],
+          "difficultyLadder": {
+            "easy": "name the layer",
+            "medium": "match responsibilities",
+            "hard": "explain a design tradeoff"
+          }
+        }
+      }
+    },
+    "general": {
+      "defaultMix": [
+        {
+          "type": "scenario",
+          "count": 2,
+          "rationale": "Apply the idea to a described situation.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "twopart",
+          "count": 1,
+          "rationale": "Answer + reason.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "matchpairs",
+          "count": 1,
+          "rationale": "Concept to definition.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "highlight",
+          "count": 1,
+          "rationale": "Locate the supporting statement.",
+          "evidence": "moderate"
+        },
+        {
+          "type": "fill",
+          "count": 2,
+          "rationale": "Terms in context.",
+          "evidence": "strong"
+        },
+        {
+          "type": "mcq",
+          "count": 1,
+          "rationale": "Retrieval.",
+          "evidence": "strong"
+        },
+        {
+          "type": "truefalse",
+          "count": 1,
+          "rationale": "Probe.",
+          "evidence": "strong"
+        },
+        {
+          "type": "write",
+          "count": 1,
+          "rationale": "Explain in your own words.",
+          "evidence": "moderate"
+        }
+      ],
+      "notes": "Fallback profile when nothing else matches. Leans on the two high-utility mechanisms: retrieval and spacing.",
+      "subtopics": {
+        "studySkills": {
+          "mix": [
+            {
+              "type": "scenario",
+              "count": 2,
+              "rationale": "Techniques are applied to situations, not ranked in the abstract.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "twopart",
+              "count": 1,
+              "rationale": "Technique + why it works.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "matchpairs",
+              "count": 1,
+              "rationale": "Technique to the problem it solves.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "fill",
+              "count": 2,
+              "rationale": "Terms.",
+              "evidence": "strong"
+            },
+            {
+              "type": "mcq",
+              "count": 1,
+              "rationale": "Retrieval.",
+              "evidence": "strong"
+            },
+            {
+              "type": "write",
+              "count": 1,
+              "rationale": "Explain the mechanism.",
+              "evidence": "moderate"
+            },
+            {
+              "type": "truefalse",
+              "count": 1,
+              "rationale": "Probe.",
+              "evidence": "strong"
+            },
+            {
+              "type": "highlight",
+              "count": 1,
+              "rationale": "Find the claim.",
+              "evidence": "weak"
+            }
+          ],
+          "stems": [
+            "You have ___ days and ___ to learn. What should you do first, and why?"
+          ],
+          "commonMisconceptions": [
+            "Rereading is an effective study strategy",
+            "Highlighting creates memory",
+            "Cramming works as well as spacing"
+          ],
+          "difficultyLadder": {
+            "easy": "name the technique",
+            "medium": "apply it to a case",
+            "hard": "justify from the mechanism"
+          }
+        }
+      }
+    }
+  }
+}

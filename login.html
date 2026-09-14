@@ -359,10 +359,10 @@
 
 <!-- LEFT PANEL -->
 <div class="left-panel">
-  <a href="https://studyflow-ten-vert.vercel.app" class="back-home" aria-label="Back to home">
+  <a href="index.html" class="back-home" aria-label="Back to home">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
   </a>
-  <a href="https://studyflow-ten-vert.vercel.app" class="left-logo">
+  <a href="index.html" class="left-logo">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:rgba(255,255,255,.9)"/><stop offset="100%" style="stop-color:rgba(255,255,255,.6)"/></linearGradient></defs>
       <rect x="0" y="2" width="40" height="40" rx="10" fill="rgba(255,255,255,.2)"/>
@@ -438,7 +438,7 @@
         <a href="#" class="forgot" style="margin:0" onclick="resetPassword();return false;">Forgot password?</a>
       </div>
       <button class="btn-submit" onclick="handleLogin()">Sign in →</button>
-      <p class="terms">By signing in you agree to our <a href="https://studyflow-ten-vert.vercel.app/terms.html">Terms</a> and <a href="https://studyflow-ten-vert.vercel.app/privacy.html">Privacy Policy</a>.</p>
+      <p class="terms">By signing in you agree to our <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy Policy</a>.</p>
     </div>
 
     <div id="signup-view" style="display:none;">
@@ -489,7 +489,7 @@
         </div>
       </div>
       <button class="btn-submit" onclick="handleSignup()">Create account →</button>
-      <p class="terms">By creating an account you agree to our <a href="https://studyflow-ten-vert.vercel.app/terms.html">Terms</a> and <a href="https://studyflow-ten-vert.vercel.app/privacy.html">Privacy Policy</a>.</p>
+      <p class="terms">By creating an account you agree to our <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy Policy</a>.</p>
     </div>
 
   </div>
@@ -516,8 +516,8 @@
     var oldPlan = localStorage.getItem('studyflow_plan');
     var hasPlan = plans.length > 0 || oldPlan;
     window.location.href = hasPlan
-      ? 'https://studyflow-ten-vert.vercel.app/dashboard.html'
-      : 'https://studyflow-ten-vert.vercel.app/app.html';
+      ? 'dashboard.html'
+      : 'app.html';
   }
 
   // Save user while preserving tier and classCode if it's the same account logging back in
@@ -665,7 +665,7 @@
             localStorage.setItem('studyflow_class_' + classCode, JSON.stringify(classData));
           }
           // Sync to Firestore for cross-device
-          fetch('https://studyflow-ten-vert.vercel.app/api/class', {
+          fetch('api/class', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'join', classCode: classCode, studentData: studentRecord })
@@ -683,7 +683,7 @@
           .catch(function(){});
         }
         // New users always go to app.html to create first plan
-        window.location.href = 'https://studyflow-ten-vert.vercel.app/app.html';
+        window.location.href = 'app.html';
       })
       .catch(function(err) {
         if (btn) { btn.disabled = false; btn.textContent = 'Create account →'; }

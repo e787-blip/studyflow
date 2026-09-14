@@ -273,7 +273,7 @@
 <body>
 
 <nav>
-  <a href="https://studyflow-ten-vert.vercel.app" class="logo">
+  <a href="index.html" class="logo">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
       <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
@@ -290,7 +290,7 @@
     </svg>
   </a>
   <div style="display:flex;align-items:center;gap:.75rem;">
-    <a href="https://studyflow-ten-vert.vercel.app/dashboard.html" style="font-size:0.82rem;color:var(--muted);text-decoration:none;font-weight:500;">Dashboard</a>
+    <a href="dashboard.html" style="font-size:0.82rem;color:var(--muted);text-decoration:none;font-weight:500;">Dashboard</a>
     <button onclick="toggleDark()" id="dark-toggle" title="Toggle dark mode" style="background:var(--soft);border:1.5px solid var(--border);border-radius:8px;padding:.35rem .5rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;width:34px;height:34px;">
       <svg id="dark-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
@@ -398,7 +398,7 @@
         <div style="font-weight:800;color:#8b5cf6;">$14.99<span style="font-size:0.7rem;font-weight:400;">/mo</span></div>
       </div>
     </div>
-    <a href="https://studyflow-ten-vert.vercel.app/pricing.html" style="display:block;background:var(--blue);color:#fff;padding:.9rem;border-radius:12px;font-weight:700;font-size:0.95rem;text-decoration:none;margin-bottom:.6rem;box-shadow:0 4px 14px rgba(74,124,246,.3);">Upgrade now →</a>
+    <a href="pricing.html" style="display:block;background:var(--blue);color:#fff;padding:.9rem;border-radius:12px;font-weight:700;font-size:0.95rem;text-decoration:none;margin-bottom:.6rem;box-shadow:0 4px 14px rgba(74,124,246,.3);">Upgrade now →</a>
     <button onclick="closeUpgradeModal()" style="background:none;border:none;color:var(--muted);font-size:0.85rem;cursor:pointer;font-family:var(--sans);">Continue with 7-day plan</button>
   </div>
 </div>
@@ -792,7 +792,7 @@
 
     // Sync to Firestore so the teacher sees them from any device
     showMsg('Joining...', true);
-    fetch('https://studyflow-ten-vert.vercel.app/api/class', {
+    fetch('api/class', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'join', classCode: code, studentData: studentRecord })
@@ -854,7 +854,7 @@
 
   // Auth guard — redirect to login if not signed in
   if (!SFStore.getItem('studyflow_user')) {
-    window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html';
+    window.location.href = 'login.html';
   }
 
   // ── FILE HANDLING — supports photos, video, audio, PDF, DOCX, TXT ──
@@ -919,7 +919,7 @@
     var reader = new FileReader();
     reader.onload = function(e) {
       var base64 = e.target.result.split(',')[1];
-      fetch('https://studyflow-ten-vert.vercel.app/api/extract', {
+      fetch('api/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageData: base64, mediaType: mediaType, filename: file.name })
@@ -1390,10 +1390,17 @@
     if (!selectedGoal) { sfNotice('Please select your goal!'); return; }
     if (!selectedDifficulty) { sfNotice('Please select a difficulty!'); return; }
 
-    var notes = fileContent || document.getElementById('notes-input').value;
-    if (!notes.trim()) { sfNotice('Please upload a file or paste your notes!'); goToStep(1); return; }
-    var deadline = document.getElementById('deadline-input').value;
-    if (!deadline) { sfNotice('Please enter your exam date!'); return; }
+    /* Choosing a goal or a difficulty re-renders the wizard, which can replace
+       these inputs - so by the time generatePlan runs, getElementById may
+       return null and `.value` throws, killing the click with nothing shown to
+       the learner. Read defensively and fall back to the same notice the empty
+       case uses. */
+    var notesEl = document.getElementById('notes-input');
+    var notes = fileContent || (notesEl ? notesEl.value : '');
+    if (!notes || !notes.trim()) { sfNotice('Please upload a file or paste your notes!'); goToStep(1); return; }
+    var deadlineEl = document.getElementById('deadline-input');
+    var deadline = deadlineEl ? deadlineEl.value : '';
+    if (!deadline) { sfNotice('Please enter your exam date!'); goToStep(2); return; }
 
     // Check plan count limits
     var allPlans = JSON.parse(SFStore.getItem('studyflow_plans') || '[]');
@@ -1625,7 +1632,21 @@
               'database', 'operating system', 'debug', 'syntax error']],
          [1, ['code', 'function', 'loop', 'network', 'sorting']]],
 
-    history: [[3, ['revolution', 'treaty', 'dynasty', 'colonialism', 'renaissance',
+    history: [/* Civics is history's other half, and the list had only the
+                 British-flavoured end of it - constitution, parliament,
+                 monarchy - so US government notes ("a bill is referred to
+                 committee, the President may veto it") scored nothing and
+                 fell through to `general`. That also meant the history/civics
+                 subtopic, which is written for exactly those notes, could
+                 almost never fire. */
+              [3, ['civics', 'congress', 'senate', 'legislature', 'veto',
+                   'judicial branch', 'executive branch', 'legislative branch',
+                   'bill of rights', 'supreme court', 'separation of powers',
+                   'checks and balances', 'filibuster', 'impeachment']],
+              [2, ['government', 'democracy', 'senator', 'representative',
+                   'legislation', 'amendment', 'federal', 'citizenship',
+                   'electoral', 'ratify']],
+              [3, ['revolution', 'treaty', 'dynasty', 'colonialism', 'renaissance',
                    'industrial revolution', 'factories', 'black death',
                    'reformation', 'imperialism', 'armistice', 'abolition',
                    'constitution', 'parliament', 'monarchy', 'feudal']],
@@ -1810,6 +1831,301 @@
      bigequation, wordproblem, errorspot, write. Subjects whose content is
      DECLARATIVE get retrieval formats - mcq, truefalse, fill. Most subjects
      need both, in the proportion their content actually demands. */
+  /* ── QUESTION TYPE TEMPLATES ──────────────────────────────────────────────
+     One JSON fragment per question type, so a subject's mix can be written as
+     a list of type names instead of a hand-assembled 2000-character string.
+     Every name here has a renderer in lesson.html; a name with no renderer is
+     queued and then silently skipped, so do not invent one. */
+  function qtpl(entry, d, i) {
+    var bits = String(entry).split(':'), type = bits[0], variant = bits[1] || '';
+    var tail = '"hint":"","explanation":"","difficulty":"' + d + '"}';
+    /* Rotate the key so a subject's answers are not all option A / all True -
+       the model anchors hard on a repeated correctIndex. */
+    var idx = i % 4;
+    if (type === 'mcq')       return '{"type":"mcq","question":"","options":["","","",""],"correctIndex":' + idx + ',' + tail;
+    if (type === 'scenario')  return '{"type":"scenario","question":"","options":["","","",""],"correctIndex":' + idx + ',' + tail;
+    if (type === 'truefalse') return '{"type":"truefalse","question":"","correct":"' + (i % 2 ? 'False' : 'True') + '",' + tail;
+    if (type === 'fill')      return '{"type":"fill","question":"","answer":"",' + tail;
+    if (type === 'write')     return '{"type":"write","question":"","modelAnswer":"",' + tail;
+    if (type === 'classify')  return '{"type":"classify","question":"Sort:","categoryA":"","categoryB":"","itemsA":["","",""],"itemsB":["","",""],' + tail;
+    if (type === 'sequence')  return '{"type":"sequence","question":"Put these in the order they happen:","items":["","","",""],' + tail;
+    if (type === 'sentence')  return '{"type":"sentence","question":"","words":["","",""],"translation":"",' + tail;
+    if (type === 'passage')   return '{"type":"passage","questionType":"' + (variant || 'main-idea') + '","passage":"","question":"","options":["","","",""],"correctIndex":' + idx + ',' + tail;
+    if (type === 'errorspot') return '{"type":"errorspot","question":"Find the mistake:","steps":[{"text":"","hasError":false},{"text":"","hasError":false},{"text":"","hasError":true},{"text":"","hasError":false}],' + tail;
+    if (type === 'wordproblem') return '{"type":"wordproblem","scenario":"","question":"","steps":[{"prompt":"","answer":"","unit":"","hint":""},{"prompt":"Now use {1} to find...","answer":"","unit":""}],"answer":"",' + tail;
+    /* The six research-backed formats. Shapes must match the renderers in
+       lesson.html exactly - a field the renderer does not read is dead, and a
+       field it needs but never receives is a blank card. */
+    if (type === 'twopart')     return '{"type":"twopart"' + (variant === 'passage' ? ',"passage":""' : '') + ',"question":"","options":["","","",""],"correctIndex":' + idx + ',"reasonPrompt":"' + (variant === 'passage' ? 'Which line from the text best supports that answer?' : 'Why is that the case?') + '","reasons":["","","",""],"reasonIndex":' + ((i + 2) % 4) + ',' + tail;
+    if (type === 'corroborate') return '{"type":"corroborate","sourceA":{"label":"Source A","text":""},"sourceB":{"label":"Source B","text":""},"question":"","options":["","","",""],"correctIndex":' + idx + ',' + tail;
+    if (type === 'highlight')   return '{"type":"highlight","question":"","sentences":["","","",""],"correctIndex":' + idx + ',' + tail;
+    if (type === 'tracetable')  return '{"type":"tracetable","question":"","setup":"","columns":["Step","Value"],"rows":[["1",""],["2",""],["3",""]],"blankCol":1,' + tail;
+    if (type === 'matchpairs')  return '{"type":"matchpairs","question":"Match each item to its pair.","pairs":[{"left":"","right":""},{"left":"","right":""},{"left":"","right":""},{"left":"","right":""}],' + tail;
+    if (type === 'estimate')    return '{"type":"estimate","question":"","answer":0,"tolerance":0,"unit":"",' + tail;
+    /* One passage, several questions against it - the shape reading
+       comprehension is actually practised in. buildQueue expands this into a
+       passage card followed by its questions. */
+    if (type === 'readingset')  return '{"type":"readingset","title":"","passage":"","questions":[{"question":"What is the main idea of the passage?","options":["","","",""],"correctIndex":' + idx + ',"questionType":"main-idea"},{"question":"","options":["","","",""],"correctIndex":' + ((i + 1) % 4) + ',"questionType":"inference"},{"question":"","options":["","","",""],"correctIndex":' + ((i + 2) % 4) + ',"questionType":"vocab-in-context"}],' + tail;
+    return '';
+  }
+
+  function buildQuestionSchema(types, d) {
+    var out = [], i, frag;
+    for (i = 0; i < types.length; i++) {
+      frag = qtpl(types[i], d, i);
+      if (frag) out.push(frag);
+    }
+    return out.join(',');
+  }
+
+  var QTYPE_NAME = { mcq:'MCQ', truefalse:'True/False', fill:'Fill', write:'Write',
+                     classify:'Classify', sequence:'Sequence', sentence:'Sentence builder',
+                     passage:'Passage', errorspot:'Errorspot', scenario:'Scenario',
+                     wordproblem:'Wordproblem', twopart:'Two-part', corroborate:'Corroborate',
+                     highlight:'Find-the-evidence', tracetable:'Trace table',
+                     matchpairs:'Match pairs', estimate:'Estimate',
+                     readingset:'Reading set (passage + 3 questions)' };
+
+  /* The quota line the model reads is counted from the same list the schema is
+     built from, so the two can no longer drift apart. They were two hand-kept
+     strings before, and a tally that disagrees with the schema is read by the
+     model as permission to improvise. */
+  function tallyFor(types) {
+    var order = [], counts = {}, i, base;
+    for (i = 0; i < types.length; i++) {
+      base = String(types[i]).split(':')[0];
+      if (!counts[base]) { counts[base] = 0; order.push(base); }
+      counts[base]++;
+    }
+    var parts = [];
+    for (i = 0; i < order.length; i++) {
+      parts.push(counts[order[i]] + ' ' + (QTYPE_NAME[order[i]] || order[i]));
+    }
+    return parts.join(', ');
+  }
+
+  /* ── SUBTOPICS ────────────────────────────────────────────────────────────
+     A subject is not one kind of knowledge. "English" is reading comprehension
+     one week and comma splices the next, and the same nine-question mix serves
+     neither well. Each entry sets the formats, what to ask, and which diagram
+     shape suits the material.
+
+     Tested in order, FIRST MATCH WINS, so the narrower pattern must come
+     first - the same trap the subject classifier hit, where a bare nationality
+     word sent "Causes of the French Revolution" to `language`.
+
+     Formats are drawn only from the twelve types that already have renderers.
+     bigequation and wordproblem stay inside math and economics: a question
+     belongs to its subject, and those two formats recast anything numeric as
+     arithmetic. */
+  var SUBTOPICS = {
+    science: [
+      { key:'life', label:'Life science',
+        terms:['cell','cells','biolog','organism','photosynthesis','respiration','genetic','dna','rna','evolution','ecosystem','enzyme','mitosis','meiosis','protein','bacteria','virus','plant','animal','digest','circulat','nervous','immune','heredity','chromosome'],
+        types:['twopart','sequence:process','classify','matchpairs','fill','mcq','estimate','truefalse','write'],
+        guide:'ASK: the order of a real process and what each stage produces, and what breaks if one stage fails. AVOID: naming a structure with no function attached.',
+        visual:'a cycle or flow for a process, parts for a structure.' },
+      { key:'physical', label:'Physical science',
+        terms:['force','forces','motion','energy','atom','atoms','molecul','chemical','reaction','element','compound','physics','chemistry','electric','magnet','heat','thermal','wave','waves','light','sound','gravity','friction','momentum','acid','base','periodic'],
+        types:['twopart','estimate','tracetable','mcq','fill','classify','truefalse','mcq','write'],
+        guide:'ASK: predict what happens to one quantity when another changes, and why. AVOID: recall of a definition with nothing to reason about.',
+        visual:'a graph for a relationship, compare for two opposing cases.' },
+      { key:'earth', label:'Earth and space science',
+        terms:['earth','rock','rocks','mineral','volcan','earthquake','plate','tectonic','weather','climate','atmosphere','ocean','erosion','fossil','planet','solar','star','moon','space','galaxy','water cycle','carbon cycle'],
+        types:['twopart','sequence:process','matchpairs','corroborate','mcq','fill','truefalse','classify','write'],
+        guide:'ASK: how one stage of a cycle feeds the next, and what evidence shows it happened. AVOID: naming layers or categories with no process attached.',
+        visual:'a cycle for anything that repeats, timeline for anything dated.' }
+    ],
+    english: [
+      { key:'reading', label:'Reading comprehension',
+        terms:['reading','comprehension','main idea','inference','infer','summar','nonfiction','informational','passage','central idea','text evidence','author.s purpose'],
+        types:['readingset','highlight','readingset','twopart:passage','mcq','fill','truefalse'],
+        guide:'ASK: what the passage itself supports - the idea it builds, what it implies without stating, and what a word means in this sentence. Every question must be answerable from the passage alone. AVOID: outside knowledge, and opinion questions with no right answer.',
+        visual:'a concept hub around the central idea, or compare for two viewpoints.' },
+      { key:'grammar', label:'Grammar and mechanics',
+        terms:['grammar','punctuation','comma','apostrophe','clause','sentence structure','subject.verb','agreement','tense','pronoun','modifier','fragment','run.on','capitali[sz]','spelling','mechanics','parts of speech'],
+        types:['highlight','sentence','sentence','matchpairs','fill','truefalse','mcq','twopart','write'],
+        guide:'ASK: the learner to build or repair a real sentence. Every question needs an actual sentence in it. AVOID: asking what a term means in the abstract - naming the rule is not applying it.',
+        visual:'compare a correct and an incorrect form side by side.' },
+      { key:'literature', label:'Literary analysis',
+        terms:['literature','literary','novel','poem','poetry','shakespeare','theme','symbol','metaphor','character','narrat','imagery','tone','motif','protagonist','setting','plot','figurative'],
+        types:['readingset','corroborate','twopart:passage','highlight','mcq','fill','matchpairs','truefalse'],
+        guide:'ASK: what a specific choice achieves in a specific passage, with the text quoted in the question. AVOID: naming a device with no text attached to it.',
+        visual:'a concept hub for theme, compare for two characters, timeline for plot.' }
+    ],
+    history: [
+      { key:'civics', label:'Civics and government',
+        terms:['civics','government','constitution','congress','senate','parliament','bill','law','court','supreme','amendment','voting','election','democracy','citizen','branch','federal','judicial','legislat','executive','rights'],
+        types:['twopart','sequence:process','highlight','matchpairs','scenario','passage:sourcing','mcq','fill','truefalse'],
+        guide:'ASK: how a process actually moves - who acts, in what order, and what stops it. Apply a rule to a short concrete case. AVOID: counting seats or naming office-holders as trivia.',
+        visual:'a flow for how a process moves, hierarchy for who answers to whom.' },
+      { key:'social', label:'Social and economic history',
+        terms:['industrial','immigration','migration','labor','labour','slavery','civil rights','women','social','economic','trade','agricultur','urban','class','reform','movement','protest','population'],
+        types:['corroborate','twopart','passage:cause-effect','classify','mcq','write','fill','highlight','truefalse'],
+        guide:'ASK: what changed for ordinary people and why, and which groups experienced it differently. AVOID: a single national story with no one in it.',
+        visual:'compare before and after, or a bar chart when the notes carry real figures.' },
+      { key:'era', label:'Events and eras',
+        fallback:true,
+        types:['corroborate','passage:sourcing','passage:cause-effect','sequence:chronology','twopart','mcq','classify','fill','matchpairs','truefalse'],
+        guide:'ASK: causes, consequences, motives and order. Tie an event to what it produced. AVOID: bare date recall unless the notes stress the chronology.',
+        visual:'a timeline for anything dated, flow for a causal chain.' }
+    ],
+    geography: [
+      { key:'physical', label:'Physical geography',
+        terms:['river','rivers','mountain','glacier','erosion','delta','climate','weather','biome','desert','rainforest','tectonic','volcano','earthquake','coast','landform','ecosystem','monsoon','hydrolog'],
+        types:['twopart','sequence:process','estimate','matchpairs','mcq','fill','classify','truefalse','write'],
+        guide:'ASK: how a physical process produces the landform or pattern you can observe, and where. AVOID: naming a feature with no process behind it.',
+        visual:'a cycle or flow for the process, map only for real named places.' },
+      { key:'human', label:'Human geography',
+        terms:['population','urban','city','cities','migration','settlement','development','economy','culture','resource','agriculture','industry','globali[sz]','density','trade','tourism'],
+        types:['twopart','scenario','estimate','classify','mcq','fill','write','matchpairs','truefalse'],
+        guide:'ASK: why people are where they are, and what happens when one pressure changes. AVOID: capital-city trivia unless the notes are about capitals.',
+        visual:'compare two places, or a bar chart when the notes carry real figures.' },
+      { key:'maps', label:'Maps and regions',
+        terms:['map','maps','atlas','latitude','longitude','coordinate','scale','projection','continent','region','border','country','countries','capital','hemisphere','compass'],
+        types:['estimate','matchpairs','twopart','mcq','fill','classify','truefalse','highlight','write'],
+        guide:'ASK: where something is relative to something else, and what that position causes. AVOID: lists of names with nothing following from them.',
+        visual:'a map, but only with real place names the notes use.' }
+    ],
+    psychology: [
+      { key:'methods', label:'Research methods',
+        terms:['research','method','experiment','variable','control','hypothesis','sampling','correlation','causation','validity','reliability','ethic','bias','placebo','double.blind','statistic'],
+        types:['twopart','corroborate','scenario','classify','mcq','truefalse','fill','write','matchpairs'],
+        guide:'ASK: judge a described study - what is wrong with it, what it can and cannot show. AVOID: definitions of method terms with no study attached.',
+        visual:'compare two study designs, or a 2x2 matrix for variable types.' },
+      { key:'bioCog', label:'Biological and cognitive',
+        terms:['brain','neuron','neural','cortex','memory','cognit','perception','attention','sensation','encoding','retrieval','sleep','conditioning','learning','language','neurotransmitter','hormone'],
+        types:['twopart','sequence:process','matchpairs','fill','mcq','truefalse','write','classify','estimate'],
+        guide:'ASK: the path information takes and where it breaks down. AVOID: asking who discovered something, which tests trivia rather than understanding.',
+        visual:'a flow for a processing path, parts for brain structure.' },
+      { key:'social', label:'Social and developmental',
+        terms:['social','develop','child','adolescen','attachment','personality','group','conform','obedien','attitude','prejudice','stage','moral','identity','therapy','disorder','stress'],
+        types:['twopart','scenario','scenario','matchpairs','classify','fill','write','truefalse','mcq'],
+        guide:'ASK: apply a named theory or effect to a short concrete situation. AVOID: naming a stage without what it predicts.',
+        visual:'a hierarchy for staged theories, concept hub for an idea and its parts.' }
+    ],
+    economics: [
+      { key:'personal', label:'Personal finance',
+        terms:['budget','saving','savings','credit','debt','loan','interest rate','compound interest','invest','tax','taxes','income','salary','insurance','bank','mortgage','personal finance'],
+        types:['estimate','wordproblem','twopart','tracetable','fill','mcq','truefalse','write','matchpairs'],
+        guide:'ASK: work the actual figures from the notes - what it costs, what it grows to, what is left. AVOID: definitions with no money in them.',
+        visual:'a bar chart or graph, but only with real figures from the notes.' },
+      { key:'macro', label:'Macroeconomics',
+        terms:['gdp','inflation','unemployment','fiscal','monetary','central bank','federal reserve','recession','growth','trade deficit','tariff','exchange rate','macro','national income','business cycle'],
+        types:['twopart','estimate','wordproblem','mcq','classify','fill','truefalse','write','matchpairs'],
+        guide:'ASK: what happens to output, prices or employment when one lever moves, and in which direction. AVOID: definition-only questions with no change to reason about.',
+        visual:'a graph for a trend, flow for a causal chain.' },
+      { key:'micro', label:'Microeconomics',
+        fallback:true,
+        types:['twopart','estimate','wordproblem','scenario','classify','mcq','fill','truefalse','write'],
+        guide:'ASK: what happens to price, quantity or incentives when one thing changes, and why. Direction of movement matters more than a number. AVOID: definition-only questions.',
+        visual:'a supply-demand template, or compare two market cases.' }
+    ],
+    cs: [
+      { key:'programming', label:'Programming fundamentals',
+        terms:['variable','loop','loops','function','conditional','if statement','syntax','debug','python','javascript','java','code','coding','program','string','array','input','output','boolean','operator'],
+        types:['tracetable','twopart','errorspot','sequence:trace','mcq','fill','write','truefalse','matchpairs'],
+        guide:'ASK: trace what the code does line by line with a given input, or find the one line that breaks it. AVOID: syntax trivia a reference would answer.',
+        visual:'a flow for control flow, compare for two versions of the code.' },
+      { key:'algorithms', label:'Algorithms and data structures',
+        terms:['algorithm','sort','sorting','search','recursion','recursive','complexity','big.o','stack','queue','tree','graph','hash','linked list','data structure','traversal','binary'],
+        types:['tracetable','twopart','estimate','sequence:trace','classify','mcq','truefalse','errorspot','matchpairs'],
+        guide:'ASK: the order of steps on a concrete input, and which approach costs more as the input grows. AVOID: quoting a complexity without reasoning to it.',
+        visual:'a flow for the steps, graph for how cost grows, compare for two approaches.' },
+      { key:'systems', label:'Theory and systems',
+        fallback:true,
+        types:['twopart','matchpairs','classify','mcq','truefalse','fill','write','estimate','highlight'],
+        guide:'ASK: how two things differ and when each is used. AVOID: acronym expansion as an end in itself.',
+        visual:'a hierarchy for layered systems, compare for two designs.' }
+    ],
+    language: [
+      { key:'grammar', label:'Grammar and conjugation',
+        terms:['conjugat','tense','verb','grammar','gender','plural','article','pronoun','adjective','agreement','preterite','subjunctive','imperfect','case','declension','past tense','present tense'],
+        types:['matchpairs','sentence','sentence','highlight','fill','fill','mcq','twopart','truefalse'],
+        guide:'ASK: produce or correct a real sentence - conjugate it, fix it, reorder it. AVOID: asking about grammar terminology in the abstract.',
+        visual:'compare two forms, or a 2x2 matrix for a conjugation pattern.' },
+      { key:'reading', label:'Reading and conversation',
+        terms:['reading','conversation','dialogue','listening','comprehension','phrase','greeting','culture','speaking','travel','ordering','directions'],
+        types:['readingset','highlight','sentence','matchpairs','mcq','fill','truefalse','write'],
+        guide:'ASK: what a short passage or exchange actually says, and how to respond in the language. AVOID: translating isolated words with no context.',
+        visual:'compare two ways of saying the same thing.' },
+      { key:'vocab', label:'Vocabulary',
+        fallback:true,
+        types:['matchpairs','matchpairs','fill','fill','mcq','mcq','sentence','twopart','truefalse'],
+        guide:'ASK: the word used inside a sentence that fixes its meaning. AVOID: bare word-to-word pairs with no context.',
+        visual:'a concept hub grouping words by theme.' }
+    ],
+    general: [
+      { key:'study', label:'Study skills',
+        terms:['study','studying','revision','revise','note.taking','memor','exam technique','time management','productivity','habit','focus','procrastinat','flashcard','recall'],
+        types:['twopart','scenario','scenario','matchpairs','mcq','fill','write','truefalse','highlight'],
+        guide:'ASK: apply the technique to a described situation and say what to do next. AVOID: asking which technique is best in the abstract.',
+        visual:'a flow for a routine, compare for two techniques.' }
+    ]
+  };
+
+  /* First match wins, so the narrower pattern is listed first. A catch-all
+     `/./` entry at the end of a list makes that subject always resolve to a
+     subtopic; a subject with no catch-all falls back to its existing mix. */
+  /* Terms are regex fragments, and a term of five characters or more matches
+     any suffix - so "variable" catches "variables" and "develop" catches
+     "developmental". Short whole words stay exact, because a stem match would
+     pull in lawn, billion and maple. */
+  function stemPattern(term) {
+    return term.length >= 5 ? term + '\\w*' : term;
+  }
+
+  function countSubtopicHits(terms, text) {
+    var n = 0, i;
+    for (i = 0; i < terms.length; i++) {
+      if (new RegExp('\\b' + stemPattern(terms[i]), 'i').test(text)) n++;
+    }
+    return n;
+  }
+
+  /* Returns the subtopics this plan actually covers, best first.
+     Every day used to get the same one, because all days are generated in
+     parallel from subjectType alone and no day knows its own title yet. But a
+     plan is often not one subtopic: notes covering reading comprehension AND
+     comma splices got a single mix for both. Scoring the notes lets the days
+     be dealt out across the subtopics that are genuinely present.
+     The subject line counts triple - it is what the learner actually meant,
+     and one stray word deep in the notes should not outvote it. */
+  function resolveSubtopics(subjectType, subjectText, notes) {
+    var list = SUBTOPICS[subjectType];
+    if (!list) return [];
+    var line = String(subjectText || '').toLowerCase();
+    var body = String(notes || '').toLowerCase().substring(0, 3000);
+    var scored = [], i, hits;
+    for (i = 0; i < list.length; i++) {
+      if (list[i].fallback) continue;
+      hits = countSubtopicHits(list[i].terms, line) * 3 +
+             countSubtopicHits(list[i].terms, body);
+      if (hits > 0) scored.push({ st: list[i], hits: hits, order: i });
+    }
+    /* Ties break on declaration order, so the narrower subtopic still wins -
+       the same ordering rule the subject classifier needs. */
+    scored.sort(function (a, b) { return (b.hits - a.hits) || (a.order - b.order); });
+
+    if (!scored.length) {
+      for (i = 0; i < list.length; i++) if (list[i].fallback) return [list[i]];
+      return [];
+    }
+    /* Only genuinely co-present subtopics join the rotation. A single stray
+       match must not split a plan that is really about one thing, so a runner
+       up needs real support of its own and at least half the leader's score. */
+    var out = [scored[0].st], top = scored[0].hits;
+    for (i = 1; i < scored.length && out.length < 3; i++) {
+      if (scored[i].hits >= 2 && scored[i].hits * 2 >= top) out.push(scored[i].st);
+    }
+    return out;
+  }
+
+  /* Kept for the single-subtopic callers and for tests. */
+  function resolveSubtopic(subjectType, subjectText, notes) {
+    return resolveSubtopics(subjectType, subjectText, notes)[0] || null;
+  }
+
   var SUBJECT_FORMAT_MANDATE = {
     math:
       'MATH IS PROCEDURAL, AND THIS QUOTA IS THE HARDEST RULE IN THIS PROMPT.\n' +
@@ -1902,7 +2218,7 @@
              'AVOID: questions needing knowledge the notes do not contain.'
   };
 
-  function getSubjectStrategy(subjectType) {
+  function getSubjectStrategy(subjectType, subjectText, notes) {
     var strategies = {
       math:        { label: 'Math',                  feynmanPrompt: 'Explain this concept and give a worked example.' },
       science:     { label: 'Science',               feynmanPrompt: 'Explain this process step by step in simple language.' },
@@ -1918,6 +2234,15 @@
     var picked = strategies[subjectType] || strategies.general;
     picked.questionGuide = SUBJECT_QUESTION_GUIDE[subjectType] || SUBJECT_QUESTION_GUIDE.general;
     picked.formatMandate = SUBJECT_FORMAT_MANDATE[subjectType] || SUBJECT_FORMAT_MANDATE.general;
+    /* A subject is not one kind of knowledge. When the topic resolves to a
+       subtopic, its mix and its guidance replace the subject-wide ones; when
+       it does not, everything below is untouched and the subject keeps the
+       mix it has always had. Maths is deliberately excluded - its mix is
+       governed by MATH_MIX and the synthesis floor in lesson.html. */
+    picked.subtopics = (subjectType === 'math')
+      ? []
+      : resolveSubtopics(subjectType, subjectText, notes);
+    picked.subtopic = picked.subtopics[0] || null;
     return picked;
   }
 
@@ -1950,7 +2275,7 @@
        formats a subject requires, and it was recomputing (or defaulting to
        "general") because this was never written to the plan. */
     window.__sfSubjectType = subjectType;
-    var strategy    = getSubjectStrategy(subjectType);
+    var strategy    = getSubjectStrategy(subjectType, subject, notes);
     var allDays = [];
 
     // ── Background tab protection ──
@@ -2181,6 +2506,84 @@
           }
           return true;
         }
+        if (q.type === 'twopart') {
+          var tpO = (q.options || []).filter(function(o){ return o && String(o).trim(); });
+          var tpR = (q.reasons || []).filter(function(o){ return o && String(o).trim(); });
+          if (!qText || tpO.length < 2 || tpR.length < 2) return false;
+          if (typeof q.correctIndex !== 'number' || q.correctIndex < 0 || q.correctIndex >= q.options.length) q.correctIndex = 0;
+          if (typeof q.reasonIndex !== 'number' || q.reasonIndex < 0 || q.reasonIndex >= q.reasons.length) q.reasonIndex = 0;
+          return true;
+        }
+        if (q.type === 'corroborate') {
+          var sA = q.sourceA || {}, sB = q.sourceB || {};
+          if (String(sA.text || '').trim().length < 15 || String(sB.text || '').trim().length < 15) return false;
+          var coO = (q.options || []).filter(function(o){ return o && String(o).trim(); });
+          if (!qText || coO.length < 2) return false;
+          if (typeof q.correctIndex !== 'number' || q.correctIndex < 0 || q.correctIndex >= q.options.length) q.correctIndex = 0;
+          return true;
+        }
+        if (q.type === 'highlight') {
+          var hs = (q.sentences || []).filter(function(o){ return o && String(o).trim(); });
+          if (!qText || hs.length < 3) return false;
+          q.sentences = q.sentences.filter(function(o){ return o && String(o).trim(); });
+          if (typeof q.correctIndex !== 'number' || q.correctIndex < 0 || q.correctIndex >= q.sentences.length) q.correctIndex = 0;
+          return true;
+        }
+        if (q.type === 'tracetable') {
+          if (!qText || !Array.isArray(q.columns) || q.columns.length < 2) return false;
+          if (!Array.isArray(q.rows)) return false;
+          /* Every row must be as wide as the header, or the blank column lands
+             on a cell that does not exist and the card renders a short row. */
+          q.rows = q.rows.filter(function(r){ return Array.isArray(r) && r.length === q.columns.length; });
+          if (q.rows.length < 2) return false;
+          if (typeof q.blankCol !== 'number' || q.blankCol < 0 || q.blankCol >= q.columns.length) q.blankCol = q.columns.length - 1;
+          /* The blanked cells are the answer key: a row with nothing there
+             cannot be graded. */
+          var bc = q.blankCol;
+          if (q.rows.some(function(r){ return !String(r[bc] == null ? '' : r[bc]).trim(); })) return false;
+          return true;
+        }
+        if (q.type === 'matchpairs') {
+          var pp = (q.pairs || []).filter(function(p){ return p && String(p.left || '').trim() && String(p.right || '').trim(); });
+          if (pp.length < 3) return false;
+          /* Two identical right-hand values make two rows indistinguishable,
+             so one of them is graded wrong whatever the learner picks. */
+          var seenR = {}, k2;
+          for (k2 = 0; k2 < pp.length; k2++) {
+            var rv = String(pp[k2].right).trim().toLowerCase();
+            if (seenR[rv]) return false;
+            seenR[rv] = 1;
+          }
+          q.pairs = pp;
+          return true;
+        }
+        if (q.type === 'estimate') {
+          if (!qText) return false;
+          var ev = parseFloat(q.answer);
+          if (!isFinite(ev)) return false;
+          q.answer = ev;
+          var et = parseFloat(q.tolerance);
+          /* Zero tolerance would make this an exact-answer card wearing an
+             estimate label. */
+          q.tolerance = (isFinite(et) && et > 0) ? et : Math.abs(ev) * 0.1;
+          return true;
+        }
+        if (q.type === 'readingset') {
+          if (String(q.passage || '').trim().length < 120) return false;
+          if (!Array.isArray(q.questions)) return false;
+          q.questions = q.questions.filter(function(sq){
+            if (!sq || !String(sq.question || '').trim()) return false;
+            if (!Array.isArray(sq.options)) return false;
+            var o = sq.options.filter(function(x){ return x && String(x).trim(); });
+            if (o.length < 2) return false;
+            while (sq.options.length < 4) sq.options.push('Option ' + (sq.options.length + 1));
+            if (typeof sq.correctIndex !== 'number' || sq.correctIndex < 0 || sq.correctIndex >= sq.options.length) sq.correctIndex = 0;
+            return true;
+          });
+          /* A passage with one question is just a long passage card - the
+             point of the format is several questions against one text. */
+          return q.questions.length >= 2;
+        }
         if (q.type === 'write') return !!(qText && qText.length > 3);
         /* A passage card is the passage. Without one the learner gets an empty
            quote block above four options about a text they were never shown -
@@ -2255,8 +2658,18 @@
       var difficulty = isFirst ? 'Easy' : (isLast ? 'Hard' : 'Medium');
       var questionInstructions = '', questionSchema = '';
       var d = difficulty;
+      /* Days are dealt round-robin across the subtopics this plan covers, so a
+         plan spanning two of them teaches both instead of repeating one. */
+      var subs = (strategy && strategy.subtopics) || [];
+      var sub = subs.length ? subs[(dayNum - 1) % subs.length] : null;
 
-      if (subjectType === 'math') {
+      if (sub) {
+        /* Tally and schema are both generated from sub.types, so the quota the
+           model reads and the shapes it is handed cannot disagree. */
+        questionInstructions = '\n\n' + String(subjectType).toUpperCase() + ' \u2014 ' +
+                               sub.label.toUpperCase() + ': ' + tallyFor(sub.types) + '.\n';
+        questionSchema = buildQuestionSchema(sub.types, d);
+      } else if (subjectType === 'math') {
         /* No MCQ. Maths asks for ~80% equations, 10-15% word problems and about
            5% anything else - and errorspot already spends that 5%. The MCQ was
            a second non-core question the format enforcer could not convert
@@ -2412,7 +2825,7 @@
         'A question whose format contradicts the quota above is a defect, not a\n' +
         'stylistic choice. Rewrite it before returning the JSON.\n' +
         '\nWHAT A GOOD QUESTION LOOKS LIKE FOR THIS SUBJECT:\n' +
-        (strategy.questionGuide || '') + '\n' +
+        ((sub && sub.guide) || strategy.questionGuide || '') + '\n' +
         '\nRULES:\n' +
         '1. title: The specific thing these notes are about, in the notes\u2019 own vocabulary\n' +
         '   (e.g. "The Missouri Compromise" not "History", and not a narrower sub-topic the notes never mention).\n' +
@@ -2458,12 +2871,12 @@
            is invisible and the topic silently loses its picture. Keep the two
            lists in step. */
         '   Template: {"type":"brain|neuron|atom|supply-demand|dna|ecosystem|water-cycle|mitosis|memory-model|plate-tectonics|photosynthesis\n' +
-        '                    |forces|wave|circuit|number-line|fractions|place-value|area-model|triangle|states-of-matter|solar-system","label":"short caption"}\n' +
+        '                    |forces|wave|circuit|number-line|fractions|place-value|area-model|triangle|states-of-matter|solar-system|rock-cycle","label":"short caption"}\n' +
         '   Use forces for gravity, weight, friction or Newton\'s laws; wave for wavelength/amplitude/frequency;\n' +
         '   circuit for voltage, current or resistance; number-line for adding and subtracting; fractions for\n' +
         '   numerator/denominator or equivalence; place-value for columns and regrouping; area-model for\n' +
         '   multiplying; triangle for angles or area; states-of-matter for solid/liquid/gas; solar-system for\n' +
-        '   orbits, planets, day and year.\n' +
+        '   orbits, planets, day and year; rock-cycle for igneous/sedimentary/metamorphic and how one becomes another.\n' +
         '   Custom (use this for ANY topic with no template - history, literature, maths, law, music, anything):\n' +
         '   {"type":"custom","layout":"flow|cycle|timeline|hierarchy|parts|concept","title":"short title","items":["...","...","..."]}\n' +
         '   - flow = ordered steps or a causal chain; cycle = a repeating loop; timeline = dated events;\n' +
@@ -2483,6 +2896,7 @@
         '   {"type":"custom","layout":"matrix","title":"","xLabel":"","yLabel":"","xLow":"low","xHigh":"high","yHigh":"high","yLow":"low","items":["top-left","top-right","bottom-left","bottom-right"]}\n' +
         '     <- four groups sorted on two traits at once. items go in reading order and there must be exactly four.\n' +
         '   - 3 to 6 items, each under 40 characters, taken from the student notes. Never filler.\n' +
+        (sub && sub.visual ? '   For this topic in particular, prefer ' + sub.visual + '\n' : '') +
         '   Custom comparison uses a different shape:\n' +
         '   {"type":"custom","layout":"compare","title":"A vs B","left":{"title":"A","items":["..."]},"right":{"title":"B","items":["..."]}}\n' +
         '   Put each fact on the side it actually belongs to - never guess an attribution.\n' +
@@ -2514,6 +2928,53 @@
         'BAD (instruction, not a sentence): {"type":"fill","question":"Order these events chronologically to show the Silk Road ________"}\n' +
         'BAD (no context, ambiguous): {"type":"fill","question":"________ is important."}\n' +
         'BAD (answer is a whole sentence): {"type":"fill","question":"Explain the Silk Road ________","answer":"It was a trade route that connected..."}\n' +
+        /* The six newer formats carry fields the model has never been asked
+           for before. The schema shows their shape; this says what belongs in
+           them, because a two-part question whose Part B does not actually
+           justify Part A is the one failure that looks fine in the JSON. */
+        /* Rosenshine: model the thinking, small steps, check understanding.
+           The hard requirement is ONE problem carried all the way through -
+           without it the model wrote general prose about the topic and the
+           board became paragraphs with unrelated expressions beside them. */
+        'WHITEBOARD (field "whiteboard") - a WORKED WALKTHROUGH of ONE problem, 4 to 7 beats.\n' +
+        '  Pick a single concrete example from the notes - one equation, one passage, one\n' +
+        '  case - and SOLVE IT STEP BY STEP across the beats. Every beat moves that same\n' +
+        '  example one step further. Do not write general commentary about the topic, and\n' +
+        '  do not switch to a different example halfway through.\n' +
+        '  Beat 1: state the problem and what we are trying to find.\n' +
+        '  Middle beats: ONE move each, with the result of that move in "show".\n' +
+        '  Last beat: the answer, and how to check it.\n' +
+        '  Each beat: "headline" under 8 words naming the move ("Subtract 3 from both\n' +
+        '  sides"), "say" one or two sentences explaining WHY that move, and "show"\n' +
+        '  {"kind":"equation|text|list|table|diagram","value":...} holding the example AS IT\n' +
+        '  NOW STANDS after that move. For "list"/"table", "value" is an array.\n' +
+        '  The "show" must be the SAME problem at every beat - 2x + 3 = 11, then 2x = 8,\n' +
+        '  then x = 4. If a beat has no new state to show, leave "show" out entirely\n' +
+        '  rather than putting an unrelated expression there.\n' +
+        '  Give most beats a "checkpoint": one short question answerable from that beat.\n' +
+        '  The headline must not restate the "say", and none of it may restate "content".\n' +
+        '\nTHE SIX EXTENDED FORMATS - what goes in each field:\n' +
+        'twopart: Part A is the question; "reasons" are four explanations, and reasonIndex\n' +
+        '  must be the one that genuinely justifies the option at correctIndex. The other\n' +
+        '  three must be wrong REASONS, not wrong facts - a common misconception is ideal.\n' +
+        '  When "passage" is present, the reasons must be lines or paraphrases FROM it.\n' +
+        'corroborate: two SHORT sources (1-2 sentences) that genuinely differ in claim,\n' +
+        '  emphasis or perspective. If both say the same thing there is nothing to ask.\n' +
+        'highlight: "sentences" are 4 sentences of a passage; correctIndex is the ONE that\n' +
+        '  states the evidence the question asks for. The others must be from the same text.\n' +
+        'tracetable: "setup" is the procedure (code, a rule, a formula). "columns" names each\n' +
+        '  column, "rows" gives every cell, and blankCol is the column the learner fills in.\n' +
+        '  Every row must have exactly as many cells as there are columns, and the blanked\n' +
+        '  cells must be correct - they are the answer key.\n' +
+        'matchpairs: 3-5 pairs. Every "right" value must be DIFFERENT from every other, or\n' +
+        '  two rows become indistinguishable and one is marked wrong whatever is chosen.\n' +
+        'readingset: ONE passage of 150-220 words, written from the student notes, followed\n' +
+        '  by 3 questions ABOUT THAT PASSAGE. The learner reads the passage on its own card\n' +
+        '  first, so every question must be answerable from the passage alone, and no two\n' +
+        '  questions in a set may test the same thing. Do not write three mini-passages -\n' +
+        '  write one passage worth reading, then question it from three angles.\n' +
+        'estimate: "answer" is a number from the notes and "tolerance" is how far off is\n' +
+        '  still fine (about 10%). Use it where reasoning to the right ballpark is the skill.\n' +
         '\nVISUAL (field "visual") - pick the ONE diagram type that genuinely fits this topic and fill it with REAL content from the notes. Never invent filler labels. Use exactly one of:\n' +
         '{"type":"timeline","items":["1914: war begins","1918: armistice signed"]}  <- dates/eras\n' +
         '{"type":"flow","items":["Tariffs rise","Southern states protest","Secession"],"label":"Cause and effect"}  <- causal chains, processes\n' +
@@ -2536,6 +2997,7 @@
         '\nFINAL CHECK: Before outputting, reread every question you wrote. Verify each one is about "' + subject + '". Replace anything that is not.\n' +
         '\nOUTPUT: ONLY valid compact JSON. No markdown. Replace ALL empty strings with REAL content.\n\n' +
         '{"title":"","microTopic":"","briefing":"","content":"","steps":[],"diagram":{"type":"none","label":""},"concepts":[],' +
+        '"whiteboard":[{"beat":1,"headline":"","say":"","show":{"kind":"text","value":""},"checkpoint":""}],' +
         /* The opening whiteboard is built from these three. Without them in the
            schema the model never returned them, so the board had nothing to
            show and silently did not render. */
@@ -2558,7 +3020,7 @@
             ? 'Retrying day ' + dayNum + ' (attempt ' + attempt + ' of ' + MAX_RETRIES + ')...'
             : 'Building your ' + strategy.label + ' plan \u2014 day ' + dayNum + ' of ' + totalDays + '...'
         );
-        fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
+        fetch('api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: prompt }),
@@ -2580,6 +3042,27 @@
           day.steps      = Array.isArray(day.steps)     ? day.steps     : [];
           day.concepts   = Array.isArray(day.concepts)  ? day.concepts  : [];
           day.diagram    = day.diagram    || { type: 'none', label: '' };
+          /* A malformed whiteboard must be DROPPED, not repaired into
+             nonsense: whiteboard.js derives beats from steps/content/concepts
+             whenever the field is absent, and that fallback is better than a
+             half-valid beat list. Anything that is not an array of objects
+             carrying a headline or a say is discarded wholesale. */
+          (function () {
+            if (!Array.isArray(day.whiteboard)) { delete day.whiteboard; return; }
+            var kept = day.whiteboard.filter(function (b) {
+              if (!b || typeof b !== 'object') return false;
+              var hasText = (typeof b.headline === 'string' && b.headline.trim()) ||
+                            (typeof b.say === 'string' && b.say.trim());
+              if (!hasText) return false;
+              if (b.show && typeof b.show === 'object') {
+                var K = { text:1, equation:1, diagram:1, arrow:1, highlight:1, list:1, table:1 };
+                if (!K[String(b.show.kind || '').toLowerCase()]) delete b.show;
+              } else if (b.show) { delete b.show; }
+              return true;
+            });
+            if (kept.length < 2) delete day.whiteboard;   /* one beat is not a board */
+            else day.whiteboard = kept.slice(0, 9);
+          })();
           day.microTopic = day.microTopic || '';
           // New pedagogical fields — keep only fully-populated entries so the
           // lesson renderer never has to display a half-empty card.
@@ -2731,7 +3214,7 @@
               SFStore.removeItem('studyflow_minutes');
               SFStore.setItem('studyflow_current_day', '0');
               cleanupBgHandlers();
-              window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html';
+              window.location.href = 'dashboard.html';
             }
           });
         })(n);

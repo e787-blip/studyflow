@@ -92,6 +92,12 @@
   .link-input-row { display:flex; gap:.75rem; max-width:380px; margin:0 auto; }
   .link-input { flex:1; padding:.8rem 1rem; border:1.5px solid var(--border); border-radius:12px; font-family:var(--sans); font-size:0.9rem; outline:none; transition:border-color .2s; }
   .link-input:focus { border-color:var(--blue); }
+  /* The row is an input beside a nowrap button; below about 420px the two
+     cannot share a line and the button hung off the right edge. */
+  @media(max-width:520px){
+    .link-input-row { flex-direction:column; align-items:stretch; }
+    .link-input-row .btn-link, .link-input-row .link-input { width:100%; }
+  }
   .btn-link { padding:.8rem 1.3rem; background:var(--blue); color:#fff; border:none; border-radius:12px; font-family:var(--sans); font-size:0.88rem; font-weight:600; cursor:pointer; white-space:nowrap; }
 
   @media(max-width:768px) { .summary-grid{grid-template-columns:repeat(2,1fr);} .stats-row{grid-template-columns:1fr 1fr;} }
@@ -100,7 +106,7 @@
 <body>
 
 <nav>
-  <a href="https://studyflow-ten-vert.vercel.app" class="logo">
+  <a href="index.html" class="logo">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
       <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
@@ -116,7 +122,7 @@
   </a>
   <div class="nav-right">
     <span class="nav-badge">Parent view</span>
-    <button class="btn-logout" onclick="window.location.href='https://studyflow-ten-vert.vercel.app'">← Back to home</button>
+    <button class="btn-logout" onclick="window.location.href='index.html'">← Back to home</button>
   </div>
 </nav>
 
@@ -204,7 +210,7 @@
 
   function init() {
     if (!localStorage.getItem('studyflow_user')) {
-      window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html';
+      window.location.href = 'login.html';
       return;
     }
     if (linkedChildren.length > 0) {

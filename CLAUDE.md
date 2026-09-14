@@ -14,7 +14,7 @@ multi-step terminal workflows.
 | Frontend | Vanilla HTML/CSS/JS. No build step, no framework, no bundler. |
 | Hosting | Vercel — `studyflow-ten-vert.vercel.app` (also pushed to GitHub Pages) |
 | Backend | Vercel serverless, `api/*.js`, uses `module.exports` (not ESM) |
-| AI | Groq API, `llama-3.1-8b-instant`, key in `GROQ_API_KEY` env var on Vercel |
+| AI | Anthropic API, `claude-haiku-4-5`, key in `ANTHROPIC_API_KEY` env var on Vercel. `api/generate.js` caps the prompt at 60 000 chars — the whole prompt must fit, because the JSON schema sits at the end of it. |
 | Auth | localStorage only. Accounts in `studyflow_accounts`, session in `studyflow_user` |
 | Storage | All plan data in localStorage, namespaced per account via `SFStore` |
 
@@ -87,7 +87,12 @@ Keep the two lists identical.
 
 ### Subject → question type matrix
 
-10 subject types, 12 question types. Schemas live in `app.html`.
+10 subject types, **18 question types**. Schemas live in `app.html`.
+
+The original 12 are `mcq`, `truefalse`, `fill`, `write`, `classify`, `sequence`,
+`sentence`, `passage`, `errorspot`, `scenario`, `wordproblem`, `bigequation`.
+Six more were added for formats those could not express — see
+**Extended formats** below.
 
 | Subject | Types generated |
 |---|---|
@@ -110,9 +115,111 @@ Every type has a renderer (`renderFill`, `renderBigEquation`, `renderPassage`,
 `renderWrite`, `renderClassify`, `renderScenario`, `renderWordProblem`,
 `renderGraph`, `renderQuestion`) dispatched by `card.type` in `renderCardInner`.
 
-**If you add a question type, you must touch four places:** the schema in
-`app.html`, `SPECIAL_TYPES` + `SPECIAL_TYPES_PRETEST`, an injector in
-`buildQueue`, and a renderer plus its dispatch case.
+**If you add a question type, you must touch eight places.** The old note said
+four; four is what the compiler would catch if this had one. The full list:
+
+1. `qtpl()` in `app.html` — the JSON fragment. Its shape must match the
+   renderer field for field.
+2. `QTYPE_NAME` in `app.html`, or the quota line prints a raw slug.
+3. A branch in `sanitizeDayQuestions` in `app.html`. Without one the type falls
+   through to the unknown-type catch-all, which only checks that question text
+   exists — so a malformed card reaches a renderer intact.
+4. `SPECIAL_TYPES` **and** `SPECIAL_TYPES_PRETEST` in `lesson.html`, identical.
+5. `DIRECT` in `cardTypeFor`, or the card is served as a generic question.
+6. An injector in `buildQueue` — ungated on subject.
+7. A renderer plus its `renderCardInner` dispatch case.
+8. A `feynmanConcept()` case, or the teach-it-back card prints the raw stem
+   (invariant 4).
+
+Anything with its own check button also belongs in `submitControl()`'s id list,
+or Enter and Cmd-Enter will not reach it.
+
+### Extended formats
+
+Six formats, each a distinct interaction rather than a relabelled MCQ, and each
+reused across every subject whose material has that shape. That is why there are
+six rather than one per subject — two-tier diagnostics (science) and
+evidence-based selected response (English) are the same card.
+
+| Type | Interaction | Used by |
+|---|---|---|
+| `twopart` | Part A answer, then Part B reason or text evidence; Part B is hidden until A is committed, and credit needs both | science, english, history, psychology, economics, geography, cs, language, general |
+| `corroborate` | two short sources side by side, asked what they disagree about | history, english, science, psychology |
+| `highlight` | pick the one sentence that carries the evidence | english, history, geography, cs, language, general |
+| `tracetable` | run a procedure by hand, filling one column of a table | cs, science, economics |
+| `matchpairs` | model-authored matching, one `<select>` per row | every subject except math |
+| `estimate` | a number judged inside a tolerance band | math-adjacent subjects: science, geography, economics, cs, psychology |
+
+**Math deliberately uses none of them.** Its mix is governed by `MATH_MIX` and
+the synthesis floor, and adding a non-core type lowers the solving share — the
+same reason invariant 1 forbids adding to `MATH_CORE_TYPES`.
+
+Two gotchas already paid for:
+
+- **Option lists need `<div class="q-options">` around them.** A bare `<button
+  class="q-option">` sizes to its text; the full-width look comes from that
+  wrapper being a column flexbox.
+- **`esc()` in block 1 replaces newlines with spaces** — it is written for
+  attribute and JS-string contexts. It collapsed a whole procedure onto one line
+  inside `tracetable`'s `<pre>`. Escape line by line and rejoin.
+
+### Subtopics
+
+A subject is not one kind of knowledge, so the matrix above is the **fallback**,
+not the whole story. `SUBTOPICS` in `app.html` splits the nine non-maths
+subjects into 25 subtopics, each with its own mix, its own "ask this / avoid
+that" guidance, and the diagram shape that suits the material:
+
+| Subject | Subtopics |
+|---|---|
+| science | life · physical · earth |
+| english | reading · grammar · literature |
+| history | civics · social · era |
+| geography | physical · human · maps |
+| psychology | methods · bioCog · social |
+| economics | personal · macro · micro |
+| cs | programming · algorithms · systems |
+| language | grammar · reading · vocab |
+| general | study |
+
+`resolveSubtopics(subjectType, subjectText, notes)` returns the subtopics a
+plan actually covers, best first. Each subtopic scores its `terms` against the
+subject line (counted triple — it is what the learner meant) and the first 3000
+characters of the notes. A runner-up joins the list only with a score of 2+ and
+at least half the leader's, so one stray word cannot split a plan that is
+really about one thing. Ties break on declaration order, so **the narrower
+subtopic is listed first** — the same ordering trap as the humanities and
+language classifiers below. An entry marked `fallback:true` is used only when
+nothing matches.
+
+**Days are dealt round-robin across that list.** All days generate in parallel
+from `subjectType` alone and no day knows its own title yet, so this is how a
+plan covering both reading comprehension and comma splices teaches each on its
+own days instead of averaging them. `generateDay` picks
+`subtopics[(dayNum - 1) % subtopics.length]` and uses that subtopic's guide.
+
+`terms` are regex fragments, not literals. A term of five characters or more
+matches any suffix (`variable` catches `variables`, `develop` catches
+`developmental`); shorter ones stay exact, or `map` would match `maple`.
+
+The evidence these mixes rest on, and the three things it does **not**
+establish, are in [docs/question-design.md](docs/question-design.md).
+
+Maths has no subtopics on purpose: its mix is governed by `MATH_MIX` and the
+synthesis floor, and `picked.subtopic` is forced null for it.
+
+Two things follow from how mixes are written:
+
+- A mix is a **list of type names** (`['passage:inference', 'fill', ...]`) and
+  `buildQuestionSchema` generates the JSON from it. Only the twelve types with
+  renderers are valid; a name with no renderer is queued and silently skipped.
+- The quota line the model reads is counted by `tallyFor()` from that same
+  list, so the tally and the schema cannot drift apart. They were two
+  hand-maintained strings, and a tally disagreeing with the schema reads to
+  the model as permission to improvise.
+
+Adding a subtopic is a `SUBTOPICS` entry and nothing else. Adding a question
+*type* is still the four-place job described above.
 
 ### `workedExample` — generated with the lesson
 
@@ -414,10 +521,11 @@ Two traps already fixed in these builders:
   quadratic), and its control point is solved from the peak height wanted
   (`cy = 2*peak - AX`), not eyeballed. Same family as the wave-crest bug below.
 
-`curatedDiagramSVG` holds 21 hand-drawn templates: brain, neuron, atom,
+`curatedDiagramSVG` holds 22 hand-drawn templates: brain, neuron, atom,
 supply-demand, dna, ecosystem, water-cycle, mitosis, memory-model,
 plate-tectonics, photosynthesis, forces, wave, circuit, number-line, fractions,
-place-value, area-model, triangle, states-of-matter, solar-system.
+place-value, area-model, triangle, states-of-matter, solar-system,
+rock-cycle.
 
 **Two rules:**
 

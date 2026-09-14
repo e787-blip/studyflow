@@ -801,7 +801,7 @@
 <body>
 
 <nav>
-  <a href="https://studyflow-ten-vert.vercel.app/dashboard.html" class="logo">
+  <a href="dashboard.html" class="logo">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
       <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
@@ -817,7 +817,7 @@
       </text>
     </svg>
   </a>
-  <a href="https://studyflow-ten-vert.vercel.app/dashboard.html" class="nav-back">← Dashboard</a>
+  <a href="dashboard.html" class="nav-back">← Dashboard</a>
   <button onclick="toggleDark()" id="dark-toggle" title="Toggle dark mode" style="background:var(--soft);border:1.5px solid var(--border);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;padding:0;flex-shrink:0;"><svg id="dark-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
 </nav>
 
@@ -931,6 +931,11 @@
   </div>
 </div>
 
+<!-- Whiteboard teaching mode. Loaded before the session scripts so
+     window.Whiteboard exists by the time a lesson card renders. It is
+     optional: lesson.html falls back to the static lesson body if this
+     file fails to load. -->
+<script src="/whiteboard.js"></script>
 <script>
 
   /* ── PER-ACCOUNT STORAGE NAMESPACE ─────────────────────────────────────
@@ -993,6 +998,18 @@
 
   // TIER 3: SM-2 Algorithm — per question adaptive scheduling
   // Stores: { question_hash: { easiness, interval, repetitions, nextReview } }
+  /* Share text must name a real host, so it cannot be relativised like the
+     navigation was - but it also must not always name the Vercel copy. A
+     share sent from GitHub Pages or a custom domain should point back to the
+     host the learner is actually on. */
+  function sfShareHost() {
+    try {
+      var h = window.location && window.location.host;
+      if (h && h.indexOf('localhost') === -1 && h.indexOf('127.0.0.1') === -1) return h;
+    } catch (e) {}
+    return 'studyflow-ten-vert.vercel.app';
+  }
+
   function getQuestionHash(q) {
     var str = (q.question || '').substring(0, 30);
     var hash = 0;
@@ -1042,7 +1059,7 @@
   function init() {
     // Auth guard
     if (!SFStore.getItem('studyflow_user')) {
-      window.location.href = 'https://studyflow-ten-vert.vercel.app/login.html';
+      window.location.href = 'login.html';
       return;
     }
     var sessionStartTime = Date.now();
@@ -1052,12 +1069,12 @@
     var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
     userPlan = user.tier || 'free';
 
-    if (!saved) { window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html'; return; }
+    if (!saved) { window.location.href = 'dashboard.html'; return; }
     plan = JSON.parse(saved);
 
     // Validate plan has days
     if (!plan || !Array.isArray(plan.days) || plan.days.length === 0) {
-      window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html'; return;
+      window.location.href = 'dashboard.html'; return;
     }
 
     // Clamp dayIndex to valid range
@@ -1069,7 +1086,7 @@
     if (dayIndex >= plan.days.length) dayIndex = 0; // all null — fallback to 0
 
     day = plan.days[dayIndex];
-    if (!day) { window.location.href = 'https://studyflow-ten-vert.vercel.app/dashboard.html'; return; }
+    if (!day) { window.location.href = 'dashboard.html'; return; }
     day = JSON.parse(JSON.stringify(day)); // deep copy
 
     // Restore timer
@@ -1351,7 +1368,7 @@
     // every other type has its own dedicated renderer and must be excluded here.
     /* Kept in sync with SPECIAL_TYPES below - a sequence question drawn into
        the pre-test would still be spliced in later by its own injector. */
-    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1 };
+    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1 };
     var simpleQuestions = questions.filter(function(q){ return !SPECIAL_TYPES_PRETEST[q.type]; });
     var shuffled = simpleQuestions.slice().sort(function(){ return Math.random() - 0.5; });
 
@@ -1364,9 +1381,15 @@
     var pretestAsked = {};
 
     // FEATURE 3: Pre-test on Day 1 — 3 questions BEFORE lesson content
-    if (dayIndex === 0 && simpleQuestions.length >= 3) {
-      sessionCards.push({ type: 'pretest-intro' });
-      shuffled.slice(0, 3).forEach(function(q) {
+    /* Two is enough to probe prior knowledge, and demanding three silently
+       removed the pre-test from 23 of the 25 subtopic mixes - the extended
+       formats are excluded from the pre-test pool, so most mixes no longer
+       carry three plain mcq/truefalse questions. The intro card counts the
+       questions rather than claiming three. */
+    var pretestCount = Math.min(3, simpleQuestions.length);
+    if (dayIndex === 0 && pretestCount >= 2) {
+      sessionCards.push({ type: 'pretest-intro', count: pretestCount });
+      shuffled.slice(0, pretestCount).forEach(function(q) {
         pretestAsked[fmStr(q.question)] = 1;
         sessionCards.push({ type: cardTypeFor(q), q: q, isPretest: true });
       });
@@ -1424,7 +1447,7 @@
        main loop queued it once and the injector spliced the very same question
        in again - every history and geography day showed its "order these
        events" question twice. Every type with its own injector belongs here. */
-    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1 };
+    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1 };
     var fillQuestions = questions.filter(function(q){ return q.type === 'fill'; });
     var regularQuestions = questions.filter(function(q){ return !SPECIAL_TYPES[q.type]; });
     var shuffled = regularQuestions.slice().sort(function(){ return Math.random() - 0.5; });
@@ -1698,14 +1721,30 @@
        to back it - see the aiSeqQs injector below. History and geography ask
        for one in their schema; science now does too. */
 
-    // Sentence Builder — language subjects only
-    if (isLanguage) {
-      var sentenceQs = (day.questions || []).filter(function(q){ return q.type === 'sentence' && Array.isArray(q.words) && q.words.length >= 3; });
-      sentenceQs.forEach(function(q, i) {
-        var insertAt7 = injectSpread(i, sentenceQs.length, 0);
-        sessionCards.splice(insertAt7, 0, { type: 'sentence', q: q });
+    /* Sentence builder — ALL subjects. This was gated on isLanguage, and the
+       gate silently discarded every sentence question on any other subject:
+       English grammar asks for three of them, and a learner revising comma
+       splices got none of the three. A question of type `sentence` exists only
+       because a schema asked for one, so the injector places it wherever it
+       came from. The words check below still skips a malformed card. */
+    var sentenceQs = (day.questions || []).filter(function(q){ return q.type === 'sentence' && Array.isArray(q.words) && q.words.length >= 3; });
+    sentenceQs.forEach(function(q, i) {
+      var insertAt7 = injectSpread(i, sentenceQs.length, 0);
+      sessionCards.splice(insertAt7, 0, { type: 'sentence', q: q });
+    });
+
+    /* The six research-backed formats. Each is excluded from the main loop by
+       SPECIAL_TYPES, so it reaches the learner only through this injector -
+       and none of them is gated on subject, because a question of type X
+       exists only because a schema asked for one. */
+    [['twopart', 0], ['corroborate', 1], ['highlight', 1],
+     ['tracetable', 0], ['matchpairs', 2], ['estimate', 0]].forEach(function (pair) {
+      var t = pair[0];
+      var qs = (day.questions || []).filter(function (q) { return q.type === t; });
+      qs.forEach(function (q, i) {
+        sessionCards.splice(injectSpread(i, qs.length, pair[1]), 0, { type: t, q: q });
       });
-    }
+    });
 
     // Classify questions — ALL subjects (science, history, geography, cs, psychology, economics)
     var classifyQs = (day.questions || []).filter(function(q){ return q.type === 'classify' && q.categoryA && q.categoryB && Array.isArray(q.itemsA) && Array.isArray(q.itemsB); });
@@ -1745,6 +1784,34 @@
   
     /* The Feynman loop is applied last, once every other card is in place, so
        it can see where teaching ends and practice begins. */
+    /* A reading set expands into several cards that must stay together: the
+       passage, then the questions about it. Spread the SETS through the
+       practice run, and splice each set's cards in as one contiguous block.
+
+       This runs AFTER every other injector on purpose. Placed with them, the
+       injectors that follow computed their slots against the lengthened queue
+       and spliced a twopart and a highlight into the middle of a set - so the
+       learner read a passage, answered one question on it, was asked something
+       unrelated, then returned to it. Going last means nothing can break a
+       block apart. */
+    var readingSets = (day.questions || []).filter(function (q) {
+      return q.type === 'readingset' && q.passage &&
+             Object.prototype.toString.call(q.questions) === '[object Array]' && q.questions.length;
+    });
+    readingSets.forEach(function (set, i) {
+      var block = [{ type: 'reading-passage', q: set }];
+      set.questions.forEach(function (sq) {
+        var copy = {}, k;
+        for (k in sq) if (Object.prototype.hasOwnProperty.call(sq, k)) copy[k] = sq[k];
+        copy.type = 'passage';
+        copy.passage = set.passage;      // renderPassage still needs the text
+        copy.collapsePassage = true;     // but collapsed: they just read it
+        if (!copy.difficulty) copy.difficulty = set.difficulty;
+        block.push({ type: 'passage', q: copy });
+      });
+      Array.prototype.splice.apply(sessionCards, [injectSpread(i, readingSets.length, 0), 0].concat(block));
+    });
+
     sessionCards = applyFeynmanOrder(sessionCards, day);
 }
 
@@ -1902,7 +1969,9 @@
     var DIRECT = {
       bigequation: 1, wordproblem: 1, errorspot: 1, sequence: 1, sentence: 1,
       match: 1, classify: 1, graph: 1, passage: 1, write: 1, scenario: 1,
-      fill: 1
+      fill: 1,
+      twopart: 1, corroborate: 1, highlight: 1, tracetable: 1, matchpairs: 1,
+      estimate: 1, readingset: 1
     };
     if (DIRECT[t]) {
       /* A fill question that is really a calculation belongs on the equation
@@ -2092,7 +2161,7 @@
       'Return ONLY a JSON array, no markdown:\n' +
       schema;
 
-    fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
+    fetch('api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: prompt })
@@ -2155,7 +2224,8 @@
   function submitControl() {
     /* The visible check/submit control on the current card, whatever type it is. */
     var ids = ['fill-btn', 'seq-check-btn', 'classify-check-btn', 'write-submit',
-               'graph-check-btn', 'match-check-btn'];
+               'graph-check-btn', 'match-check-btn',
+               'mp-check-btn', 'tt-check-btn', 'est-check-btn'];
     var i, el;
     for (i = 0; i < ids.length; i++) {
       el = document.getElementById(ids[i]);
@@ -2353,6 +2423,16 @@
     }
   }
 
+  /* Set by the lesson branch, consumed immediately after sc.innerHTML is
+     assigned. A module-level flag rather than a return value because
+     renderCardInner builds a string and commits it in one place. */
+  var pendingWhiteboardDay = null;
+
+  function global_hasWhiteboard() {
+    return !!(window.Whiteboard && typeof window.Whiteboard.render === 'function' &&
+              typeof window.Whiteboard.deriveBeats === 'function');
+  }
+
   function renderCardInner(card) {
     var sc = document.getElementById('session-card');
     var html = '';
@@ -2361,7 +2441,7 @@
 
     if (card.type === 'pretest-intro') {
       html = buildCard('Quick Check', 'Before we start — test yourself!', false,
-        '<p class="content-text" style="text-align:center;">We\'re going to show you 3 questions <strong>before</strong> the lesson. Don\'t worry if you don\'t know the answers — this actually helps you learn better. It\'s backed by science! </p>',
+        '<p class="content-text" style="text-align:center;">We\'re going to show you ' + (card.count || 3) + ' question' + ((card.count || 3) === 1 ? '' : 's') + ' <strong>before</strong> the lesson. Don\'t worry if you don\'t know the answers — this actually helps you learn better. It\'s backed by science! </p>',
         'Takes 2 minutes', 'Let\'s try →', false);
     }
     else if (card.type === 'pretest-done') {
@@ -2488,7 +2568,23 @@
           '</div>';
       }
 
-      html = buildCard('Today\'s Lesson', day.title || '', false, lessonBody, 'Read carefully', 'Got it →', false);
+      /* Whiteboard teaching mode replaces the static lesson card: the same
+         chrome, but the explanation is built one beat at a time instead of
+         arriving as a finished wall of text. The body assembled above stays
+         as the fallback and is used verbatim whenever whiteboard.js is not
+         loaded, or derives no beats - an old plan must never see a blank
+         card. The mount is filled after sc.innerHTML is committed, below. */
+      var wbBeats = null;
+      if (global_hasWhiteboard()) {
+        try { wbBeats = window.Whiteboard.deriveBeats(day); } catch (e) { wbBeats = null; }
+      }
+      if (wbBeats && wbBeats.length) {
+        pendingWhiteboardDay = day;
+        html = buildCard('Today\'s Lesson', day.title || '', false,
+          '<div id="wb-mount"></div>', 'Step through it', 'Got it →', false);
+      } else {
+        html = buildCard('Today\'s Lesson', day.title || '', false, lessonBody, 'Read carefully', 'Got it →', false);
+      }
     }
     else if (card.type === 'terms') {
       var termsHtml = '<div class="terms-list">';
@@ -2554,6 +2650,13 @@
     else if (card.type === 'scenario') {
       html = renderScenario(card.q);
     }
+    else if (card.type === 'reading-passage') { html = renderReadingPassage(card.q); }
+    else if (card.type === 'twopart')     { html = renderTwoPart(card.q); }
+    else if (card.type === 'corroborate') { html = renderCorroborate(card.q); }
+    else if (card.type === 'highlight')   { html = renderHighlight(card.q); }
+    else if (card.type === 'tracetable')  { html = renderTraceTable(card.q); }
+    else if (card.type === 'matchpairs')  { html = renderMatchPairs(card.q); }
+    else if (card.type === 'estimate')    { html = renderEstimate(card.q); }
     else if (card.type === 'done') {
       html = buildCard('Session Complete', 'Great work today!', false,
         '<p class="content-text" style="text-align:center;">You\'ve finished all the cards for this session. Tap below to see your results.</p>',
@@ -2620,6 +2723,23 @@
     else { endSession(); return; }
 
     sc.innerHTML = html;
+
+    /* The whiteboard needs a mounted element, so it runs after the card HTML
+       is committed. If render() declines for any reason the card is rebuilt
+       with the static lesson body - the learner never sees an empty board. */
+    if (pendingWhiteboardDay) {
+      var wbDay = pendingWhiteboardDay;
+      pendingWhiteboardDay = null;
+      var wbMount = sc.querySelector('#wb-mount');
+      var wbOk = false;
+      try {
+        if (wbMount && global_hasWhiteboard()) wbOk = window.Whiteboard.render(wbDay, wbMount);
+      } catch (e) { wbOk = false; }
+      if (!wbOk && wbMount) {
+        wbMount.innerHTML = '<div class="content-text">' + formatContent(wbDay.content || '') + '</div>';
+      }
+    }
+
     sc.style.animation = 'none';
     void sc.offsetWidth;
     sc.style.animation = 'fadeUp .4s cubic-bezier(0.16,1,.3,1) both';
@@ -3114,10 +3234,17 @@
     var body =
       '<div class="q-meta"><span class="q-type-label" style="background:#f3f0ff;color:#7c3aed;">' + typeLabel + '</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
-      '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.08em;color:#7c3aed;margin-bottom:.35rem;">' + passageLabel + '</div>' +
+      /* Inside a reading set the learner has just read this passage on its own
+         card, so re-printing 200 words above every follow-up question buries
+         the question and makes the set feel like the same passage four times.
+         It collapses to a line they can open to check a detail. */
+      (q.collapsePassage
+        ? '<details style="margin-bottom:1rem;"><summary style="cursor:pointer;font-size:0.68rem;font-weight:700;letter-spacing:.08em;color:#7c3aed;">' + passageLabel + ' — tap to re-read</summary>'
+        : '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.08em;color:#7c3aed;margin-bottom:.35rem;">' + passageLabel + '</div>') +
       '<div style="background:var(--soft);border-left:3px solid #7c3aed;border-radius:0 12px 12px 0;padding:.9rem 1rem 1rem;margin-bottom:1rem;font-size:0.88rem;line-height:1.8;color:var(--ink);font-style:italic;">' +
       passageText +
       '</div>' +
+      (q.collapsePassage ? '</details>' : '') +
       '<div class="q-text" style="font-style:normal;margin-bottom:.75rem;">' + qText(q) + '</div>' +
       optHtml +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
@@ -3134,8 +3261,35 @@
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
   // ── BIG EQUATION — smart visual renderer, auto-detects topic from equation ──
+  /* Does `equation` actually describe the same problem as `question`?
+
+     The card header shows q.question, but the topic detector and the visual
+     both read q.equation. When the model returns an equation that disagrees
+     with its own question - a bare "2 + 3" under "Evaluate: 2x + 5 when
+     x = 3" - the card asked for one thing and DREW another: a stacked column
+     sum of 2 + 3 above a box that graded against 11. A learner who answered
+     the picture was told they were wrong.
+
+     The signal that matters is a variable. If the question carries a variable
+     term or a substitution and the equation carries no letters at all, the
+     equation is not about the same problem and must not drive the card. */
+  function equationMatchesQuestion(eq, question) {
+    var qt = String(question || ''), et = String(eq || '');
+    if (!qt || !et) return true;
+    var qHasVar = /\b\d+\s*[a-z]\b/i.test(qt) ||
+                  /\b(?:when|if|given|for)\b[^.]*\b[a-z]\s*=/i.test(qt);
+    var eHasLetter = /[a-z]/i.test(et.replace(/\b(?:when|and|then|is|the|of|for|if|given)\b/gi, ''));
+    if (qHasVar && !eHasLetter) return false;
+    return true;
+  }
+
   function renderBigEquation(q) {
     var eq = (q.equation || q.question || '').trim();
+    /* Mismatch: fall back to the question, which is what the learner is being
+       shown and graded on. A plainer card beats a contradictory one. */
+    if (q.equation && !equationMatchesQuestion(q.equation, q.question)) {
+      eq = String(q.question || '').trim();
+    }
     var ans = q.answer || '';
     var diff = (q.difficulty || 'Medium');
     var diffClass = diff.toLowerCase();
@@ -3183,6 +3337,10 @@
     }
 
     var visual = buildMathVisual(topic, eq, q);
+    /* clean() is not in scope here - it lives inside other functions further
+       down the file - so normalise locally. */
+    var eqNorm = String(eq || '').replace(/\s+/g, ' ').trim();
+    var titleNorm = String(topic.title || '').replace(/\s+/g, ' ').trim();
 
     var body =
       '<div class="q-meta">' +
@@ -3280,6 +3438,24 @@
     var SERIF = 'font-family:\'Georgia\',serif;';
     var BOX = 'padding:.9rem 1.1rem;background:var(--soft);border-radius:14px;border:2px solid var(--border);';
 
+    /* The column layouts below take the first two numbers they can find
+       anywhere in the string and stack them. That is only honest when the
+       expression really is one number OP one number. Given "Evaluate: 2x + 5
+       when x = 3" it produced a column sum of two unrelated digits - a picture
+       of a different problem, sitting above the question it contradicted.
+       Anything with a letter in it, or with more than two numbers, gets no
+       column visual: the card still shows the question, which is correct if
+       plainer. */
+    function isPlainArithmetic(text) {
+      var t = String(text || '').trim().replace(/^[^0-9\-]*/, '').replace(/[=?\s]+$/, '');
+      return /^-?\d+(?:\.\d+)?\s*[+\-−*×xX/÷]\s*-?\d+(?:\.\d+)?$/.test(t);
+    }
+    if (!isPlainArithmetic(eq) &&
+        (topic.id === 'add' || topic.id === 'subtract' ||
+         topic.id === 'multiply' || topic.id === 'divide')) {
+      return '';
+    }
+
     // ── ADDITION: vertical stacked format ──
     if (topic.id === 'add' || topic.id === 'subtract') {
       var nums = eq.match(/-?\d+(?:\.\d+)?/g) || [];
@@ -3289,7 +3465,7 @@
         var maxLen = Math.max(top.replace('-','').length, bot.replace('-','').length);
         var pad = function(n){ var s = String(n); while(s.length < maxLen + 1) s = '\u00a0' + s; return s; };
         return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;display:inline-block;min-width:140px;">' +
-          '<div style="' + SERIF + 'font-size:2.2rem;font-weight:700;color:var(--ink);letter-spacing:.05em;white-space:pre;font-variant-numeric:tabular-nums;">' +
+          '<div style="' + SERIF + 'font-size:clamp(1.35rem,6.5vw,2.2rem);font-weight:700;color:var(--ink);letter-spacing:.05em;white-space:pre;font-variant-numeric:tabular-nums;">' +
           '\u00a0' + pad(top) + '<br>' +
           op + pad(bot) + '<br>' +
           '<span style="display:inline-block;border-top:3px solid var(--ink);width:100%;margin:4px 0;"></span><br>' +
@@ -3304,7 +3480,7 @@
       if (nums2.length >= 2) {
         var a = nums2[0], b = nums2[1];
         return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;display:inline-block;min-width:140px;">' +
-          '<div style="' + SERIF + 'font-size:2.2rem;font-weight:700;color:var(--ink);letter-spacing:.05em;white-space:pre;font-variant-numeric:tabular-nums;">' +
+          '<div style="' + SERIF + 'font-size:clamp(1.35rem,6.5vw,2.2rem);font-weight:700;color:var(--ink);letter-spacing:.05em;white-space:pre;font-variant-numeric:tabular-nums;">' +
           '\u00a0\u00a0' + a + '<br>' +
           '×\u00a0' + b + '<br>' +
           '<span style="display:inline-block;border-top:3px solid var(--ink);width:100%;margin:4px 0;"></span><br>' +
@@ -3408,7 +3584,13 @@
 
     // ── FALLBACK: plain display ──
     return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;">' +
-      '<div style="' + SERIF + 'font-size:2.2rem;font-weight:700;color:var(--ink);">' + eq + '</div>' +
+      /* Scales and wraps: a long expression used to run straight off the card.
+         Suppressed when it would only repeat the header - which happens when
+         the equation fell back to the question because the two disagreed. */
+      (eqNorm && eqNorm !== titleNorm
+        ? '<div style="' + SERIF + 'font-size:clamp(1.3rem,6vw,2.2rem);font-weight:700;color:var(--ink);' +
+          'line-height:1.35;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;">' + eq + '</div>'
+        : '') +
       '</div>';
   }
 
@@ -4714,6 +4896,24 @@
     /* Model-written explain prompts are already phrased as concepts. */
     if (type === 'write' && stem) return stem;
 
+    /* The six newer formats carry their concept somewhere other than the stem,
+       and printing the stem raw would reproduce an instruction ("Trace the
+       loop", "Match each term") on a card that asks the learner to teach the
+       idea back. Invariant 4. */
+    if (type === 'twopart')     return trim(q.reasonPrompt || stem, 90);
+    if (type === 'corroborate') return 'Why two accounts of ' + topic + ' can disagree';
+    if (type === 'highlight')   return 'How to find the evidence for a claim in a text';
+    if (type === 'tracetable')  return 'Walk through what happens at each step of: ' + trim(q.setup || topic, 70);
+    if (type === 'matchpairs') {
+      var pr = (q.pairs || [])[0];
+      return pr && pr.left ? 'How ' + trim(pr.left, 40) + ' relates to its pair' : 'The key pairings in ' + topic;
+    }
+    /* A colon rather than a preposition: the stem is a full question, and
+       splicing it in after "estimate" produced "How to estimate how many
+       seconds are there in one day?". */
+    if (type === 'estimate')    return 'How to estimate: ' + trim(stem, 70);
+    if (type === 'readingset')  return 'How to find the main idea and the evidence for it in a text';
+
     /* Give them the real expression to work, not a description of one. */
     if (type === 'bigequation') {
       var eq = trim(q.equation, 70);
@@ -4926,6 +5126,400 @@
   }
 
   // ── SCENARIO — read a scenario, pick the best concept/explanation ──
+  /* ══ RESEARCH-BACKED QUESTION FORMATS ══════════════════════════════════════
+     Six formats that the twelve original types could not express. Each one is
+     a distinct INTERACTION, not a relabelled multiple choice, and each is
+     reused across every subject whose material has that shape - which is why
+     there are six rather than one per subject. See docs/question-design.md.
+
+     All six follow the house contract: one handler per card, guarded by
+     currentAnswered, ending in handleResult() then enableNext(). handleResult
+     already calls showFeedback, so these must not call it again. */
+
+  /* TWO-PART — answer, then justify it. Two-tier diagnostic items (science)
+     and evidence-based selected response (English) are the same shape: part A
+     asks what, part B asks why or where the text says so. Grading both
+     separates "knows it" from "guessed it", which a single tier cannot. */
+  /* READING SET — one passage on its own card, then the questions about it.
+     A reading comprehension day used to serve three passage questions, each
+     carrying its own block of text, so the learner read three separate walls
+     of prose and answered one question on each. Real comprehension practice
+     is the other shape: read once, then answer several questions against that
+     text. buildQueue expands a `readingset` into this card followed by its
+     questions, which is also why roughly one card in four is a passage. */
+  function renderReadingPassage(q) {
+    var words = String(q.passage || '').split(/\s+/).filter(Boolean).length;
+    var mins = Math.max(1, Math.round(words / 200));
+    var n = (q.questions || []).length;
+    var body = '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.08em;color:#7c3aed;margin-bottom:.5rem;">READ THIS FIRST</div>' +
+      '<div style="background:var(--soft);border-left:3px solid #7c3aed;border-radius:0 12px 12px 0;padding:1rem 1.1rem 1.1rem;margin-bottom:.9rem;font-size:0.92rem;line-height:1.85;color:var(--ink);">' +
+      esc(q.passage || '') + '</div>' +
+      '<p class="content-text" style="text-align:center;font-size:.84rem;color:var(--muted);">' +
+      n + ' question' + (n === 1 ? '' : 's') + ' follow. You can re-open the passage on each one.</p>';
+    return buildCard('Reading', q.title ? String(q.title) : 'Read the passage', false,
+      body, 'About ' + mins + ' min read', 'I\'ve read it →', false);
+  }
+
+  function renderTwoPart(q) {
+    var optHtml = (q.options || []).map(function (opt, i) {
+      return '<button class="q-option option-btn tp-a" onclick="answerTwoPartA(this,' + i + ')">' +
+        '<span class="opt-letter">' + String.fromCharCode(65 + i) + '</span>' +
+        '<span class="opt-text">' + esc(opt) + '</span></button>';
+    }).join('');
+    var reasonHtml = (q.reasons || []).map(function (r, i) {
+      return '<button class="q-option option-btn tp-b" onclick="answerTwoPartB(this,' + i + ')">' +
+        '<span class="opt-letter">' + String.fromCharCode(65 + i) + '</span>' +
+        '<span class="opt-text">' + esc(r) + '</span></button>';
+    }).join('');
+
+    window._twoPartState = { q: q, partA: null };
+
+    var passage = q.passage ? '<div class="tp-passage" style="background:#f8fafc;border-left:4px solid #4a7cf6;border-radius:0 12px 12px 0;padding:.85rem 1rem;margin-bottom:.9rem;font-size:.88rem;line-height:1.7;">' + esc(q.passage) + '</div>' : '';
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#eef2ff;color:#4338ca;">Two-part</span>' +
+      '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
+      passage +
+      '<div style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;">Part A</div>' +
+      '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.question) + '</div>' +
+      '<div class="q-options" id="tp-a-opts">' + optHtml + '</div>' +
+      '<div id="tp-b-block" style="display:none;margin-top:1.1rem;padding-top:1rem;border-top:1px dashed var(--rule,#cbd5e1);">' +
+        '<div style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;">Part B</div>' +
+        '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.reasonPrompt || 'Which statement best supports your answer?') + '</div>' +
+        '<div class="q-options" id="tp-b-opts">' + reasonHtml + '</div>' +
+      '</div>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Answer Part A first, then find the reason that backs it up.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Two-part question</div><h2>' + esc(day.title || 'Answer, then justify it') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function answerTwoPartA(btn, i) {
+    var st = window._twoPartState;
+    if (!st || st.partA !== null || currentAnswered) return;
+    st.partA = i;
+    var opts = document.querySelectorAll('.tp-a');
+    for (var k = 0; k < opts.length; k++) {
+      opts[k].disabled = true;
+      if (opts[k] !== btn) opts[k].classList.add('dimmed');
+    }
+    /* No 'chosen' class exists in the sheet, and reusing correct-ans here
+       would assert a verdict before Part B has been answered. */
+    btn.style.borderColor = '#4a7cf6';
+    btn.style.background = 'rgba(74,124,246,.08)';
+    /* Part B is only revealed after A is committed. Showing both at once lets
+       the reason list give away the answer to A. */
+    var b = document.getElementById('tp-b-block');
+    if (b) b.style.display = 'block';
+  }
+
+  function answerTwoPartB(btn, i) {
+    var st = window._twoPartState;
+    if (!st || st.partA === null || currentAnswered) return;
+    currentAnswered = true;
+    totalAnswered++;
+    var q = st.q;
+    var aOK = st.partA === q.correctIndex;
+    var bOK = i === q.reasonIndex;
+    var both = aOK && bOK;
+
+    var opts = document.querySelectorAll('.tp-b');
+    for (var k = 0; k < opts.length; k++) {
+      opts[k].disabled = true;
+      if (k === q.reasonIndex) opts[k].classList.add('correct-ans');
+      else if (opts[k] === btn) opts[k].classList.add('wrong-ans');
+      else opts[k].classList.add('dimmed');
+    }
+    var aOpts = document.querySelectorAll('.tp-a');
+    if (aOpts[q.correctIndex]) aOpts[q.correctIndex].classList.add('correct-ans');
+
+    /* The diagnostic payload: right answer with the wrong reason is the case
+       worth naming, because it usually means a guess that landed. */
+    var note = both ? ''
+      : (aOK ? 'Part A was right, but not for that reason — that is the part worth re-reading. '
+             : (bOK ? 'Your reasoning was sound, but it does not support the answer you picked in Part A. '
+                    : ''));
+    if (both) spawnConfetti();
+    handleResult(both, note + esc(q.explanation || ''), btn);
+    enableNext();
+  }
+
+  /* CORROBORATE — two sources side by side. Corroboration is one of the four
+     historical reading skills and the only one StudyFlow could not ask for,
+     because every other format shows a single text. */
+  function renderCorroborate(q) {
+    var A = q.sourceA || {}, B = q.sourceB || {};
+    function srcBlock(s, tone) {
+      return '<div style="flex:1 1 200px;min-width:0;background:' + tone.bg + ';border:1px solid ' + tone.br +
+        ';border-radius:12px;padding:.75rem .85rem;">' +
+        '<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:' + tone.fg + ';margin-bottom:.35rem;">' + esc(s.label || 'Source') + '</div>' +
+        '<div style="font-size:.84rem;line-height:1.65;">' + esc(s.text || '') + '</div></div>';
+    }
+    var optHtml = (q.options || []).map(function (opt, i) {
+      return '<button class="q-option option-btn" onclick="answerMCQ(this,' + i + ',' + q.correctIndex + ',\'' + esc(q.explanation) + '\')">' +
+        '<span class="opt-letter">' + String.fromCharCode(65 + i) + '</span>' +
+        '<span class="opt-text">' + esc(opt) + '</span></button>';
+    }).join('');
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#fef3c7;color:#92400e;">Compare sources</span>' +
+      '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
+      '<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:.9rem;">' +
+      srcBlock(A, { bg: '#eff6ff', br: '#bfdbfe', fg: '#1d4ed8' }) +
+      srcBlock(B, { bg: '#fdf4ff', br: '#f0abfc', fg: '#a21caf' }) + '</div>' +
+      '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.question) + '</div>' +
+      '<div class="q-options">' + optHtml + '</div>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Ask what each source claims, and where they actually differ.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Compare two sources</div><h2>' + esc(day.title || 'Do these agree?') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  /* HIGHLIGHT — pick the sentence that does the work. Text-dependent close
+     reading: the learner must locate evidence inside the passage rather than
+     recognise a paraphrase of it. */
+  function renderHighlight(q) {
+    var sents = q.sentences || [];
+    var sentHtml = sents.map(function (s, i) {
+      return '<button class="hl-sent" data-i="' + i + '" onclick="answerHighlight(this,' + i + ')" ' +
+        'style="display:block;width:100%;text-align:left;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;' +
+        'padding:.6rem .75rem;margin-bottom:.4rem;font-size:.86rem;line-height:1.6;cursor:pointer;font-family:inherit;color:inherit;">' +
+        esc(s) + '</button>';
+    }).join('');
+
+    window._highlightState = { q: q };
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#ecfdf5;color:#047857;">Find the evidence</span>' +
+      '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
+      '<div class="q-text" style="margin-bottom:.8rem;">' + esc(q.question) + '</div>' +
+      '<div>' + sentHtml + '</div>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Read each sentence and ask which one actually states it.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Find the evidence</div><h2>' + esc(day.title || 'Locate it in the text') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function answerHighlight(btn, i) {
+    var st = window._highlightState;
+    if (!st || currentAnswered) return;
+    currentAnswered = true;
+    totalAnswered++;
+    var q = st.q, ok = i === q.correctIndex;
+    var all = document.querySelectorAll('.hl-sent');
+    for (var k = 0; k < all.length; k++) {
+      all[k].disabled = true;
+      if (k === q.correctIndex) { all[k].style.borderColor = '#10b981'; all[k].style.background = '#ecfdf5'; }
+      else if (all[k] === btn) { all[k].style.borderColor = '#ef4444'; all[k].style.background = '#fef2f2'; }
+      else { all[k].style.opacity = '.5'; }
+    }
+    if (ok) spawnConfetti();
+    handleResult(ok, q.explanation || '', btn);
+    enableNext();
+  }
+
+  /* MATCH PAIRS — a model-authored matching card. The existing match card is
+     synthesised from keyTerms; this one lets a schema ask for the pairing that
+     matters (word to translation, representation to representation, term to
+     function). A select per row rather than click-to-pair: far less state to
+     get wrong, and it works with a keyboard. */
+  function renderMatchPairs(q) {
+    var pairs = (q.pairs || []).filter(function (p) { return p && p.left && p.right; });
+    var rights = pairs.map(function (p) { return p.right; }).slice();
+    /* Shuffled once at render, and the correct value is compared by text, so
+       the order of the menu cannot leak the answer. */
+    rights.sort(function () { return Math.random() - 0.5; });
+    var optTags = rights.map(function (r) { return '<option value="' + esc(r) + '">' + esc(r) + '</option>'; }).join('');
+
+    var rowsHtml = pairs.map(function (p, i) {
+      return '<div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;flex-wrap:wrap;">' +
+        '<div style="flex:1 1 120px;min-width:0;font-size:.87rem;font-weight:600;">' + esc(p.left) + '</div>' +
+        '<select class="mp-sel" data-i="' + i + '" style="flex:1 1 150px;min-width:0;padding:.45rem .55rem;border:1.5px solid #e2e8f0;' +
+        'border-radius:9px;font-family:inherit;font-size:.85rem;background:#fff;color:inherit;">' +
+        '<option value="">— choose —</option>' + optTags + '</select></div>';
+    }).join('');
+
+    window._matchPairsState = { q: q, pairs: pairs };
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#f0f9ff;color:#0369a1;">Match</span>' +
+      '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
+      '<div class="q-text" style="margin-bottom:.8rem;">' + esc(q.question || 'Match each item to its pair.') + '</div>' +
+      rowsHtml +
+      '<button class="fill-submit" id="mp-check-btn" onclick="checkMatchPairs()" style="margin-top:.6rem;">Check answers</button>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Work from the ones you are sure of first.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Match the pairs</div><h2>' + esc(day.title || 'Match them up') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function checkMatchPairs() {
+    var st = window._matchPairsState;
+    if (!st || currentAnswered) return;
+    currentAnswered = true;
+    totalAnswered++;
+    var sels = document.querySelectorAll('.mp-sel'), right = 0, k;
+    for (k = 0; k < sels.length; k++) {
+      var want = st.pairs[k] ? st.pairs[k].right : '';
+      var got = sels[k].value;
+      sels[k].disabled = true;
+      if (got === want) { right++; sels[k].style.borderColor = '#10b981'; sels[k].style.background = '#ecfdf5'; }
+      else { sels[k].style.borderColor = '#ef4444'; sels[k].style.background = '#fef2f2'; }
+    }
+    var all = right === st.pairs.length && st.pairs.length > 0;
+    var btn = document.getElementById('mp-check-btn');
+    if (btn) btn.disabled = true;
+    if (all) spawnConfetti();
+    handleResult(all, (all ? '' : right + ' of ' + st.pairs.length + ' matched. ') + (st.q.explanation || ''), btn);
+    enableNext();
+  }
+
+  /* TRACE TABLE — run the procedure by hand, one row at a time. The format
+     computing teachers use for loops, and it works for any procedure with a
+     running value. One column is blanked; the rest is given, so the learner
+     traces rather than re-derives. */
+  function renderTraceTable(q) {
+    var cols = q.columns || [], rows = q.rows || [];
+    var blank = typeof q.blankCol === 'number' ? q.blankCol : (cols.length - 1);
+
+    var head = cols.map(function (c) {
+      return '<th style="text-align:left;padding:.4rem .55rem;font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1.5px solid #e2e8f0;">' + esc(c) + '</th>';
+    }).join('');
+    var bodyRows = rows.map(function (r, ri) {
+      var cells = (r || []).map(function (cell, ci) {
+        if (ci === blank) {
+          return '<td style="padding:.3rem .35rem;border-bottom:1px solid #f1f5f9;">' +
+            '<input class="tt-in" data-r="' + ri + '" inputmode="text" ' +
+            'style="width:100%;min-width:64px;max-width:130px;padding:.35rem .45rem;border:1.5px solid #cbd5e1;' +
+            'border-radius:8px;font-family:inherit;font-size:.85rem;font-variant-numeric:tabular-nums;' +
+            'background:#fff;color:inherit;"></td>';
+        }
+        return '<td style="padding:.4rem .55rem;font-size:.85rem;border-bottom:1px solid #f1f5f9;">' + esc(cell) + '</td>';
+      }).join('');
+      return '<tr>' + cells + '</tr>';
+    }).join('');
+
+    window._traceState = { q: q, blank: blank };
+
+    /* esc() flattens newlines to spaces - it is written for attribute and JS
+       string contexts - which collapsed a whole procedure onto one line inside
+       the <pre>. Escape each line and rejoin, so the breaks survive. */
+    var setupTxt = String(q.setup || '').split('\n').map(function (ln) { return esc(ln); }).join('\n');
+    var setup = setupTxt ? '<pre style="background:#0f172a;color:#e2e8f0;border-radius:10px;padding:.7rem .85rem;overflow-x:auto;font-size:.8rem;line-height:1.6;margin-bottom:.85rem;white-space:pre-wrap;">' + setupTxt + '</pre>' : '';
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#f1f5f9;color:#334155;">Trace it</span>' +
+      '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
+      '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.question) + '</div>' + setup +
+      '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>' + head + '</tr></thead><tbody>' + bodyRows + '</tbody></table></div>' +
+      '<button class="fill-submit" id="tt-check-btn" onclick="checkTraceTable()" style="margin-top:.7rem;">Check answers</button>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Take one row at a time and carry the value forward.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Trace the steps</div><h2>' + esc(day.title || 'Work it through') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function checkTraceTable() {
+    var st = window._traceState;
+    if (!st || currentAnswered) return;
+    currentAnswered = true;
+    totalAnswered++;
+    var ins = document.querySelectorAll('.tt-in'), rows = st.q.rows || [], right = 0, k;
+    for (k = 0; k < ins.length; k++) {
+      var ri = parseInt(ins[k].getAttribute('data-r'), 10);
+      var want = fmStr((rows[ri] || [])[st.blank]).trim().toLowerCase();
+      var got = fmStr(ins[k].value).trim().toLowerCase();
+      ins[k].disabled = true;
+      if (got === want && got !== '') { right++; ins[k].style.borderColor = '#10b981'; ins[k].style.background = '#ecfdf5'; }
+      else {
+        ins[k].style.borderColor = '#ef4444'; ins[k].style.background = '#fef2f2';
+        ins[k].value = ins[k].value ? ins[k].value + '  →  ' + ((rows[ri] || [])[st.blank] || '') : ((rows[ri] || [])[st.blank] || '');
+      }
+    }
+    var all = right === ins.length && ins.length > 0;
+    var btn = document.getElementById('tt-check-btn');
+    if (btn) btn.disabled = true;
+    if (all) spawnConfetti();
+    handleResult(all, (all ? '' : right + ' of ' + ins.length + ' rows correct. ') + (st.q.explanation || ''), btn);
+    enableNext();
+  }
+
+  /* ESTIMATE — a number, judged inside a tolerance band. Reasoning to the
+     right order of magnitude is a different skill from computing an exact
+     value, and marking 47 wrong because the key says 50 tests neither. */
+  function renderEstimate(q) {
+    window._estimateState = { q: q };
+    var unit = q.unit ? '<span style="font-size:.9rem;color:var(--muted);margin-left:.45rem;">' + esc(q.unit) + '</span>' : '';
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#fff7ed;color:#c2410c;">Estimate</span>' +
+      '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
+      '<div class="q-text" style="margin-bottom:.8rem;">' + esc(q.question) + '</div>' +
+      /* Wraps, and the field flexes: a fixed 150px box with the unit beside it
+         pushed a long answer ("3155760000 seconds") past the card edge. */
+      '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:.35rem;margin-bottom:.6rem;">' +
+      '<input id="est-in" inputmode="decimal" placeholder="your estimate" ' +
+      'style="flex:1 1 130px;min-width:110px;max-width:220px;padding:.55rem .7rem;border:1.5px solid #cbd5e1;' +
+      'border-radius:10px;font-family:inherit;font-size:.95rem;font-variant-numeric:tabular-nums;' +
+      'background:#fff;color:inherit;">' + unit + '</div>' +
+      '<button class="fill-submit" id="est-check-btn" onclick="checkEstimate()">Check answer</button>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Round the numbers to something easy, then adjust.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Estimate it</div><h2>' + esc(day.title || 'About how much?') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function checkEstimate() {
+    var st = window._estimateState;
+    if (!st || currentAnswered) return;
+    var el = document.getElementById('est-in');
+    if (!el) return;
+    var raw = fmStr(el.value).replace(/[, ]/g, '').replace(/[^0-9.eE+-]/g, '');
+    if (raw === '') return;                     // nothing typed: do not burn the attempt
+    currentAnswered = true;
+    totalAnswered++;
+    var got = parseFloat(raw);
+    var want = parseFloat(st.q.answer);
+    /* A tolerance of zero would make this an exact-answer card wearing an
+       estimate label, so fall back to 10% of the target. */
+    var tol = parseFloat(st.q.tolerance);
+    if (!isFinite(tol) || tol <= 0) tol = Math.abs(want) * 0.1;
+    var ok = isFinite(got) && isFinite(want) && Math.abs(got - want) <= tol;
+    el.disabled = true;
+    el.style.borderColor = ok ? '#10b981' : '#ef4444';
+    el.style.background = ok ? '#ecfdf5' : '#fef2f2';
+    var btn = document.getElementById('est-check-btn');
+    if (btn) btn.disabled = true;
+    var msg = ok ? '' : ('A good estimate was about ' + st.q.answer + (st.q.unit ? ' ' + st.q.unit : '') + '. ');
+    if (ok) spawnConfetti();
+    handleResult(ok, msg + (st.q.explanation || ''), btn);
+    enableNext();
+  }
+
   function renderScenario(q) {
     // Scenario questions have: question (the scenario text), options[], correctIndex
     var optHtml = (q.options || []).map(function(opt, i) {
@@ -5313,7 +5907,7 @@
     // TIER 3: Feynman technique — AI identifies knowledge gaps specifically
     var prompt = 'You are a tutor grading a student explanation using the Feynman Technique. Be specific, honest, and encouraging.\n\nCONCEPT: ' + question + '\nCORRECT EXPLANATION: ' + modelAnswer + '\nSTUDENT WROTE: ' + answer + '\n\nRespond in this exact format:\n SCORE: X/10\n WHAT YOU NAILED: [1-2 specific things they got right, reference their exact words]\n KNOWLEDGE GAPS: [specific concepts they missed or got wrong — be precise]\n ADVICE: [one concrete tip to fill the biggest gap]\n\nBe specific — reference actual content from their answer. Never be generic.';
 
-    fetch('https://studyflow-ten-vert.vercel.app/api/generate', {
+    fetch('api/generate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: prompt })
     })
@@ -5525,7 +6119,7 @@
 
     addChatMsg('', 'ai thinking');
 
-    fetch('https://studyflow-ten-vert.vercel.app/api/chat', {
+    fetch('api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -5656,7 +6250,7 @@
 
     // Share results button
     var shareSubject = plan ? plan.subject || 'my subject' : 'my subject';
-    var shareText = 'I just scored ' + pct + '% studying ' + shareSubject + ' on StudyFlow! Building my streak one day at a time. Try it free: studyflow-ten-vert.vercel.app';
+    var shareText = 'I just scored ' + pct + '% studying ' + shareSubject + ' on StudyFlow! Building my streak one day at a time. Try it free: ' + sfShareHost();
     var shareHtml = '<button onclick="shareSession(\'' + pct + '\',\'' + esc(shareSubject) + '\')" style="width:100%;padding:.85rem;background:var(--soft);border:1.5px solid var(--border);border-radius:14px;font-family:var(--sans);font-size:0.9rem;font-weight:600;color:var(--ink);cursor:pointer;margin-bottom:.75rem;display:flex;align-items:center;justify-content:center;gap:.6rem;transition:all .2s;" onmouseover="this.style.borderColor=\'var(--blue)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>' +
       'Share my score</button>';
@@ -5710,7 +6304,7 @@
         SFStore.setItem(classKey, JSON.stringify(classData));
 
         // Sync to Firestore for cross-device access
-        fetch('https://studyflow-ten-vert.vercel.app/api/class', {
+        fetch('api/class', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -5761,7 +6355,7 @@
   }
 
   function shareSession(pct, subject) {
-    var text = 'Just scored ' + pct + '% studying ' + subject + ' with StudyFlow! Building my streak one day at a time. Try it free \u2192 studyflow-ten-vert.vercel.app';
+    var text = 'Just scored ' + pct + '% studying ' + subject + ' with StudyFlow! Building my streak one day at a time. Try it free \u2192 ' + sfShareHost();
     if (navigator.share) {
       navigator.share({ title: 'StudyFlow — ' + pct + '% accuracy', text: text });
     } else {
@@ -7216,11 +7810,18 @@
 
     /* ── §3 drawing primitives ─────────────────────────────────────────────── */
 
+    /* Rotation only - pal(i) cycles these so consecutive nodes stay apart.
+       Amber (#f59e0b) was the fourth entry and is deliberately gone: any
+       diagram with four or more items handed a node to it, and those diagrams
+       are what both whiteboards draw into, so the boards kept coming out
+       yellow however the boards' own palettes were set. Amber is still used
+       elsewhere in lesson.html where it MEANS something - hints, flagged
+       questions, the unsure button, the struggling header - and none of that
+       is touched. Six hues is still more rotation than any diagram needs. */
     var PAL = [
       { s: '#4a7cf6', f: '#eaf1ff', t: '#1e40af' },
       { s: '#38bfa1', f: '#e6faf5', t: '#065f46' },
       { s: '#7c3aed', f: '#f3ebff', t: '#5b21b6' },
-      { s: '#f59e0b', f: '#fff5e5', t: '#92400e' },
       { s: '#ec4899', f: '#fdeaf4', t: '#9d174d' },
       { s: '#0891b2', f: '#e5f7fb', t: '#155e75' },
       { s: '#ef4444', f: '#fdecec', t: '#991b1b' }
@@ -8094,6 +8695,10 @@
   // ── CURATED DIAGRAMS — hand-drawn templates for common science topics ──
   // Returns null when the topic has no template; generateDiagramSVG() below
   // then falls back to building one from the topic itself.
+  /* whiteboard.js is a separate file and cannot see this scope. Exposing the
+     existing implementation keeps ONE diagram system in the app, per the
+     "reuse what exists" rule. Assigned after definition, at the end of the
+     diagram section below. */
   function curatedDiagramSVG(desc) {
     /* Hyphens and underscores are flattened to spaces before matching.
 
@@ -8439,6 +9044,47 @@
     }
 
     // ── FOOD CHAIN / ECOSYSTEM ────────────────────────────────────────────────
+    // ── ROCK CYCLE ───────────────────────────────────────────────────────────
+    /* Three rock types in a triangle with magma at the centre. The processes
+       ride the arrows, because in this topic the arrows ARE the content - a
+       learner who can name the three rocks but not what turns one into another
+       has the picture and not the cycle. Labels sit outside the triangle on
+       the side the arrow runs, so none of them cross a path. */
+    if (/rock cycle|igneous|sedimentary|metamorphic|magma/.test(d)) {
+      return '<svg viewBox="0 0 460 300" width="100%" style="max-width:460px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs><marker id="rcA" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">' +
+        '<path d="M0,0 L7,3.5 L0,7 Z" fill="#57534e"/></marker></defs>' +
+        // Igneous — top
+        '<rect x="176" y="26" width="108" height="36" rx="9" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>' +
+        '<text x="230" y="44" style="' + LP + '" fill="#991b1b" text-anchor="middle">Igneous</text>' +
+        '<text x="230" y="56" style="' + LT + '" fill="#ef4444" text-anchor="middle">granite, basalt</text>' +
+        // Sedimentary — bottom right
+        '<rect x="314" y="226" width="108" height="36" rx="9" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>' +
+        '<text x="368" y="244" style="' + LP + '" fill="#92400e" text-anchor="middle">Sedimentary</text>' +
+        '<text x="368" y="256" style="' + LT + '" fill="#b45309" text-anchor="middle">sandstone, shale</text>' +
+        // Metamorphic — bottom left
+        '<rect x="38" y="226" width="108" height="36" rx="9" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>' +
+        '<text x="92" y="244" style="' + LP + '" fill="#5b21b6" text-anchor="middle">Metamorphic</text>' +
+        '<text x="92" y="256" style="' + LT + '" fill="#7c3aed" text-anchor="middle">marble, slate</text>' +
+        // Magma — centre
+        '<ellipse cx="230" cy="162" rx="46" ry="24" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>' +
+        '<text x="230" y="166" style="' + LP + '" fill="#9a3412" text-anchor="middle">Magma</text>' +
+        // Igneous -> Sedimentary, down the right side
+        '<path d="M284 58 Q372 120 362 226" fill="none" stroke="#57534e" stroke-width="1.8" marker-end="url(#rcA)"/>' +
+        '<text x="418" y="128" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="middle">weathering</text>' +
+        '<text x="418" y="140" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="middle">&amp; erosion</text>' +
+        // Sedimentary -> Metamorphic, along the bottom
+        '<path d="M310 244 L154 244" fill="none" stroke="#57534e" stroke-width="1.8" marker-end="url(#rcA)"/>' +
+        '<text x="232" y="284" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="middle">heat &amp; pressure</text>' +
+        // Metamorphic -> Magma, inward
+        '<path d="M146 232 L188 178" fill="none" stroke="#57534e" stroke-width="1.8" marker-end="url(#rcA)"/>' +
+        '<text x="118" y="198" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="middle">melting</text>' +
+        // Magma -> Igneous, up the middle
+        '<path d="M230 136 L230 72" fill="none" stroke="#57534e" stroke-width="1.8" marker-end="url(#rcA)"/>' +
+        '<text x="244" y="106" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="start">cooling</text>' +
+        '</svg>';
+    }
+
     if (/food chain|food web|ecosystem|producer|consumer|decomposer|trophic/.test(d)) {
       return '<svg viewBox="0 0 290 300" width="100%" style="max-width:330px;display:block;margin:0 auto;' + LF + '">' +
         '<defs><marker id="eA" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#374151"/></marker></defs>' +
@@ -8996,6 +9642,11 @@
      Step 3 is the point: it is drawn from THIS lesson's material, so two
      lessons never get the same picture, and a lesson is never left without
      one. Only when a day carries no structure at all does this return null. */
+
+
+  /* whiteboard.js lives in its own file and cannot reach this scope.
+     Expose rather than duplicate - there must be one diagram system. */
+  window.generateDiagramSVG = generateDiagramSVG;
 
   function dgClean(v) {
     return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
@@ -10508,18 +11159,38 @@ var SFBoard = (function () {
       minX = Math.min(minX, px - boxes[i].w / 2); maxX = Math.max(maxX, px + boxes[i].w / 2);
       minY = Math.min(minY, py - boxes[i].h / 2); maxY = Math.max(maxY, py + boxes[i].h / 2);
     }
+    /* The ring the arrows ride reaches R in every direction, and between two
+       nodes it can pass outside every box - with three nodes the bottom arc
+       sits at +R while the lowest box centre is only at R*sin(30), so bounding
+       the card by the boxes alone clipped that arrow off the canvas entirely.
+       Two of the three arrows drew, which reads as a deliberate open arc
+       rather than as a missing one. */
+    minX = Math.min(minX, -R); maxX = Math.max(maxX, R);
+    minY = Math.min(minY, -R); maxY = Math.max(maxY, R);
+
     var w = (maxX - minX) + PAD * 2, h = (maxY - minY) + PAD * 2;
     var cx = -minX + PAD, cy = -minY + PAD;
-    var Rin = Math.max(26, R * cosH - maxH / 2 - 16);
-
-    var o = '', step = 2 * Math.PI / n, padA = Math.min(step * 0.34, 0.5);
+    /* The arrows ride the SAME circle the nodes sit on, each one starting and
+       ending clear of the boxes it joins. They used to be drawn on a much
+       smaller circle - R * cos(PI/n) minus half a box height - and cos(PI/n)
+       is 0.5 at three nodes, so the ring collapsed to about a quarter of R:
+       a small circle of arrowheads floating in the middle of the card,
+       connected to nothing. It reads as correct code; it only shows up when
+       the card is looked at. */
+    var o = '', step = 2 * Math.PI / n;
+    /* Half-angle a box occupies as seen from the centre. Half the diagonal is
+       used rather than half the width so the gap clears the corner whatever
+       direction the box sits in. Capped so an arc never closes up entirely. */
+    function clearAng(b) {
+      return Math.min(Math.atan2(Math.sqrt(b.w * b.w + b.h * b.h) / 2 + 8, R), step * 0.40);
+    }
     for (i = 0; i < n; i++) {
       var t = tone(i), b = boxes[i], p = pts[i];
-      var a0 = p.a + padA, a1 = pts[(i + 1) % n].a - padA;
+      var a0 = p.a + clearAng(b), a1 = pts[(i + 1) % n].a - clearAng(boxes[(i + 1) % n]);
       if (a1 < a0) a1 += 2 * Math.PI;
-      var arc = '<path d="M' + r1(cx + Rin * Math.cos(a0)) + ' ' + r1(cy + Rin * Math.sin(a0)) +
-        ' A' + r1(Rin) + ' ' + r1(Rin) + ' 0 0 1 ' + r1(cx + Rin * Math.cos(a1)) + ' ' +
-        r1(cy + Rin * Math.sin(a1)) + '" fill="none" stroke="' + RULE +
+      var arc = '<path d="M' + r1(cx + R * Math.cos(a0)) + ' ' + r1(cy + R * Math.sin(a0)) +
+        ' A' + r1(R) + ' ' + r1(R) + ' 0 0 1 ' + r1(cx + R * Math.cos(a1)) + ' ' +
+        r1(cy + R * Math.sin(a1)) + '" fill="none" stroke="' + RULE +
         '" stroke-width="1.6" marker-end="url(#sfbTip)"/>';
       var bx = cx + p.x - b.w / 2, by = cy + p.y - b.h / 2;
       o += g(i + 1, arc + cardRich(bx, by, b.w, b.h, t, 12, false) +
@@ -12494,9 +13165,19 @@ var SFBoard = (function () {
     if (!pillars.length) {
       var ds = list(day.steps);
       for (i = 0; i < ds.length && pillars.length < 3; i++) {
-        var st = ds[i] || {};
-        var l2 = clean(st.step || st.title || st.label);
-        var d2 = clean(st.action || st.body || st.detail);
+        var st = ds[i];
+        /* steps and keyTerms arrive as plain strings whenever the model
+           ignores the object schema - which it does on some days and not
+           others, from the same prompt. Reading only the object form left
+           pillars empty, and with no trap and no anchor briefFor then returned
+           null, so the opening whiteboard was simply absent from those
+           sessions and present in the rest. That is the whole of the "it does
+           not show up every time" report. pillars and concepts below already
+           accepted both shapes; these two did not. */
+        var l2 = typeof st === 'string' ? clean(st)
+                                        : clean(st && (st.step || st.title || st.label));
+        var d2 = typeof st === 'string' ? ''
+                                        : clean(st && (st.action || st.body || st.detail));
         if (l2) pillars.push({ label: l2, detail: d2 });
       }
     }
@@ -12512,8 +13193,12 @@ var SFBoard = (function () {
     if (!pillars.length) {
       var kts = list(day.keyTerms);
       for (i = 0; i < kts.length && pillars.length < 3; i++) {
-        var kt = kts[i] || {};
-        var term = clean(kt.term), def = clean(kt.definition);
+        var kt = kts[i];
+        /* Same string-or-object split as steps above. */
+        var term = typeof kt === 'string' ? clean(kt)
+                                          : clean(kt && (kt.term || kt.title || kt.label));
+        var def  = typeof kt === 'string' ? ''
+                                         : clean(kt && (kt.definition || kt.detail));
         if (term) pillars.push({ label: term, detail: def });
       }
     }

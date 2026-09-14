@@ -61,6 +61,20 @@ stay readable. It deliberately does *not* trim when the clause is only a number,
 because that once turned `"Nitrogen: 78"` into `"Nitrogen"` and quietly demoted
 every chart to plain boxes.
 
+### Label length
+
+Node labels are wrapped by `wrap()` to 2-3 lines and then **ellipsized** —
+visibly, with a `…`, on the principle that a silently clipped label reads as a
+complete and wrong one. In practice a `flow` box holds roughly 40-45 characters
+and a `compare` bullet a little more.
+
+A whole rule does not fit in a box. "Signed, it is law. Vetoed, two-thirds of
+both chambers can still override" came out as "Signed, it is law. Vetoed,
+two-thirds of…". Keep each label to a short phrase and put the qualification in
+a second diagram or the card's caption. Check for `…` in the rendered text —
+`Array.from(svg.querySelectorAll('text')).map(t => t.textContent)` — rather than
+counting characters by eye.
+
 ### venn
 
 Model-driven only. `specFromDayStructure` will never choose it from a flat list,

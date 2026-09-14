@@ -77,6 +77,23 @@
   .search-input { padding:.5rem 1rem; border:1.5px solid var(--border); border-radius:10px; font-family:var(--sans); font-size:0.85rem; outline:none; transition:border-color .2s; width:200px; }
   .search-input:focus { border-color:var(--blue); }
   table { width:100%; border-collapse:collapse; }
+  /* A roster table does not fit a phone and should not be squeezed into one:
+     give it its own horizontal scroll rather than pushing the page sideways.
+     The tab bar was width:fit-content, so four tabs measured 422px. */
+  .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  @media(max-width:768px){
+    .tabs { width:auto; flex-wrap:wrap; }
+    table { min-width:560px; }
+    /* The teacher nav carries the same row of controls the dashboard does,
+       and at 320px it ran 44px past the edge. Wrap it rather than shrink the
+       tap targets. min-width:0 lets a flex child actually give ground; without
+       it the row refuses to shrink below its content. */
+    nav { flex-wrap:wrap; gap:.5rem; }
+    .nav-right { gap:.4rem; flex-wrap:wrap; justify-content:flex-end; min-width:0; }
+    /* The scroll container must be allowed to be narrower than the table it
+       holds, or it simply grows and the page scrolls instead. */
+    .table-scroll { max-width:100%; min-width:0; }
+  }
   th { padding:.9rem 1.5rem; text-align:left; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); border-bottom:1px solid var(--border); }
   td { padding:1rem 1.5rem; border-bottom:1px solid var(--border); font-size:0.88rem; color:var(--ink); }
   tr:last-child td { border-bottom:none; }
@@ -163,7 +180,7 @@
 <body>
 
 <nav>
-  <a href="https://studyflow-ten-vert.vercel.app" class="logo">
+  <a href="index.html" class="logo">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
       <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
@@ -269,6 +286,7 @@
           </button>
         </div>
       </div>
+      <div class="table-scroll">
       <table>
         <thead>
           <tr>
@@ -284,6 +302,7 @@
           <tr><td colspan="6"><div class="empty-state"><h4>No students yet</h4><p>Share your class code and students will appear here when they join.</p></div></td></tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 
@@ -348,7 +367,7 @@
 <script>
   // Auth guard
   if (!localStorage.getItem('studyflow_teacher')) {
-    window.location.href = 'https://studyflow-ten-vert.vercel.app/teacher-login.html';
+    window.location.href = 'teacher-login.html';
   }
 
   var teacher = JSON.parse(localStorage.getItem('studyflow_teacher') || '{}');
@@ -361,7 +380,7 @@
       localStorage.setItem('studyflow_teacher', JSON.stringify(teacher));
       classData = { students: [] };
       // Init class in Firestore
-      fetch('https://studyflow-ten-vert.vercel.app/api/class', {
+      fetch('api/class', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'init', classCode: code })
@@ -381,7 +400,7 @@
 
     // Load from Firestore for cross-device data, fall back to localStorage
     function loadFromFirestore() {
-      fetch('https://studyflow-ten-vert.vercel.app/api/class?classCode=' + teacher.classCode)
+      fetch('api/class?classCode=' + teacher.classCode)
         .then(function(r){ return r.json(); })
         .then(function(data) {
           console.log('[TEACHER] Firestore response:', JSON.stringify(data).substring(0, 300));
@@ -594,7 +613,7 @@
     showActiveAssignment(assignment);
 
     // Sync assignment to Firestore
-    fetch('https://studyflow-ten-vert.vercel.app/api/class', {
+    fetch('api/class', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'assign', classCode: teacher.classCode, assignment: assignment })
@@ -624,7 +643,7 @@
 
   function loadActiveAssignment() {
     // Firestore first, localStorage fallback
-    fetch('https://studyflow-ten-vert.vercel.app/api/class?classCode=' + teacher.classCode + '&type=assignment')
+    fetch('api/class?classCode=' + teacher.classCode + '&type=assignment')
       .then(function(r){ return r.json(); })
       .then(function(data) {
         if (data.assignment && data.assignment.topic) showActiveAssignment(data.assignment);
@@ -637,7 +656,7 @@
 
   function logout() {
     localStorage.removeItem('studyflow_teacher');
-    window.location.href = 'https://studyflow-ten-vert.vercel.app/teacher-login.html';
+    window.location.href = 'teacher-login.html';
   }
 
 }
