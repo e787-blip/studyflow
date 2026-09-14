@@ -9206,8 +9206,13 @@
     var LF = "font-family:'DM Sans',system-ui,-apple-system,sans-serif;";
     var INK = '#1a1d2e', MUTED = '#6b7280', RULE = '#cbd5e1';
     var BLUE = '#4a7cf6', BLUE_F = '#eaf1ff', BLUE_T = '#1e40af';
-    var GOLD = '#f59e0b', GOLD_F = '#fff5e5', GOLD_T = '#92400e';
     var TEAL = '#38bfa1', TEAL_F = '#e6faf5', TEAL_T = '#065f46';
+    /* No amber anywhere on the board. The three roles a step visual needs to
+       tell apart - what goes in, the thing itself, what comes out - are teal,
+       brand blue and violet, all already in SFDiagramKit's rotation. Amber
+       was here first and read as a warning colour on a card that is not
+       warning about anything. */
+    var VIOLET = '#7c3aed', VIOLET_F = '#f3ebff', VIOLET_T = '#5b21b6';
 
     function sv(s) {
       return String(s == null ? '' : s)
@@ -9297,7 +9302,7 @@
 
       if (note) {
         var ns = fitSize(note, W - 24, 11.5, 600, 8.5);
-        o += T(W / 2, H - 10, note, { size: ns, weight: 600, fill: GOLD_T });
+        o += T(W / 2, H - 10, note, { size: ns, weight: 600, fill: BLUE_T });
       }
       return o + '</svg>';
     }
@@ -9523,7 +9528,7 @@
 
       var o = open(W, H);
       o += column(ins, 6, TEAL, TEAL_F, TEAL_T, true);
-      o += column(outs, W - CHIP_W - 6, GOLD, GOLD_F, GOLD_T, false);
+      o += column(outs, W - CHIP_W - 6, VIOLET, VIOLET_F, VIOLET_T, false);
       o += '<rect x="' + BX + '" y="' + BY + '" width="' + BW + '" height="' + BH +
         '" rx="14" fill="' + BLUE_F + '" stroke="' + BLUE + '" stroke-width="2.2"/>';
 
@@ -9543,7 +9548,7 @@
       }
 
       o += T(6 + CHIP_W / 2, 14, 'IN', { size: 9, weight: 700, fill: TEAL_T });
-      o += T(W - 6 - CHIP_W / 2, 14, 'OUT', { size: 9, weight: 700, fill: GOLD_T });
+      o += T(W - 6 - CHIP_W / 2, 14, 'OUT', { size: 9, weight: 700, fill: VIOLET_T });
       return o + '</svg>';
     }
 
@@ -10103,13 +10108,20 @@ var SFBoard = (function () {
 
   /* ── §2 tokens ─────────────────────────────────────────────────────────── */
 
-  /* StudyFlow Apex palette. Three hues only: Soft Navy carries structure and
-     headings, Deep Slate carries body copy, Accent Gold marks the one thing on
-     the board that matters most. Everything else is a tint of those, so the
-     board never introduces a fourth colour. */
-  var NAVY = '#1F407A', SLATE = '#4F5D75', GOLD = '#E8A851';
+  /* StudyFlow palette. Three hues only: Soft Navy carries structure and
+     headings, Deep Slate carries body copy, and the accent marks the one
+     thing on the board that matters most. Everything else is a tint of those,
+     so the board never introduces a fourth colour.
+
+     The accent was Accent Gold (#E8A851), and it was the wrong call twice
+     over. It is not the product's colour - StudyFlow is brand blue #4a7cf6 -
+     and on a worked example it landed on the step badges, the rail, the
+     connectors, the button and the whole final panel, so the card a learner
+     opens on read as amber. Amber also carries a warning meaning it had no
+     business carrying here: nothing on this board is a caution. */
+  var NAVY = '#1F407A', SLATE = '#4F5D75', BRAND = '#4A7CF6';
   var INK = NAVY, MUTED = SLATE, RULE = '#DCE2EC', FAINT = '#F5F7FB';
-  var ACCENT = GOLD, ACCENT_SOFT = '#FDF3E3';
+  var ACCENT = BRAND, ACCENT_SOFT = '#EAF1FF', ACCENT_INK = '#1E40AF';
 
   /* One restrained hue per index. Minimal means colour carries meaning
      (which beat am I on) rather than decoration. */
@@ -10118,10 +10130,10 @@ var SFBoard = (function () {
   var TONES = [
     { line: NAVY,      fill: '#EDF2FA', ink: NAVY },
     { line: SLATE,     fill: '#F0F2F6', ink: '#3A465A' },
-    { line: GOLD,      fill: '#FDF3E3', ink: '#8A5E15' },
+    { line: BRAND,     fill: ACCENT_SOFT, ink: ACCENT_INK },
     { line: '#2F5694', fill: '#EAF0F9', ink: '#1A3768' },
     { line: '#66748C', fill: '#F2F4F8', ink: '#44506480'.slice(0, 7) },
-    { line: '#C99340', fill: '#FCF0DF', ink: '#7A5312' }
+    { line: '#6E93E8', fill: '#EEF3FD', ink: '#2C4F9E' }
   ];
   function tone(i) { return TONES[((i % TONES.length) + TONES.length) % TONES.length]; }
 
@@ -10282,7 +10294,7 @@ var SFBoard = (function () {
       // Classical column
       o = '<path d="M6 10 H40"/><path d="M9 10 V36"/><path d="M17 10 V36"/>' +
           '<path d="M25 10 V36"/><path d="M33 10 V36"/><path d="M4 36 H42"/>' +
-          '<path d="M8 6 H38 L40 10 H6 Z" fill="' + GOLD + '" fill-opacity=".22" stroke="' + NAVY + '"/>';
+          '<path d="M8 6 H38 L40 10 H6 Z" fill="' + BRAND + '" fill-opacity=".22" stroke="' + NAVY + '"/>';
     } else if (/dna|gene|cell|biolog|organism|evolution|hered/.test(k)) {
       // Double helix
       o = '<path d="M14 6 C30 14 14 24 30 32 C14 36 30 40 30 42"/>' +
@@ -10293,17 +10305,17 @@ var SFBoard = (function () {
       o = '<ellipse cx="22" cy="24" rx="17" ry="7"/>' +
           '<ellipse cx="22" cy="24" rx="17" ry="7" transform="rotate(60 22 24)"/>' +
           '<ellipse cx="22" cy="24" rx="17" ry="7" transform="rotate(120 22 24)"/>' +
-          '<circle cx="22" cy="24" r="3.6" fill="' + GOLD + '" stroke="' + NAVY + '"/>';
+          '<circle cx="22" cy="24" r="3.6" fill="' + BRAND + '" stroke="' + NAVY + '"/>';
     } else if (/math|algebra|calculus|equation|geometry|number|function|statistic/.test(k)) {
       // Axis and curve
       o = '<path d="M8 40 V8"/><path d="M8 40 H40"/>' +
-          '<path d="M11 35 C20 35 20 14 34 12" stroke="' + GOLD + '" stroke-width="2.2"/>' +
-          '<circle cx="34" cy="12" r="2.6" fill="' + GOLD + '" stroke="none"/>';
+          '<path d="M11 35 C20 35 20 14 34 12" stroke="' + BRAND + '" stroke-width="2.2"/>' +
+          '<circle cx="34" cy="12" r="2.6" fill="' + BRAND + '" stroke="none"/>';
     } else if (/econom|market|supply|demand|trade|business|finance/.test(k)) {
       // Trend bars
       o = '<path d="M8 40 H40"/><path d="M13 40 V28"/><path d="M21 40 V20"/>' +
           '<path d="M29 40 V26"/><path d="M37 40 V13"/>' +
-          '<path d="M11 24 L21 15 L29 21 L39 9" stroke="' + GOLD + '" stroke-width="2.2"/>';
+          '<path d="M11 24 L21 15 L29 21 L39 9" stroke="' + BRAND + '" stroke-width="2.2"/>';
     } else if (/english|literat|poem|novel|writing|essay|language|grammar/.test(k)) {
       // Open book
       o = '<path d="M6 12 C14 8 20 8 24 12 C28 8 34 8 42 12 V36 C34 32 28 32 24 36 C20 32 14 32 6 36 Z"/>' +
@@ -10316,12 +10328,12 @@ var SFBoard = (function () {
       // Brain
       o = '<path d="M22 10 C15 8 9 12 10 18 C5 21 6 28 11 30 C11 37 18 40 22 36 Z"/>' +
           '<path d="M26 10 C33 8 39 12 38 18 C43 21 42 28 37 30 C37 37 30 40 26 36 Z"/>' +
-          '<path d="M24 12 V36" stroke="' + GOLD + '"/>';
+          '<path d="M24 12 V36" stroke="' + BRAND + '"/>';
     } else {
       // Lightbulb — the general-study mark
       o = '<path d="M24 8 C16 8 11 14 11 21 C11 26 14 29 16 32 H32 C34 29 37 26 37 21 C37 14 32 8 24 8 Z"/>' +
           '<path d="M18 36 H30"/><path d="M20 40 H28"/>' +
-          '<path d="M24 18 V28" stroke="' + GOLD + '" stroke-width="2.2"/>';
+          '<path d="M24 18 V28" stroke="' + BRAND + '" stroke-width="2.2"/>';
     }
     return open(o);
   }
@@ -10783,7 +10795,7 @@ var SFBoard = (function () {
         '" r="12" fill="#FFFFFF" stroke="' + (last ? ACCENT : NAVY) +
         '" stroke-width="1.6"/>';
       inner += text(NUM_X, r.y + 24, String(i + 1),
-        { size: SMALL + 1, weight: 700, fill: last ? '#8A5E15' : NAVY });
+        { size: SMALL + 1, weight: 700, fill: last ? ACCENT_INK : NAVY });
 
       /* Equation, then the reason directly beneath it in the same column. */
       var ty = r.y + 14 + EQ * 0.72;
@@ -10935,7 +10947,7 @@ var SFBoard = (function () {
     /* Header: subject mark in white, topic, hairline. */
     var icon = subjectIcon(subject, 40, 34, 42)
       .replace(new RegExp(NAVY, 'g'), '#FFFFFF')
-      .replace(new RegExp(GOLD, 'g'), GOLD);
+      .replace(new RegExp(BRAND, 'g'), '#9FC0F0');
     var tl = wrap(topic, W2 - 240, 27, 700, 2);
     var headTxt = '';
     for (k = 0; k < tl.length; k++) {
@@ -10950,7 +10962,7 @@ var SFBoard = (function () {
     /* Connectors first so nodes paint over their ends. */
     var beat = 0, placed = [];
     for (i = 0; i < pts.length; i++) {
-      var t = tone(i), col = i % 3 === 2 ? GOLD : '#9FC0F0';
+      var t = tone(i), col = i % 3 === 2 ? '#CFE0FA' : '#9FC0F0';
       var inner = '';
       if (i > 0) {
         var a = pts[i - 1], b = pts[i];
@@ -11389,7 +11401,7 @@ var SFBoard = (function () {
       var hg = '';
       for (k = 0; k < hl.length; k++) {
         hg += text(PW / 2, headTop + hs * 0.82 + k * hs * 1.22, hl[k],
-                   { size: hs, weight: 700, fill: last ? '#8A5E15' : INK });
+                   { size: hs, weight: 700, fill: last ? ACCENT_INK : INK });
       }
       inner += '<g class="sfb-wline">' + hg + '</g>';
 
@@ -11672,11 +11684,11 @@ var SFBoard = (function () {
   '.sfb-prose .content-text p{margin:0;}' +
   '.sfb-prose .content-text strong{color:' + NAVY + ';font-weight:700;}' +
   '.sfb-note{border-radius:12px;padding:12px 14px;}' +
-  '.sfb-note.is-trap{background:#FDF3E3;}' +
+  '.sfb-note.is-trap{background:#FDECEC;}' +
   '.sfb-note.is-anchor{background:#EDF2FA;}' +
   '.sfb-tag{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;' +
     'text-transform:uppercase;margin-bottom:4px;}' +
-  '.sfb-note.is-trap .sfb-tag{color:#8A5E15;}' +
+  '.sfb-note.is-trap .sfb-tag{color:#991B1B;}' +
   '.sfb-note.is-anchor .sfb-tag{color:' + NAVY + ';}' +
   '.sfb-svg{display:block;width:100%;height:auto;}' +
 
@@ -11950,9 +11962,35 @@ var SFBoard = (function () {
       } else if (ev.key === 'ArrowLeft') { go(at - 1, true); ev.preventDefault(); }
     };
 
+    /* Both return paths hand back the same controller. */
+    function controller() {
+      return {
+        el: wrapEl,
+        beats: scene.beats,
+        type: scene.type,
+        go: function (n) { go(n, true); },
+        showAll: function () { go(scene.beats, true); },
+        destroy: function () {
+          destroyed = true; stop();
+          if (wrapEl.parentNode) wrapEl.parentNode.removeChild(wrapEl);
+        }
+      };
+    }
+
     paint();
     /* Hold the reveal until the board is actually on screen, so a learner does
-       not scroll down to an animation that already finished. */
+       not scroll down to an animation that already finished.
+
+       A manual scene is the exception and must NOT be gated. There is no
+       autoplay to protect - beat 1 is simply its resting state - and while the
+       board waited at beat 0 it drew no panel at all while the counter read
+       "1 / 4", because paint() prints Math.max(at, 1). So the card claimed to
+       be on the first step, showed nothing, and spent the learner's first
+       Next click arriving at the step it already said it was on. It looked
+       fine in a normal session only because the observer fires immediately
+       when the card opens at the top of the viewport. */
+    if (scene.manual) { go(1); return controller(); }
+
     var started = false;
     function start() { if (!started) { started = true; autoplay(); } }
     try {
@@ -11966,17 +12004,7 @@ var SFBoard = (function () {
       } else start();
     } catch (e) { start(); }
 
-    return {
-      el: wrapEl,
-      beats: scene.beats,
-      type: scene.type,
-      go: function (n) { go(n, true); },
-      showAll: function () { go(scene.beats, true); },
-      destroy: function () {
-        destroyed = true; stop();
-        if (wrapEl.parentNode) wrapEl.parentNode.removeChild(wrapEl);
-      }
-    };
+    return controller();
   }
 
   return {
