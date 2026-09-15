@@ -47,6 +47,13 @@ while the module itself tested fine from the console.
 - Fonts: Instrument Serif (headings), DM Sans (body)
 - Card hover: blue border only. **No pop/scale transform** — this was a deliberate
   decision, don't reintroduce it.
+- **No amber on either whiteboard.** It was in three places and only fixing all
+  three worked: `SFBoard`'s accent (`ACCENT` was Accent Gold), the OUT column of
+  `SFStepVisual.inOut`, and — the one that kept it coming back — the 4th entry
+  of `SFDiagramKit`'s `PAL` rotation, which any diagram with 4+ items handed a
+  node to. Amber stays where it *means* something: hints, flagged questions, the
+  unsure button, the struggling header. Check by rendering and scanning output
+  for hues 25–70°, never by grepping source.
 
 ## Pricing
 
@@ -65,7 +72,8 @@ This is the highest-risk function in the codebase. Read it fully before editing.
 
 The flow:
 
-1. Opening cards — welcome, whiteboard brief, lesson, key terms
+1. Opening cards — welcome, whiteboard **outline**, whiteboard **worked**,
+   lesson, key terms
 2. Pre-test (day 1 only) — 3 questions drawn from `simpleQuestions`
 3. Main loop over `regularQuestions` (everything **not** in `SPECIAL_TYPES`)
 4. Targeted injectors splice in each special type at fixed positions
@@ -498,9 +506,30 @@ Four parametric builders, chosen from what the step actually contains:
 | `jumpLine` | one arithmetic move | the two numbers, as a jump along a line |
 | `angleArc` | a named angle | its real measure |
 | `inOut` | the step names what goes in and what comes out | the nouns either side of the verb |
+| `areaModel` | a step about expanding `a(b + c)` | the bracket, as a partitioned rectangle |
+| `trendGraph` | the step claims one quantity moves with another | both axis names, read out of the sentence |
 | `progressStrip` | anything else | the real step labels, with this one lit |
 
 All of them return null rather than draw an empty frame.
+
+Two ordering rules inside the quantitative branch, both paid for:
+
+- **`areaModel` is tried BEFORE `balance`, but only when the step's TITLE says
+  it is expanding.** `2x + 10 = 18` splits into two sides perfectly well, so
+  the balance answered first and the one step whose whole point is the
+  distribution was drawn as a pair of pans — true, and silent about what just
+  happened. Matching the *reason* text instead of the title was worse: a
+  distribute problem mentions brackets on nearly every line ("until it is
+  expanded", "inside the bracket is 9"), so three steps of five got the area
+  model, including the two that want the balance.
+- **The bracket comes from `ctx.prevLine` when the step's own line no longer
+  has one.** An expand step prints the *result* of the expansion, so the
+  bracket it is explaining is the row above.
+
+`trendGraph` names both axes from the sentence — the driver after
+*as/when/with*, and the quantity from the step's own title — and declines when
+either is missing or the direction is ambiguous. An axis with a guessed name
+states something the notes never said.
 
 **The 21 curated templates are deliberately NOT in this chain.** Their patterns
 are written to match a whole day's topic string, so against one sentence they
@@ -556,8 +585,14 @@ Three entry points:
 | Lesson-card replacement | `fromDay(day)` | **Returns null on every subject — dormant.** Pre-existing, falls back safely to the normal lesson card. |
 | Wrong-answer walkthrough | `fromWrongAnswer(q, day)` | Active |
 
-12 scenes: `hero`, `brief`, `map`, `chart`, `pyramid`, `steps`, `cycle`,
-`compare`, `timeline`, `parts`, `equation`, **`worked`**.
+11 scenes: `hero`, `brief`, `map`, `chart`, `pyramid`, `steps`, `cycle`,
+`compare`, `timeline`, `parts`, **`worked`**.
+
+`equation` is **gone** — deleted, not parked. It drew the numbered column
+running down the card, and leaving it in place "in case" was wrong twice over:
+`briefFor`'s maths branch and `autoScene` could both still route into it, so
+the card the sideways board replaced was still reachable. `equation`, `math`
+and `formula` now alias to `worked`.
 
 `briefFor` picks a scene by subject and topic keywords. Two things are required
 for a scene to build: the right `type` **and** the data that scene reads. Setting
@@ -571,6 +606,34 @@ and returns null if under ~60% resolve. That's correct; the fallback handles it.
 **Critical:** the card handler skips to the next card when `render()` returns
 falsy. A scene that builds but returns false shows the learner *nothing*, with no
 error. Always verify `render()` returns true, not just that `build()` works.
+
+### The opening sequence: outline, then worked
+
+`buildOpeningBoard()` returns an **array**, and the queue is:
+
+```
+welcome  ->  sfwb-outline  ->  sfwb-brief  ->  lesson
+             (the map)        (the method)
+```
+
+`outlineFor(day, subject)` builds the outline from the day's `steps`, else its
+`concepts`, else its `pillars` — a numbered row per idea, label and detail. It
+is the `steps` scene, and it is the card that answers "what is today about".
+The worked board then teaches one piece of it.
+
+Opening straight onto step 1 of a worked solution gave the learner no map of
+where that step sat, which is what the outline fixes.
+
+Either card can be absent — a day with no procedure and no concepts gets no
+outline, a day the board cannot build for gets no worked card — and
+`buildOpeningBoard` returns `[]` when neither builds, so the session simply
+starts on the lesson. Three places must agree that `sfwb-outline` is a
+teaching card: the `TEACHING` map in `applyFeynmanOrder`, the `renderCard`
+dispatch in the integration layer, and the queue loop.
+
+The outline is revealed at **420ms** a row rather than the standard 1500ms
+(`spec.outline` sets the pace). A six-row outline at the normal pace spends
+nine seconds mostly blank, which is the opposite of orienting.
 
 ### `Scene.worked` — the sideways worked example
 
@@ -697,6 +760,13 @@ What to check after any `buildQueue` or renderer change:
 14. The opening board is `worked` or a subject scene (`map`, `timeline`,
     `compare`, `cycle`, `parts`, `steps`) — **never `brief`/`hero`**, which is
     the identical generic node card every subject used to open on
+14b. `sfwb-outline` comes **before** `sfwb-brief` and the two are adjacent,
+    directly after `welcome`
+14c. **No warm hue (25–70°, sat > 0.22) in any rendered board**, on any
+    subject, on the opening board or the wrong-answer walkthrough
+14d. Nothing resolves to the deleted `equation` scene: `resolveType` sends
+    `equation`, `math` and `formula` to `worked`, and no `briefFor` or
+    `fromWrongAnswer` spec on any subject comes back typed `equation`
 15. Every panel of a `worked` board carries a picture, and no `.sfb-wvis` slot
     is empty
 16. A maths board's equations appear nowhere in `day.questions` (invariant 7,
@@ -744,11 +814,14 @@ frontend and `api/*.js` together. There is no build step, so a push is the deplo
   no generated plan has come back carrying the field yet. Check the first one
   for step `line` lengths, and for whether it honours "not one of the questions
   below" — that rule is prompt-enforced only, with no validator behind it.
-- **Concept-only days lean on `progressStrip`.** When a day has concepts but no
-  procedure, most panels get the strip, because a single term genuinely has
-  little to draw. A model-supplied `workedExample` is what fixes those days.
-- `Scene.equation` is now unreachable — kept, with a note, in case the vertical
-  form is ever wanted again.
+- **Concept-only days still lean on `progressStrip`.** `areaModel` and
+  `trendGraph` converted the expansion and trend steps, but a day of bare
+  definitions has genuinely little to draw per step — a term and its meaning is
+  not a shape. Measured across the ten fixtures, the non-maths worked boards are
+  roughly half strip. A model-supplied `workedExample`, which walks a real
+  instance rather than a list of terms, is the fix; more builders are not.
+- `Scene.equation` has been **deleted**, and every route into it now goes to
+  `worked`. Parking it unused was not enough: two live paths still reached it.
 
 ## Conventions
 

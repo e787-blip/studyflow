@@ -1145,7 +1145,7 @@
     }
 
     /* Where does the teaching end and practice begin? */
-    var TEACHING = { welcome: 1, lesson: 1, terms: 1, 'sfwb-brief': 1,
+    var TEACHING = { welcome: 1, lesson: 1, terms: 1, 'sfwb-brief': 1, 'sfwb-outline': 1,
                      'pretest-intro': 1, 'pretest-done': 1,
                      'review-intro': 1, 'review-done': 1, 'interleave-intro': 1 };
     var firstPractice = rest.length;
@@ -1310,15 +1310,31 @@
      students trip, and where it shows up in the world. Built before the queue
      so it is always card one; if the day carries nothing real to say, the card
      is skipped rather than shown empty. */
+  /* Returns the opening whiteboard cards, in order, as an ARRAY - the
+     overview first, then the worked example.
+
+     The overview is the map ("here is what today covers, one idea per row")
+     and the worked board is the method. Opening straight on step 1 of a
+     worked solution gave the learner no sense of where that step sat. Either
+     can be missing: a day with no procedure and no concepts gets no outline,
+     a day the board cannot build for gets no worked card, and a day with
+     neither returns an empty array and the session simply starts on the
+     lesson. */
   function buildOpeningBoard() {
+    var cards = [];
     try {
-      if (!window.SFWhiteboard || !window.SFWhiteboard.briefFor) return null;
+      if (!window.SFWhiteboard || !window.SFWhiteboard.briefFor) return cards;
       var subj = (typeof day !== 'undefined' && day && day.subject) ||
                  (window.SFStore && window.SFStore.subject) || '';
+
+      if (typeof window.SFWhiteboard.outlineFor === 'function') {
+        var outline = window.SFWhiteboard.outlineFor(day || {}, subj);
+        if (outline) cards.push({ type: 'sfwb-outline', lesson: outline });
+      }
       var spec = window.SFWhiteboard.briefFor(day || {}, subj);
-      if (!spec) return null;
-      return { type: 'sfwb-brief', lesson: spec };
-    } catch (e) { return null; }
+      if (spec) cards.push({ type: 'sfwb-brief', lesson: spec });
+    } catch (e) { /* a board is never worth losing the session over */ }
+    return cards;
   }
 
   function buildQueue() {
@@ -1416,7 +1432,7 @@
        It is the procedure the lesson then walks through: what the topic rests
        on, where learners trip, and where it shows up. Sitting here it primes
        the lesson instead of pre-empting the pre-test. */
-    if (openingBoard) sessionCards.push(openingBoard);
+    for (var ob = 0; ob < openingBoard.length; ob++) sessionCards.push(openingBoard[ob]);
 
     if (day.content) sessionCards.push({ type: 'lesson' });
     if (dayIndex === 0 && day.keyTerms && day.keyTerms.length) sessionCards.push({ type: 'terms' });
@@ -10203,7 +10219,190 @@
       return o + '</svg>';
     }
 
-    /* ── 5. PROGRESS STRIP ─────────────────────────────────────────────────
+    /* ── 5. AREA MODEL ─────────────────────────────────────────────────────
+       a(b + c) drawn as a rectangle cut into columns. The multiplier is the
+       height, each term is a column width, and each cell holds its own
+       product - so "multiply everything inside" stops being a rule to
+       remember and becomes the shape of the picture.
+
+       This exists because an expansion has no equals sign, so splitEquation
+       rejects it and the balance cannot draw it. Every distribute step used
+       to fall through to the generic strip. */
+    function parseDistribute(line) {
+      var m = cl(line).match(/^(-?\d+)\s*\(\s*([^()]+?)\s*\)$/);
+      if (!m) return null;
+      var mult = m[1], inner = m[2];
+      /* Split on + / - while keeping the sign with the term that follows. */
+      var parts = [], re = /([+-]?)\s*([^+\-]+)/g, mm;
+      while ((mm = re.exec(inner))) {
+        var body = cl(mm[2]);
+        if (body) parts.push({ sign: mm[1] === '-' ? '-' : '+', body: body });
+      }
+      if (parts.length < 2 || parts.length > 3) return null;
+      return { mult: mult, parts: parts };
+    }
+
+    /* 4 x 2 -> 8, 4 x "x" -> 4x, 4 x "2x" -> 8x. Returns '' when the term is
+       not a shape this can multiply, and the caller then declines. */
+    function mulTerm(a, body) {
+      var n = Number(a);
+      if (!isFinite(n)) return '';
+      if (/^\d+$/.test(body)) return String(n * Number(body));
+      var v = body.match(/^(\d*)([A-Za-z][A-Za-z0-9^]*)$/);
+      if (v) {
+        var coef = v[1] === '' ? 1 : Number(v[1]);
+        var k = n * coef;
+        return (k === 1 ? '' : String(k)) + v[2];
+      }
+      return '';
+    }
+
+    /* The first a(b + c) group inside a longer line, so "2(x + 5) = 18" can
+       still be drawn as an area model of its bracket. */
+    var EXPAND_WORDS = /\bexpand\w*|\bdistribut\w*|multiply (?:out|each|everything)|\bbrackets?\b|\bparenthes/i;
+    function bracketIn(line) {
+      var m = cl(line).match(/(-?\d+\s*\([^()]+\))/);
+      return m ? cl(m[1]).replace(/\s+\(/, '(') : null;
+    }
+
+    function areaModel(line, note) {
+      var d = parseDistribute(line);
+      if (!d) return null;
+      var i, prods = [];
+      for (i = 0; i < d.parts.length; i++) {
+        var pr = mulTerm(d.mult, d.parts[i].body);
+        if (!pr) return null;              /* cannot multiply it honestly */
+        prods.push(pr);
+      }
+
+      var n = d.parts.length;
+      var X0 = 66, Y0 = 54, BH = 78;
+      /* Column widths follow the wider of the term and its product, so no
+         cell ever has to shrink its own text to fit. */
+      var wids = [], total = 0;
+      for (i = 0; i < n; i++) {
+        var need = Math.max(measure(d.parts[i].body, 15, 700),
+                            measure(prods[i], 16, 700)) + 34;
+        wids.push(Math.max(72, need)); total += wids[i];
+      }
+      /* The sum line and the note are separate rows. They were both placed by
+         formula and both landed on y=162, so the result printed straight
+         through the caption - invisible in the source, obvious on screen. */
+      var hasNote = !!cl(note);
+      var SUMY = Y0 + BH + 30;
+      var W = Math.max(320, X0 + total + 22), H = hasNote ? SUMY + 30 : SUMY + 14;
+      var o = open(W, H);
+
+      /* The multiplier, as the height of the block. */
+      o += '<path d="M' + (X0 - 16) + ' ' + Y0 + ' l-6 0 l0 ' + BH + ' l6 0" fill="none" stroke="' +
+        RULE + '" stroke-width="1.6"/>';
+      o += T(X0 - 26, Y0 + BH / 2 + 5, d.mult, { size: 16, weight: 700, fill: INK, anchor: 'end' });
+
+      var x = X0;
+      for (i = 0; i < n; i++) {
+        var w = wids[i];
+        o += '<rect x="' + r1(x) + '" y="' + Y0 + '" width="' + r1(w) + '" height="' + BH +
+          '" rx="10" fill="' + (i % 2 ? '#f5f8ff' : BLUE_F) + '" stroke="' + BLUE +
+          '" stroke-width="1.8"/>';
+        /* The term carries its own sign, and so does its product.
+           Labelling the column "5" with a separate minus glyph off to one
+           side, then printing a bare "15" in the cell, said 3 x 5 = 15 next
+           to a subtraction - the cell has to read -15 or the picture
+           contradicts the sum underneath it. */
+        var lab = (i > 0 ? d.parts[i].sign + ' ' : '') + d.parts[i].body;
+        var val = (d.parts[i].sign === '-' ? '-' : '') + prods[i];
+        var ts = fitSize(lab, w - 14, 15, 700, 10);
+        o += T(x + w / 2, Y0 - 14, lab, { size: ts, weight: 700, fill: BLUE_T });
+        var ps = fitSize(val, w - 18, 16, 700, 10);
+        o += T(x + w / 2, Y0 + BH / 2 + 6, val, { size: ps, weight: 700, fill: INK });
+        x += w;
+      }
+
+      /* The result, spelled out under the block. */
+      var sum = prods[0];
+      for (i = 1; i < n; i++) sum += ' ' + d.parts[i].sign + ' ' + prods[i];
+      var ss = fitSize(sum, W - 40, 15, 700, 10);
+      o += T(W / 2, SUMY, sum, { size: ss, weight: 700, fill: BLUE_T });
+      if (hasNote) {
+        var ns = fitSize(cl(note), W - 24, 11, 600, 8.5);
+        o += T(W / 2, SUMY + 22, cl(note), { size: ns, weight: 600, fill: MUTED });
+      }
+      return o + '</svg>';
+    }
+
+    /* ── 6. TREND ──────────────────────────────────────────────────────────
+       "It falls as price rises" is a claim about a relationship, and a
+       relationship is a line. Both axis names are read out of the sentence -
+       the driver after as/when/with, and the quantity from the step's own
+       title - and it declines when either is missing, because an axis with a
+       guessed name states something the notes never said. */
+    var TREND_DOWN = /\b(fall|falls|fell|drop|drops|decreas\w*|declin\w*|shrink\w*|lower\w*|reduce\w*)\b/i;
+    var TREND_UP   = /\b(rise|rises|rose|increas\w*|grow\w*|climb\w*|higher|expand\w*)\b/i;
+
+    function trendFrom(text, title) {
+      var t = cl(text), y = cl(title);
+      if (!t || !y) return null;
+      /* The driver: what the sentence says this responds TO. */
+      var m = t.match(/\b(?:as|when|with|if)\s+(?:the\s+|an?\s+)?([A-Za-z][A-Za-z\s]{2,26}?)\s+(?:rise|rises|fall|falls|increas\w*|decreas\w*|grow\w*|drop\w*|go(?:es)?\s+up|go(?:es)?\s+down)\b/i);
+      if (!m) return null;
+      var x = cl(m[1]);
+      if (!x || x.length > 26) return null;
+
+      /* Direction of the RESPONSE, read from the clause before the driver. */
+      var head = t.slice(0, m.index);
+      var down = TREND_DOWN.test(head), up = TREND_UP.test(head);
+      if (down === up) return null;          /* ambiguous or silent - decline */
+      if (y.length > 26) y = y.slice(0, 24).replace(/\s\S*$/, '');
+      return { y: y, x: x, shape: down ? 'fall' : 'rise' };
+    }
+
+    function trendGraph(yLabel, xLabel, shape, note) {
+      yLabel = cl(yLabel); xLabel = cl(xLabel);
+      if (!yLabel || !xLabel) return null;
+      var W = 324, H = 186;
+      var L = 56, Rt = 300, TOP = 34, BOT = 144;   /* the plot box */
+      var o = open(W, H);
+
+      o += '<defs><marker id="svTrA" markerWidth="7" markerHeight="7" refX="6" refY="3.5" ' +
+        'orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="' + MUTED + '"/></marker></defs>';
+      /* Axes, drawn past the plot box so the arrowheads sit clear of the curve. */
+      o += '<line x1="' + L + '" y1="' + BOT + '" x2="' + L + '" y2="' + (TOP - 10) +
+        '" stroke="' + MUTED + '" stroke-width="1.6" marker-end="url(#svTrA)"/>';
+      o += '<line x1="' + L + '" y1="' + BOT + '" x2="' + (Rt + 12) + '" y2="' + BOT +
+        '" stroke="' + MUTED + '" stroke-width="1.6" marker-end="url(#svTrA)"/>';
+
+      /* Every control point is inside the plot box, so the curve is too - a
+         quadratic never leaves the hull of its three points. */
+      var path;
+      if (shape === 'rise') {
+        path = 'M' + (L + 12) + ' ' + (BOT - 8) + ' Q' + ((L + Rt) / 2 + 24) + ' ' +
+               (BOT - 18) + ' ' + Rt + ' ' + (TOP + 6);
+      } else {
+        path = 'M' + (L + 12) + ' ' + (TOP + 6) + ' Q' + ((L + Rt) / 2 - 10) + ' ' +
+               (BOT - 26) + ' ' + Rt + ' ' + (BOT - 8);
+      }
+      o += '<path d="' + path + '" fill="none" stroke="' + BLUE + '" stroke-width="2.6" ' +
+        'stroke-linecap="round"/>';
+      /* A dot at the end the eye should finish on. */
+      o += '<circle cx="' + Rt + '" cy="' + (shape === 'rise' ? TOP + 6 : BOT - 8) +
+        '" r="4.5" fill="' + BLUE + '"/>';
+
+      /* Axis names: y above its axis, x under the right end. Horizontal, not
+         rotated - a rotated label is the first thing that becomes unreadable
+         when the board scales down on a phone. */
+      var ys = fitSize(yLabel, 150, 11.5, 700, 9);
+      o += T(L - 4, TOP - 18, yLabel, { size: ys, weight: 700, fill: INK, anchor: 'start' });
+      var xs = fitSize(xLabel, 150, 11.5, 700, 9);
+      o += T(Rt + 12, BOT + 20, xLabel, { size: xs, weight: 700, fill: INK, anchor: 'end' });
+
+      if (cl(note)) {
+        var ns2 = fitSize(cl(note), W - 24, 11, 600, 8.5);
+        o += T(W / 2, H - 8, cl(note), { size: ns2, weight: 600, fill: MUTED });
+      }
+      return o + '</svg>';
+    }
+
+    /* ── 7. PROGRESS STRIP ─────────────────────────────────────────────────
        The whole procedure with this step lit. The fallback, but drawn from
        the real step labels, so it says something true and it changes on every
        step. Needs two steps: a strip of one is a box. */
@@ -10398,11 +10597,41 @@
             the subject because "E = mc^2" quoted in a history lesson is not a
             step of algebra being worked. */
       if (ctx.quantitative) {
+        /* The area model is tried BEFORE the balance, but only on a step that
+           is about expanding. Order matters: "2x + 10 = 18" splits into two
+           sides perfectly well, so the balance would answer first and the one
+           step whose whole point is the distribution would be drawn as a pair
+           of pans - true, but silent about what just happened.
+
+           The bracket comes from this line when it still has one, otherwise
+           from the previous line, because an expand step prints the result of
+           the expansion and the bracket it is explaining is the row above. */
+        /* Matched against the TITLE only. The reason text mentions brackets
+           on almost every step of a distribute problem - "The problem" says
+           "until it is expanded", "Check it" says "inside the bracket is 9" -
+           so including it handed the area model to three steps out of five,
+           including the two that want the balance. A title is short and says
+           what the step DOES. */
+        if (EXPAND_WORDS.test(cl(step.title))) {
+          var br = bracketIn(line) || bracketIn(ctx.prevLine);
+          if (br) {
+            /* No caption: the panel already prints the step's reason
+               directly beneath the picture, and both said the same thing. */
+            svg = areaModel(br, '');
+            if (svg) return svg;
+          }
+        }
+
         var eq = splitEquation(line);
         if (eq) {
           svg = balance(eq.lhs, eq.rhs, bothSidesNote(why));
           if (svg) return svg;
         }
+
+        /* A bare expansion has no equals sign at all, so the balance declines
+           it and it would otherwise reach the generic strip. */
+        svg = areaModel(bracketIn(line) || line, '');
+        if (svg) return svg;
       }
 
       /* 2. A named angle, at its real measure. */
@@ -10438,7 +10667,18 @@
         }
       }
 
-      /* 5. The procedure, with this step lit.
+      /* 5. A relationship, as a line. Ungated on subject: a claim that one
+            thing moves with another is the same shape in economics, biology
+            and psychology. trendFrom declines unless the sentence names both
+            the driver and the direction, so a guessed axis cannot reach the
+            board. */
+      var tr = trendFrom(text, step.title || ctx.topic);
+      if (tr) {
+        svg = trendGraph(tr.y, tr.x, tr.shape, '');
+        if (svg) return svg;
+      }
+
+      /* 6. The procedure, with this step lit.
 
             The 21 curated templates were tried here once, between in/out and
             this, and they are deliberately NOT any more. Their patterns are
@@ -10466,6 +10706,11 @@
       jumpLine: jumpLine,
       angleArc: angleArc,
       inOut: inOut,
+      areaModel: areaModel,
+      bracketIn: bracketIn,
+      trendGraph: trendGraph,
+      trendFrom: trendFrom,
+      parseDistribute: parseDistribute,
       progressStrip: progressStrip,
       nest: nest,
       splitEquation: splitEquation,
@@ -11385,105 +11630,17 @@ var SFBoard = (function () {
     return { svg: svgOpen(w, h2) + o + '</svg>', beats: n, w: w, h: h2 };
   };
 
-  /* EQUATION — worked steps as a numbered column running DOWN the card.
+  /* The EQUATION scene is gone. It laid a solution out as a numbered column
+     running DOWN the card: every line visible at once, so nothing arrived,
+     and by step four the first line had scrolled off the top. It is a printed
+     answer, not a walkthrough. Scene.worked replaced it and runs across.
 
-     Nothing reaches this any more. It was the opening board and the
-     wrong-answer walkthrough; both now use Scene.worked, which runs across and
-     reveals one step at a time. The column showed every line of a solution at
-     once, so nothing arrived and a four-step solution had scrolled its first
-     line off the top by the end - a printed answer rather than a walkthrough.
-
-     Kept, not deleted, in case the vertical form is ever wanted for something
-     genuinely list-shaped. 'equation' still resolves here if a spec asks for
-     it by name; 'working', 'solve' and 'math' alias to 'worked'. */
-  Scene.equation = function (spec) {
-    var raw = spec.lines || spec.items || spec.steps;
-    var items = pairs(raw, 8);
-    if (items.length < 1) return null;
-    var n = items.length, i, k;
-
-    /* Organised as a worked solution rather than a loose stack:
-
-         [n]  |  equation, left-aligned on a shared column
-              |  reason for this step, in the same column beneath
-
-       A step number anchors each line, a rule runs down the left so the eye
-       tracks the sequence, and every equation starts at the same x so the
-       algebra lines up the way it would on paper. The previous version put
-       the reason on the right edge, which pulled the eye away from the maths
-       and broke down entirely when the reason was long. */
-
-    var W2 = 560;
-    var NUM_X = PAD + 15;            // centre of the step badge
-    var COL_X = PAD + 44;            // shared left edge for equations and reasons
-    var TEXT_W = W2 - COL_X - PAD;
-    var EQ = TITLE + 3, RE = SMALL + 0.5;
-
-    var rows = [], y = PAD;
-    for (i = 0; i < n; i++) {
-      var eqL = wrap(items[i].a, TEXT_W, EQ, 700, 2);
-      var reL = items[i].b ? wrap(items[i].b, TEXT_W, RE, 400, 2) : [];
-      var hh = 14 + eqL.length * EQ * 1.28 + (reL.length ? 6 + reL.length * RE * 1.4 : 0);
-      hh = Math.max(hh, 46);
-      rows.push({ eq: eqL, re: reL, h: hh, y: y });
-      y += hh + 10;
-    }
-    var h = y - 10 + PAD;
-
-    var o = '';
-    /* Spine: one continuous rule behind the step badges. Drawn on beat 0 so it
-       is present from the start and the steps appear along it. */
-    if (n > 1) {
-      o += g(0, '<line x1="' + r1(NUM_X) + '" y1="' + r1(rows[0].y + 20) +
-        '" x2="' + r1(NUM_X) + '" y2="' + r1(rows[n - 1].y + rows[n - 1].h - 18) +
-        '" stroke="' + RULE + '" stroke-width="1.6" stroke-linecap="round"/>');
-    }
-
-    /* Highlight the line that carries the result, not simply the final row.
-       A trailing "Check it" beat is guidance, not the answer, and colouring it
-       gold told the eye the wrong thing. */
-    var resultIdx = -1;
-    for (i = n - 1; i >= 0; i--) {
-      if (items[i].a.indexOf('=') !== -1) { resultIdx = i; break; }
-    }
-
-    for (i = 0; i < n; i++) {
-      var r = rows[i], t = tone(i), last = (i === resultIdx);
-      var inner = '';
-
-      /* Highlight the final line: it is the result. */
-      if (last && resultIdx > 0) {
-        inner += '<rect x="' + r1(PAD + 30) + '" y="' + r1(r.y) + '" width="' +
-          r1(W2 - PAD - (PAD + 30)) + '" height="' + r1(r.h) +
-          '" rx="12" fill="' + ACCENT_SOFT + '"/>';
-      }
-
-      /* Step badge. The steps are one sequence, not six unrelated categories,
-         so the badges stay a single neutral colour. Cycling the palette put a
-         gold badge on step 3 that competed with the gold result highlight and
-         made the eye look in the wrong place. */
-      inner += '<circle cx="' + r1(NUM_X) + '" cy="' + r1(r.y + 20) +
-        '" r="12" fill="#FFFFFF" stroke="' + (last ? ACCENT : NAVY) +
-        '" stroke-width="1.6"/>';
-      inner += text(NUM_X, r.y + 24, String(i + 1),
-        { size: SMALL + 1, weight: 700, fill: last ? ACCENT_INK : NAVY });
-
-      /* Equation, then the reason directly beneath it in the same column. */
-      var ty = r.y + 14 + EQ * 0.72;
-      for (k = 0; k < r.eq.length; k++) {
-        inner += text(COL_X, ty + k * EQ * 1.28, r.eq[k],
-          { anchor: 'start', size: EQ, weight: 700, fill: last ? ACCENT : INK });
-      }
-      var ry = ty + r.eq.length * EQ * 1.28 + 2;
-      for (k = 0; k < r.re.length; k++) {
-        inner += text(COL_X, ry + k * RE * 1.4, r.re[k],
-          { anchor: 'start', size: RE, weight: 400, fill: MUTED });
-      }
-
-      o += g(i + 1, inner);
-    }
-    return { svg: svgOpen(W2, h) + o + '</svg>', beats: n, w: W2, h: h };
-  };
+     It was previously kept unused "in case the vertical form is wanted",
+     which turned out to be the wrong call twice over: briefFor’s maths
+     branch and autoScene could both still route into it, so the card it was
+     supposed to have replaced was still reachable. Deleted rather than
+     parked - "equation", "math" and "formula" now alias to worked.
+     See the ALIAS table and CLAUDE.md. */
 
   /* HERO — the opening whiteboard.
 
@@ -12080,6 +12237,11 @@ var SFBoard = (function () {
          be a thumbnail of a diagram, which teaches nothing. */
       if (vH >= 76 && typeof SFStepVisual !== 'undefined') {
         ctx.index = i;
+        /* The step BEFORE this one, because an "expand the bracket" step
+           prints the already-expanded line - the bracket it is talking about
+           is on the previous row. Without this the area model can never draw
+           the one step it exists for. */
+        ctx.prevLine = i > 0 ? (steps[i - 1] && steps[i - 1].line) : '';
         var vis = null;
         try { vis = SFStepVisual.forStep(st, ctx); } catch (e) { vis = null; }
         if (vis) {
@@ -12156,7 +12318,10 @@ var SFBoard = (function () {
     };
   };
 
-  var TYPES = ['hero', 'brief', 'map', 'chart', 'pyramid', 'steps', 'cycle', 'compare', 'timeline', 'parts', 'equation', 'worked'];
+  /* 'equation' is gone: it named the vertical numbered column that the
+     sideways worked example replaced. Removing it from TYPES is what makes
+     resolveType send the name to ALIAS instead of matching it directly. */
+  var TYPES = ['hero', 'brief', 'map', 'chart', 'pyramid', 'steps', 'cycle', 'compare', 'timeline', 'parts', 'worked'];
 
   var ALIAS = {
     overview: 'hero', intro: 'hero', summary: 'hero', brief: 'hero',
@@ -12173,9 +12338,11 @@ var SFBoard = (function () {
     chronology: 'timeline', history: 'timeline', dates: 'timeline', events: 'timeline',
     structure: 'parts', anatomy: 'parts', components: 'parts', labelled: 'parts',
     labeled: 'parts', concept: 'parts', web: 'parts', map: 'parts',
-    math: 'equation', formula: 'equation',
-    /* 'working'/'solve' now mean the sideways worked example, which is what
-       both words describe: a problem being worked, step by step. */
+    /* Everything that names a problem being worked goes to the sideways
+       worked example. 'math', 'formula' and 'equation' pointed at the old
+       vertical column, so a spec naming any of them re-opened the exact card
+       this replaced - the one failure mode worth being absolute about. */
+    math: 'worked', formula: 'worked', equation: 'worked',
     working: 'worked', solve: 'worked', workedexample: 'worked',
     example: 'worked', walkthrough: 'worked'
   };
@@ -12254,8 +12421,11 @@ var SFBoard = (function () {
         numeric < Math.max(2, Math.ceil(items.length * 0.7))) {
       order.push(['timeline', null]);
     }
+    /* A solving spec wants the sideways worked example, not the old vertical
+       column. Scene.worked declines when it has no real steps, and autoScene
+       simply moves to the next candidate, so this cannot strand anything. */
     if (/[=+\u00d7\u00f7]|\bsolve\b|\bderivative\b|\bintegral\b/.test(blob)) {
-      order.push(['equation', null]);
+      order.push(['worked', null]);
     }
     if (/\bcycle\b|\bloop\b|\brepeat|\bfeedback\b|\brenew|\bcircular\b/.test(blob)) {
       order.push(['cycle', null]);
@@ -13131,6 +13301,47 @@ var SFBoard = (function () {
     };
   }
 
+  /** The overview that OPENS the session: the day's ideas laid out as a
+      numbered list, one per row, label and detail.
+
+      It runs before the worked example on purpose. The worked board walks one
+      problem sideways, which is the right shape for teaching a method but the
+      wrong shape for "what is today about" - a learner dropped straight into
+      step 1 of a solution has no map of where it sits. So the session now
+      opens with the whole list, then moves to the animated walkthrough.
+
+      Built from the day's own procedure first, then its concepts, then its
+      pillars. Returns null under two rows, because a list of one is a
+      sentence and the worked board should simply open instead. */
+  function outlineFor(day, subject) {
+    day = day || {};
+    var title = clean(day.title) || clean(subject);
+    var items = itemsFromSteps(list(day.steps));
+
+    if (items.length < 2) {
+      var cps = list(day.concepts), i;
+      items = [];
+      for (i = 0; i < cps.length && items.length < 6; i++) {
+        var c = cps[i];
+        var lab = typeof c === 'string' ? clean(c) : clean(c && (c.name || c.title || c.label));
+        var det = typeof c === 'string' ? '' : clean(c && (c.definition || c.detail || c.description));
+        if (lab) items.push({ label: lab, detail: det });
+      }
+    }
+    if (items.length < 2) {
+      var ps = list(day.pillars || day.corePillars || day.keyPoints), j;
+      items = [];
+      for (j = 0; j < ps.length && items.length < 6; j++) {
+        var pp = ps[j];
+        var l2 = typeof pp === 'string' ? clean(pp) : clean(pp && (pp.label || pp.title || pp.name));
+        var d2 = typeof pp === 'string' ? '' : clean(pp && (pp.detail || pp.body || pp.note));
+        if (l2) items.push({ label: l2, detail: d2 });
+      }
+    }
+    if (items.length < 2) return null;
+    return { type: 'steps', title: title, items: items, outline: true };
+  }
+
   /** Build the opening whiteboard for a session, or null.
       Uses whatever the lesson supplies; falls back to the day's own prose so a
       session still opens with something real rather than a blank board. */
@@ -13273,33 +13484,15 @@ var SFBoard = (function () {
       } else if (/\bcell\b|anatomy|organelle|structure|\bparts\b|components|atom|molecule|skeleton|organ\b/.test(sKey)) {
         boardType = 'parts';
         extra.center = topic;
-      } else if (/\bmath\b|maths|algebra|calculus|equation|solve|solving|arithmetic|fraction|geometry|trigonometr|formula/.test(sKey)) {
-        /* Real equations beat pillar labels here. Pull them from the solving
-           questions the day already generated; without them the equation scene
-           has nothing to write, so fall back rather than draw a blank.
+      /* There is deliberately NO maths branch here any more.
 
-           The answers are deliberately NOT drawn. This board used to push
-           '= ' + qq.answer after each equation, so the card that opens the
-           session displayed the worked solutions to the first two questions
-           the learner was about to be asked - "3x + 7 = 22 / = 5" - before
-           they had attempted either. It went unnoticed because the opening
-           board was never reaching the queue at all (see the init() note at
-           the end of script block 1); the moment that was fixed, the leak
-           became visible on the first maths session.
-
-           Showing the equations themselves is fine and is the point of the
-           card: this is the shape of today's work. Showing what they come out
-           to is not. Worked lines with answers belong on the wrong-answer
-           board, where the learner has already committed to an answer. */
-        var eqLines = [];
-        var qs = list(day.questions);
-        for (i = 0; i < qs.length && eqLines.length < 3; i++) {
-          var qq = qs[i] || {};
-          if (qq.type === 'bigequation' && clean(qq.equation)) {
-            eqLines.push(clean(qq.equation));
-          }
-        }
-        if (eqLines.length >= 2) { boardType = 'equation'; extra.lines = eqLines; }
+         It used to set boardType 'equation', which listed two or three of the
+         day's own equations down the card with no working - the card in the
+         bug report. Maths is served earlier and better by workedFor(), which
+         synthesises a parallel problem and works it to an answer; this branch
+         only ever ran when that had already been tried, so all it could do was
+         show bare equations the learner was about to be asked anyway. Falling
+         through to the concept board below is strictly more use. */
       } else if (/programming|computer science|algorithm|\bcode\b|recursion|\bprocess\b|procedure|method|workflow|conditioning|experiment/.test(sKey)) {
         boardType = 'steps';
       } else if (/\bversus\b|\bvs\b|compared|contrast|difference between|supply and demand/.test(sKey)) {
@@ -13759,7 +13952,12 @@ var SFBoard = (function () {
   function render(mount, spec, onDone) {
     if (!mount || !spec) return false;
     var ctl = null;
-    try { ctl = SFBoard.render(mount, spec, {}); }
+    /* The outline is a map, not a walkthrough: it exists so the learner can
+       see the shape of the day before the worked board teaches one piece of
+       it. Revealed at the standard 1.5s a six-row outline spends nine seconds
+       mostly blank, which is the opposite of orienting. Same animation, just
+       quick enough to land. */
+    try { ctl = SFBoard.render(mount, spec, spec && spec.outline ? { pace: 420 } : {}); }
     catch (e) {
       if (global.console && global.console.warn) {
         global.console.warn('[SFBoard] render failed', e);
@@ -13791,6 +13989,7 @@ var SFBoard = (function () {
     destroy: destroy,
     fromDay: fromDay,
     briefFor: briefFor,
+    outlineFor: outlineFor,
     workedFor: workedFor,
     fromWrongAnswer: fromWrongAnswer,
     adapt: adapt,
@@ -13969,7 +14168,7 @@ var SFBoard = (function () {
     /* Walkthrough requested from a wrong answer. */
     /* Opening whiteboard. Same render path as the walkthrough, so it inherits
        the stepped reveal, the tap targets and the Next control. */
-    if (card && card.type === 'sfwb-brief' && mount) {
+    if (card && (card.type === 'sfwb-brief' || card.type === 'sfwb-outline') && mount) {
       try {
         /* Clear the mount first. SFBoard.render appends, and renderCardInner
            is what normally overwrites #session-card - but this branch returns
