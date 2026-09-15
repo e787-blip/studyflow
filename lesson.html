@@ -2511,11 +2511,13 @@
          'none', so every day where the model skipped the field showed no
          diagram at all. */
       var dgm = diagramForDay(day);
+      var dgmHtml = '';
       if (dgm && dgm.svg) {
-        lessonBody += '<div style="text-align:center;margin-bottom:1rem;padding:.75rem;background:var(--soft);border-radius:14px;">' +
+        dgmHtml = '<div style="text-align:center;margin-bottom:1rem;padding:.75rem;background:var(--soft);border-radius:14px;">' +
           dgm.svg +
           '<div style="font-size:0.68rem;color:var(--muted);margin-top:.4rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">' +
           esc(dgm.caption) + '</div></div>';
+        lessonBody += dgmHtml;
       }
 
       // Lesson text content
@@ -2604,7 +2606,16 @@
              instruction for controls the board already shows - it has its
              own Back/Next/Replay row directly above. The walkthrough
              button is a different thing and stays. */
-          '<div id="wb-mount"></div>', '', 'Got it →', false);
+          /* The DIAGRAM COMES WITH IT. whiteboard.js derives beats on every
+             subject, so this branch always won and the lesson card became the
+             stepped board alone. diagramForDay was still being called a few
+             lines up, still returning a picture on all ten subjects - the
+             hand-drawn leaf, the cell, the neuron - and the result was dropped
+             on the floor of every lesson ever rendered. The board's own first
+             beat draws a 558x68 strip from the kit, which is not the same
+             thing and is not what those templates are for. So the picture goes
+             above the board: look at the thing, then step through it. */
+          dgmHtml + '<div id="wb-mount"></div>', '', 'Got it →', false);
       } else {
         html = buildCard('Today\'s Lesson', day.title || '', false, lessonBody, 'Read carefully', 'Got it →', false);
       }
@@ -8758,6 +8769,89 @@
     var LT = 'font-size:8px;';      // tertiary / micro annotation
 
     // ── BRAIN LOBES ──────────────────────────────────────────────────────────
+    // ── CELL (animal / plant) ────────────────────────────────────────────────
+    /* app.html's VISUAL list has offered {"type":"cell","cellType":"animal"}
+       for a long time and nothing drew it: specFromDayVisual needs an items
+       array, a cell spec has none, so it returned null and the curated matcher
+       had no 'cell' branch to catch it. The picture was requested, generated
+       and thrown away on every cell lesson. This is the branch it was missing.
+
+       Plant and animal share the layout and differ where they actually differ:
+       the plant gets a squared-off wall, a large central vacuole and
+       chloroplasts; the animal gets a round membrane and no wall. Labels sit
+       OUTSIDE the cell with leaders into it, so nothing sits on top of an
+       organelle. */
+    if (/\bcells?\b|organelle|nucleus|cytoplasm|mitochondri|ribosome|vacuole|cell wall|cell membrane|eukaryot|prokaryot/.test(d)) {
+      var plant = /plant|chloroplast|vacuole|cell wall|photosynth/.test(d);
+      var oL = function (x, y, t) {           // label to the LEFT of the cell
+        return '<text x="' + x + '" y="' + y + '" style="' + LP + '" fill="#334155" text-anchor="end">' + t + '</text>';
+      };
+      var oR = function (x, y, t) {           // label to the RIGHT
+        return '<text x="' + x + '" y="' + y + '" style="' + LP + '" fill="#334155">' + t + '</text>';
+      };
+      var lead = function (x1, y1, x2, y2) {
+        return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
+               '" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 3"/>';
+      };
+
+      var o = '<svg viewBox="0 0 490 286" width="100%" style="max-width:500px;display:block;margin:0 auto;' + LF + '">';
+
+      if (plant) {
+        /* Rigid wall, then the membrane just inside it. */
+        o += '<rect x="96" y="44" width="250" height="200" rx="14" fill="#f0fdf4" stroke="#65a30d" stroke-width="4"/>';
+        o += '<rect x="106" y="54" width="230" height="180" rx="10" fill="#ecfdf5" stroke="#16a34a" stroke-width="1.8"/>';
+        /* The vacuole is most of the cell, which is the point of it. */
+        o += '<rect x="126" y="76" width="150" height="136" rx="22" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.8"/>';
+        o += '<text x="201" y="148" style="' + LS + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">vacuole</text>';
+        /* Nucleus, pushed to the edge by the vacuole - as it is in life. */
+        o += '<ellipse cx="302" cy="104" rx="26" ry="22" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.8"/>';
+        o += '<circle cx="302" cy="104" r="8" fill="#7c3aed" opacity=".55"/>';
+        /* Chloroplasts around the rim. */
+        o += '<g fill="#bbf7d0" stroke="#16a34a" stroke-width="1.4">';
+        o += '<ellipse cx="300" cy="170" rx="15" ry="9" transform="rotate(-20 300 170)"/>';
+        o += '<ellipse cx="302" cy="200" rx="15" ry="9" transform="rotate(12 302 200)"/>';
+        o += '<ellipse cx="163" cy="216" rx="15" ry="9" transform="rotate(-8 163 216)"/>';
+        o += '</g>';
+        o += lead(346, 60, 372, 50) + oR(376, 53, 'cell wall');
+        o += lead(330, 98, 372, 92) + oR(376, 95, 'nucleus');
+        o += lead(316, 172, 372, 164) + oR(376, 167, 'chloroplasts');
+        o += lead(118, 96, 84, 104) + oL(80, 107, 'cytoplasm');
+        o += lead(110, 206, 84, 228) + oL(80, 231, 'membrane');
+        o += '<text x="221" y="272" style="' + LT + '" fill="#475569" text-anchor="middle">' +
+             'A plant cell: boxed in by a wall, most of its room taken by one vacuole</text>';
+      } else {
+        /* An organic blob, not a circle: an animal cell has no wall to make
+           it regular. */
+        o += '<path d="M221 46 C288 44 348 82 350 142 C352 202 292 240 221 240 C152 240 92 204 92 143 C92 82 156 48 221 46 Z" ' +
+             'fill="#fef2f8" stroke="#db2777" stroke-width="2.6"/>';
+        o += '<ellipse cx="206" cy="132" rx="50" ry="42" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>';
+        o += '<circle cx="206" cy="132" r="14" fill="#7c3aed" opacity=".5"/>';
+        o += '<text x="206" y="136" style="' + LT + 'font-weight:700;" fill="#4c1d95" text-anchor="middle">nucleus</text>';
+        /* Two mitochondria, each with its folded inner membrane. */
+        o += '<g>';
+        o += '<ellipse cx="292" cy="192" rx="30" ry="15" fill="#ffe4e6" stroke="#e11d48" stroke-width="1.8" transform="rotate(-18 292 192)"/>';
+        o += '<path d="M272 196 q8 -10 16 0 q8 10 16 -2" fill="none" stroke="#e11d48" stroke-width="1.4" transform="rotate(-18 292 192)"/>';
+        o += '<ellipse cx="146" cy="196" rx="26" ry="13" fill="#ffe4e6" stroke="#e11d48" stroke-width="1.8" transform="rotate(14 146 196)"/>';
+        o += '<path d="M130 199 q7 -9 14 0 q7 9 14 -2" fill="none" stroke="#e11d48" stroke-width="1.4" transform="rotate(14 146 196)"/>';
+        o += '</g>';
+        /* Rough ER: folded sheets with ribosomes on them. */
+        o += '<path d="M262 86 q22 10 4 22 q-20 12 2 22" fill="none" stroke="#0891b2" stroke-width="1.8"/>';
+        o += '<g fill="#0e7490">' +
+             '<circle cx="268" cy="88" r="2.2"/><circle cx="276" cy="96" r="2.2"/>' +
+             '<circle cx="266" cy="108" r="2.2"/><circle cx="274" cy="120" r="2.2"/>' +
+             '<circle cx="160" cy="104" r="2.2"/><circle cx="150" cy="118" r="2.2"/>' +
+             '<circle cx="168" cy="142" r="2.2"/></g>';
+        o += lead(350, 142, 372, 130) + oR(376, 133, 'cell membrane');
+        o += lead(316, 186, 372, 178) + oR(376, 181, 'mitochondrion');
+        o += lead(276, 92, 372, 66) + oR(376, 69, 'rough ER');
+        o += lead(158, 140, 84, 112) + oL(80, 115, 'ribosomes');
+        o += lead(140, 202, 84, 218) + oL(80, 221, 'cytoplasm');
+        o += '<text x="221" y="272" style="' + LT + '" fill="#475569" text-anchor="middle">' +
+             'An animal cell: no wall, so it holds a soft, rounded shape</text>';
+      }
+      return o + '</svg>';
+    }
+
     if (/brain|lobe|cortex|cerebr|hippocamp|amygdala|frontal|temporal|parietal|occipital/.test(d)) {
       return '<svg viewBox="0 0 420 268" width="100%" style="max-width:480px;display:block;margin:0 auto;' + LF + '">' +
         '<path d="M80 200 Q40 160 45 110 Q48 65 90 45 Q120 28 160 30 Q200 28 230 42 Q270 30 300 50 Q340 75 345 115 Q350 155 320 185 Q295 205 260 210 Q220 225 180 220 Q140 225 105 215 Z" fill="#fff5f7" stroke="#f472b6" stroke-width="2"/>' +
@@ -8789,7 +8883,11 @@
         '<text x="372" y="212" style="' + LT + '" fill="#ef4444" text-anchor="middle">vision</text>' +
         // Callout: Cerebellum — offset down, label 14px below the lobe boundary
         '<line x1="133" y1="220" x2="108" y2="252" stroke="#7c3aed" stroke-width="1" stroke-dasharray="3 2"/>' +
-        '<rect x="66" y="242" width="80" height="18" rx="5" fill="white" stroke="#7c3aed" stroke-width="1"/>' +
+        /* 102 wide, not 80: "Cerebellum (balance)" is 20 characters, which
+           at 8px DM Sans is ~92 units. The text is centred on the box, so
+           an 80-wide box let it spill over both borders and the closing
+           bracket read as cut off. */
+        '<rect x="55" y="242" width="102" height="18" rx="5" fill="white" stroke="#7c3aed" stroke-width="1"/>' +
         '<text x="106" y="254" style="' + LT + 'font-weight:600;" fill="#5b21b6" text-anchor="middle">Cerebellum (balance)</text>' +
         '</svg>';
     }
@@ -9205,47 +9303,90 @@
 
     // ── PHOTOSYNTHESIS ────────────────────────────────────────────────────────
     if (/photosynthesis|chloroplast|glucose/.test(d)) {
-      return '<svg viewBox="0 0 400 200" width="100%" style="max-width:460px;display:block;margin:0 auto;' + LF + '">' +
-        '<defs><marker id="pA" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#374151"/></marker></defs>' +
-        // Sun — top-left, clear of all labels
-        '<circle cx="46" cy="38" r="28" fill="#fef08a" stroke="#f59e0b" stroke-width="2"/>' +
-        // Sun drawn as geometry rather than the U+2600 glyph, which DM Sans
-        // does not contain.
-        '<circle cx="46" cy="34" r="7" fill="#d97706"/>' +
-        '<line x1="55.0" y1="34.0" x2="60.0" y2="34.0" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/><line x1="52.4" y1="40.4" x2="55.9" y2="43.9" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/><line x1="46.0" y1="43.0" x2="46.0" y2="48.0" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/><line x1="39.6" y1="40.4" x2="36.1" y2="43.9" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/><line x1="37.0" y1="34.0" x2="32.0" y2="34.0" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/><line x1="39.6" y1="27.6" x2="36.1" y2="24.1" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/><line x1="46.0" y1="25.0" x2="46.0" y2="20.0" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/><line x1="52.4" y1="27.6" x2="55.9" y2="24.1" stroke="#d97706" stroke-width="1.6" stroke-linecap="round"/>' +
-        '<text x="46" y="72" style="' + LT + 'font-weight:600;" fill="#92400e" text-anchor="middle">Light</text>' +
-        '<text x="46" y="82" style="' + LT + '" fill="#92400e" text-anchor="middle">energy</text>' +
-        // Arrow sun → leaf
-        '<path d="M70 48 L108 72" fill="none" stroke="#f59e0b" stroke-width="1.8" marker-end="url(#pA)"/>' +
-        // Leaf (chloroplast) body
-        '<ellipse cx="172" cy="100" rx="64" ry="82" fill="#d1fae5" stroke="#16a34a" stroke-width="2" transform="rotate(-15 172 100)"/>' +
-        // Label inside leaf — vertically centered, offset from leaf outline
-        '<text x="172" y="92" style="' + LS + 'font-weight:700;" fill="#14532d" text-anchor="middle">Chloroplast</text>' +
-        '<text x="172" y="106" style="' + LT + '" fill="#15803d" text-anchor="middle">light reactions</text>' +
-        '<text x="172" y="118" style="' + LT + '" fill="#15803d" text-anchor="middle">Calvin cycle</text>' +
-        // CO2 input label — left side, 14px from leaf edge
-        '<text x="54" y="116" style="' + LS + 'font-weight:700;" fill="#374151">CO2</text>' +
-        '<text x="54" y="128" style="' + LT + '" fill="#64748b">(from air)</text>' +
-        '<path d="M82 120 L112 114" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#pA)"/>' +
-        // H2O input
-        '<text x="54" y="152" style="' + LS + 'font-weight:700;" fill="#3b82f6">H2O</text>' +
-        '<text x="54" y="164" style="' + LT + '" fill="#3b82f6">(from roots)</text>' +
-        '<path d="M80 156 L112 140" fill="none" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#pA)"/>' +
-        // Output arrow — exits right side of leaf
-        '<path d="M236 96 L278 84" fill="none" stroke="#374151" stroke-width="2" marker-end="url(#pA)"/>' +
-        // Output box — 8px gap from arrow end
-        '<rect x="280" y="56" width="114" height="80" rx="10" fill="#fefce8" stroke="#f59e0b" stroke-width="1.5"/>' +
-        '<text x="337" y="78" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">Outputs</text>' +
-        '<text x="337" y="96" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">Glucose (C6H12O6)</text>' +
-        '<text x="337" y="110" style="' + LT + '" fill="#374151" text-anchor="middle">stored energy</text>' +
-        '<text x="337" y="124" style="' + LT + 'font-weight:700;" fill="#0284c7" text-anchor="middle">O2 released</text>' +
-        // Equation bar — 14px below all content
-        '<rect x="40" y="182" width="320" height="16" rx="6" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="0.8"/>' +
-        '<text x="193" y="193" style="' + LT + '" fill="#374151" text-anchor="end">6CO2 + 6H2O + light</text>' +
-        // Reaction arrow drawn as geometry: DM Sans has no arrow glyph, and
-        // borrowing one from a fallback face would break the equation's type.
-        '<path d="M196 190 L206 190" fill="none" stroke="#374151" stroke-width="1" marker-end="url(#pA)"/>' +
-        '<text x="210" y="193" style="' + LT + '" fill="#374151" text-anchor="start">C6H12O6 + 6O2</text>' +
+      /* An actual leaf, not a labelled ellipse.
+
+         This template used to be a green oval with the word "Chloroplast"
+         printed inside it and four arrows pointing at it - a box-and-arrow
+         diagram wearing a leaf's colour. The thing being taught is that a
+         leaf takes in light, air and water and gives back sugar and oxygen,
+         so the picture is a leaf doing that.
+
+         The blade is two quadratics mirrored about the midrib, so it is
+         symmetric by construction: control points sit at 2x the wanted bulge
+         along the midrib's normal, because a quadratic only reaches half way
+         to its control. The veins are anchored on the midrib at t = .26/.44/
+         .62/.79 and stop at 78% of the blade's half-width there, which is why
+         none of them punches through the edge. */
+      return '<svg viewBox="0 0 470 296" width="100%" style="max-width:480px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs>' +
+        '<marker id="psA" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="context-stroke"/></marker>' +
+        '</defs>' +
+
+        /* ── sun, upper left ── */
+        '<circle cx="46" cy="42" r="19" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>' +
+        '<g stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round">' +
+        '<line x1="46" y1="15" x2="46" y2="8"/><line x1="65" y1="23" x2="70" y2="18"/>' +
+        '<line x1="73" y1="42" x2="80" y2="42"/><line x1="65" y1="61" x2="70" y2="66"/>' +
+        '<line x1="27" y1="23" x2="22" y2="18"/><line x1="19" y1="42" x2="12" y2="42"/>' +
+        '</g>' +
+        '<text x="46" y="80" style="' + LS + 'font-weight:700;" fill="#92400e" text-anchor="middle">Sunlight</text>' +
+
+        /* Three rays, fanning onto the blade and stopping clear of it. */
+        '<g stroke="#f59e0b" stroke-width="1.6" fill="none" marker-end="url(#psA)">' +
+        '<path d="M68 58 L164 138"/><path d="M76 46 L185 111"/><path d="M84 34 L216 90"/>' +
+        '</g>' +
+
+        /* ── the blade ── */
+        '<path d="M150 180 Q194.5 57.8 320 92 Q275.5 214.2 150 180 Z" fill="#dcfce7" stroke="#16a34a" stroke-width="2.4" stroke-linejoin="round"/>' +
+        '<path d="M150 180 L320 92" stroke="#15803d" stroke-width="2.2" stroke-linecap="round"/>' +
+        '<g stroke="#4ade80" stroke-width="1.5" stroke-linecap="round" fill="none">' +
+        '<path d="M194 157 Q190 142 182 134"/><path d="M194 157 Q202 172 206 181"/>' +
+        '<path d="M225 141 Q219 123 209 111"/><path d="M225 141 Q235 160 240 171"/>' +
+        '<path d="M255 125 Q250 108 241 97"/><path d="M255 125 Q266 143 270 154"/>' +
+        '<path d="M284 110 Q280 98 274 90"/><path d="M284 110 Q292 123 295 131"/>' +
+        '</g>' +
+
+        /* Stem down to the soil, and water climbing it. */
+        '<path d="M150 180 Q128 198 116 232" fill="none" stroke="#15803d" stroke-width="3" stroke-linecap="round"/>' +
+        '<path d="M66 230 H192" stroke="#d6d3d1" stroke-width="7" stroke-linecap="round"/>' +
+        '<path d="M66 230 H192" stroke="#a8a29e" stroke-width="1.4" stroke-linecap="round"/>' +
+        '<g fill="none" stroke="#a8a29e" stroke-width="1.6" stroke-linecap="round">' +
+        '<path d="M116 231 Q112 244 100 252"/><path d="M116 231 Q118 246 114 258"/>' +
+        '<path d="M116 231 Q124 243 136 249"/>' +
+        '</g>' +
+
+        /* ── what goes in ── */
+        '<text x="14" y="140" style="' + LP + '" fill="#475569">CO' + '₂' + '</text>' +
+        '<text x="14" y="151" style="' + LT + '" fill="#64748b">from the air</text>' +
+        '<path d="M52 150 Q120 182 186 192" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#psA)"/>' +
+        '<text x="14" y="216" style="' + LP + '" fill="#2563eb">H' + '₂' + 'O</text>' +
+        '<text x="14" y="227" style="' + LT + '" fill="#3b82f6">up from the roots</text>' +
+        '<path d="M74 219 Q104 224 130 204" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#psA)"/>' +
+
+        /* ── what comes back out ── */
+        '<path d="M251 184 L266 220" fill="none" stroke="#0891b2" stroke-width="1.6" marker-end="url(#psA)"/>' +
+        '<text x="272" y="226" style="' + LP + '" fill="#0e7490">O' + '₂' + '</text>' +
+        '<text x="272" y="237" style="' + LT + '" fill="#0891b2">out through the leaf</text>' +
+        '<path d="M309 130 L348 170" fill="none" stroke="#15803d" stroke-width="1.8" marker-end="url(#psA)"/>' +
+        '<text x="352" y="182" style="' + LP + '" fill="#14532d">Glucose</text>' +
+        '<text x="352" y="193" style="' + LT + '" fill="#15803d">the food it built</text>' +
+
+        /* ── zoom on one chloroplast ── */
+        '<line x1="300" y1="110" x2="366" y2="100" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 3"/>' +
+        '<circle cx="399" cy="98" r="34" fill="#ffffff" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3 3"/>' +
+        '<ellipse cx="399" cy="98" rx="27" ry="18" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.8"/>' +
+        '<g fill="#15803d">' +
+        '<ellipse cx="387" cy="93" rx="6" ry="3"/><ellipse cx="387" cy="99" rx="6" ry="3"/>' +
+        '<ellipse cx="401" cy="96" rx="6" ry="3"/><ellipse cx="401" cy="102" rx="6" ry="3"/>' +
+        '<ellipse cx="414" cy="92" rx="5" ry="2.6"/><ellipse cx="414" cy="98" rx="5" ry="2.6"/>' +
+        '</g>' +
+        '<text x="399" y="146" style="' + LT + 'font-weight:700;" fill="#14532d" text-anchor="middle">a chloroplast</text>' +
+        '<text x="399" y="156" style="' + LT + '" fill="#15803d" text-anchor="middle">where it happens</text>' +
+
+        /* ── the sentence, in symbols ── */
+        '<rect x="66" y="272" width="338" height="18" rx="7" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>' +
+        '<text x="235" y="284" style="' + LT + '" fill="#334155" text-anchor="middle">' +
+        '6CO' + '₂' + ' + 6H' + '₂' + 'O + light → C' + '₆' + 'H' + '₁' + '₂' + 'O' + '₆' + ' + 6O' + '₂' + '</text>' +
         '</svg>';
     }
 
@@ -9638,9 +9779,26 @@
     var explicit = !!(spec && (spec.layout ||
                     String(spec.type || '').toLowerCase() === 'custom'));
 
+    /* MATCH THE TYPE BEFORE THE CAPTION.
+
+       `desc` is label-first, because it is also what polish() names the
+       diagram in a warning. Feeding that to the curated matcher meant the
+       CAPTION was searched and the template NAME ignored - and app.html asks
+       the model for exactly {"type":"water-cycle","label":"short caption"}.
+       So {type:'photosynthesis', label:'Inside a leaf'} searched for "Inside
+       a leaf", matched nothing, fell through fromSpec (no items) and
+       forTopic (no keywords), and returned NULL. The same spec without a
+       label drew the leaf perfectly.
+
+       Every curated template was reachable only when the model's caption
+       happened to repeat the template's own keywords. */
+    var typeName = spec ? String(spec.type || '').trim() : '';
+    var typeIsName = typeName && !/^(none|custom)$/i.test(typeName);
+
     var svg = null;
     try {
-      if (!explicit && desc) svg = curatedDiagramSVG(desc);
+      if (!explicit && typeIsName) svg = curatedDiagramSVG(typeName);
+      if (!explicit && !svg && desc) svg = curatedDiagramSVG(desc);
       if (!svg && spec) svg = SFDiagramKit.fromSpec(spec);
       if (!svg && desc) svg = SFDiagramKit.forTopic(desc);
     } catch (e) {

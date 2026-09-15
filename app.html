@@ -2870,7 +2870,7 @@
            kit quietly falls back to a generic custom diagram - so the failure
            is invisible and the topic silently loses its picture. Keep the two
            lists in step. */
-        '   Template: {"type":"brain|neuron|atom|supply-demand|dna|ecosystem|water-cycle|mitosis|memory-model|plate-tectonics|photosynthesis\n' +
+        '   Template: {"type":"brain|neuron|atom|cell|supply-demand|dna|ecosystem|water-cycle|mitosis|memory-model|plate-tectonics|photosynthesis\n' +
         '                    |forces|wave|circuit|number-line|fractions|place-value|area-model|triangle|states-of-matter|solar-system|rock-cycle","label":"short caption"}\n' +
         '   Use forces for gravity, weight, friction or Newton\'s laws; wave for wavelength/amplitude/frequency;\n' +
         '   circuit for voltage, current or resistance; number-line for adding and subtracting; fractions for\n' +
@@ -2999,13 +2999,9 @@
         '{"type":"arcGraph"}  <- narrative plot structure\n' +
         '{"type":"bars","items":[{"label":"1990","value":42},{"label":"2020","value":78}]}  <- real numeric comparisons\n' +
         '{"type":"equation","lines":["2x + 3 = 11","2x = 8","x = 4"],"note":"Solving step by step"}  <- worked math steps\n' +
-        '{"type":"geometry","points":[{"x":0,"y":0},{"x":4,"y":0},{"x":0,"y":3}],"vertexNames":["A","B","C"],"sideLabels":["4","5","3"],"angleLabels":["90"]}  <- triangles/polygons. sideLabels follow the point order (A-B, B-C, C-A), so the longest side must carry the largest number\n' +
-        '{"type":"arc","sweepDegrees":60,"radiusLabel":"r"}  <- circles, sectors, angles\n' +
-        '{"type":"atom","protons":6,"element":"Carbon"}  <- atomic structure\n' +
-        '{"type":"molecule","preset":"water"}  <- bonding (preset: water|co2|methane|nitrogen|oxygen|hcl)\n' +
-        '{"type":"cell","cellType":"animal"}  <- cell structure (animal|plant)\n' +
-        '{"type":"vector","vectors":[{"dx":150,"dy":-80,"label":"F","magnitude":"12N"}]}  <- forces/vectors\n' +
-        '{"type":"concept","center":"Homeostasis","items":["Feedback","Balance"]}  <- fallback for abstract ideas\n' +
+                        '{"type":"atom","protons":6,"element":"Carbon"}  <- atomic structure\n' +
+                '{"type":"cell","label":"animal cell"}  <- cell structure. Say "animal" or "plant" in the label.\n' +
+                '{"type":"concept","center":"Homeostasis","items":["Feedback","Balance"]}  <- fallback for abstract ideas\n' +
         'Labels must come from the actual notes. Keep each label under 20 characters.\n' +
         '\nFINAL CHECK: Before outputting, reread every question you wrote. Verify each one is about "' + subject + '". Replace anything that is not.\n' +
         '\nOUTPUT: ONLY valid compact JSON. No markdown. Replace ALL empty strings with REAL content.\n\n' +

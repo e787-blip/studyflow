@@ -468,7 +468,7 @@ Two separate systems, often confused:
 
 | | Where | Drawn by |
 |---|---|---|
-| `day.diagram` | the **lesson card** | `generateDiagramSVG` → `curatedDiagramSVG`, else `SFDiagramKit` |
+| `day.diagram` | the **lesson card**, above the stepped board | `generateDiagramSVG` → `curatedDiagramSVG`, else `SFDiagramKit` |
 | the opening board | card 2 of the session | `SFWhiteboard.briefFor` → `SFBoard` scenes |
 
 **Every lesson gets a diagram, built from that lesson.** `diagramForDay(day)`
@@ -485,6 +485,14 @@ order of how specific they are:
    hierarchy / flow / concept). This is the workhorse: it is drawn from *this*
    lesson's material, so two lessons never get the same picture.
 4. the curated matcher, against the topic text
+
+**The lesson card keeps its picture even when `whiteboard.js` takes over.**
+That branch wins on every subject — `Whiteboard.deriveBeats` returns beats for
+all ten — so for a long time `diagramForDay` was called, returned a picture,
+and had it dropped on the floor of every lesson ever rendered. The board's own
+first beat draws a 558x68 strip from the kit, which is not the same thing and
+is not what the hand-drawn templates are for. The diagram is now rendered
+above the mount: look at the thing, then step through the explanation of it.
 
 Before this, the lesson card tested `day.diagram.type !== 'none'` — and
 `app.html` defaults that field to `'none'`. Any day where the model omitted the
@@ -614,14 +622,42 @@ Two traps already fixed in these builders:
   quadratic), and its control point is solved from the peak height wanted
   (`cy = 2*peak - AX`), not eyeballed. Same family as the wave-crest bug below.
 
-`curatedDiagramSVG` holds 22 hand-drawn templates: brain, neuron, atom,
-supply-demand, dna, ecosystem, water-cycle, mitosis, memory-model,
+`curatedDiagramSVG` holds 23 hand-drawn templates: brain, neuron, atom,
+**cell**, supply-demand, dna, ecosystem, water-cycle, mitosis, memory-model,
 plate-tectonics, photosynthesis, forces, wave, circuit, number-line, fractions,
 place-value, area-model, triangle, states-of-matter, solar-system,
 rock-cycle.
 
-**Two rules:**
+`cell` draws an animal cell, or a plant one when the text mentions plant /
+wall / vacuole / chloroplast. `app.html` had offered `{"type":"cell",...}` for
+a long time with nothing to draw it: a cell spec carries no `items`, so
+`specFromDayVisual` returned null and the curated matcher had no branch to
+catch it.
 
+`photosynthesis` is **an actual leaf** — blade, midrib, veins, stem, roots,
+with light, CO2 and water going in and oxygen and glucose coming out, and a
+zoomed callout on one chloroplast. It was a green ellipse with the word
+"Chloroplast" printed in it: a box-and-arrow diagram wearing a leaf's colour.
+The blade is two quadratics mirrored about the midrib (control points at 2x
+the wanted bulge, since a quadratic only reaches half way to its control), and
+every arrow is anchored to a **computed** point on that curve rather than
+eyeballed — the first draft had light rays and gas arrows terminating inside
+the blade.
+
+**Three rules:**
+
+0. **The `type` is matched BEFORE the `label`.** `generateDiagramSVG` builds
+   its `desc` label-first (that string also names the diagram in a `polish`
+   warning), and it used to hand *that* to the curated matcher — so the
+   CAPTION was searched and the template NAME ignored. `app.html` asks the
+   model for exactly `{"type":"water-cycle","label":"short caption"}`, so
+   `{type:'photosynthesis', label:'Inside a leaf'}` searched for "Inside a
+   leaf", matched nothing, fell through `fromSpec` (no items) and `forTopic`
+   (no keywords), and returned **null**. The same spec without a label drew
+   perfectly. Every curated template was reachable only when the model's
+   caption happened to repeat that template's own keywords. A `custom` spec
+   still bypasses the matcher entirely, or a flow titled "cell phone adoption"
+   gets answered with a biology cell.
 1. **Names are matched with hyphens flattened to spaces.** The prompt asks for
    templates by hyphenated name (`water-cycle`), every pattern is written with
    spaces (`water cycle`), and without the normalisation at the top of
