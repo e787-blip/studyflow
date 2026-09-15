@@ -229,6 +229,28 @@ Two things follow from how mixes are written:
 Adding a subtopic is a `SUBTOPICS` entry and nothing else. Adding a question
 *type* is still the four-place job described above.
 
+### `concepts[].visual` — a picture per main idea
+
+The main-ideas card draws one row per concept and asks each for its own
+diagram spec. Shape, and the only layouts kept:
+
+```json
+"concepts": [{ "name":"", "definition":"", "why":"", "misconception":"",
+               "visual": { "layout":"flow|timeline|compare|parts",
+                           "items":["",""], "center":"" } }]
+```
+
+The validator drops anything else: a layout outside that set, fewer than two
+items, or a `parts` with no `center`. Dropping it is the right outcome — the
+row then falls back to what `lesson.html` can infer from the words, which beats
+a spec the kit would decline anyway.
+
+`why` is folded into the row's detail text as well as displayed, because the
+visual chooser reads that same text: "Demand / Quantity buyers purchase at each
+price" has no relationship in it, and the `why` that follows — "It falls as
+price rises" — is exactly what `trendGraph` needs. Dropping `why` meant the
+economics ideas could never be drawn.
+
 ### `workedExample` — generated with the lesson
 
 `app.html`'s prompt asks for one on every day, and its validator keeps it only
@@ -508,6 +530,7 @@ Four parametric builders, chosen from what the step actually contains:
 | `inOut` | the step names what goes in and what comes out | the nouns either side of the verb |
 | `areaModel` | a step about expanding `a(b + c)` | the bracket, as a partitioned rectangle |
 | `trendGraph` | the step claims one quantity moves with another | both axis names, read out of the sentence |
+| `bothSidesRule` | a rule naming an operation applied to both sides | the operation, arriving at both pans of a level beam |
 | `progressStrip` | anything else | the real step labels, with this one lit |
 
 All of them return null rather than draw an empty frame.
@@ -530,6 +553,33 @@ Two ordering rules inside the quantitative branch, both paid for:
 *as/when/with*, and the quantity from the step's own title — and declines when
 either is missing or the direction is ambiguous. An axis with a guessed name
 states something the notes never said.
+
+`bothSidesRule` draws its pans **empty**, and that is deliberate. "Subtract the
+constant from both sides" is a rule about an equation nobody has written down
+yet, so there is nothing to put in them; the picture asserts exactly what the
+sentence asserts — same operation, both sides, balance kept — and nothing more.
+Each operation carries its own preposition (`OP_WORD[...].say`), because
+building the caption from the matched verb alone produced "Divide **from** both
+sides".
+
+### A model-authored picture per main idea
+
+`forStep` prefers `step.visual` over everything it can infer, so the shortest
+path to a real picture on every idea is to have the model write one with the
+lesson. `app.html` asks for a `visual` on each concept and validates it.
+
+Four things had to line up, and the middle two are the ones that silently
+swallow it:
+
+1. the prompt asks for it, and the **output schema string** shows it — a field
+   named in the prompt but missing from the schema is never returned;
+2. `pair()` in block 2 carries `v.visual` through — it used to flatten every
+   item to `{a, b}`, one call before the only thing that reads it;
+3. `itemsFromSteps` and `outlineFor` carry it onto the item;
+4. the validator keeps only layouts the row can draw legibly — `flow`,
+   `timeline`, `compare`, `parts`. `cycle`, `concept` and `hierarchy` are drawn
+   tall, so the card's own guard would drop them anyway; rejecting them in
+   `app.html` makes that explicit instead of silent, and the prompt says so.
 
 **The 21 curated templates are deliberately NOT in this chain.** Their patterns
 are written to match a whole day's topic string, so against one sentence they
@@ -585,8 +635,8 @@ Three entry points:
 | Lesson-card replacement | `fromDay(day)` | **Returns null on every subject — dormant.** Pre-existing, falls back safely to the normal lesson card. |
 | Wrong-answer walkthrough | `fromWrongAnswer(q, day)` | Active |
 
-11 scenes: `hero`, `brief`, `map`, `chart`, `pyramid`, `steps`, `cycle`,
-`compare`, `timeline`, `parts`, **`worked`**.
+12 scenes: `hero`, `brief`, `map`, `chart`, `pyramid`, `steps`, `cycle`,
+`compare`, `timeline`, `parts`, **`worked`**, **`ideas`**.
 
 `equation` is **gone** — deleted, not parked. It drew the numbered column
 running down the card, and leaving it in place "in case" was wrong twice over:
@@ -618,8 +668,28 @@ welcome  ->  sfwb-outline  ->  sfwb-brief  ->  lesson
 
 `outlineFor(day, subject)` builds the outline from the day's `steps`, else its
 `concepts`, else its `pillars` — a numbered row per idea, label and detail. It
-is the `steps` scene, and it is the card that answers "what is today about".
-The worked board then teaches one piece of it.
+is the **`ideas`** scene, and it is the card that answers "what is today
+about". The worked board then teaches one piece of it.
+
+**Every row can carry its own picture**, drawn by the same `SFStepVisual`
+chain the worked board uses. Three rules, all paid for:
+
+- **The picture goes BELOW the text, across the row** — 470x136. Beside the
+  text was the first attempt and could not work: the kit draws 298–430 units
+  wide, a side slot leaves ~250 once the text has its column, and every
+  diagram landed at 0.27–0.58 scale. 9px labels rendered at 2.4–5.3px. The
+  diagrams were all there and not one word was readable.
+- **A picture that would shrink below 0.68 is dropped** and the row stays
+  text-only. `concept` comes back 340x346 and `cycle` 304x253; in a wide short
+  row those are a third size. The same rule `Scene.worked` applies to its own
+  slot.
+- **`ctx.labels` is passed EMPTY on purpose.** `forStep`'s last resort is
+  `progressStrip`, which on this card would stamp the same picture of the list
+  onto every row of the list.
+
+A row whose idea has nothing drawable gets no picture. That is the honest
+outcome for a bare definition, and roughly half the rows on a definition-only
+day take it.
 
 Opening straight onto step 1 of a worked solution gave the learner no map of
 where that step sat, which is what the outline fixes.
@@ -762,6 +832,11 @@ What to check after any `buildQueue` or renderer change:
     the identical generic node card every subject used to open on
 14b. `sfwb-outline` comes **before** `sfwb-brief` and the two are adjacent,
     directly after `welcome`
+14e. The ideas card builds and renders on all 10 subjects, with **no empty
+    picture slot** and **no picture scaled under 0.66**; a model-supplied
+    `flow`/`compare` per idea is drawn, a tall `concept` one is refused
+    rather than shrunk, and six malformed `visual` shapes fall back without
+    throwing
 14c. **No warm hue (25–70°, sat > 0.22) in any rendered board**, on any
     subject, on the opening board or the wrong-answer walkthrough
 14d. Nothing resolves to the deleted `equation` scene: `resolveType` sends
@@ -814,6 +889,12 @@ frontend and `api/*.js` together. There is no build step, so a push is the deplo
   no generated plan has come back carrying the field yet. Check the first one
   for step `line` lengths, and for whether it honours "not one of the questions
   below" — that rule is prompt-enforced only, with no validator behind it.
+- **`concepts[].visual` has not been seen from a real model run** — same
+  status as `workedExample`. The prompt, schema and validator are in place and
+  the path is tested against hand-written payloads (a `flow` and a `compare`
+  draw; a tall `concept` is refused; six malformed shapes fall back without
+  throwing). What is unverified is whether the model returns the field, keeps
+  to the four allowed layouts, and keeps items under 26 characters.
 - **Concept-only days still lean on `progressStrip`.** `areaModel` and
   `trendGraph` converted the expansion and trend steps, but a day of bare
   definitions has genuinely little to draw per step — a term and its meaning is

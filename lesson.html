@@ -10219,6 +10219,91 @@
       return o + '</svg>';
     }
 
+    /* ── 4b. BOTH-SIDES RULE ───────────────────────────────────────────────
+       "Subtract the constant from both sides" is a rule about an equation
+       nobody has written down yet - it is the main idea, not a step of a
+       particular problem. So there is nothing to put in the pans, and the
+       picture is the rule itself: the same operation arriving at both pans of
+       a level beam.
+
+       The pans are drawn EMPTY on purpose and are not labelled with invented
+       contents. What the picture asserts is exactly what the sentence
+       asserts - same operation, both sides, balance preserved - and nothing
+       more. It declines unless the sentence really names an operation applied
+       to both sides, so it cannot spread to ideas it does not describe. */
+    var BOTH_SIDES_RE = /\bboth sides\b|\beach side\b|\bevery side\b/i;
+    /* Each operation carries the preposition it actually takes. Building the
+       caption from the matched word alone produced "Divide from both sides". */
+    var OP_WORD = {
+      add:         { sym: '+', say: 'Add to both sides' },
+      adding:      { sym: '+', say: 'Add to both sides' },
+      plus:        { sym: '+', say: 'Add to both sides' },
+      subtract:    { sym: '−', say: 'Subtract from both sides' },
+      subtracting: { sym: '−', say: 'Subtract from both sides' },
+      minus:       { sym: '−', say: 'Subtract from both sides' },
+      multiply:    { sym: '×', say: 'Multiply both sides' },
+      multiplying: { sym: '×', say: 'Multiply both sides' },
+      divide:      { sym: '÷', say: 'Divide both sides' },
+      dividing:    { sym: '÷', say: 'Divide both sides' }
+    };
+
+    /* "Subtract the constant from both sides" -> the minus sign and the
+       sentence that goes under the picture. Null unless the text really names
+       an operation applied to both sides. */
+    function bothSidesOp(text) {
+      var t = cl(text);
+      if (!BOTH_SIDES_RE.test(t)) return null;
+      var m = t.match(/\b(add|adding|plus|subtract|subtracting|minus|multiply|multiplying|divide|dividing)\b/i);
+      if (!m) return null;
+      var e = OP_WORD[m[1].toLowerCase()];
+      return e ? { sym: e.sym, say: e.say } : null;
+    }
+
+    function bothSidesRule(op, note) {
+      if (!op || !op.sym) return null;
+      var W = 330, H = note ? 182 : 160;
+      var PAN_W = 104, PAN_H = 40;
+      var LX = 82, RX = 248, BEAM_Y = 62, PAN_Y = 86;
+      var o = open(W, H);
+
+      o += '<defs><marker id="svBsA" markerWidth="8" markerHeight="8" refX="6.5" refY="4" ' +
+        'orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="' + BLUE + '"/></marker></defs>';
+
+      /* Stand, beam, fulcrum - level, as always. */
+      o += '<path d="M' + (W / 2) + ' ' + BEAM_Y + ' L' + (W / 2 - 19) + ' 132 L' +
+        (W / 2 + 19) + ' 132 Z" fill="#eef2f9" stroke="' + RULE + '" stroke-width="1.6" stroke-linejoin="round"/>';
+      o += '<rect x="' + (W / 2 - 42) + '" y="132" width="84" height="8" rx="4" fill="' + RULE + '"/>';
+      o += '<line x1="' + LX + '" y1="' + BEAM_Y + '" x2="' + RX + '" y2="' + BEAM_Y +
+        '" stroke="' + INK + '" stroke-width="3.4" stroke-linecap="round"/>';
+      o += '<circle cx="' + (W / 2) + '" cy="' + BEAM_Y + '" r="5.5" fill="' + INK + '"/>';
+
+      /* Two empty pans, and the same operation arriving at each. The arrow
+         starts above the pan and stops 7 units short of its top edge. */
+      var xs = [LX, RX], i;
+      for (i = 0; i < 2; i++) {
+        var cx = xs[i];
+        o += '<line x1="' + cx + '" y1="' + BEAM_Y + '" x2="' + cx + '" y2="' + PAN_Y +
+          '" stroke="' + RULE + '" stroke-width="1.6"/>';
+        o += '<rect x="' + (cx - PAN_W / 2) + '" y="' + PAN_Y + '" width="' + PAN_W +
+          '" height="' + PAN_H + '" rx="11" fill="' + BLUE_F + '" stroke="' + BLUE +
+          '" stroke-width="1.8"/>';
+        /* The operation, over its own pan. */
+        o += '<line x1="' + cx + '" y1="18" x2="' + cx + '" y2="' + (BEAM_Y - 26) +
+          '" stroke="' + BLUE + '" stroke-width="2" marker-end="url(#svBsA)"/>';
+        o += T(cx, 14, op.sym, { size: 17, weight: 700, fill: BLUE_T });
+      }
+
+      o += T(W / 2, PAN_Y + PAN_H / 2 + 5, '=', { size: 17, weight: 700, fill: MUTED });
+      var cap = op.say + ', and it stays balanced';
+      var cs = fitSize(cap, W - 20, 11, 600, 8.5);
+      o += T(W / 2, 154, cap, { size: cs, weight: 600, fill: MUTED });
+      if (cl(note)) {
+        var ns3 = fitSize(cl(note), W - 20, 11, 600, 8.5);
+        o += T(W / 2, H - 8, cl(note), { size: ns3, weight: 600, fill: MUTED });
+      }
+      return o + '</svg>';
+    }
+
     /* ── 5. AREA MODEL ─────────────────────────────────────────────────────
        a(b + c) drawn as a rectangle cut into columns. The multiplier is the
        height, each term is a column width, and each cell holds its own
@@ -10632,6 +10717,14 @@
            it and it would otherwise reach the generic strip. */
         svg = areaModel(bracketIn(line) || line, '');
         if (svg) return svg;
+
+        /* A rule about both sides, with no particular equation in it - which
+           is what a main idea usually is. */
+        var bs = bothSidesOp(text);
+        if (bs) {
+          svg = bothSidesRule(bs, '');
+          if (svg) return svg;
+        }
       }
 
       /* 2. A named angle, at its real measure. */
@@ -10708,6 +10801,8 @@
       inOut: inOut,
       areaModel: areaModel,
       bracketIn: bracketIn,
+      bothSidesRule: bothSidesRule,
+      bothSidesOp: bothSidesOp,
       trendGraph: trendGraph,
       trendFrom: trendFrom,
       parseDistribute: parseDistribute,
@@ -11269,7 +11364,13 @@ var SFBoard = (function () {
     var a = clean(v.label || v.name || v.when || v.title || v.step || v.term || v.a);
     var b = clean(v.detail || v.note || v.what || v.body || v.action || v.definition || v.b);
     if (!a && b) { a = b; b = ''; }
-    return a ? { a: a, b: b } : null;
+    if (!a) return null;
+    /* A model-authored diagram spec rides along. pair() used to flatten every
+       item to {a, b}, so a visual the model wrote for this idea was dropped
+       here, one call before the only thing that reads it. */
+    var out = { a: a, b: b };
+    if (v.visual && typeof v.visual === 'object') out.visual = v.visual;
+    return out;
   }
 
   function pairs(list, max) {
@@ -11373,6 +11474,107 @@ var SFBoard = (function () {
       inner += text(PAD + 26, r.y + r.h / 2 + 4.5, String(i + 1),
         { size: BODY + 1, weight: 700, fill: t.ink });
       inner += stack(PAD + 56, r.y + r.h / 2, r.g, 'start');
+      o += g(i + 1, inner);
+    }
+    return { svg: svgOpen(w, total) + o + '</svg>', beats: rows.length, w: w, h: total };
+  };
+
+  /* IDEAS — the main ideas of the day, each with its own picture.
+
+     This is the card the session OPENS on: the map, before the worked board
+     teaches one piece of it. It is Scene.steps with a visual slot on the
+     right of every row, because "the main ideas should also be represented
+     visually" - a numbered list of sentences is an outline, not a whiteboard.
+
+     A row whose idea has nothing drawable gets NO picture and its text takes
+     the whole width instead. That is deliberate: the alternative is a frame
+     with a shrug in it, and half the rows of a definition-only day would
+     carry one. ctx.labels is passed EMPTY for exactly this reason - forStep's
+     last resort is progressStrip, which here would stamp the same picture of
+     the list onto every row of the list. */
+  Scene.ideas = function (spec) {
+    var items = pairs(spec.items || spec.steps, 6);
+    if (items.length < 2) return null;
+
+    var w = 560, boxW = w - PAD * 2;
+    /* The picture sits BELOW the text, across the row, not beside it.
+
+       Beside it was the first attempt and it could not work: the kit draws
+       between 298 and 430 units wide, a side slot leaves at most ~250 once
+       the text has its column, and everything landed at 0.27-0.58 scale -
+       9px labels rendering at 2.4 to 5.3px. The diagrams were there and
+       nobody could read a word of them. */
+    var VW = 470, VH = 136, VGAP = 12;
+    /* Below this scale a diagram is a picture of a diagram. Anything that
+       would shrink past it is dropped and the row stays text-only - the same
+       rule Scene.worked applies to its own slot. */
+    var MIN_SCALE = 0.68;
+    var canDraw = (typeof SFStepVisual !== 'undefined' &&
+                   SFStepVisual && typeof SFStepVisual.forStep === 'function' &&
+                   spec.visuals !== false);
+
+    /* How far nest() will have to shrink this svg to fit VW x VH. */
+    function fitScale(svg) {
+      var m = /viewBox="\s*([-\d.]+)[\s,]+([-\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/.exec(svg || '');
+      if (!m) return 0;
+      var iw = parseFloat(m[3]), ih = parseFloat(m[4]);
+      if (!(iw > 0 && ih > 0)) return 0;
+      return Math.min(VW / iw, VH / ih);
+    }
+
+    var rows = [], i, y = PAD;
+    for (i = 0; i < items.length; i++) {
+      var vis = null;
+      if (canDraw) {
+        try {
+          vis = SFStepVisual.forStep(
+            { title: items[i].a, line: items[i].a, why: items[i].b || '',
+              visual: items[i].visual || null },
+            { quantitative: !!spec.quantitative,
+              topic: clean(spec.topic || spec.title),
+              labels: [], index: i, prevLine: '' });
+        } catch (e) { vis = null; }
+      }
+      if (vis && fitScale(vis) < MIN_SCALE) vis = null;
+
+      var textW = boxW - 74 - 16;
+      var aL = wrap(items[i].a, textW, LABEL, 700, 2);
+      var bL = items[i].b ? wrap(items[i].b, textW, BODY, 400, 3) : [];
+      var grp = [{ lines: aL, size: LABEL, weight: 700, fill: INK },
+                 { lines: bL, size: BODY, weight: 400, fill: MUTED }];
+      var textH = stackHeight(grp);
+      var h = Math.max(54, textH + 22) + (vis ? VGAP + VH : 0);
+      rows.push({ g: grp, h: h, y: y, vis: vis, textH: Math.max(54, textH + 22) });
+      y += h + 18;
+    }
+    var total = y - 18 + PAD;
+
+    var o = '';
+    for (i = 0; i < rows.length; i++) {
+      var t = tone(i), r = rows[i], inner = '';
+      if (i < rows.length - 1) {
+        inner += '<line x1="' + (PAD + 26) + '" y1="' + r1(r.y + r.h) + '" x2="' + (PAD + 26) +
+          '" y2="' + r1(r.y + r.h + 18) + '" stroke="' + RULE + '" stroke-width="2" ' +
+          'stroke-linecap="round"/>';
+      }
+      inner += cardRich(PAD, r.y, boxW, r.h, t, 12, false);
+      /* The badge and the heading share a centre line: the badge tracks the
+         TEXT block, not the whole row, or a row with a tall picture beneath
+         it floats its own number halfway down the diagram. */
+      var midY = r.y + r.textH / 2;
+      inner += '<circle cx="' + (PAD + 26) + '" cy="' + r1(midY) + '" r="19" fill="' +
+        t.line + '" opacity=".10"/>';
+      inner += '<circle cx="' + (PAD + 26) + '" cy="' + r1(midY) + '" r="14" fill="' +
+        t.fill + '" stroke="' + t.line + '" stroke-width="1.6"/>';
+      inner += text(PAD + 26, midY + 4.5, String(i + 1),
+        { size: BODY + 1, weight: 700, fill: t.ink });
+      inner += stack(PAD + 56, midY, r.g, 'start');
+
+      if (r.vis) {
+        var vx = PAD + (boxW - VW) / 2, vy = r.y + r.textH + VGAP - 6;
+        inner += '<g class="sfb-ivis">' +
+          SFStepVisual.nest(r.vis, vx, vy, VW, VH) + '</g>';
+      }
       o += g(i + 1, inner);
     }
     return { svg: svgOpen(w, total) + o + '</svg>', beats: rows.length, w: w, h: total };
@@ -12321,7 +12523,7 @@ var SFBoard = (function () {
   /* 'equation' is gone: it named the vertical numbered column that the
      sideways worked example replaced. Removing it from TYPES is what makes
      resolveType send the name to ALIAS instead of matching it directly. */
-  var TYPES = ['hero', 'brief', 'map', 'chart', 'pyramid', 'steps', 'cycle', 'compare', 'timeline', 'parts', 'worked'];
+  var TYPES = ['hero', 'brief', 'map', 'chart', 'pyramid', 'steps', 'cycle', 'compare', 'timeline', 'parts', 'worked', 'ideas'];
 
   var ALIAS = {
     overview: 'hero', intro: 'hero', summary: 'hero', brief: 'hero',
@@ -12344,7 +12546,10 @@ var SFBoard = (function () {
        this replaced - the one failure mode worth being absolute about. */
     math: 'worked', formula: 'worked', equation: 'worked',
     working: 'worked', solve: 'worked', workedexample: 'worked',
-    example: 'worked', walkthrough: 'worked'
+    example: 'worked', walkthrough: 'worked',
+    /* NB: 'overview' is deliberately NOT here - it already maps to hero
+       higher up, and a duplicate key silently rebinds it. */
+    outline: 'ideas', mainideas: 'ideas', keyideas: 'ideas'
   };
 
   function resolveType(v) {
@@ -12912,7 +13117,8 @@ var SFBoard = (function () {
         detail = clean(s.action || s.body || s.detail || s.why);
       }
       if (!label && detail) { label = detail; detail = ''; }
-      if (label) out.push({ label: label, detail: detail });
+      var sv2 = (s && typeof s === 'object' && s.visual && typeof s.visual === 'object') ? s.visual : null;
+      if (label) out.push({ label: label, detail: detail, visual: sv2 });
     }
     return out;
   }
@@ -13271,7 +13477,7 @@ var SFBoard = (function () {
     if (!topic) return null;
 
     var subj = (clean(subject) + ' ' + topic + ' ' + clean(day.microTopic)).toLowerCase();
-    var quantitative = /\bmath|maths|algebra|arithmetic|equation|calculus|geometr|trigonometr|fraction|decimal|percentage|\bsolve\b/.test(subj);
+    var quantitative = QUANTITATIVE_RE.test(subj);
 
     var built = modelWorked(day);
     var kicker = 'Worked example';
@@ -13313,10 +13519,31 @@ var SFBoard = (function () {
       Built from the day's own procedure first, then its concepts, then its
       pillars. Returns null under two rows, because a list of one is a
       sentence and the worked board should simply open instead. */
+  /* Which subjects may use the maths-only step visuals (the balance, the
+     area model, the number-line jump). Shared by outlineFor and workedFor:
+     they were separate copies of the same literal, which is how one of them
+     silently stops matching the other. */
+  var QUANTITATIVE_RE = /\bmath|maths|algebra|arithmetic|equation|calculus|geometr|trigonometr|fraction|decimal|percentage|\bsolve\b/;
+
   function outlineFor(day, subject) {
     day = day || {};
     var title = clean(day.title) || clean(subject);
     var items = itemsFromSteps(list(day.steps));
+
+    /* The detail carries the concept's `why` as well as its definition, up to
+       a readable length. Two reasons, and the second is the important one:
+       an overview row has space for a sentence more, and the visual chooser
+       reads this same text - "Demand / Quantity buyers purchase at each
+       price" has no relationship in it, while the `why` that follows it, "It
+       falls as price rises", is exactly what trendGraph needs to draw an
+       axis. Dropping `why` meant the economics ideas could never be drawn. */
+    function joinDetail(a, b2) {
+      a = clean(a); b2 = clean(b2);
+      if (!b2) return a;
+      if (!a) return b2;
+      if (a.length > 108) return a;
+      return a.replace(/[.\s]+$/, '') + '. ' + b2;
+    }
 
     if (items.length < 2) {
       var cps = list(day.concepts), i;
@@ -13324,8 +13551,14 @@ var SFBoard = (function () {
       for (i = 0; i < cps.length && items.length < 6; i++) {
         var c = cps[i];
         var lab = typeof c === 'string' ? clean(c) : clean(c && (c.name || c.title || c.label));
-        var det = typeof c === 'string' ? '' : clean(c && (c.definition || c.detail || c.description));
-        if (lab) items.push({ label: lab, detail: det });
+        var det = typeof c === 'string' ? '' :
+          joinDetail(c && (c.definition || c.detail || c.description), c && c.why);
+        /* A diagram spec the model wrote for THIS idea. forStep already
+           prefers step.visual over everything it can infer, so carrying it
+           here is all that is needed for a model-authored picture to reach
+           the row. */
+        var cv = (c && typeof c === 'object' && c.visual && typeof c.visual === 'object') ? c.visual : null;
+        if (lab) items.push({ label: lab, detail: det, visual: cv });
       }
     }
     if (items.length < 2) {
@@ -13335,11 +13568,22 @@ var SFBoard = (function () {
         var pp = ps[j];
         var l2 = typeof pp === 'string' ? clean(pp) : clean(pp && (pp.label || pp.title || pp.name));
         var d2 = typeof pp === 'string' ? '' : clean(pp && (pp.detail || pp.body || pp.note));
-        if (l2) items.push({ label: l2, detail: d2 });
+        var pv = (pp && typeof pp === 'object' && pp.visual && typeof pp.visual === 'object') ? pp.visual : null;
+        if (l2) items.push({ label: l2, detail: d2, visual: pv });
       }
     }
     if (items.length < 2) return null;
-    return { type: 'steps', title: title, items: items, outline: true };
+
+    /* Type 'ideas', not 'steps': same list, but every row gets a picture
+       drawn from that idea. `quantitative` gates the maths-only builders the
+       same way the worked board does, so an equation quoted in a history
+       lesson is not drawn as a balance. */
+    return {
+      type: 'ideas', title: title, items: items, outline: true,
+      topic: title, subject: clean(subject),
+      quantitative: QUANTITATIVE_RE.test(
+        (clean(subject) + ' ' + title + ' ' + clean(day.microTopic)).toLowerCase())
+    };
   }
 
   /** Build the opening whiteboard for a session, or null.
