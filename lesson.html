@@ -83,10 +83,19 @@
   .stat-pill { font-size:0.72rem; font-weight:700; padding:.22rem .65rem; border-radius:999px; }
   .stat-pill.correct { background:#d1faf0; color:#1a9e80; }
   .stat-pill.total { background:var(--blue-light); color:var(--blue); }
-  .streak-pill { display:none; align-items:center; justify-content:center; animation:streakPop .4s cubic-bezier(0.16,1,.3,1); position:relative; width:44px; height:44px; }
+  /* The streak used to be a 44px orange-to-red gradient flame with the count
+     reversed out in white - the single loudest thing on a page whose whole
+     palette is one blue. It is now the same shape and weight as the score
+     pill beside it: a thin-stroke mark and a number, monochrome, themed. */
+  .streak-pill { display:none; align-items:center; gap:.3rem; font-size:0.72rem; font-weight:700;
+                 padding:.22rem .6rem .22rem .5rem; border-radius:999px; background:var(--soft);
+                 color:var(--ink); border:1px solid var(--border); line-height:1;
+                 animation:streakPop .4s cubic-bezier(0.16,1,.3,1); }
   .streak-pill.show { display:inline-flex; }
-  .streak-flame { width:44px; height:44px; }
-  .streak-num-inside { position:absolute; font-size:0.72rem; font-weight:800; color:#fff; font-family:'Inter',sans-serif; top:52%; left:50%; transform:translate(-50%,-50%); line-height:1; }
+  /* 14px, and the flame keeps its inner tongue: the simplified outline
+     read as a water droplet once it was this small. */
+  .streak-mark { width:14px; height:14px; flex-shrink:0; opacity:.72; }
+  .streak-num-inside { font-variant-numeric:tabular-nums; }
 
   /* CONTAINER */
   .container { max-width:680px; margin:0 auto; padding:1.5rem 1.5rem 6rem; }
@@ -594,8 +603,8 @@
     .chat-panel { width:calc(100vw - 1.5rem); right:.75rem; bottom:4.5rem; max-height:65vh; }
     .chat-header { padding:.85rem 1rem; }
     .chat-messages { max-height:200px; }
-    /* Streak pill */
-    .streak-pill { width:38px; height:38px; }
+    /* Streak pill - sizes itself from its content now, so no fixed square. */
+    .streak-mark { width:12px; height:12px; }
     /* Milestone/Struggling banners */
     .milestone-banner { padding:.85rem 1rem; font-size:0.82rem; border-radius:12px; }
     .struggling-banner { padding:.8rem 1rem; font-size:0.82rem; border-radius:12px; }
@@ -830,16 +839,10 @@
   <div class="session-stats">
     
     <span class="stat-pill total" id="score-pill">0/0</span>
-    <span class="streak-pill" id="streak-pill">
-      <svg class="streak-flame" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="flameGrad" x1="50%" y1="0%" x2="50%" y2="100%">
-            <stop offset="0%" style="stop-color:#ff9500"/>
-            <stop offset="100%" style="stop-color:#ff3000"/>
-          </linearGradient>
-        </defs>
-        <path d="M22 4 C22 4 28 10 28 17 C28 17 31 14 30 10 C34 14 36 20 35 26 C34 32 29 38 22 39 C15 38 10 32 9 26 C8 20 10 14 14 10 C13 14 16 17 16 17 C16 10 22 4 22 4Z" fill="url(#flameGrad)"/>
-        <path d="M22 18 C22 18 25 22 25 26 C25 26 26 24 26 22 C28 24 28 27 27 30 C26 33 24 35 22 35 C20 35 18 33 17 30 C16 27 16 24 18 22 C18 24 19 26 19 26 C19 22 22 18 22 18Z" fill="#ffcc00" opacity="0.9"/>
+    <span class="streak-pill" id="streak-pill" title="Answer streak">
+      <svg class="streak-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12.4 2.6c.4 2.6 2 3.9 3.1 5.4a5.6 5.6 0 0 1 1.1 3.5 4.6 4.6 0 1 1-9.2 0c0-2 .9-3.3 2-4.5.2 1 .7 1.7 1.3 2.1.6-2.3 1-4.3 1.7-6.5Z"/>
       </svg>
       <span class="streak-num-inside" id="streak-num">2</span>
     </span>
@@ -2597,7 +2600,11 @@
       if (wbBeats && wbBeats.length) {
         pendingWhiteboardDay = day;
         html = buildCard('Today\'s Lesson', day.title || '', false,
-          '<div id="wb-mount"></div>', 'Step through it', 'Got it →', false);
+          /* No footer label. It read "Step through it", which is an
+             instruction for controls the board already shows - it has its
+             own Back/Next/Replay row directly above. The walkthrough
+             button is a different thing and stays. */
+          '<div id="wb-mount"></div>', '', 'Got it →', false);
       } else {
         html = buildCard('Today\'s Lesson', day.title || '', false, lessonBody, 'Read carefully', 'Got it →', false);
       }
@@ -4860,6 +4867,23 @@
     var d = dayObj || ((typeof day !== 'undefined' && day) ? day : {});
     var t = String(d.microTopic || d.title || '').replace(/\s+/g, ' ').trim();
     if (!t) return '';
+
+    /* microTopic arrives as a BREADCRUMB - "Algebra > Equation solving >
+       Isolating the variable" - and every one of these prompts splices it
+       into the middle of a sentence. The learner was being asked to "explain
+       Algebra > Equation solving > Isolating the variable in your own words",
+       chevrons and all, which reads as punctuation soup rather than a topic.
+
+       The last segment is the point of a narrowing path: it is the most
+       specific thing, and the one that reads as English. The welcome card
+       still shows the full path - buildTopicPath draws it as a proper stepped
+       trail, which is what a breadcrumb is actually for. */
+    var seg = t.split(/\s*(?:\u203a|>|\u2192|\||\u00bb)\s*/);
+    for (var si = seg.length - 1; si >= 0; si--) {
+      var cand = seg[si].replace(/\s+/g, ' ').trim();
+      if (cand.length >= 3) { t = cand; break; }
+    }
+
     var ci = t.indexOf(':');
     if (ci > -1) {
       var after = t.slice(ci + 1).trim();

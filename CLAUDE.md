@@ -47,6 +47,11 @@ while the module itself tested fine from the console.
 - Fonts: Instrument Serif (headings), DM Sans (body)
 - Card hover: blue border only. **No pop/scale transform** — this was a deliberate
   decision, don't reintroduce it.
+- **The streak mark is monochrome**, sized and shaped like the score pill beside
+  it. It was a 44px orange-to-red gradient flame with the count reversed out in
+  white — the loudest thing on a page whose palette is one blue. At 14px the
+  flame keeps its inner tongue on purpose: the simplified outline read as a
+  water droplet.
 - **No amber on either whiteboard.** It was in three places and only fixing all
   three worked: `SFBoard`'s accent (`ACCENT` was Accent Gold), the OUT column of
   `SFStepVisual.inOut`, and — the one that kept it coming back — the 4th entry
@@ -351,6 +356,15 @@ Also: **don't interpolate raw `day.title` into a sentence.** Titles arrive as
 chapter headings ("Algebra: Variables, Expressions, and Equations") and produce
 broken grammar. Use `feynmanTopic(dayObj)`, which strips the prefix and truncates
 on a word boundary. `applyFeynmanOrder` printed the raw title for a long time.
+
+**`feynmanTopic` also has to split the breadcrumb.** `microTopic` is preferred
+over `title` and arrives as a path — `Algebra › Equation solving › Isolating the
+variable` — so every prompt spliced the chevrons into the middle of its own
+sentence: *"explain Algebra › Equation solving › Isolating the variable in your
+own words"*. It now keeps the **last** segment, which is the specific thing the
+path narrows to and the only part that reads as English. The welcome card still
+shows the whole path: `buildTopicPath` draws it as a stepped trail, which is
+what a breadcrumb is for.
 
 `getFeynmanTip()` must have an entry for all 10 subjects.
 
