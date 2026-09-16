@@ -52,6 +52,9 @@ while the module itself tested fine from the console.
   white — the loudest thing on a page whose palette is one blue. At 14px the
   flame keeps its inner tongue on purpose: the simplified outline read as a
   water droplet.
+- **No amber on either whiteboard** (the lesson-card `supply-demand` chart is
+  the one deliberate exception: demand is red, supply is blue, and amber marks
+  the equilibrium between them — recolouring it would collide with a curve).
 - **No amber on either whiteboard.** It was in three places and only fixing all
   three worked: `SFBoard`'s accent (`ACCENT` was Accent Gold), the OUT column of
   `SFStepVisual.inOut`, and — the one that kept it coming back — the 4th entry
@@ -486,6 +489,24 @@ order of how specific they are:
    lesson's material, so two lessons never get the same picture.
 4. the curated matcher, against the topic text
 
+### Who owns the lesson card
+
+`LESSON_CARD_STEPPED` (block 1, near `buildOpeningBoard`) — **`false`**.
+
+Three things could replace that card, and all three did: `SFWhiteboard.fromDay`
+(a stepped `SFBoard` scene, fires on the *first* view of a topic),
+`whiteboard.js` (a stepped beat-by-beat board, fires always), and the static
+card. The session already opens on two stepped boards — the main-ideas card and
+the sideways worked example — so a third directly after them meant **three
+stepped boards in a row before a single question**, and the third was the
+weakest: `whiteboard.js`'s beats are generic kit strips, not the hand-drawn
+picture the day actually has.
+
+So the lesson card is the lesson: the picture, then the prose, the steps and
+the concepts. Teaching by beats happens on the two cards before it. Set the
+flag to `true` to hand the card back — both branches read it and nothing else
+needs changing.
+
 **Three things compete for the lesson card, and all three must keep the
 picture.** `SFWhiteboard.fromDay` (block 2's integration layer), `whiteboard.js`,
 and the static card. Each replaced the card wholesale, so `diagramForDay` was
@@ -733,7 +754,7 @@ Three entry points:
 | Entry | Function | Status |
 |---|---|---|
 | Opening board (card 2) | `briefFor(day, subject)` → `sfwb-brief` card | Active |
-| Lesson-card replacement | `fromDay(day)` | **Returns null on every subject — dormant.** Pre-existing, falls back safely to the normal lesson card. |
+| Lesson-card replacement | `fromDay(day)` | **Gated off** by `LESSON_CARD_STEPPED`. It was never actually dormant — it builds from `day.steps` and fired on the first view of every topic, which is where the lesson card kept losing its diagram. |
 | Wrong-answer walkthrough | `fromWrongAnswer(q, day)` | Active |
 
 12 scenes: `hero`, `brief`, `map`, `chart`, `pyramid`, `steps`, `cycle`,
@@ -952,6 +973,21 @@ What to check after any `buildQueue` or renderer change:
 18. The board does not overflow at 375px, and its reason line is still legible
     there (it is the smallest text on the card)
 
+**And a second suite that belongs to `app.html`**, not the session — load
+`app.html`, inject `appsuite.js`, call `SFRunAppSuite()`:
+
+19. The real prompt is captured off the wire and is **under the 60 000 char
+    cap with real headroom**, and still ends with an intact JSON schema. The
+    cap truncates from the end, so going over deletes the schema, not the
+    guidance.
+20. 200 000 chars of notes produce the same prompt length (the 3 500 cap holds)
+21. The prompt still carries the drawing vocabulary, the worked example and the
+    per-concept visual — adding guidance is how the budget gets spent
+22. **Every extension in the file picker's `accept` list has a handler.** A
+    format advertised with no branch is how `.pptx` came back "not supported"
+    for months
+23. `pptxTextFromXml` pulls every run and decodes entities
+
 Verify by executing the code, not by reading it. Several bugs here looked correct
 on inspection and only showed up when the queue was actually built — and two
 (the missing opening board, the dead badges) only showed up when the *page* was
@@ -971,6 +1007,28 @@ python3 .claude/skills/diagram/scripts/preview_diagrams.py --demo -o /tmp/p.html
 That pulls the real kit out of `lesson.html` and renders any set of specs onto
 one page, so a diagram can be *looked at* rather than read. Use it — every
 diagram bug in this codebase read as correct code.
+
+## The prompt budget
+
+`api/generate.js` caps the prompt at **60 000 chars and truncates from the
+end** — and the JSON schema sits at the end. Going over does not shorten the
+guidance, it removes the shape the model is told to return, which fails
+silently and completely.
+
+Measured, not estimated (`appsuite.js` captures the real prompt off the wire):
+
+| | chars |
+|---|---|
+| static prompt text | ~25 600 |
+| notes, capped by `notesForPrompt = notes.substring(0, 3500)` | ≤ 3 500 |
+| question schema, worst subject | ≤ ~2 600 |
+| **longest real prompt** | **30 467** |
+| headroom | ~29 500 |
+
+200 000 chars of notes produce a byte-identical prompt length, because of that
+cap — there is a test for it. The drawing vocabulary, `workedExample` and the
+per-concept visual together cost about 4 000 chars, which is why there is
+still half the budget spare.
 
 ## Reading what the learner uploads
 
@@ -1011,6 +1069,27 @@ Three things worth knowing:
   reported "no speech detected". The honest routes are a caption file or live
   listening, and those are what the UI offers.
 
+## The teach-it-back card
+
+`.write-area` starts at **five lines and grows with what is typed**, to a
+fourteen-line cap and then scrolls; `autoGrowWrite` resets the height to `auto`
+before measuring, because `scrollHeight` only ever reports the larger of the
+content and the current height — without the reset a box that has grown can
+never shrink back.
+
+It was a fixed 110px: three visible lines, about 40 words, while the grader
+asks for an explanation scored out of ten with specific knowledge gaps named. A
+real one runs 80–150 words, so most of the answer was typed into a porthole.
+That matters more here than on an ordinary form: **re-reading your own
+explanation and noticing where it goes vague is the Feynman technique**, and a
+window hiding two thirds of it removes the step that makes the card work.
+
+Growing rather than simply being tall is deliberate — a fixed fourteen-line box
+on a card where two sentences is a legitimate answer reads as a demand.
+
+The footer slot carries a live word count. It used to read "Writing = strongest
+memory", which is a slogan; every question card uses that slot for the score.
+
 ## Deploying
 
 `main` is the live branch. Push to GitHub and Vercel rebuilds automatically —
@@ -1018,31 +1097,35 @@ frontend and `api/*.js` together. There is no build step, so a push is the deplo
 
 ## Open items
 
-- **`fromDay` is dormant** — the whiteboard never replaces the lesson card.
-- `index.html` has not been reviewed yet. That was the next task (hero section).
-- **`workedExample` has not been seen from a real model run.** The prompt, the
-  schema and the validator are in place; the fallback chain is tested against
-  fixtures, and the primary path is tested against a hand-written payload of
-  the shape the prompt asks for (`workedFor` prefers it, `briefFor` prefers it
-  over its own subject scene, per-step `visual` specs draw, and six malformed
-  shapes fall back without throwing). What is still unverified is the *model*:
-  no generated plan has come back carrying the field yet. Check the first one
-  for step `line` lengths, and for whether it honours "not one of the questions
-  below" — that rule is prompt-enforced only, with no validator behind it.
-- **`concepts[].visual` has not been seen from a real model run** — same
-  status as `workedExample`. The prompt, schema and validator are in place and
-  the path is tested against hand-written payloads (a `flow` and a `compare`
-  draw; a tall `concept` is refused; six malformed shapes fall back without
-  throwing). What is unverified is whether the model returns the field, keeps
-  to the four allowed layouts, and keeps items under 26 characters.
-- **Concept-only days still lean on `progressStrip`.** `areaModel` and
-  `trendGraph` converted the expansion and trend steps, but a day of bare
-  definitions has genuinely little to draw per step — a term and its meaning is
-  not a shape. Measured across the ten fixtures, the non-maths worked boards are
-  roughly half strip. A model-supplied `workedExample`, which walks a real
-  instance rather than a list of terms, is the fix; more builders are not.
-- `Scene.equation` has been **deleted**, and every route into it now goes to
-  `worked`. Parking it unused was not enough: two live paths still reached it.
+- **Nothing generated by a real model run has been checked yet.** Three fields
+  are wired end to end, prompted, validated and tested against hand-written
+  payloads, and none has been seen coming back from the actual model:
+  `workedExample`, `concepts[].visual`, and `{"type":"drawing"}`. Generate one
+  plan and look at what arrives. Specifically: does the model return them at
+  all, does it keep `line` under 40 chars, does it keep per-idea visuals to the
+  four wide-and-short layouts, and does it honour "the worked example must not
+  be one of the questions below" — that last rule is prompt-enforced only, with
+  no validator behind it.
+- **Audio and video still cannot be transcribed**, and no amount of client work
+  fixes it: a browser cannot transcribe a media file and the Anthropic API has
+  no speech-to-text. The honest routes — a caption file, or live listening —
+  are what the UI offers. Real support needs a transcription service (Whisper,
+  Deepgram, AssemblyAI) behind a new `api/transcribe.js`; that is a paid
+  dependency and a product decision.
+- **Concept-only days lean on `progressStrip`.** A day of bare definitions has
+  genuinely little to draw per row — a term and its meaning is not a shape.
+  Roughly half those rows stay text-only. A model-supplied `visual` is the fix;
+  more builders are not.
+- **`whiteboard.js` is now unreached** (`LESSON_CARD_STEPPED` is `false`). It is
+  ~800 lines that nothing calls. Kept rather than deleted because the flag is a
+  one-word revert — but it is dead code, and dead code that can silently
+  reactivate is exactly how `Scene.equation` kept drawing the card it was
+  supposed to have replaced. Decide whether to keep it.
+- **`index.html` has not been reviewed.** It loads clean — no console errors, no
+  broken images, no horizontal overflow, and all eight internal links resolve —
+  but the hero section is still the intended next task. `hero-bg.mp4` (1.6 MB)
+  is committed and referenced by nothing, which is presumably what that task is
+  for.
 
 ## Conventions
 

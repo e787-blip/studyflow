@@ -352,8 +352,22 @@
   .fill-submit:disabled { background:var(--border); color:var(--muted); cursor:not-allowed; }
 
   /* WRITING */
+  /* Starts at about five lines and grows with what is typed, up to fourteen.
+
+     It was a fixed 110px - three visible lines, roughly 40 words - while the
+     grader asks for a Feynman explanation scored out of ten with specific
+     knowledge gaps named. A real one runs 80-150 words, so most of the answer
+     was being typed into a porthole, and the learner could not re-read what
+     they had written. Re-reading your own explanation and noticing where it
+     goes vague IS the Feynman technique; a window that hides two thirds of it
+     removes the step that makes the card work.
+
+     Growing rather than simply being tall matters too: a fixed fourteen-line
+     box on a card where two sentences is a legitimate answer reads as a
+     demand, and an empty expanse is its own kind of intimidating. */
   .write-area {
-    width:100%; min-height:110px; padding:.95rem 1.1rem;
+    width:100%; min-height:150px; max-height:420px; overflow-y:auto;
+    padding:.95rem 1.1rem;
     border:1.5px solid var(--border); border-radius:12px;
     font-family:var(--sans); font-size:0.93rem; color:var(--ink);
     background:var(--soft); resize:vertical; outline:none; line-height:1.7;
@@ -589,7 +603,7 @@
     .fill-input { font-size:0.92rem; padding:.85rem 5.6rem .85rem 1rem; }
     .fill-wrap .fill-submit { padding:.5rem .85rem; font-size:0.82rem; }
     /* Write area */
-    .write-area { min-height:100px; font-size:0.88rem; }
+    .write-area { min-height:130px; max-height:300px; font-size:0.88rem; }
     /* Results */
     .results-score { font-size:3.5rem; }
     .results-stats { grid-template-columns:repeat(3,1fr); gap:.4rem; }
@@ -1323,6 +1337,27 @@
      a day the board cannot build for gets no worked card, and a day with
      neither returns an empty array and the session simply starts on the
      lesson. */
+  /* ── WHO OWNS THE LESSON CARD ──────────────────────────────────────────
+     Three things could replace it, and all three did:
+
+       SFWhiteboard.fromDay   a stepped SFBoard scene (fires on FIRST view)
+       whiteboard.js          a stepped beat-by-beat board (fires always)
+       the static card        diagram + prose + steps + concepts
+
+     The session already opens on two stepped boards - the main-ideas card and
+     the sideways worked example - and both are built from this day's own
+     material. A third stepped board directly after them means a learner meets
+     three in a row before a single question, and the third is the weakest of
+     the three: whiteboard.js's beats are generic kit strips, not the
+     hand-drawn picture the day actually has.
+
+     So the lesson card is the LESSON: the picture, then the prose, the steps
+     and the concepts. Teaching by beats happens on the two cards before it.
+
+     Set this to true to hand the card back to the stepped boards. Nothing
+     else needs changing - both branches read it. */
+  var LESSON_CARD_STEPPED = false;
+
   function buildOpeningBoard() {
     var cards = [];
     try {
@@ -2599,7 +2634,7 @@
       if (global_hasWhiteboard()) {
         try { wbBeats = window.Whiteboard.deriveBeats(day); } catch (e) { wbBeats = null; }
       }
-      if (wbBeats && wbBeats.length) {
+      if (LESSON_CARD_STEPPED && wbBeats && wbBeats.length) {
         pendingWhiteboardDay = day;
         html = buildCard('Today\'s Lesson', day.title || '', false,
           /* No footer label. It read "Step through it", which is an
@@ -5036,13 +5071,39 @@
     return stem || 'The main idea from this lesson, in your own words';
   }
 
+  /* Grow the box to fit what is in it, to the CSS max-height and no further -
+     past that it scrolls, so the card cannot run away down the page. Height is
+     reset to auto first because scrollHeight only ever reports the larger of
+     the content and the current height, so without the reset a box that has
+     grown can never shrink back when text is deleted. */
+  function autoGrowWrite(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    var max = parseInt(window.getComputedStyle(el).maxHeight, 10);
+    if (!isFinite(max)) max = 420;
+    el.style.height = Math.min(el.scrollHeight, max) + 'px';
+
+    /* The footer slot on this card said "Writing = strongest memory", which is
+       a slogan. Every question card uses that slot for the score. A live word
+       count is the same kind of thing: information about where you are. */
+    var foot = document.querySelector('.session-card .footer-left');
+    if (foot) {
+      var words = el.value.trim() ? el.value.trim().split(/\s+/).length : 0;
+      foot.textContent = words
+        ? words + (words === 1 ? ' word' : ' words')
+        : 'Writing is the strongest memory';
+    }
+  }
+  window.autoGrowWrite = autoGrowWrite;
+
   function renderWrite(q) {
     var concept = feynmanConcept(q);
     var body = '<div class="q-meta"><span class="q-type-label write">Feynman Technique</span><span class="q-difficulty medium">Deep Learning</span></div>' +
       '<div class="q-text">Explain this concept <strong>in your own words</strong>, as if teaching it to a friend:</div>' +
       '<div style="background:var(--blue-light);border-radius:10px;padding:.75rem 1rem;margin:.5rem 0 .75rem;font-size:0.88rem;color:var(--blue);font-weight:600;">' + concept + '</div>' +
       '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:.5rem;">' + getFeynmanTip(plan.subjectType) + '</div>' +
-      '<textarea class="write-area" id="write-input" placeholder="Write your explanation here. The more specific the better — include examples, causes, effects, dates, names..."></textarea>' +
+      '<textarea class="write-area" id="write-input" oninput="autoGrowWrite(this)" ' +
+      'placeholder="Write your explanation here. The more specific the better — include examples, causes, effects, dates, names..."></textarea>' +
       '<div style="display:flex;align-items:center;gap:.75rem;margin-top:.65rem;">' +
       '<button class="write-submit" onclick="submitWrite(\'' + esc(q.modelAnswer || q.explanation || '') + '\',\'' + esc(q.question) + '\')">Get AI feedback →</button>' +
       '<div class="write-analyzing" id="write-analyzing"><div class="mini-spinner"></div><span>Claude is analyzing your explanation...</span></div>' +
@@ -5051,7 +5112,7 @@
     return '<div class="session-card">' +
       '<div class="card-header"><div class="card-badge">✦ Feynman Technique</div><h2>Teach it back</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
-      '<div class="card-footer"><span class="footer-left">Writing = strongest memory</span>' +
+      '<div class="card-footer"><span class="footer-left">Writing is the strongest memory</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
@@ -14885,7 +14946,7 @@ var SFBoard = (function () {
 
     /* Onboarding or a spatial concept: show the whiteboard instead of the
        static lesson card. Any failure falls through to the original card. */
-    if (card && card.type === 'lesson' && mount) {
+    if (card && card.type === 'lesson' && mount && w.LESSON_CARD_STEPPED) {
       try {
         var key = topicKey();
         var decision = w.SFWhiteboard.shouldTrigger({
