@@ -486,6 +486,14 @@ order of how specific they are:
    lesson's material, so two lessons never get the same picture.
 4. the curated matcher, against the topic text
 
+**Three things compete for the lesson card, and all three must keep the
+picture.** `SFWhiteboard.fromDay` (block 2's integration layer), `whiteboard.js`,
+and the static card. Each replaced the card wholesale, so `diagramForDay` was
+computed and discarded by whichever won. `fromDay` is the worst to lose it on:
+`shouldTrigger` keys off `firstOpen`, so it fires on the **first** view of a
+topic — exactly when the learner has never seen the thing before. There is a
+test for all three paths.
+
 **The lesson card keeps its picture even when `whiteboard.js` takes over.**
 That branch wins on every subject — `Whiteboard.deriveBeats` returns beats for
 all ten — so for a long time `diagramForDay` was called, returned a picture,
@@ -502,6 +510,42 @@ looks exactly like "this topic did not need one".
 On a hub layout (`concept`, `parts`) pass the topic as `center` and leave
 `title` empty — passing both prints the topic twice, once above the drawing and
 once inside it. The card captions the diagram underneath anyway.
+
+### `SFSceneKit` — drawing anything, from a spec written with the lesson
+
+The 23 curated templates are hand-drawn and keyword-matched, so they cover 23
+topics. A lesson on a trebuchet, the layers of the atmosphere, a sarcomere or
+the plot of *Macbeth* gets whichever generic box-and-arrow layout fits least
+badly. `SFSceneKit` is the other half: a small drawing vocabulary the **model**
+fills in at generation time.
+
+```json
+{"type":"drawing","title":"","w":440,"h":250,"shapes":[
+  {"s":"rect","x":,"y":,"w":,"h":,"r":8,"fill":"blueFill","stroke":"blue"},
+  {"s":"circle"|"ellipse"|"line"|"path"|"poly"|"text", ...}]}
+```
+
+**It is deliberately not raw SVG.** Raw SVG from a model is unbounded — script
+elements, external references, arbitrary colour, text off the canvas — and none
+of that is cheap to check. A fixed vocabulary is:
+
+| Guard | What it stops |
+|---|---|
+| shape kinds are a whitelist | `<script>`, `<image href>`, `<foreignObject>` |
+| colours are **names** from a palette | off-brand or invisible drawings, `url(#…)` |
+| every number clamped to the canvas | shapes landing off-screen |
+| path `d` grammar-checked (`M L H V Q C A Z` + numbers) | anything that is not a path |
+| text escaped and length-capped | markup injected through a label |
+| floor of 3 shapes and 1 label | a "drawing" nobody can read |
+
+A spec that fails any of it returns **null** and the caller falls back exactly
+as for any other missing diagram. `app.html` validates the same shape before
+storing, so a rejected drawing never reaches localStorage — but **the renderer
+is the security boundary**, because a plan can be loaded from storage that the
+validator never saw. Both must stay.
+
+A drawing **wins over the curated matcher**: a picture made for this lesson
+beats a template matched on a keyword.
 
 ### Custom layouts
 
@@ -621,6 +665,13 @@ Two traps already fixed in these builders:
 - **`jumpLine`'s arrowhead follows the curve's tangent** (`P1 - C` on a
   quadratic), and its control point is solved from the peak height wanted
   (`cy = 2*peak - AX`), not eyeballed. Same family as the wave-crest bug below.
+
+`ecosystem` is **an energy pyramid with the creatures in it** — hawk, fox,
+rabbit, grass — not four stacked boxes. The shape is the lesson: each level is
+narrower because only about a tenth of the energy is passed on, and equal-width
+rectangles say the opposite. Every role label is anchored to **its own level's**
+edge; one right-hand column printed "secondary consumer" across the pyramid,
+because the column has to clear the widest level, not the narrowest.
 
 `curatedDiagramSVG` holds 23 hand-drawn templates: brain, neuron, atom,
 **cell**, supply-demand, dna, ecosystem, water-cycle, mitosis, memory-model,
@@ -920,6 +971,45 @@ python3 .claude/skills/diagram/scripts/preview_diagrams.py --demo -o /tmp/p.html
 That pulls the real kit out of `lesson.html` and renders any set of specs onto
 one page, so a diagram can be *looked at* rather than read. Use it — every
 diagram bug in this codebase read as correct code.
+
+## Reading what the learner uploads
+
+`app.html` accepts photos, PDFs, Word, PowerPoint, caption files and plain
+text. What each route actually does:
+
+| Format | How | Notes |
+|---|---|---|
+| jpg png webp gif heic | `api/extract` → Claude Vision | handwriting, textbook photos, whiteboards |
+| **pdf, with a text layer** | pdf.js `getTextContent` | fast and exact |
+| **pdf, scanned** | pdf.js renders each page to canvas → `api/extract` | capped at `PDF_OCR_MAX_PAGES` (12) |
+| docx | mammoth | |
+| **pptx** | JSZip → `<a:t>` runs in `ppt/slides/slideN.xml` | **speaker notes too** |
+| vtt srt sbv | parsed locally, timings stripped | the reliable route for a lecture |
+| mp4 mov mp3 wav … | **not transcribed** — see below | |
+
+Three things worth knowing:
+
+- **A scanned PDF used to be a dead end.** It scraped printable bytes out of
+  the raw file (which yields fragments of font tables far more often than
+  prose) and then told the learner to "take a photo of the pages instead" —
+  of the pages they had just uploaded. It now renders them and reads them with
+  the same vision endpoint a photo goes through. The canvas is **filled white
+  first**: a PDF assumes paper, and a transparent page flattened to JPEG comes
+  out black on black.
+- **PowerPoint was advertised and unimplemented.** `.pptx` was in the file
+  picker's `accept` list and had its own "PowerPoint" chip, and the dispatcher
+  had no branch for it, so every deck came back "File type not supported".
+  Slides are ordered by the **number** in the filename: `slide10` sorts before
+  `slide2` as a string, and a deck read out of order teaches the sequence
+  wrong. Speaker notes are pulled from `ppt/notesSlides/` and appended to their
+  slide — that is usually where the actual explanation is.
+- **Audio and video cannot be transcribed here, and the code should not
+  pretend otherwise.** A browser cannot transcribe a media file, and the only
+  backend is the Anthropic API, which has no speech-to-text. An earlier version
+  played the file at volume 0.01 and started `SpeechRecognition`, which
+  captures the *microphone* — so it opened the mic, heard the room, and
+  reported "no speech detected". The honest routes are a caption file or live
+  listening, and those are what the UI offers.
 
 ## Deploying
 

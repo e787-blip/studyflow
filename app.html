@@ -867,6 +867,13 @@
     var p = document.createElement('script');
     p.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
     document.head.appendChild(p);
+    /* A .pptx is a zip of XML parts, so reading one needs an unzipper. The
+       upload control has advertised .pptx and shown a "PowerPoint" chip since
+       the beginning, and there was no handler at all - every deck dropped
+       here came back "File type not supported". */
+    var z = document.createElement('script');
+    z.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    document.head.appendChild(z);
   })();
 
   var extractedTexts = []; // accumulate text from multiple files
@@ -1130,12 +1137,14 @@
     var reader = new FileReader();
     reader.onload = function(e) {
       var buf = e.target.result;
+      var pdfDoc = null;
       var tryPDF = function(attempts) {
         if (attempts <= 0) { extractRawPdfText(buf, file.name); return; }
         if (!window.pdfjsLib) { setTimeout(function(){ tryPDF(attempts-1); }, 400); return; }
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         window.pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise
           .then(function(pdf) {
+            pdfDoc = pdf;
             var pages = [];
             for (var i = 1; i <= pdf.numPages; i++) pages.push(i);
             return Promise.all(pages.map(function(n) {
@@ -1148,16 +1157,92 @@
           })
           .then(function(pageTexts) {
             var text = pageTexts.join('\n').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim();
-            if (text.length < 30) { extractRawPdfText(buf, file.name); return; }
+            /* No text layer: it is a scan. Read the pages as images rather
+               than telling the learner to photograph what they just gave us. */
+            if (text.length < 30) { ocrPdfPages(pdfDoc, file.name, buf); return; }
             hideStatus();
             appendToNotes(text);
             addFileToList(file.name, 'PDF read', true);
           })
-          .catch(function() { extractRawPdfText(buf, file.name); });
+          .catch(function() {
+            if (pdfDoc) ocrPdfPages(pdfDoc, file.name, buf);
+            else extractRawPdfText(buf, file.name);
+          });
       };
       tryPDF(15);
     };
     reader.readAsArrayBuffer(file);
+  }
+
+  /* ── SCANNED PDF -> AI VISION ─────────────────────────────────────────────
+     A PDF with no text layer is a stack of page images, and pdf.js finds
+     nothing in it. The old behaviour was to scrape printable bytes out of the
+     raw file - which yields mangled fragments of font tables far more often
+     than prose - and then tell the learner to "take a photo of the pages
+     instead". They already gave us the pages.
+
+     pdf.js can render each page to a canvas, and api/extract already reads an
+     image with Claude Vision for photographed notes. This connects the two, so
+     a scanned worksheet works the same as a photo of one.
+
+     Capped at 12 pages: each page is an API call, and a 200-page textbook
+     dropped in by accident should not fire 200 of them. */
+  var PDF_OCR_MAX_PAGES = 12;
+
+  function ocrPdfPages(pdf, name, rawBuf) {
+    var total = Math.min(pdf.numPages, PDF_OCR_MAX_PAGES);
+    var texts = [];
+
+    function done() {
+      hideStatus();
+      var text = texts.join('\n\n').replace(/\s{3,}/g, ' ').trim();
+      if (text.length > 40) {
+        appendToNotes(text);
+        var note = 'Scanned PDF read by AI \u00b7 ' + texts.length + ' page' +
+                   (texts.length === 1 ? '' : 's');
+        if (pdf.numPages > total) note += ' (first ' + total + ' of ' + pdf.numPages + ')';
+        addFileToList(name, note, true);
+      } else if (rawBuf) {
+        /* Vision found nothing either - fall back to the old byte scrape
+           rather than lose the file entirely. */
+        extractRawPdfText(rawBuf, name);
+      } else {
+        addFileToList(name, 'Could not read this PDF \u2014 paste the text instead', false);
+      }
+    }
+
+    function page(n) {
+      if (n > total) { done(); return; }
+      showStatus('Reading page ' + n + ' of ' + total + ' with AI vision...');
+      pdf.getPage(n).then(function (pg) {
+        /* Render wide enough that small print survives, but cap the width so
+           the base64 payload stays sane. */
+        var base = pg.getViewport({ scale: 1 });
+        var targetW = Math.min(1500, Math.max(900, base.width * 1.6));
+        var vp = pg.getViewport({ scale: targetW / base.width });
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.round(vp.width);
+        canvas.height = Math.round(vp.height);
+        var ctx = canvas.getContext('2d');
+        /* PDFs assume paper. Without a white ground a transparent page
+           renders as black-on-black once it is flattened to JPEG. */
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        return pg.render({ canvasContext: ctx, viewport: vp }).promise.then(function () {
+          var data = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+          return fetch('api/extract', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageData: data, mediaType: 'image/jpeg',
+                                   filename: name + ' page ' + n })
+          }).then(function (r) { return r.json(); }).then(function (d) {
+            if (d && d.text && String(d.text).trim()) texts.push(String(d.text).trim());
+            page(n + 1);
+          });
+        });
+      }).catch(function () { page(n + 1); });   // one bad page must not stop the rest
+    }
+    page(1);
   }
 
   function extractRawPdfText(buf, name) {
@@ -1177,6 +1262,95 @@
     } else {
       addFileToList(name, 'Scanned PDF — try taking a photo of the pages instead', false);
     }
+  }
+
+  // ── PPTX (PowerPoint) ──
+  /* A .pptx is a zip. Slide text lives in ppt/slides/slideN.xml inside <a:t>
+     runs; speaker notes live alongside in ppt/notesSlides/notesSlideN.xml and
+     are often where the actual explanation is, so both are read.
+
+     Slides are numbered slide1, slide2, ... slide10 - which sorts as 1, 10, 2
+     as a string, so the order is taken from the number in the filename. A deck
+     read out of order is worse than useless: it teaches the sequence wrong. */
+  function pptxSlideNumber(path) {
+    var m = String(path).match(/(\d+)\.xml$/);
+    return m ? parseInt(m[1], 10) : 0;
+  }
+
+  function pptxTextFromXml(xml) {
+    var out = [], m;
+    /* <a:t> is the text run. Paragraph breaks matter for bullet lists, so
+       </a:p> becomes a newline before the runs are pulled. */
+    var withBreaks = String(xml).replace(/<\/a:p>/g, '\n');
+    var re = /<a:t[^>]*>([\s\S]*?)<\/a:t>/g;
+    while ((m = re.exec(withBreaks))) {
+      var t = m[1]
+        .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+        .trim();
+      if (t) out.push(t);
+    }
+    return out.join(' ').replace(/\s{2,}/g, ' ').trim();
+  }
+
+  function handlePPTX(file) {
+    showStatus('Reading ' + file.name + '...');
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var tryZip = function (attempts) {
+        if (attempts <= 0) {
+          hideStatus();
+          addFileToList(file.name, 'Could not open the deck — paste the text instead', false);
+          return;
+        }
+        if (!window.JSZip) { setTimeout(function () { tryZip(attempts - 1); }, 400); return; }
+        window.JSZip.loadAsync(e.target.result).then(function (zip) {
+          var slides = [], notes = {};
+          zip.forEach(function (path) {
+            if (/^ppt\/slides\/slide\d+\.xml$/.test(path)) slides.push(path);
+            else if (/^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(path)) notes[pptxSlideNumber(path)] = path;
+          });
+          if (!slides.length) {
+            hideStatus();
+            addFileToList(file.name, 'No slides found in this file', false);
+            return;
+          }
+          slides.sort(function (a, b) { return pptxSlideNumber(a) - pptxSlideNumber(b); });
+
+          return Promise.all(slides.map(function (path) {
+            var n = pptxSlideNumber(path);
+            var jobs = [zip.file(path).async('string')];
+            jobs.push(notes[n] ? zip.file(notes[n]).async('string') : Promise.resolve(''));
+            return Promise.all(jobs).then(function (parts) {
+              var body = pptxTextFromXml(parts[0]);
+              var note = parts[1] ? pptxTextFromXml(parts[1]) : '';
+              if (!body && !note) return '';
+              var chunk = 'Slide ' + n + ': ' + body;
+              /* Notes carry the explanation the slide only gestures at. */
+              if (note) chunk += '\n  Speaker notes: ' + note;
+              return chunk;
+            });
+          })).then(function (chunks) {
+            var text = chunks.filter(function (c) { return c; }).join('\n\n').trim();
+            hideStatus();
+            if (text.length < 20) {
+              addFileToList(file.name, 'Slides look like images — export as PDF and upload that', false);
+              return;
+            }
+            appendToNotes(text);
+            var withNotes = chunks.filter(function (c) { return c.indexOf('Speaker notes:') !== -1; }).length;
+            addFileToList(file.name,
+              slides.length + ' slide' + (slides.length === 1 ? '' : 's') + ' read' +
+              (withNotes ? ' · ' + withNotes + ' with notes' : ''), true);
+          });
+        }).catch(function () {
+          hideStatus();
+          addFileToList(file.name, 'Could not open the deck — paste the text instead', false);
+        });
+      };
+      tryZip(15);
+    };
+    reader.readAsArrayBuffer(file);
   }
 
   // ── DOCX ──
@@ -1224,6 +1398,7 @@
       var videoExts = ['mp4','mov','m4v','avi','mkv','mp3','m4a','wav','ogg'];
       var docExts   = ['pdf'];
       var docxExts  = ['docx'];
+      var pptExts   = ['pptx'];
       var textExts  = ['txt','md','doc'];
       /* Caption and subtitle files are the reliable way to get a lecture's
          words in. They are checked before the plain text types so a .vtt is
@@ -1235,6 +1410,7 @@
       else if (videoExts.includes(ext)) { handleVideoAudio(file); }
       else if (docExts.includes(ext))   { handlePDF(file); }
       else if (docxExts.includes(ext))  { handleDOCX(file); }
+      else if (pptExts.includes(ext))   { handlePPTX(file); }
       else if (textExts.includes(ext))  { handleText(file); }
       else { addFileToList(file.name, 'File type not supported — paste text instead', false); }
     }
@@ -2900,6 +3076,45 @@
         '   Custom comparison uses a different shape:\n' +
         '   {"type":"custom","layout":"compare","title":"A vs B","left":{"title":"A","items":["..."]},"right":{"title":"B","items":["..."]}}\n' +
         '   Put each fact on the side it actually belongs to - never guess an attribution.\n' +
+        '\nDRAW IT YOURSELF - {"type":"drawing"} - when NONE of the above fits.\n' +
+        '   The templates cover 23 topics and the custom layouts are boxes and arrows. If this\n' +
+        '   lesson is about a THING with a shape - a trebuchet, the layers of the atmosphere,\n' +
+        '   an eye, a volcano, a bridge truss, a sarcomere, a castle keep, an orbit - draw it.\n' +
+        '   Shape: {"type":"drawing","title":"short title","w":440,"h":250,"shapes":[ ... ]}\n' +
+        '   Canvas: x goes right from 0, y goes DOWN from 0. Keep everything inside w and h.\n' +
+        '   Each entry in "shapes" is one of:\n' +
+        '     {"s":"rect","x":,"y":,"w":,"h":,"r":8,"fill":"blueFill","stroke":"blue"}\n' +
+        '     {"s":"circle","x":,"y":,"r":,"fill":"","stroke":""}\n' +
+        '     {"s":"ellipse","x":,"y":,"rx":,"ry":,"fill":"","stroke":""}\n' +
+        '     {"s":"line","x1":,"y1":,"x2":,"y2":,"stroke":"ink","sw":2,"arrow":true,"dash":true}\n' +
+        '     {"s":"path","d":"M10 10 Q60 0 110 10","stroke":"ink","fill":"none","arrow":true}\n' +
+        '     {"s":"poly","points":"10,90 60,20 110,90","fill":"faint","stroke":"ink"}\n' +
+        '     {"s":"text","x":,"y":,"t":"label","size":10,"anchor":"middle|start|end","fill":"ink"}\n' +
+        '   COLOURS ARE NAMES, never hex. Pick from: ink muted rule paper faint,\n' +
+        '   blue blueFill blueInk, green greenFill greenInk, red redFill redInk,\n' +
+        '   violet violetFill violetInk, teal tealFill tealInk, amber amberFill amberInk,\n' +
+        '   pink pinkFill pinkInk, none. Use the plain name for strokes and the Fill name\n' +
+        '   for fills, and the Ink name for text on that colour.\n' +
+        '   Path data may only use M L H V Q C A Z and numbers.\n' +
+        '   RULES, and a drawing that breaks them is thrown away:\n' +
+        '     - 8 to 40 shapes. Fewer than 3 shapes or no text at all is rejected.\n' +
+        '     - LABEL EVERY PART. A shape nobody can name teaches nothing.\n' +
+        '     - Put labels in empty space, not on top of the thing they name. Leave 12 units.\n' +
+        '     - Draw the thing, then label it. Do not draw a box and write a noun in it -\n' +
+        '       that is what the custom layouts are for and they do it better.\n' +
+        '   Worked example - the layers of the atmosphere:\n' +
+        '   {"type":"drawing","title":"Layers of the atmosphere","w":400,"h":250,"shapes":[\n' +
+        '     {"s":"rect","x":40,"y":30,"w":230,"h":40,"fill":"violetFill","stroke":"violet"},\n' +
+        '     {"s":"rect","x":40,"y":76,"w":230,"h":40,"fill":"blueFill","stroke":"blue"},\n' +
+        '     {"s":"rect","x":40,"y":122,"w":230,"h":40,"fill":"tealFill","stroke":"teal"},\n' +
+        '     {"s":"rect","x":40,"y":168,"w":230,"h":40,"fill":"greenFill","stroke":"green"},\n' +
+        '     {"s":"line","x1":40,"y1":214,"x2":270,"y2":214,"stroke":"ink","sw":2.5},\n' +
+        '     {"s":"text","x":155,"y":55,"t":"Thermosphere","size":11,"fill":"violetInk"},\n' +
+        '     {"s":"text","x":155,"y":101,"t":"Mesosphere","size":11,"fill":"blueInk"},\n' +
+        '     {"s":"text","x":155,"y":147,"t":"Stratosphere","size":11,"fill":"tealInk"},\n' +
+        '     {"s":"text","x":155,"y":193,"t":"Troposphere","size":11,"fill":"greenInk"},\n' +
+        '     {"s":"text","x":282,"y":147,"t":"ozone layer","size":9,"anchor":"start","fill":"muted"},\n' +
+        '     {"s":"text","x":282,"y":193,"t":"weather, clouds","size":9,"anchor":"start","fill":"muted"}]}\n' +
         '   Use {"type":"none"} only when the topic genuinely cannot be drawn.\n' +
         '6. concepts: 3-5 items each {name,definition,why,misconception,visual}.\n' +
         '   These are the MAIN IDEAS. They open the session on their own card, one numbered\n' +
@@ -3155,6 +3370,46 @@
               steps: steps
             };
           })();
+          /* Validate a model-DRAWN diagram before it is stored.
+
+             SFSceneKit in lesson.html validates again at render time and is
+             the real guard - it has to be, because a plan can be loaded from
+             localStorage that this code never saw. Doing it here too keeps a
+             rejected drawing out of storage entirely, so a day does not carry
+             40 shapes that will never be drawn. Both must stay: the renderer
+             is the security boundary, this is the tidy-up. */
+          (function () {
+            var d = day.diagram;
+            if (!d || typeof d !== 'object') return;
+            var isDrawing = String(d.type || '').toLowerCase() === 'drawing' || d.shapes;
+            if (!isDrawing) return;
+            var KIND = { rect:1, circle:1, ellipse:1, line:1, path:1, poly:1, text:1 };
+            var shapes = Array.isArray(d.shapes) ? d.shapes : [];
+            var kept = shapes.filter(function (sh) {
+              if (!sh || typeof sh !== 'object') return false;
+              var k = String(sh.s || sh.kind || sh.type || '').toLowerCase();
+              if (!KIND[k]) return false;
+              if (k === 'text') return String(sh.t || sh.text || '').trim().length > 0;
+              if (k === 'path') {
+                var pd = String(sh.d || '');
+                return /^[Mm]/.test(pd.trim()) && /^[MmLlHhVvQqCcAaZz0-9eE ,.+-]+$/.test(pd);
+              }
+              return true;
+            }).slice(0, 80);
+            var labels = kept.filter(function (sh) {
+              return String(sh.s || sh.kind || sh.type || '').toLowerCase() === 'text'; }).length;
+            /* Same floor the renderer uses: a drawing with no label is a shape
+               nobody can read, and two shapes is not a drawing. */
+            if (kept.length < 3 || labels < 1) { day.diagram = { type: 'none', label: '' }; return; }
+            day.diagram = {
+              type: 'drawing',
+              title: String(d.title || d.label || '').trim().slice(0, 70),
+              label: String(d.label || d.title || '').trim().slice(0, 70),
+              w: Number(d.w) || 440, h: Number(d.h) || 250,
+              shapes: kept
+            };
+          })();
+
           // Validate the AI-supplied diagram spec. If the type is unknown or
           // the spec carries no real content, drop it so the whiteboard falls
           // back to inferring a visual from the lesson text instead of
