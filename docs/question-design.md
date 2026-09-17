@@ -109,6 +109,44 @@ an exact value, and marking 47 wrong against a key of 50 tests neither.
 per-subject assignment is optimal. They are formats with research behind the
 *interaction*; which subtopic gets which is judgment.
 
+## 6. What the walkthrough board is shaped like, and why
+
+The board behind the **Walkthrough** button, and the one the session opens on,
+are the same scene. Four findings decide its shape, and a fifth is not
+implemented yet.
+
+**Worked examples beat unguided problem solving for novices** — section 2
+above. That is why the button exists at all, rather than showing the right
+answer and moving on.
+
+**Segmenting: one step at a time, learner-paced.** Presenting a complex
+sequence in learner-controlled parts beats presenting it whole. The board is
+`manual: true` for this reason — every other scene reveals on a 1.5s timer,
+which for a solution walks off the answer before the line has been read.
+
+**Coherence, and the seductive-detail effect: cut what is interesting but
+not needed.** The strongest version of this in the codebase was the
+`progressStrip` that used to fill each panel — a diagram of the list of steps,
+drawn inside the list of steps. It was not decoration anybody chose; it was
+the fallback firing because nothing better was available, which is the same
+thing from the learner's side.
+
+**Signaling: cue the organisation once.** Four simultaneous encodings of
+"which step" (count, rail, dots, numbered disc) is not four times the
+signalling. The two that survived are the two the learner can act on.
+
+**Spatial contiguity: words next to what they explain.** A reason pinned to
+the bottom edge of a card with the line it explains at the top is the split
+the principle is about, and it is why a panel with no picture now centres
+line and reason together.
+
+**Not implemented: self-explanation prompts, and fading.** Asking the learner
+to explain why a step works before revealing the reason reliably beats showing
+the reason alone, and *backward fading* — blanking the last step, then the
+last two — is the evidence-backed way to hand the work back as skill grows.
+Both would change this board from something you read into something you do.
+Neither is built.
+
 ## What none of this establishes
 
 - **The specific counts.** That reading comprehension gets four passage
@@ -132,6 +170,11 @@ per-subject assignment is optimal. They are formats with research behind the
 - [Development of two-tier diagnostic instrument in chemistry](https://www.researchgate.net/publication/254383547_Development_of_two-tier_diagnostic_instrument_and_assess_students'_understanding_in_chemistry)
 - [Stanford History Education Group — Reading Like a Historian](https://csaa.wested.org/resource/stanford-history-education-group-reading-like-a-historian/)
 - [Historical Thinking Chart (SHEG)](https://www.trumanlibrary.gov/sites/default/files/2019-10/Copy%20of%20Historical%20Thinking%20Chart.pdf)
+- [Principles for reducing extraneous processing: coherence, signaling, redundancy, spatial and temporal contiguity (Mayer & Fiorella)](https://edtechuvic.ca/wp-content/uploads/sites/11/2022/09/principles-for-reducing-extraneous-processing-in-multimedia-learning-coherence-signaling-redundancy-spatial-contiguity-and-temporal-contiguity-principles.pdf)
+- [Cognitive architecture and instructional design: 20 years later (Sweller et al.)](https://link.springer.com/article/10.1007/s10648-019-09465-5)
+- [How fading worked solution steps works — a cognitive load perspective (Renkl & Atkinson)](https://link.springer.com/article/10.1023/B:TRUC.0000021815.74806.f6)
+- [Transitioning from studying examples to solving problems: self-explanation prompts and fading](https://mrbartonmaths.com/resourcesnew/8.%20Research/Making%20the%20most%20of%20examples/Fading%20out%20and%20Prompts.pdf)
+- [The effect of worked examples on learning solution steps and knowledge transfer](https://www.tandfonline.com/doi/full/10.1080/01443410.2023.2273762)
 - [Multiple representations (mathematics education)](https://en.wikipedia.org/wiki/Multiple_representations_(mathematics_education))
 - [Multiple Representations — SERP Institute](https://www.serpinstitute.org/sensemaking/multiple-representations)
 - [Evidence-Based Selected Response questions](https://support.focalpointk12.com/hc/en-us/articles/115002565992-How-do-I-create-an-Evidence-Based-Selected-Response-Question-EBSR)

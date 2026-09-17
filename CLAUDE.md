@@ -507,6 +507,48 @@ the concepts. Teaching by beats happens on the two cards before it. Set the
 flag to `true` to hand the card back — both branches read it and nothing else
 needs changing.
 
+### The lesson card is PAGED — `.lp-*` and `sfLessonJump`
+
+Being the lesson does not mean being a column. The card used to append every
+block to one body — picture, prose, every step, every concept, every trap, the
+case study — which came to **~2 200px on an ordinary algebra day**: half a
+minute of scrolling before the first question. Nothing was wrong with any one
+block; there were eight of them stacked.
+
+It is now a **spread**: one part at a time, moving sideways, with a rail across
+the top saying how many there are and where you are. The longest part of that
+same day is **609px**. Deliberately *not* the whiteboard — same prose, same
+cards, same picture, no SVG board and no beats. The motion is the only thing
+borrowed: a 170ms slide out, the new part rising in on a staggered fade, and
+the viewport's height animated between the two.
+
+```
+The idea | How it works | Core concepts | More concepts | Common traps | In the real world
+```
+
+- **The footer button turns the page.** On every part but the last it reads
+  the *next* part's name and advances the pager; only on the last does it say
+  "Got it" and leave the card. `sfLessonChrome()` rebinds it after
+  `sc.innerHTML` is committed — `buildCard` still hardcodes `showNextCard()`,
+  so every other card's footer is untouched.
+- **A section longer than a screen becomes two short parts, evenly split.**
+  `per` in `lpSection` is a ceiling, not a stride: five steps are 3+2, never
+  4+1. A part carrying a single item is a page turn that buys nothing.
+- **The rail label IS the section heading.** It was printed twice — once in
+  the rail, again as the first line of the part. The label takes the part's
+  own tone, which is the only reason a page of traps still reads amber.
+- **One part means no pager at all.** A prose-only day renders exactly as it
+  always did, with the ordinary footer.
+- **A height of zero means nothing is being laid out** — background tab, or a
+  `display:none` ancestor (the 10-minute recap overlay does this). Animating
+  to it collapses the card to a line, so `sfLessonJump` hands the height
+  straight back to `auto` instead.
+- **`lpLive()`, not `sfLesson`, is the guard.** The whiteboard cards render
+  through `SFWhiteboard`'s own `renderCard` branch, which returns *before*
+  `renderCardInner` and so never clears `sfLesson`. "Is there a viewport in
+  the document" is the honest test; without it the arrow keys stay bound to a
+  lesson the learner walked past two cards ago.
+
 **Three things compete for the lesson card, and all three must keep the
 picture.** `SFWhiteboard.fromDay` (block 2's integration layer), `whiteboard.js`,
 and the static card. Each replaced the card wholesale, so `diagramForDay` was
@@ -849,6 +891,52 @@ What it replaced, and why not to go back:
   learner has read the line. `render()` honours `scene.manual` by showing beat 1
   and waiting.
 
+**One progress signal, not four.** A panel used to carry a numbered disc in
+its top-left corner while the board's own chrome printed "2 / 5" above the
+card, a row of tappable dots below it, and the scene drew a filling rail of
+its own — four answers to "where am I", three of them not even clickable.
+The disc is also the loudest mark available on a card whose content is a line
+of type, and it was spent on the row's index. What is left: the count, the
+dots (they are tap targets), and the arrows between panels. The step's own
+NAME now sits where the disc was, set as a small muted kicker — that is the
+half of the badge that was carrying information.
+
+**`ctx.labels` is passed EMPTY here, exactly as on the ideas card.**
+`forStep`'s last resort is `progressStrip`, a little diagram of the list of
+steps — and on this board the learner is standing in that list. It was drawing
+a picture of the furniture. On maths it was worse than redundant: the strip
+prints every label it is handed, so panel one of `x + 7 = 15` displayed the
+whole solution, `x = 8` included, in 10px boxes before the learner had read
+the problem. A walkthrough that opens by showing the answer is not a
+walkthrough.
+
+**The panels size themselves.** Height was a flat 320 units whatever they
+held, so a step reading "x = 8" with one line of reason got the same card as
+a step with a balance drawn in it, and the difference came out as a hole. It
+is now the tallest panel's real need, plus a picture slot only when some step
+on this board actually has a picture. And where a panel has no picture, the
+line and its reason are centred **as one block** — pinned to the top and
+bottom of an empty card they were two things either side of a gap.
+
+**The reason arrives behind a prompt.** Studying a worked example beats
+solving one unaided — but only if the learner processes it, and most learners
+do not self-explain unless asked. So each panel's `why` waits behind "Why does
+this work?", one tap away. It is an invitation, not a gate: `onPaint` reveals
+every panel the learner has moved past, so a reason can never be lost by not
+tapping.
+
+**The closing line of the parallel maths example is withheld** — "Work it out
+— then tap to check". This is backward fading in its smallest honest form,
+and it is set by `spec.predict`, which `workedFor` sets **only** for
+`buildParallelMath`. None of the day's questions are spent on that problem
+(invariant 7), which is what makes asking for its last line free. A
+walkthrough opened after a wrong answer never gets it — that learner is here
+for the answer, and hiding it would be a punishment.
+
+The reveal state rides in **`data-sfb-cls`**, not on the element: `paint()`
+rewrites the whole class attribute on every beat change, so anything set
+directly is wiped on the first advance. Same trap as the scene classes.
+
 Three pieces of plumbing that are easy to break:
 
 - **`onPaint`.** The track slide and the rail fill depend on *which* beat, not
@@ -868,6 +956,60 @@ Sizing is in viewBox units at `width:100%`, so **W sets the scale**. It is 480
 wide on purpose: at 640 the board was 1:1 on desktop and shrank every label to
 54% on a phone — the reason line came out at 6px. A narrower board scales *up*
 where there is room. Nothing is rasterised, so scaling up is free.
+
+### The walkthrough button — what it must never do
+
+`fromWrongAnswer(q, day)` builds the board the **Walkthrough** button opens.
+For a calculation it goes through `derivedWorking`, which does not compute
+anything: it **scrapes** equation-shaped substrings out of `q.equation`, the
+stem and the explanation. Four rules paid for in a board that taught a
+falsehood:
+
+- **`EQ_CHARS` must contain the typographic operators** (`−`, `×`, `÷`), not just
+  the ASCII hyphen. A model writes "x + 7 − 7 = 15 − 7" with a real minus. The
+  left-walk from the `=` stopped dead at that character, so the scraper pulled
+  **"7 = 15"** out of the middle of a correct sentence — and `SFStepVisual`
+  then drew that as a **level balance**, asserting in a picture that seven
+  equals fifteen. It read as a plausible maths card, which is what made it
+  bad.
+- **`contradicts()` is the second lock on the same door.** Both sides pure
+  arithmetic and not equal → drop the line. It is a tiny recursive-descent
+  parser, deliberately not `eval` or `Function`: the string came out of model
+  prose, and the argument for `SFSceneKit`'s fixed vocabulary applies here
+  too. Anything with a letter in it passes — unknowns are what a solution is
+  made of.
+- **Dedupe on a normalised key, and cut at the sentence end.** "That leaves
+  x = 8. Check: 8 + 7 = 15" was kept whole as "x = 8. Check", which then
+  failed to match the plain "x = 8" the answer field supplies, so the same
+  step arrived twice, once mangled.
+- **Cap the panels.** A one-step equation was coming back as **seven**: a
+  ceremonial "Goal" card, the equation, the scraped falsehood, the answer, the
+  check, the answer again under "Almost there", and a second check. The goal
+  now rides on the first line's reason rather than taking a panel — "Goal" set
+  in 27px with "Find x." underneath is a title card, where the label is the
+  biggest thing on the panel and the content the smallest.
+
+`x + 7 = 15` now yields three panels: the equation, `x = 8`, and the
+substitution that checks it. Use that as the regression.
+
+### Numbering says there is an order — `Scene.steps`'s `ordered` flag
+
+`Scene.steps` draws two different things: a procedure, and a set of labelled
+notes. It used to number every row identically — a numeral inside a filled
+disc inside a halo, three marks for one fact. On a procedure that is at least
+true. On the walkthrough of a multiple-choice question — *What was asked / The
+answer / Why / Why not the others* — those rows have no order, and numbering
+them tells the learner to do them in turn.
+
+So the caller declares it, and **the default is unordered**: `ordered: true`
+on the sequence walkthrough, on `fromDay`'s `day.steps` procedure and on a
+cause-and-effect chain; nothing else. Unordered rows get no numeral and no
+disc — the row's own label is the marker, and the text reclaims the 30 units
+the disc column was holding. The connector line between rows is drawn only
+when there is a sequence to connect.
+
+Where a number IS drawn it is **plain type**, on this scene and on `ideas`.
+The disc and its halo were the component asserting itself over the content.
 
 ### Where the worked example comes from — `workedFor(day, subject, opts)`
 
@@ -964,14 +1106,27 @@ What to check after any `buildQueue` or renderer change:
 14d. Nothing resolves to the deleted `equation` scene: `resolveType` sends
     `equation`, `math` and `formula` to `worked`, and no `briefFor` or
     `fromWrongAnswer` spec on any subject comes back typed `equation`
-15. Every panel of a `worked` board carries a picture, and no `.sfb-wvis` slot
-    is empty
+15b. A panel's reason is hidden until tapped **or until the learner moves
+    past it**, and a `fromWrongAnswer` board never sets `predict` — assert
+    both, because a walkthrough that withholds the answer after a wrong
+    answer is the one version of this that must never ship.
+15. No `worked` panel carries a numbered badge, and **no panel contains a
+    `progressStrip`** — the picture of the list, drawn inside the list. A
+    text-only step having no picture at all is the correct outcome, the same
+    call the ideas card makes; what must never appear is a strip. Check by
+    asserting `labels: []` reaches `forStep`, and that a concept-only day
+    renders panels with zero `.sfb-wvis` rather than filled ones.
 16. A maths board's equations appear nowhere in `day.questions` (invariant 7,
     and the reason `collidesWithDay` exists)
 17. `Scene.worked`'s track actually slides — check `onPaint` ran, not just that
     the beat classes changed
 18. The board does not overflow at 375px, and its reason line is still legible
     there (it is the smallest text on the card)
+18b. The lesson card pages: on all 10 subjects it builds **2+ parts**, the
+    footer button names the next part and only says "Got it" on the last, a
+    prose-only day builds **exactly one** part and no rail, and no part's
+    first line repeats the rail label. Assert the counts — a pager that
+    silently collapses to one part looks identical to a short lesson.
 
 **And a second suite that belongs to `app.html`**, not the session — load
 `app.html`, inject `appsuite.js`, call `SFRunAppSuite()`:

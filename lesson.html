@@ -201,6 +201,68 @@
   .content-text p:last-child { margin-bottom:0; }
   .content-text strong { font-weight:600; color:var(--ink); }
 
+  /* ── LESSON PAGER ──────────────────────────────────────────────────────
+     The lesson card used to be one column: picture, prose, steps, every
+     concept, every trap, the case study - a page you scrolled for half a
+     minute before the first question. Nothing was wrong with any one block;
+     there were simply eight of them stacked, so the card read as a document
+     rather than as teaching.
+
+     It is now a spread: one short part at a time, moving sideways. This is
+     deliberately NOT the whiteboard - no SVG board, no beats, the same prose
+     and the same cards the lesson always had - only paged, so a part is what
+     fits on a screen and the motion between parts says which way you went.
+     The rail across the top is the map the scroll bar used to be. */
+  .lp-head { display:flex; align-items:baseline; justify-content:space-between;
+    gap:1rem; margin-bottom:.45rem; }
+  .lp-label { font-size:0.72rem; font-weight:700; text-transform:uppercase;
+    letter-spacing:.07em; color:var(--blue); }
+  .lp-count { font-size:0.7rem; font-weight:600; color:var(--muted);
+    font-variant-numeric:tabular-nums; }
+  .lp-rail { display:flex; align-items:center; gap:.4rem; margin-bottom:1.15rem; }
+  .lp-seg { flex:1; height:4px; padding:0; border:none; border-radius:999px;
+    background:var(--border); cursor:pointer; -webkit-appearance:none;
+    transition:background .34s cubic-bezier(.16,1,.3,1), transform .18s ease; }
+  .lp-seg.is-done { background:rgba(74,124,246,.4); }
+  .lp-seg.is-at   { background:var(--blue); }
+  .lp-seg:hover   { transform:scaleY(2); }
+
+  /* Height is animated between parts, so a short part does not make the card
+     snap shut. It is released to auto once the transition lands - a locked
+     pixel height cannot reflow when a font or an image settles later. */
+  .lp-viewport { position:relative; overflow:hidden;
+    transition:height .4s cubic-bezier(.16,1,.3,1); }
+
+  /* Each block of a part arrives on its own beat. The stagger is what makes
+     a page turn read as composed rather than as a repaint. */
+  .lp-pane > * { animation:lpRise .44s cubic-bezier(.16,1,.3,1) both; }
+  .lp-pane > *:nth-child(1) { animation-delay:.03s; }
+  .lp-pane > *:nth-child(2) { animation-delay:.09s; }
+  .lp-pane > *:nth-child(3) { animation-delay:.15s; }
+  .lp-pane > *:nth-child(4) { animation-delay:.21s; }
+  .lp-pane > *:nth-child(5) { animation-delay:.27s; }
+  .lp-pane > *:nth-child(6) { animation-delay:.33s; }
+  @keyframes lpRise { from { opacity:0; transform:translateY(12px); }
+    to { opacity:1; transform:none; } }
+  .lp-pane.lp-out-left  { animation:lpOutLeft .17s ease both; }
+  .lp-pane.lp-out-right { animation:lpOutRight .17s ease both; }
+  @keyframes lpOutLeft  { to { opacity:0; transform:translateX(-26px); } }
+  @keyframes lpOutRight { to { opacity:0; transform:translateX(26px); } }
+
+  .lp-nav { display:flex; align-items:center; gap:.6rem; margin-top:1.15rem; }
+  .lp-back { background:none; border:1.5px solid var(--border); border-radius:10px;
+    padding:.42rem .8rem; cursor:pointer; color:var(--muted);
+    font-family:var(--sans); font-size:0.76rem; font-weight:600;
+    transition:border-color .18s ease, color .18s ease, transform .18s ease; }
+  .lp-back:hover { border-color:var(--blue); color:var(--blue); transform:translateX(-2px); }
+  .lp-hint { font-size:0.7rem; color:var(--muted); font-weight:500; }
+
+  @media (prefers-reduced-motion:reduce) {
+    .lp-pane > *, .lp-pane.lp-out-left, .lp-pane.lp-out-right { animation:none !important; }
+    .lp-viewport { transition:none; }
+    .lp-seg:hover, .lp-back:hover { transform:none; }
+  }
+
   /* KEY TERMS */
   .terms-list { display:flex; flex-direction:column; gap:.55rem; }
   .term-item { background:var(--soft); border:1.5px solid var(--border); border-radius:12px; padding:.85rem 1.1rem; }
@@ -589,6 +651,8 @@
     .card-badge { font-size:0.65rem; }
     .card-body { padding:1.1rem 1.2rem; }
     .card-footer { padding:.85rem 1.2rem; }
+    .lp-rail { gap:.3rem; margin-bottom:.95rem; }
+    .lp-hint { display:none; }
     /* Questions */
     .q-text { font-size:0.95rem; line-height:1.55; }
     .q-option {
@@ -2487,11 +2551,177 @@
               typeof window.Whiteboard.deriveBeats === 'function');
   }
 
+  /* ── THE LESSON PAGER ──────────────────────────────────────
+     State for the lesson card while it is on screen. Null on every other
+     card, and nulled at the top of renderCardInner - a stale pane list would
+     have the footer button advancing a card that is no longer there. */
+  var sfLesson = null;
+
+  /* One section becomes one part - or several short ones. Six concepts on a
+     part is the column this card was split up to get rid of, so they go three
+     at a time and the rail says there are two of them.
+
+     `per` is a ceiling, not a stride: the items are spread EVENLY over as
+     few parts as that ceiling allows. Slicing at a fixed stride left five
+     steps as a part of four and a part of one, and a part carrying a single
+     step is a page turn that buys the learner nothing. */
+  function lpSection(panes, items, label, contLabel, per, tone) {
+    var n = items ? items.length : 0;
+    if (!n) return;
+    var groups = Math.ceil(n / per);
+    var base = Math.floor(n / groups), extra = n % groups;
+    var i = 0, g, take;
+    for (g = 0; g < groups; g++) {
+      take = base + (g < extra ? 1 : 0);
+      panes.push({ label: g === 0 ? label : contLabel, tone: tone || '',
+                   html: items.slice(i, i + take).join('') });
+      i += take;
+    }
+  }
+
+  function lpShell(panes) {
+    var rail = '', i;
+    for (i = 0; i < panes.length; i++) {
+      rail += '<button type="button" class="lp-seg' + (i === 0 ? ' is-at' : '') +
+        '" aria-label="' + esc(panes[i].label) + '" onclick="sfLessonJump(' + i + ')"></button>';
+    }
+    return '<div class="lp-head">' +
+        '<span class="lp-label" id="lp-label">' + esc(panes[0].label) + '</span>' +
+        '<span class="lp-count" id="lp-count">1 / ' + panes.length + '</span>' +
+      '</div>' +
+      '<div class="lp-rail" id="lp-rail">' + rail + '</div>' +
+      '<div class="lp-viewport" id="lp-viewport"><div class="lp-pane">' + panes[0].html + '</div></div>' +
+      '<div class="lp-nav">' +
+        '<button type="button" class="lp-back" id="lp-back" style="display:none" ' +
+          'onclick="sfLessonJump(sfLesson ? sfLesson.at - 1 : 0)">← Back</button>' +
+        '<span class="lp-hint">Use ← → to move through the lesson</span>' +
+      '</div>';
+  }
+
+  /* The rail, the counter, the Back button and the FOOTER button all say
+     where you are. The footer button is the one that matters: on every part
+     but the last it turns the page, and only on the last does it leave the
+     card. Rebinding it here rather than in buildCard keeps every other card's
+     footer exactly as it was. */
+  function sfLessonChrome() {
+    if (!sfLesson) return;
+    var at = sfLesson.at, n = sfLesson.panes.length, i;
+    var segs = document.querySelectorAll('#lp-rail .lp-seg');
+    for (i = 0; i < segs.length; i++) {
+      segs[i].className = 'lp-seg' + (i === at ? ' is-at' : (i < at ? ' is-done' : ''));
+    }
+    /* The rail label IS the section heading - it used to be printed twice,
+       once in the rail and again as the first line of the part. It takes the
+       part's own tone so a page of traps still reads as a warning. */
+    var lab = document.getElementById('lp-label');
+    if (lab) {
+      lab.textContent = sfLesson.panes[at].label;
+      lab.style.color = sfLesson.panes[at].tone || '';
+    }
+    var cnt = document.getElementById('lp-count');
+    if (cnt) cnt.textContent = (at + 1) + ' / ' + n;
+    /* display, not visibility: a hidden-but-reserved button pushed the
+       keyboard hint into the middle of an otherwise empty row. */
+    var back = document.getElementById('lp-back');
+    if (back) back.style.display = at === 0 ? 'none' : '';
+
+    var btn = document.querySelector('#session-card .card-footer .btn-next');
+    if (btn) {
+      if (at === n - 1) {
+        btn.textContent = 'Got it →';
+        btn.onclick = function () { showNextCard(); };
+      } else {
+        btn.textContent = sfLesson.panes[at + 1].label + ' →';
+        btn.onclick = function () { sfLessonJump(sfLesson.at + 1); };
+      }
+    }
+    var fl = document.querySelector('#session-card .card-footer .footer-left');
+    if (fl) fl.textContent = 'Part ' + (at + 1) + ' of ' + n;
+  }
+
+  /* The pager is live only while its own card is the one on screen. The
+     whiteboard cards render through SFWhiteboard's own renderCard branch,
+     which returns before renderCardInner and so never clears sfLesson - so
+     "is there a viewport in the document" is the honest test, not "is there
+     a pane list". Without it the arrow keys stay bound to a lesson the
+     learner has already walked past. */
+  function lpLive() {
+    return !!(sfLesson && document.getElementById('lp-viewport'));
+  }
+
+  function sfLessonJump(idx) {
+    if (!lpLive()) return;
+    if (idx < 0 || idx >= sfLesson.panes.length || idx === sfLesson.at) return;
+    var dir = idx > sfLesson.at ? 1 : -1;
+    var vp = document.getElementById('lp-viewport');
+    if (sfLesson.moving) return;      // one page turn at a time
+    sfLesson.moving = true;
+
+    /* Lock the height before the swap so a short part does not make the card
+       collapse and snap back. It is animated to the new height and released
+       to auto once it lands - a pinned pixel height cannot reflow when a
+       font or an SVG settles a moment later. */
+    var startH = vp.offsetHeight;
+    vp.style.height = startH + 'px';
+    var old = vp.querySelector('.lp-pane');
+    if (old) old.className = 'lp-pane ' + (dir > 0 ? 'lp-out-left' : 'lp-out-right');
+    sfLesson.at = idx;
+
+    setTimeout(function () {
+      vp.innerHTML = '<div class="lp-pane">' + sfLesson.panes[idx].html + '</div>';
+      var pane = vp.querySelector('.lp-pane');
+      var endH = pane ? pane.offsetHeight : 0;
+      sfLessonChrome();
+      sfLessonScrollUp();
+      /* A measurement of zero means nothing is being laid out - the tab is in
+         the background, or something above us is display:none. Animating to
+         it would collapse the card to a line. Hand the height straight back
+         to the content instead; there is nobody watching the transition. */
+      if (endH <= 0) {
+        vp.style.height = 'auto';
+        sfLesson.moving = false;
+        return;
+      }
+      vp.style.height = endH + 'px';
+      setTimeout(function () {
+        vp.style.height = 'auto';
+        if (sfLesson) sfLesson.moving = false;
+      }, 430);
+    }, 170);
+  }
+
+  /* A part starts at its own top. If the previous one was long enough to
+     push the card's header off the screen, come back to it - otherwise the
+     new part opens half-scrolled and reads as nothing having happened. */
+  function sfLessonScrollUp() {
+    var sc = document.getElementById('session-card');
+    if (!sc) return;
+    var top = sc.getBoundingClientRect().top;
+    if (top >= 0) return;
+    try {
+      window.scrollTo({ top: window.pageYOffset + top - 16, behavior: 'smooth' });
+    } catch (e) {
+      window.scrollTo(0, window.pageYOffset + top - 16);
+    }
+  }
+
+  /* Arrow keys turn the page. Guarded on an active pager, so they do nothing
+     on any other card, and never while the learner is typing. */
+  document.addEventListener('keydown', function (ev) {
+    if (!ev || !lpLive()) return;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var tag = ((ev.target || {}).tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea') return;
+    if (ev.key === 'ArrowRight') { ev.preventDefault(); sfLessonJump(sfLesson.at + 1); }
+    else if (ev.key === 'ArrowLeft') { ev.preventDefault(); sfLessonJump(sfLesson.at - 1); }
+  });
+
   function renderCardInner(card) {
     var sc = document.getElementById('session-card');
     var html = '';
     currentCardType = (card && card.type) || '';
     swpState = null;   // a previous scaffold must not leak into this card
+    sfLesson = null;   // and neither must a previous lesson's parts
 
     if (card.type === 'pretest-intro') {
       html = buildCard('Quick Check', 'Before we start — test yourself!', false,
@@ -2537,8 +2767,23 @@
         'Session: ' + totalMinutes + ' min', 'Let\'s go →', false);
     }
     else if (card.type === 'lesson') {
-      // Rich lesson card: diagram auto-injected, steps rendered if present, full content
-      var lessonBody = '';
+      /* The lesson is PAGED, not poured down one column.
+
+         Every block below used to be appended to a single body: the picture,
+         the prose, every step, every concept, every trap and the case study,
+         one after another. Nothing was wrong with any of them - there were
+         just eight, so a learner scrolled for half a minute before the first
+         question and the card read as a document rather than as teaching.
+
+         Each block is a PART now, and a section with more items than fit on
+         a screen becomes two short parts rather than one long one. This is
+         not the whiteboard: same prose, same cards, same picture, only one
+         screenful at a time with the motion between them saying which way
+         you went. See .lp-* in the stylesheet.
+
+         A day that produces a single part gets no pager chrome at all - it
+         renders exactly as it always did. */
+      var panes = [];
 
       /* The diagram is built for THIS lesson, from this lesson's material -
          see diagramForDay. The old test here was
@@ -2548,46 +2793,46 @@
       var dgm = diagramForDay(day);
       var dgmHtml = '';
       if (dgm && dgm.svg) {
-        dgmHtml = '<div style="text-align:center;margin-bottom:1rem;padding:.75rem;background:var(--soft);border-radius:14px;">' +
+        dgmHtml = '<div style="text-align:center;padding:.75rem;background:var(--soft);border-radius:14px;">' +
           dgm.svg +
           '<div style="font-size:0.68rem;color:var(--muted);margin-top:.4rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">' +
           esc(dgm.caption) + '</div></div>';
-        lessonBody += dgmHtml;
       }
 
-      // Lesson text content
-      lessonBody += '<div class="content-text">' + formatContent(day.content) + '</div>';
+      /* Part one: look at it, then read it. */
+      panes.push({ label: 'The idea',
+                   html: dgmHtml +
+                         '<div class="content-text" style="margin-top:' + (dgmHtml ? '1rem' : '0') + ';">' +
+                         formatContent(day.content) + '</div>' });
 
-      // Render steps if present (procedural topics)
+      // Steps (procedural topics)
       if (day.steps && day.steps.length > 0) {
-        lessonBody += '<div style="margin-top:1.1rem;">' +
-          '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--blue);margin-bottom:.75rem;">Step-by-Step Breakdown</div>';
+        var stepItems = [];
         day.steps.forEach(function(s, i) {
           if (!s || !s.action) return;
-          lessonBody += '<div style="display:flex;gap:.75rem;margin-bottom:.7rem;align-items:flex-start;">' +
+          stepItems.push('<div style="display:flex;gap:.75rem;margin-bottom:.7rem;align-items:flex-start;">' +
             '<div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:var(--blue);color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;">' + (i+1) + '</div>' +
             '<div>' +
             '<div style="font-size:0.88rem;font-weight:700;color:var(--ink);">' + (s.step || ('Step ' + (i+1))) + ': ' + s.action + '</div>' +
             (s.why ? '<div style="font-size:0.78rem;color:var(--muted);margin-top:.15rem;font-style:italic;">Why: ' + s.why + '</div>' : '') +
-            '</div></div>';
+            '</div></div>');
         });
-        lessonBody += '</div>';
+        lpSection(panes, stepItems, 'How it works', 'More steps', 6);
       }
 
-      // Concepts section if present
+      // Concepts
       if (day.concepts && day.concepts.length > 0) {
-        lessonBody += '<div style="margin-top:1.1rem;border-top:1px solid var(--border);padding-top:1rem;">' +
-          '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.65rem;">Core Concepts</div>';
+        var conItems = [];
         day.concepts.forEach(function(con) {
           if (!con || !con.name) return;
-          lessonBody += '<div style="margin-bottom:.7rem;padding:.65rem .85rem;background:var(--soft);border-radius:10px;border-left:3px solid var(--blue);">' +
+          conItems.push('<div style="margin-bottom:.7rem;padding:.65rem .85rem;background:var(--soft);border-radius:10px;border-left:3px solid var(--blue);">' +
             '<div style="font-size:0.85rem;font-weight:700;color:var(--ink);">' + con.name + '</div>' +
             '<div style="font-size:0.78rem;color:var(--muted);margin-top:.2rem;">' + (con.definition||'') + '</div>' +
             (con.why ? '<div style="font-size:0.74rem;color:var(--blue);margin-top:.2rem;"><strong>Why it matters:</strong> ' + con.why + '</div>' : '') +
             (con.misconception ? '<div style="font-size:0.72rem;color:#d97706;margin-top:.25rem;"><strong>Common mistake:</strong> ' + con.misconception + '</div>' : '') +
-            '</div>';
+            '</div>');
         });
-        lessonBody += '</div>';
+        lpSection(panes, conItems, 'Core concepts', 'More concepts', 3);
       }
 
       // ── MISCONCEPTIONS — "you might think X, but actually Y" ──
@@ -2595,11 +2840,10 @@
       // better than only stating the right answer, because the student has to
       // notice the conflict with what they already believed.
       if (day.misconceptions && day.misconceptions.length > 0) {
-        lessonBody += '<div style="margin-top:1.1rem;border-top:1px solid var(--border);padding-top:1rem;">' +
-          '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#d97706;margin-bottom:.65rem;">Common Traps</div>';
+        var mcItems = [];
         day.misconceptions.forEach(function(mc) {
           if (!mc || !mc.believe || !mc.actually) return;
-          lessonBody += '<div style="margin-bottom:.7rem;padding:.75rem .9rem;background:#fff8e0;border-radius:12px;border-left:3px solid #f59e0b;">' +
+          mcItems.push('<div style="margin-bottom:.7rem;padding:.75rem .9rem;background:#fff8e0;border-radius:12px;border-left:3px solid #f59e0b;">' +
             '<div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.4rem;">' +
             '<span style="flex-shrink:0;font-size:0.62rem;font-weight:800;letter-spacing:.06em;color:#92400e;background:rgba(245,158,11,.22);padding:.15rem .4rem;border-radius:4px;margin-top:.1rem;">MYTH</span>' +
             '<div style="font-size:0.8rem;color:#92400e;line-height:1.5;text-decoration:line-through;text-decoration-color:rgba(146,64,14,.4);">' + mc.believe + '</div></div>' +
@@ -2607,22 +2851,29 @@
             '<span style="flex-shrink:0;font-size:0.62rem;font-weight:800;letter-spacing:.06em;color:#065f46;background:rgba(56,191,161,.22);padding:.15rem .4rem;border-radius:4px;margin-top:.1rem;">FACT</span>' +
             '<div style="font-size:0.82rem;color:var(--ink);line-height:1.5;font-weight:600;">' + mc.actually + '</div></div>' +
             (mc.why ? '<div style="font-size:0.74rem;color:var(--muted);margin-top:.45rem;font-style:italic;padding-left:.2rem;">Why it trips people up: ' + mc.why + '</div>' : '') +
-            '</div>';
+            '</div>');
         });
-        lessonBody += '</div>';
+        lpSection(panes, mcItems, 'Common traps', 'More traps', 2, '#d97706');
       }
 
       // ── REAL-WORLD CASE STUDY — concrete anchor for an abstract concept ──
       if (day.caseStudy && day.caseStudy.title && day.caseStudy.what) {
-        lessonBody += '<div style="margin-top:1.1rem;padding:.95rem 1.1rem;background:linear-gradient(135deg,#f0f7ff,#e8f4ff);border-radius:14px;border-left:4px solid var(--blue);">' +
-          '<div style="display:flex;align-items:center;gap:.45rem;margin-bottom:.4rem;">' +
-          '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/></svg>' +
-          '<span style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--blue);">In the real world</span></div>' +
-          '<div style="font-size:0.88rem;font-weight:700;color:var(--ink);margin-bottom:.3rem;">' + day.caseStudy.title + '</div>' +
+        panes.push({ label: 'In the real world',
+          html: '<div style="padding:.95rem 1.1rem;background:linear-gradient(135deg,#f0f7ff,#e8f4ff);border-radius:14px;border-left:4px solid var(--blue);">' +
+          /* The globe moved up beside the title. It used to head its own row
+             reading "IN THE REAL WORLD" - which is what the rail now says
+             two lines above it. */
+          '<div style="display:flex;align-items:center;gap:.45rem;margin-bottom:.3rem;">' +
+          '<svg width="14" height="14" style="flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/></svg>' +
+          '<div style="font-size:0.88rem;font-weight:700;color:var(--ink);">' + day.caseStudy.title + '</div></div>' +
           '<div style="font-size:0.82rem;color:var(--ink);line-height:1.65;">' + day.caseStudy.what + '</div>' +
           (day.caseStudy.connection ? '<div style="font-size:0.78rem;color:#2851c8;margin-top:.5rem;line-height:1.55;"><strong>Why this matters here:</strong> ' + day.caseStudy.connection + '</div>' : '') +
-          '</div>';
+          '</div>' });
       }
+
+      /* One part means no pager: the chrome would be a rail with a single
+         segment and a button that says the same thing the footer does. */
+      var lessonBody = panes.length > 1 ? lpShell(panes) : panes[0].html;
 
       /* Whiteboard teaching mode replaces the static lesson card: the same
          chrome, but the explanation is built one beat at a time instead of
@@ -2652,7 +2903,12 @@
              above the board: look at the thing, then step through it. */
           dgmHtml + '<div id="wb-mount"></div>', '', 'Got it →', false);
       } else {
-        html = buildCard('Today\'s Lesson', day.title || '', false, lessonBody, 'Read carefully', 'Got it →', false);
+        /* Armed only for the paged body. A single-part lesson keeps the
+           ordinary footer, which already says the right thing. */
+        if (panes.length > 1) sfLesson = { panes: panes, at: 0, moving: false };
+        html = buildCard('Today\'s Lesson', day.title || '', false, lessonBody,
+                         sfLesson ? 'Part 1 of ' + panes.length : 'Read carefully',
+                         'Got it →', false);
       }
     }
     else if (card.type === 'terms') {
@@ -2792,6 +3048,11 @@
     else { endSession(); return; }
 
     sc.innerHTML = html;
+
+    /* The footer button belongs to the pager while a paged lesson is up: on
+       part one it has to say where it goes next, not "Got it". Committed
+       HTML first, because it rewrites a button that has to exist. */
+    if (sfLesson) sfLessonChrome();
 
     /* The whiteboard needs a mounted element, so it runs after the card HTML
        is committed. If render() declines for any reason the card is rebuilt
@@ -11929,7 +12190,25 @@ var SFBoard = (function () {
     var items = pairs(spec.items || spec.steps, 6);
     if (items.length < 2) return null;
 
-    var w = 560, boxW = w - PAD * 2, textW = boxW - 74;
+    /* ORDERED, or merely a list?
+
+       This scene draws both, and it used to number every row the same way:
+       a numeral inside a filled disc inside a halo, three marks for one
+       piece of information. On a procedure that is at least true. On the
+       walkthrough of a multiple-choice question - "What was asked", "The
+       answer", "Why", "Why not the others" - it is a lie with a circle
+       round it: those rows have no order, and numbering them says the
+       learner should do them in turn.
+
+       So the caller says which it is, and the default is the honest one.
+       Where there IS an order the number is set as plain type, because that
+       is what a numbered list looks like; the disc and its halo were the
+       component asserting itself over the content. The connector line
+       between rows already carries the sequence. */
+    var ordered = !!spec.ordered;
+    var w = 560, boxW = w - PAD * 2;
+    var LEFT = ordered ? 56 : 22;
+    var textW = boxW - LEFT - 18;
     var rows = [], i, y = PAD;
     for (i = 0; i < items.length; i++) {
       var aL = wrap(items[i].a, textW, LABEL, 700, 2);
@@ -11945,20 +12224,19 @@ var SFBoard = (function () {
     var o = '';
     for (i = 0; i < rows.length; i++) {
       var t = tone(i), r = rows[i], inner = '';
-      if (i < rows.length - 1) {
+      /* The thread between rows is the sequence, so it is drawn only where
+         there is one to draw. */
+      if (ordered && i < rows.length - 1) {
         inner += '<line x1="' + (PAD + 26) + '" y1="' + r1(r.y + r.h) + '" x2="' + (PAD + 26) +
           '" y2="' + r1(r.y + r.h + 18) + '" stroke="' + RULE + '" stroke-width="2" ' +
           'stroke-linecap="round"/>';
       }
       inner += cardRich(PAD, r.y, boxW, r.h, t, 12, false);
-      /* Numbered token with a halo, so the sequence reads before the text does. */
-      inner += '<circle cx="' + (PAD + 26) + '" cy="' + r1(r.y + r.h / 2) + '" r="19" fill="' +
-        t.line + '" opacity=".10"/>';
-      inner += '<circle cx="' + (PAD + 26) + '" cy="' + r1(r.y + r.h / 2) + '" r="14" fill="' +
-        t.fill + '" stroke="' + t.line + '" stroke-width="1.6"/>';
-      inner += text(PAD + 26, r.y + r.h / 2 + 4.5, String(i + 1),
-        { size: BODY + 1, weight: 700, fill: t.ink });
-      inner += stack(PAD + 56, r.y + r.h / 2, r.g, 'start');
+      if (ordered) {
+        inner += text(PAD + 26, r.y + r.h / 2 + 5.5, String(i + 1),
+          { anchor: 'middle', size: BODY + 4, weight: 700, fill: t.line });
+      }
+      inner += stack(PAD + LEFT, r.y + r.h / 2, r.g, 'start');
       o += g(i + 1, inner);
     }
     return { svg: svgOpen(w, total) + o + '</svg>', beats: rows.length, w: w, h: total };
@@ -12047,12 +12325,12 @@ var SFBoard = (function () {
          TEXT block, not the whole row, or a row with a tall picture beneath
          it floats its own number halfway down the diagram. */
       var midY = r.y + r.textH / 2;
-      inner += '<circle cx="' + (PAD + 26) + '" cy="' + r1(midY) + '" r="19" fill="' +
-        t.line + '" opacity=".10"/>';
-      inner += '<circle cx="' + (PAD + 26) + '" cy="' + r1(midY) + '" r="14" fill="' +
-        t.fill + '" stroke="' + t.line + '" stroke-width="1.6"/>';
-      inner += text(PAD + 26, midY + 4.5, String(i + 1),
-        { size: BODY + 1, weight: 700, fill: t.ink });
+      /* One numeral, set as type. It was a numeral inside a filled disc
+         inside a halo - three marks to say "this is the second idea", on a
+         card whose own content is a sentence and a diagram. The disc is the
+         loudest thing available and it was spent on the row's index. */
+      inner += text(PAD + 26, midY + 5.5, String(i + 1),
+        { anchor: 'middle', size: BODY + 4, weight: 700, fill: t.line });
       inner += stack(PAD + 56, midY, r.g, 'start');
 
       if (r.vis) {
@@ -12830,64 +13108,109 @@ var SFBoard = (function () {
        shrank every label to 54% on a phone - the reason line came out at 6px.
        A narrower board scales UP on desktop, where there is room, and down
        far less on mobile. Nothing is rasterised, so scaling up costs nothing. */
-    var W = 480, PW = 336, GAP = 20, PH = 320;
+    var W = 480, PW = 336, GAP = 20;
     var HEAD = 46, PANEL_Y = HEAD + 6;
-    var H = PANEL_Y + PH + 14;
     var CENTRE = (W - PW) / 2;
 
     var problem = clean(spec.problem || spec.equation);
     var kicker = clean(spec.kicker) || 'Worked example';
 
     /* Context for the picture chooser: it reads the step's own words first,
-       and falls back to the topic and the list of step names. */
-    var labels = [];
-    for (i = 0; i < n; i++) labels.push(steps[i].title || steps[i].line);
+       and falls back to the topic.
+
+       **ctx.labels is passed EMPTY on purpose**, the same way the ideas card
+       passes it empty. forStep's last resort is progressStrip - a little
+       diagram OF THE LIST OF STEPS - and on this board the learner is already
+       standing in that list: the panels are the steps, the arrows between
+       them are the order, the dots under the card are the position. Drawing
+       it again inside panel one was a picture of the furniture.
+
+       It was worse than redundant on maths. The strip prints every label it
+       is given, so step one of "x + 7 = 15" displayed the whole solution -
+       including "x = 8" - in 10px boxes before the learner had read the
+       problem. A walkthrough that opens by showing the answer is not a
+       walkthrough. */
     var ctx = {
       subject: clean(spec.subject), topic: clean(spec.topic || spec.title),
-      quantitative: !!spec.quantitative, labels: labels, index: 0
+      quantitative: !!spec.quantitative, labels: [], index: 0
     };
 
-    /* ── header: what is being worked, and how far in ── */
-    var RAIL_W = 84, RAIL_X = W - PAD - RAIL_W;
+    /* ── measure every panel, then pick one height for all of them ────────
+       The panels sit side by side on one track, so they share a height, and
+       it used to be a flat 320 units whatever they held. A step reading
+       "x = 8" with one line of reason under it got the same card as a step
+       with a balance drawn in it, and the difference came out as a hole.
+
+       Height is now the tallest panel's actual need: text, plus a picture
+       slot only when some step in this board has a picture to put in it. */
+    var HS = TITLE + 7, RS = BODY + 1.5;
+    var TITLE_H = 20;        // the step's own name, where it has one
+    var PIC_WANT = 124;      // a slot big enough to be worth drawing into
+    var plan = [], needText = 0, anyPic = false;
+    for (i = 0; i < n; i++) {
+      var s0 = steps[i];
+      /* Three lines, not two. A procedural step reads as a sentence - "Water
+         is broken into oxygen, protons and electrons" - and capping at two
+         cut it to "...protons and…" directly above a diagram naming all
+         three. */
+      var hl0 = wrap(s0.line, PW - 46, HS, 700, 3);
+      /* One very long token cannot be wrapped, only shrunk. */
+      var hs0 = HS;
+      while (hs0 > 12 && widest(hl0, hs0, 700) > PW - 46) hs0 -= 0.5;
+      var rl0 = s0.why ? wrap(s0.why, PW - 40, RS, 400, 3) : [];
+      var hasT0 = !!(s0.title && s0.title !== s0.line);
+
+      /* Chosen once, here, and reused when the panel is drawn. */
+      ctx.index = i;
+      /* The step BEFORE this one, because an "expand the bracket" step
+         prints the already-expanded line - the bracket it is talking about
+         is on the previous row. Without this the area model can never draw
+         the one step it exists for. */
+      ctx.prevLine = i > 0 ? (steps[i - 1] && steps[i - 1].line) : '';
+      var v0 = null;
+      if (typeof SFStepVisual !== 'undefined') {
+        try { v0 = SFStepVisual.forStep(s0, ctx); } catch (e) { v0 = null; }
+      }
+      if (v0) anyPic = true;
+
+      var hH0 = hl0.length * hs0 * 1.22;
+      var rH0 = rl0.length ? rl0.length * RS * 1.45 : 0;
+      var tx0 = (hasT0 ? TITLE_H : 0) + 22 + hH0 + (rH0 ? rH0 + 16 : 0) + 22;
+      if (tx0 > needText) needText = tx0;
+      plan.push({ lines: hl0, size: hs0, reason: rl0, vis: v0,
+                  hasTitle: hasT0, headH: hH0, reasonH: rH0 });
+    }
+    var PH = Math.max(168, Math.min(330, needText + (anyPic ? PIC_WANT : 0)));
+    var H = PANEL_Y + PH + 14;
+
+    /* ── header: what is being worked ──
+       No progress rail here any more. The board's own chrome already prints
+       "2 / 5" above the card and a row of dots below it, and every panel
+       used to carry a numbered badge as well - four separate answers to one
+       question. The two the learner can actually use are the ones that
+       stayed: the count, and the dots, which are tap targets. */
     var o = '', head = '';
     head += text(PAD, 20, kicker.toUpperCase(),
                  { anchor: 'start', size: 9.5, weight: 700, fill: MUTED });
     if (problem) {
       var ps = TITLE + 4;
-      while (ps > 12 && measure(problem, ps, 700) > W - PAD * 2 - RAIL_W - 14) ps -= 0.5;
+      while (ps > 12 && measure(problem, ps, 700) > W - PAD * 2) ps -= 0.5;
       head += text(PAD, 40, problem, { anchor: 'start', size: ps, weight: 700, fill: INK });
     }
-    /* Rail: full width, scaled from JS. Transforming a rect is reliable in a
-       way that transitioning its width attribute is not. */
-    head += '<rect x="' + RAIL_X + '" y="16" width="' + RAIL_W +
-      '" height="5" rx="2.5" fill="' + RULE + '"/>';
-    head += '<rect class="sfb-wrail" data-sfb-rail x="' + RAIL_X + '" y="16" width="' +
-      RAIL_W + '" height="5" rx="2.5" fill="' + ACCENT + '"/>';
     o += g(0, head);
 
     /* ── panels ── */
-    var HS = TITLE + 7, RS = BODY + 1.5;
+    /* Backward fading, in its smallest honest form: the closing line of a
+       SYNTHESISED example is withheld until the learner has had a go at it.
+       Only there - spec.predict is set for the parallel maths problem alone,
+       never for a walkthrough opened after a wrong answer. */
+    var predictOn = !!spec.predict && n >= 3;
     var track = '';
     for (i = 0; i < n; i++) {
       var px = i * (PW + GAP);
-      var st = steps[i], t = tone(i), last = (i === n - 1);
-
-      /* Three lines, not two. A procedural step reads as a sentence - "Water
-         is broken into oxygen, protons and electrons" - and capping at two
-         cut it to "...protons and…" directly above a diagram naming all
-         three. The visual slot below adapts to whatever height this takes. */
-      var hl = wrap(st.line, PW - 46, HS, 700, 3);
-      /* One very long token cannot be wrapped, only shrunk. */
-      var hs = HS;
-      while (hs > 12 && widest(hl, hs, 700) > PW - 46) hs -= 0.5;
-      var headTop = 52, headH = hl.length * hs * 1.22;
-
-      var rl = st.why ? wrap(st.why, PW - 40, RS, 400, 3) : [];
-      var reasonH = rl.length ? rl.length * RS * 1.45 : 0;
-
-      var vTop = headTop + headH + 12;
-      var vBot = PH - 16 - (reasonH ? reasonH + 14 : 0);
-      var vH = vBot - vTop;
+      var st = steps[i], pl = plan[i], last = (i === n - 1);
+      var titleH = pl.hasTitle ? TITLE_H : 0;
+      var headH = pl.headH, reasonH = pl.reason.length ? pl.reasonH : 0;
 
       var inner = '';
       /* Card. The shadow is drawn on the card, not the group, so the dimmed
@@ -12902,49 +13225,95 @@ var SFBoard = (function () {
           '" rx="20" fill="' + ACCENT_SOFT + '" opacity=".55"/>';
       }
 
-      /* Step badge. */
-      inner += '<circle cx="30" cy="30" r="14" fill="' + (last ? ACCENT : t.fill) +
-        '" stroke="' + (last ? ACCENT : t.line) + '" stroke-width="1.6"/>';
-      inner += text(30, 34.5, String(i + 1),
-                    { size: SMALL + 1.5, weight: 700, fill: last ? '#FFFFFF' : t.ink });
-      if (st.title && st.title !== st.line) {
-        inner += text(54, 34.5, st.title.slice(0, 26),
-                      { anchor: 'start', size: SMALL, weight: 700, fill: MUTED });
+      /* The step's own name, set as a quiet kicker.
+
+         It was a filled circle with the step number in it, and the number was
+         the fourth copy of something the board says three times already. A
+         disc is also the loudest mark available on a card whose content is a
+         line of type - it read as a bullet somebody had to find a home for,
+         which is exactly what it was. The name of the step is the useful
+         half; the number was never the point. */
+      if (pl.hasTitle) {
+        /* Classed, so the not-yet-reached panel can hide it with everything
+           else. Drawn as a bare label it was the one piece of a future step
+           still legible in the ghost card at the edge of the board - "UNDO
+           THE ADDING" announcing itself two panels early. */
+        inner += '<g class="sfb-wname">' +
+          text(22, 27, st.title.slice(0, 30).toUpperCase(),
+               { anchor: 'start', size: SMALL - 0.5, weight: 700,
+                 fill: last ? ACCENT : MUTED }) + '</g>';
+      }
+
+      /* Where the block sits. With a picture the panel reads downwards from
+         the step name. Without one, the line and its reason are centred
+         together - a headline pinned to the top of an empty card with its
+         explanation pinned to the bottom is two things either side of a
+         hole, and it is what made the opening panel look unfinished. */
+      var blockH = headH + (reasonH ? reasonH + 16 : 0);
+      var headTop, vTop = 0, vH = 0;
+      if (pl.vis) {
+        headTop = titleH + 22;
+        vTop = headTop + headH + 12;
+        vH = PH - 16 - (reasonH ? reasonH + 14 : 0) - vTop;
+      } else {
+        headTop = titleH + Math.max(12, (PH - titleH - blockH) / 2 - 4);
       }
 
       /* Headline - the line itself, as large as it will go. */
       var hg = '';
-      for (k = 0; k < hl.length; k++) {
-        hg += text(PW / 2, headTop + hs * 0.82 + k * hs * 1.22, hl[k],
-                   { size: hs, weight: 700, fill: last ? ACCENT_INK : INK });
+      for (k = 0; k < pl.lines.length; k++) {
+        hg += text(PW / 2, headTop + pl.size * 0.82 + k * pl.size * 1.22, pl.lines[k],
+                   { size: pl.size, weight: 700, fill: last ? ACCENT_INK : INK });
       }
       inner += '<g class="sfb-wline">' + hg + '</g>';
 
       /* Picture. Skipped rather than squeezed: under 76 units tall it would
          be a thumbnail of a diagram, which teaches nothing. */
-      if (vH >= 76 && typeof SFStepVisual !== 'undefined') {
-        ctx.index = i;
-        /* The step BEFORE this one, because an "expand the bracket" step
-           prints the already-expanded line - the bracket it is talking about
-           is on the previous row. Without this the area model can never draw
-           the one step it exists for. */
-        ctx.prevLine = i > 0 ? (steps[i - 1] && steps[i - 1].line) : '';
-        var vis = null;
-        try { vis = SFStepVisual.forStep(st, ctx); } catch (e) { vis = null; }
-        if (vis) {
-          inner += '<g class="sfb-wvis">' +
-            SFStepVisual.nest(vis, 16, vTop, PW - 32, vH) + '</g>';
-        }
+      if (pl.vis && vH >= 76) {
+        inner += '<g class="sfb-wvis">' +
+          SFStepVisual.nest(pl.vis, 16, vTop, PW - 32, vH) + '</g>';
       }
 
-      /* Reason, along the bottom. */
-      if (rl.length) {
+      /* Reason. Under the picture where there is one, and directly under the
+         line where there is not - words belong next to what they explain.
+
+         It arrives BEHIND A PROMPT. Studying a worked example beats solving
+         one unaided, but only if the learner processes it; asked to explain
+         a step before being told, they learn more than they do from reading
+         the same explanation cold, and most learners never self-explain
+         unprompted. So the reason waits behind "Why does this work?" - one
+         tap, or simply moving on, and it is there. Nothing can be lost by
+         not tapping: onPaint reveals every panel the learner leaves. */
+      var ask = '';
+      if (pl.reason.length) {
+        var rTop = pl.vis ? (PH - 16 - reasonH) : (headTop + headH + 16);
         var rg = '';
-        for (k = 0; k < rl.length; k++) {
-          rg += text(PW / 2, PH - 16 - reasonH + RS * 1.05 + k * RS * 1.45, rl[k],
+        for (k = 0; k < pl.reason.length; k++) {
+          rg += text(PW / 2, rTop + RS * 1.05 + k * RS * 1.45, pl.reason[k],
                      { size: RS, weight: 400, fill: MUTED });
         }
         inner += '<g class="sfb-wwhy">' + rg + '</g>';
+
+        var askLabel = (predictOn && last) ? 'Work it out \u2014 then tap to check'
+                                           : 'Why does this work?';
+        var aw = measure(askLabel, RS - 0.5, 600) + 26, ah = 23;
+        var ax = (PW - aw) / 2;
+        /* The prompt stands where what it withholds will appear: over the
+           reason on an ordinary panel, over the LINE on the one whose line
+           is being held back - so the answer arrives where the learner was
+           already looking, rather than somewhere else on a card that had
+           looked empty. */
+        var ay = (predictOn && last)
+          ? headTop + headH / 2 - ah / 2
+          : rTop + (reasonH - ah) / 2 - 1;
+        ask = '<g class="sfb-wask">' +
+          '<rect x="' + r1(ax) + '" y="' + r1(ay) + '" width="' + r1(aw) + '" height="' + ah +
+            '" rx="' + (ah / 2) + '" fill="' + ACCENT_SOFT + '" stroke="' + ACCENT +
+            '" stroke-width="1.3" opacity=".9"/>' +
+          text(PW / 2, ay + ah / 2 + 3.4, askLabel,
+               { size: RS - 0.5, weight: 600, fill: ACCENT_INK }) +
+          '</g>';
+        inner += ask;
       }
 
       /* Arrow into this panel from the one before, drawn in the gap. */
@@ -12957,7 +13326,12 @@ var SFBoard = (function () {
           ACCENT + '"/></g>';
       }
 
-      track += '<g class="sfb-b sfb-wp" data-sfb-cls="sfb-wp" data-beat="' + (i + 1) +
+      /* The reveal state rides in data-sfb-cls, because paint() rewrites the
+         whole class attribute on every beat change and anything set directly
+         on the element is wiped on the first advance. */
+      var pcls = 'sfb-wp' + (pl.reason.length ? ' has-ask' : '') +
+                 ((predictOn && last) ? ' has-pred' : '');
+      track += '<g class="sfb-b sfb-wp" data-sfb-cls="' + pcls + '" data-beat="' + (i + 1) +
         '">' + link + '<g transform="translate(' + r1(px) + ' ' + PANEL_Y + ')">' +
         inner + '</g></g>';
     }
@@ -12989,18 +13363,49 @@ var SFBoard = (function () {
          the line, and the track had already slid to the last panel by the
          time they looked up. The learner sets the pace here. */
       manual: true,
-      /* Called by the player on every beat change. The track slide and the
-         rail fill are the two things that cannot be expressed as a per-beat
-         class, because both depend on WHICH beat rather than merely whether
-         one has been reached. */
+      /* Called by the player on every beat change. The track slide cannot be
+         expressed as a per-beat class: it depends on WHICH beat, rather than
+         merely on whether a beat has been reached. */
       onPaint: function (wrapEl, at) {
         var idx = Math.max(1, Math.min(n, at)) - 1;
         var tr = wrapEl.querySelector('[data-sfb-track]');
         if (tr) {
           tr.style.transform = 'translateX(' + r1(CENTRE - idx * (PW + GAP)) + 'px)';
         }
-        var rail = wrapEl.querySelector('[data-sfb-rail]');
-        if (rail) rail.style.transform = 'scaleX(' + r1((idx + 1) / n) + ')';
+
+        /* One delegated listener for the whole board, attached once. Bound
+           per paint it would stack a new handler on every beat change. */
+        if (!wrapEl.getAttribute('data-sfb-asked')) {
+          wrapEl.setAttribute('data-sfb-asked', '1');
+          wrapEl.addEventListener('click', function (ev) {
+            var t = ev.target, panel = null;
+            while (t && t !== wrapEl) {
+              if (t.getAttribute && /(^|\s)sfb-wp(\s|$)/.test(t.getAttribute('class') || '')) {
+                panel = t; break;
+              }
+              t = t.parentNode;
+            }
+            if (!panel) return;
+            var cls = panel.getAttribute('data-sfb-cls') || '';
+            if (cls.indexOf('is-told') === -1) {
+              panel.setAttribute('data-sfb-cls', cls + ' is-told');
+              panel.setAttribute('class', (panel.getAttribute('class') || '') + ' is-told');
+            }
+          });
+        }
+
+        /* Anything the learner has moved past tells itself. The prompt is an
+           invitation, not a gate - a reason nobody ever sees because they did
+           not know to tap is worse than one shown unasked. */
+        var ps = wrapEl.querySelectorAll('.sfb-wp'), j;
+        for (j = 0; j < ps.length; j++) {
+          var b = parseInt(ps[j].getAttribute('data-beat'), 10) || 0;
+          var c = ps[j].getAttribute('data-sfb-cls') || '';
+          if (b < at && c.indexOf('is-told') === -1) {
+            ps[j].setAttribute('data-sfb-cls', c + ' is-told');
+            ps[j].setAttribute('class', (ps[j].getAttribute('class') || '') + ' is-told');
+          }
+        }
       }
     };
   };
@@ -13279,7 +13684,8 @@ var SFBoard = (function () {
      the answer is just an answer. */
   '.sfb .sfb-b.sfb-wp.is-ahead{opacity:.2;}' +
   '.sfb .sfb-wp.is-ahead .sfb-wline,.sfb .sfb-wp.is-ahead .sfb-wvis,' +
-    '.sfb .sfb-wp.is-ahead .sfb-wwhy,.sfb .sfb-wp.is-ahead .sfb-wlink{opacity:0;}' +
+    '.sfb .sfb-wp.is-ahead .sfb-wwhy,.sfb .sfb-wp.is-ahead .sfb-wlink,' +
+    '.sfb .sfb-wp.is-ahead .sfb-wname,.sfb .sfb-wp.is-ahead .sfb-wask{opacity:0;}' +
   /* The board draws its own cards, so the container must not draw another
      one around them. */
   '.sfb-t-worked .whiteboard-preview{box-shadow:none;border-radius:0;}' +
@@ -13305,6 +13711,24 @@ var SFBoard = (function () {
     'transform-origin:center center;}' +
   '@keyframes sfbRise{from{opacity:0;transform:translateY(9px);}to{opacity:1;transform:none;}}' +
   '@keyframes sfbBloom{from{opacity:0;transform:scale(.9);}to{opacity:1;transform:none;}}' +
+
+  /* ── the self-explanation prompt ────────────────────────────────────
+     The reason sits behind a tap. Gated on a class rather than on inline
+     opacity, because the arrival animation runs with `both` and its final
+     frame would otherwise win. */
+  '.sfb .sfb-wp.has-ask .sfb-wwhy{opacity:0;animation:none;}' +
+  '.sfb .sfb-wp.has-ask.is-told .sfb-wwhy{opacity:1;' +
+    'animation:sfbRise .38s cubic-bezier(.22,.68,.3,1) both;}' +
+  '.sfb .sfb-wp .sfb-wask{opacity:0;transition:opacity .3s ease;}' +
+  '.sfb .sfb-wp.has-ask.is-now .sfb-wask{opacity:1;cursor:pointer;}' +
+  '.sfb .sfb-wp.has-ask.is-told .sfb-wask{opacity:0;pointer-events:none;}' +
+  '.sfb .sfb-wp.has-ask.is-now:hover .sfb-wask rect{opacity:1;}' +
+  /* The withheld closing line of a synthesised example. */
+  '.sfb .sfb-wp.has-pred .sfb-wline,.sfb .sfb-wp.has-pred .sfb-wvis{opacity:0;animation:none;}' +
+  '.sfb .sfb-wp.has-pred.is-told .sfb-wline{opacity:1;' +
+    'animation:sfbRise .38s cubic-bezier(.22,.68,.3,1) both;}' +
+  '.sfb .sfb-wp.has-pred.is-told .sfb-wvis{opacity:1;' +
+    'animation:sfbBloom .44s cubic-bezier(.22,.68,.3,1) .06s both;}' +
 
   /* The arrow from the previous step draws itself along its own length. */
   '.sfb .sfb-wp .sfb-wlink{opacity:0;}' +
@@ -13967,7 +14391,13 @@ var SFBoard = (function () {
     var built = modelWorked(day);
     var kicker = 'Worked example';
 
-    if (!built && quantitative) built = buildParallelMath(day);
+    var parallel = false;
+    if (!built && quantitative) {
+      built = buildParallelMath(day);
+      /* None of the day's questions are spent on this one - see invariant 7
+         - which is what makes it safe to ask the learner to finish it. */
+      parallel = !!built;
+    }
     if (!built) { built = procedureWorked(day); if (built) kicker = 'How it works'; }
     /* Concepts are the weakest source: a list of terms is not a worked
        anything, and each panel can only be drawn as "where you are in the
@@ -13988,7 +14418,14 @@ var SFBoard = (function () {
       title: topic,
       topic: topic,
       subject: clean(subject) || topic,
-      quantitative: quantitative
+      quantitative: quantitative,
+      /* Hand the last step back to the learner. Only on the synthesised
+         parallel problem: it is not one of the day's questions, so asking
+         for the final line costs nothing and turns the closing panel from
+         something read into something done. A walkthrough opened after a
+         wrong answer never gets this - that learner is here for the
+         answer. */
+      predict: parallel
     };
   }
 
@@ -14261,14 +14698,16 @@ var SFBoard = (function () {
         if (direct) return direct;
       }
       var items = itemsFromSteps(ds);
-      if (items.length >= 2) return { type: 'steps', title: title, items: items };
+      /* Built from day.steps, which is a procedure. */
+      if (items.length >= 2) return { type: 'steps', title: title, items: items, ordered: true };
     }
 
     var yrs = yearsFrom(str(day.summary) + ' ' + str(day.body) + ' ' + str(day.explanation));
     if (yrs.length) return { type: 'timeline', title: title, items: yrs };
 
     var chain = chainFrom(day.summary || day.body);
-    if (chain.length) return { type: 'steps', title: title, items: chain };
+    /* A cause-and-effect chain is an order too. */
+    if (chain.length) return { type: 'steps', title: title, items: chain, ordered: true };
 
     return null;   // nothing real to show
   }
@@ -14308,7 +14747,92 @@ var SFBoard = (function () {
      boundaries of the expression. An earlier attempt matched a fixed window
      around the sign and truncated "14" to "1", producing equations that were
      quietly wrong - worse than no walkthrough at all. */
-  var EQ_CHARS = /[A-Za-z0-9.\u00b2\u00b3^_+\-*\/()\[\]\s]/;
+  /* The characters an equation is made of. **The typographic operators are in
+     here on purpose.** A model writes "x + 7 \u2212 7 = 15 \u2212 7" with a real minus
+     sign, and while this class held only the ASCII hyphen the left-walk from
+     the "=" stopped dead at that character - so the scraper pulled "7 = 15"
+     out of the middle of a correct sentence and the board drew that falsehood
+     as a level balance. See contradicts() below, which is the second lock on
+     the same door. */
+  var EQ_CHARS = /[A-Za-z0-9.\u00b2\u00b3^_+\-*\/()\[\]\s\u2212\u00d7\u00f7]/;
+
+  /* ── arithmetic on a scraped line, without eval ────────────────────────
+     A recursive-descent parser over digits and + - * / ( ) only. Anything
+     carrying a letter returns null: an expression with an x in it is not
+     something we can check, and guessing would be worse than not checking.
+
+     Deliberately not `Function` or `eval`. This string came out of model
+     prose, and the whole reason SFSceneKit uses a fixed vocabulary rather
+     than raw SVG applies here too - a grammar you can read beats a sandbox
+     you hope holds. */
+  function numValue(expr) {
+    var t = String(expr || '')
+      .replace(/\u2212/g, '-').replace(/\u00d7/g, '*').replace(/\u00f7/g, '/')
+      .replace(/\s+/g, '');
+    if (!t || /[^0-9.+\-*\/()]/.test(t)) return null;
+    var i = 0, bad = false;
+
+    function peek() { return t.charAt(i); }
+    function number() {
+      var st = i;
+      while (i < t.length && /[0-9.]/.test(t.charAt(i))) i++;
+      if (i === st) { bad = true; return 0; }
+      var v = parseFloat(t.slice(st, i));
+      if (isNaN(v)) { bad = true; return 0; }
+      return v;
+    }
+    function factor() {
+      if (peek() === '-') { i++; return -factor(); }
+      if (peek() === '+') { i++; return factor(); }
+      if (peek() === '(') {
+        i++;
+        var v = sum();
+        if (peek() !== ')') { bad = true; return 0; }
+        i++;
+        return v;
+      }
+      return number();
+    }
+    function term() {
+      var v = factor(), c;
+      while (!bad && (peek() === '*' || peek() === '/')) {
+        c = peek(); i++;
+        var r = factor();
+        if (c === '/') {
+          if (!r) { bad = true; return 0; }
+          v = v / r;
+        } else v = v * r;
+      }
+      return v;
+    }
+    function sum() {
+      var v = term(), c;
+      while (!bad && (peek() === '+' || peek() === '-')) {
+        c = peek(); i++;
+        var r = term();
+        v = c === '+' ? v + r : v - r;
+      }
+      return v;
+    }
+
+    var out = sum();
+    if (bad || i !== t.length) return null;
+    return out;
+  }
+
+  /* Both sides are pure arithmetic and they do not agree. That is never a
+     step of a solution - it is a scraping artefact, and drawing it puts a
+     false statement on the board with a balance under it saying the two
+     sides are equal. Anything with a variable in it passes: unknowns are
+     what a solution is made of. */
+  function contradicts(line) {
+    var halves = String(line || '').split('=');
+    if (halves.length !== 2) return false;
+    var a = numValue(halves[0]), b = numValue(halves[1]);
+    if (a === null || b === null) return false;
+    return Math.abs(a - b) > 1e-9;
+  }
+
 
   function equationLines(text) {
     var t = str(text);
@@ -14338,6 +14862,12 @@ var SFBoard = (function () {
          "3x - 7 = 14 for x." keeps only "3x - 7 = 14". */
       line = line.replace(/\s+(?:and|then|so|which|because|to|for|where|when|if|is|are|gives?|equals?)\b.*$/i, '');
       line = line.replace(/\s+or\b.*$/i, '');      // "x = 2 or x = 3" -> keep the first
+      /* Stop at the end of the sentence. "That leaves x = 8. Check: 8 + 7 =
+         15" was kept whole as "x = 8. Check", which then failed to match the
+         plain "x = 8" the answer supplies - so the same step arrived twice,
+         once mangled. A decimal is safe: this needs whitespace and a capital
+         after the point. */
+      line = line.replace(/\.\s+[A-Z].*$/, '');
       line = line.replace(/[.,;:]+$/, '');
       line = clean(line);
 
@@ -14345,6 +14875,8 @@ var SFBoard = (function () {
       if (line.indexOf('=') === -1) continue;
       /* A fill-in-the-blank prompt is not a step of the working. */
       if (/_{2,}/.test(line)) continue;
+      /* Arithmetic that does not hold is a scrape, not a step. */
+      if (contradicts(line)) continue;
       /* Both sides must carry something. */
       var halves = line.split('=');
       if (halves.length !== 2) continue;
@@ -14429,10 +14961,16 @@ var SFBoard = (function () {
     var ops = operationSteps(q.explanation);
 
     var lines = [], seen = {}, i;
+    /* Keyed on a normalised form, not the literal string. The same step
+       arrives from the equation field, the stem and the explanation with
+       different spacing and punctuation every time, and three spellings of
+       "x = 8" used to become three panels. */
     function push(v) {
       var k2 = clean(v);
-      if (!k2 || seen[k2]) return;
-      seen[k2] = 1; lines.push(k2);
+      if (!k2) return;
+      var key = k2.toLowerCase().replace(/[\s.]+/g, '').replace(/\u2212/g, '-');
+      if (seen[key]) return;
+      seen[key] = 1; lines.push(k2);
     }
     for (i = 0; i < fromEq.length; i++) push(fromEq[i]);
     for (i = 0; i < fromQ.length; i++) push(fromQ[i]);
@@ -14445,13 +14983,23 @@ var SFBoard = (function () {
 
     if (lines.length < 2) return null;
 
+    /* Five panels, hard. A one-step equation was coming back as SEVEN - a
+       ceremonial "Goal" card, the equation, a scraped falsehood, the answer,
+       the check, the answer again under "Almost there", and a second check.
+       Three of those said the same thing. A walkthrough longer than the
+       problem is not a walkthrough. */
+    if (lines.length > 4) lines = lines.slice(0, 4);
+
     var items = [];
 
-    /* Opening beat: what we are solving for. */
+    /* The goal rides on the first line instead of taking a panel of its own.
+       "Goal" set in 27px with "Find x." underneath is a title card: the
+       label is the biggest thing on the panel and the content is the
+       smallest. The equation is step one, and what we are looking for is
+       the reason we are starting there. */
     var goal = goalOf(q);
-    if (goal) {
-      items.push({ label: 'Goal', detail: 'Find ' + goal + '.' });
-    }
+    var opening = goal ? 'Find ' + goal + '. This is the equation as given.'
+                       : 'The equation as given.';
 
     var STEP_WORD = ['Start from the equation as given',
                      'Apply the same operation to both sides',
@@ -14461,16 +15009,22 @@ var SFBoard = (function () {
     for (i = 0; i < lines.length; i++) {
       var detail;
       if (i === 0) {
-        detail = 'the equation as given';
+        detail = opening;
       } else {
         detail = operationFor(ops, i - 1) || STEP_WORD[Math.min(i, STEP_WORD.length - 1)];
       }
       items.push({ label: lines[i], detail: detail });
     }
 
-    /* Closing beat: state the result in words, and how to check it. */
+    /* Closing beat: how to check it.
+
+       Skipped when the working already ends on a check. A line with no
+       letter left in it - "8 + 7 = 15" - IS the substitution, so following
+       it with a panel that says "now substitute" asks for the step the
+       learner is looking at. */
     var last = lines[lines.length - 1];
-    if (/=/.test(last)) {
+    var lastIsCheck = !/[A-Za-z]/.test(last);
+    if (!lastIsCheck && /=/.test(last)) {
       var halves = last.split('=');
       var lhs = clean(halves[0]), rhs = clean(halves[1]);
       if (lhs && rhs && lhs.length <= 12) {
@@ -14479,6 +15033,9 @@ var SFBoard = (function () {
           detail: 'Substitute ' + lhs + ' = ' + rhs + ' back into the original equation \u2014 both sides should match.'
         });
       }
+    } else if (lastIsCheck && items.length) {
+      items[items.length - 1].detail =
+        'Substituting the answer back in makes both sides match, which is the check.';
     }
 
     return items.length >= 2 ? items : null;
@@ -14496,7 +15053,10 @@ var SFBoard = (function () {
     if (type === 'sequence' || type === 'ordering') {
       var seq = itemsFromSteps(list(q.items || q.correctOrder || q.sequence));
       if (seq.length >= 2) {
-        return { type: 'steps', title: title + ' \u2014 the right order', items: seq };
+        /* A sequence question IS an order - the one walkthrough on this
+           scene where numbering the rows states something true. */
+        return { type: 'steps', title: title + ' \u2014 the right order',
+                 items: seq, ordered: true };
       }
     }
 
