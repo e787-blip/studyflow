@@ -1276,19 +1276,18 @@ frontend and `api/*.js` together. There is no build step, so a push is the deplo
   one-word revert — but it is dead code, and dead code that can silently
   reactivate is exactly how `Scene.equation` kept drawing the card it was
   supposed to have replaced. Decide whether to keep it.
-- **`index.html`'s hero is a monochrome mesh gradient** (WebGL, Three.js off
-  the CDN, `#hero-shader`). It replaced concentric ripple rings over a navy
-  base — five hard-edged circles pulsing out of the centre, which read as a
-  radar sweep rather than a surface. The field is domain-warped gradient
-  noise, twice, ramped black → `#1a1a1a` → `#2e2e2e` → a white capped at 0.72
-  of the mix, with contour bands standing in for the reference's wireframe
-  layer. **White headline type sits on top of it**: the vignette and the
-  0.92 clamp are what keep it legible, so do not raise either without
-  looking at the hero at 375px. Reduced motion renders one frame and stops.
-  The rest of the page is untouched and still unreviewed. `hero-bg.mp4`
-  (1.6 MB) remains committed and referenced by nothing — the shader does the
-  job it was presumably for, so it is now dead weight in the repo and should
-  probably be deleted.
+- **`index.html` has not been reviewed.** It loads clean — no console errors, no
+  broken images, no horizontal overflow, and all eight internal links resolve —
+  but the hero section is still the intended next task. `hero-bg.mp4` has been
+  deleted: 1.6 MB committed and referenced by nothing.
+
+  **The hero shader is the navy ripple, and that is a decision, not an
+  oversight.** A monochrome mesh gradient — black through `#2e2e2e` to white,
+  domain-warped noise, contour bands for a wireframe — was built and reverted
+  in one sitting (`823564b`, reverted). It was a faithful version of the
+  reference and it looked wrong here: the landing page is one blue, and a
+  black-and-white hero above it made the rest of the page look like a
+  different product. Try something else before trying that again.
 
 ## Conventions
 
