@@ -263,6 +263,63 @@
     .lp-seg:hover, .lp-back:hover { transform:none; }
   }
 
+  /* ── THE WATCH-OUT CARD ───────────────────────────────────────────────
+     Vocabulary and the day's traps on one card, as flashcards you turn.
+
+     They were three separate things: a key-terms card listing every term,
+     a "Common traps" part on the lesson card, and the vocabulary again in
+     the lesson prose. A term and the mistake people make with it belong on
+     the same card - the mistake is usually ABOUT the term - and turning a
+     card to see the meaning is retrieval, where reading a list is not. */
+  .fc-deck { display:flex; flex-direction:column; align-items:center; gap:.9rem; }
+  .fc-stage { width:100%; max-width:440px; perspective:1200px; }
+  .fc-card {
+    position:relative; width:100%; min-height:168px; cursor:pointer;
+    transform-style:preserve-3d; transition:transform .52s cubic-bezier(.22,.68,.3,1);
+  }
+  .fc-card.is-flipped { transform:rotateY(180deg); }
+  .fc-face {
+    position:absolute; inset:0; backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:1.4rem 1.5rem; border-radius:18px;
+    border:1.5px solid var(--border); background:var(--white);
+    box-shadow:0 6px 20px rgba(26,29,46,.06);
+  }
+  .fc-face.fc-back { transform:rotateY(180deg); }
+  .fc-kind {
+    font-size:.64rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+    margin-bottom:.55rem;
+  }
+  .fc-term { font-family:var(--serif); font-size:1.5rem; color:var(--ink); line-height:1.2; }
+  .fc-def { font-size:.9rem; color:var(--ink); line-height:1.6; font-weight:400; }
+  .fc-hint { font-size:.7rem; color:var(--muted); margin-top:.7rem; font-weight:500; }
+  /* A trap card is amber, which is what amber means everywhere else here. */
+  .fc-card.is-trap .fc-face { border-color:#f0c274; background:#fffdf6; }
+  .fc-card.is-trap .fc-kind { color:#b4740d; }
+  .fc-card.is-term .fc-kind { color:var(--blue); }
+  .fc-myth {
+    font-size:.86rem; color:#92400e; line-height:1.5;
+    text-decoration:line-through; text-decoration-color:rgba(146,64,14,.4);
+  }
+  .fc-nav { display:flex; align-items:center; gap:.7rem; }
+  .fc-arrow {
+    width:34px; height:34px; border-radius:50%; border:1.5px solid var(--border);
+    background:var(--white); color:var(--muted); cursor:pointer; font-size:1rem;
+    display:flex; align-items:center; justify-content:center;
+    transition:border-color .18s ease, color .18s ease, transform .18s ease;
+  }
+  .fc-arrow:hover:not(:disabled) { border-color:var(--blue); color:var(--blue); }
+  .fc-arrow:disabled { opacity:.35; cursor:not-allowed; }
+  .fc-pips { display:flex; gap:5px; }
+  .fc-pip { width:18px; height:4px; border-radius:2px; background:var(--border); border:0; padding:0;
+    cursor:pointer; transition:background .25s ease; }
+  .fc-pip.is-now { background:var(--blue); }
+  .fc-pip.is-done { background:rgba(74,124,246,.42); }
+  @media (prefers-reduced-motion:reduce) {
+    .fc-card { transition:none; }
+  }
+
   /* KEY TERMS */
   .terms-list { display:flex; flex-direction:column; gap:.55rem; }
   .term-item { background:var(--soft); border:1.5px solid var(--border); border-radius:12px; padding:.85rem 1.1rem; }
@@ -623,6 +680,17 @@
   body.dark .fill-input { background:#1e2336; border-color:#222840; color:#e8eeff; }
   body.dark .hint-box { background:#2a2000; border-color:#f59e0b; color:#fcd34d; }
   body.dark .term-item { background:#1e2336; border-color:#222840; }
+  /* The deck. A trap card is cream in the light theme, and cream with
+     --ink text on it in dark mode is light type on a light card - which is
+     what shipped for about ten minutes. Both faces get a dark ground. */
+  body.dark .fc-face { background:#1e2336; border-color:#222840;
+    box-shadow:0 6px 20px rgba(0,0,0,.35); }
+  body.dark .fc-card.is-trap .fc-face { background:#2a2417; border-color:#6b5320; }
+  body.dark .fc-card.is-trap .fc-kind { color:#e0b877; }
+  body.dark .fc-myth { color:#e0b877; text-decoration-color:rgba(224,184,119,.45); }
+  body.dark .fc-arrow, body.dark .fc-pip { background:#1e2336; border-color:#222840; }
+  body.dark .fc-pip { background:#222840; }
+  body.dark .fc-pip.is-now { background:var(--blue); }
   body.dark .recap-card { background:#0d2015; border-color:#1a9e80; }
   body.dark .struggling-banner { background:#2a1800; border-color:#f59e0b; }
   body.dark .struggling-text h4, body.dark .struggling-text p { color:#fcd34d; }
@@ -1226,7 +1294,7 @@
     }
 
     /* Where does the teaching end and practice begin? */
-    var TEACHING = { welcome: 1, lesson: 1, terms: 1, 'sfwb-brief': 1, 'sfwb-outline': 1,
+    var TEACHING = { welcome: 1, lesson: 1, terms: 1, flashcards: 1, 'sfwb-brief': 1,
                      'pretest-intro': 1, 'pretest-done': 1,
                      'review-intro': 1, 'review-done': 1, 'interleave-intro': 1 };
     var firstPractice = rest.length;
@@ -1422,18 +1490,36 @@
      else needs changing - both branches read it. */
   var LESSON_CARD_STEPPED = false;
 
+  /* ── THE OPENING BOARD IS ONE CARD, AND IT WALKS A REAL EXAMPLE ────────
+     It used to be two: an outline of the day's steps, then a "worked
+     example" board. Both were built from `day.steps`, so on every
+     non-maths day they were THE SAME FOUR ITEMS, one after the other -
+     and the lesson card printed them a third time. A learner met
+     "Chlorophyll in the thylakoid absorbs photons" three times before a
+     single question.
+
+     The second card was worse than redundant. `briefFor` fell back to
+     `procedureWorked`, which re-plates the procedure as if it were a
+     solution, so the header read "HOW IT WORKS" over an EMPTY problem
+     line and each panel blew one sentence up to headline size and asked
+     "Why does this work?" - about a fact, not a step. It called itself a
+     worked example on nine subjects where no example was being worked.
+
+     So: the outline is gone, the steps live once on the lesson card, and
+     this board appears only when there is a real instance to walk -
+     `day.workedExample` from the model, or the synthesised parallel
+     problem on maths. When there is not, the session simply has one fewer
+     card. A walkthrough with nothing to walk through is not worth a
+     screen. */
   function buildOpeningBoard() {
     var cards = [];
     try {
       if (!window.SFWhiteboard || !window.SFWhiteboard.briefFor) return cards;
       var subj = (typeof day !== 'undefined' && day && day.subject) ||
                  (window.SFStore && window.SFStore.subject) || '';
-
-      if (typeof window.SFWhiteboard.outlineFor === 'function') {
-        var outline = window.SFWhiteboard.outlineFor(day || {}, subj);
-        if (outline) cards.push({ type: 'sfwb-outline', lesson: outline });
-      }
-      var spec = window.SFWhiteboard.briefFor(day || {}, subj);
+      var spec = typeof window.SFWhiteboard.workedInstanceFor === 'function'
+        ? window.SFWhiteboard.workedInstanceFor(day || {}, subj)
+        : null;
       if (spec) cards.push({ type: 'sfwb-brief', lesson: spec });
     } catch (e) { /* a board is never worth losing the session over */ }
     return cards;
@@ -1528,16 +1614,21 @@
       }
     }
 
+    /* ── THE OPENING, IN THE ORDER A PERSON WOULD TEACH IT ──────────────
+         welcome     what today is about
+         lesson      the picture, the prose, the steps, the ideas
+         flashcards  the words, and the mistakes people make with them
+         sfwb-brief  one real example, worked interactively
+
+       The boards used to come FIRST, before the lesson - two of them, both
+       built from day.steps, saying the same four things the lesson card
+       then said a third time. Fourteen screens before the first question.
+       Now nothing is said twice, the example comes after the teaching it
+       is an example OF, and a day with no example simply has no board. */
     sessionCards.push({ type: 'welcome' });
-
-    /* The whiteboard goes directly before the teaching card, every session.
-       It is the procedure the lesson then walks through: what the topic rests
-       on, where learners trip, and where it shows up. Sitting here it primes
-       the lesson instead of pre-empting the pre-test. */
-    for (var ob = 0; ob < openingBoard.length; ob++) sessionCards.push(openingBoard[ob]);
-
     if (day.content) sessionCards.push({ type: 'lesson' });
-    if (dayIndex === 0 && day.keyTerms && day.keyTerms.length) sessionCards.push({ type: 'terms' });
+    if (deckItems(day).length) sessionCards.push({ type: 'flashcards' });
+    for (var ob = 0; ob < openingBoard.length; ob++) sessionCards.push(openingBoard[ob]);
 
     // TIER 2: Interleaved review — every 3rd day mixes questions from ALL previous days
     if (dayIndex > 0 && dayIndex % 3 === 0) {
@@ -2551,6 +2642,106 @@
               typeof window.Whiteboard.deriveBeats === 'function');
   }
 
+  /* ── THE WATCH-OUT DECK ────────────────────────────────────
+     Key terms and the day's traps, as cards you turn. State for the deck
+     while it is on screen; null on every other card. */
+  var sfDeck = null;
+
+  function deckItems(dayObj) {
+    var out = [], i, t, m;
+    var terms = (dayObj && dayObj.keyTerms) || [];
+    var traps = (dayObj && dayObj.misconceptions) || [];
+
+    /* Traps first. A misconception is the more useful card - it names
+       something the learner probably believes right now - and putting them
+       after six definitions is where attention has already gone. */
+    for (i = 0; i < traps.length && out.length < 8; i++) {
+      m = traps[i];
+      if (!m || !fmStr(m.believe) || !fmStr(m.actually)) continue;
+      out.push({ kind: 'trap', front: fmStr(m.believe), back: fmStr(m.actually),
+                 note: fmStr(m.why) });
+    }
+    for (i = 0; i < terms.length && out.length < 8; i++) {
+      t = terms[i];
+      if (!t) continue;
+      var term = typeof t === 'string' ? fmStr(t) : fmStr(t.term);
+      var def  = typeof t === 'string' ? '' : fmStr(t.definition);
+      if (!term || !def) continue;
+      if (term === 'undefined' || def === 'undefined') continue;
+      out.push({ kind: 'term', front: term, back: def, note: '' });
+    }
+    return out;
+  }
+
+  function deckCardHtml(it) {
+    var isTrap = it.kind === 'trap';
+    return '<div class="fc-card ' + (isTrap ? 'is-trap' : 'is-term') + '" id="fc-card" ' +
+        'onclick="sfDeckFlip()">' +
+      '<div class="fc-face fc-front">' +
+        '<div class="fc-kind">' + (isTrap ? 'People often think' : 'Key term') + '</div>' +
+        '<div class="' + (isTrap ? 'fc-myth' : 'fc-term') + '">' + esc(it.front) + '</div>' +
+        '<div class="fc-hint">Tap to turn</div>' +
+      '</div>' +
+      '<div class="fc-face fc-back">' +
+        '<div class="fc-kind">' + (isTrap ? 'Actually' : 'What it means') + '</div>' +
+        '<div class="fc-def">' + esc(it.back) + '</div>' +
+        (it.note ? '<div class="fc-hint">' + esc(it.note) + '</div>' : '') +
+      '</div>' +
+    '</div>';
+  }
+
+  function deckHtml(items) {
+    var pips = '', i;
+    for (i = 0; i < items.length; i++) {
+      pips += '<button type="button" class="fc-pip' + (i === 0 ? ' is-now' : '') +
+        '" aria-label="Card ' + (i + 1) + '" onclick="sfDeckGo(' + i + ')"></button>';
+    }
+    return '<div class="fc-deck">' +
+      '<div class="fc-stage" id="fc-stage">' + deckCardHtml(items[0]) + '</div>' +
+      '<div class="fc-nav">' +
+        '<button type="button" class="fc-arrow" id="fc-prev" disabled ' +
+          'onclick="sfDeckGo(sfDeck ? sfDeck.at - 1 : 0)">\u2190</button>' +
+        '<div class="fc-pips" id="fc-pips">' + pips + '</div>' +
+        '<button type="button" class="fc-arrow" id="fc-next" ' +
+          'onclick="sfDeckGo(sfDeck ? sfDeck.at + 1 : 0)">\u2192</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function sfDeckFlip() {
+    var c = document.getElementById('fc-card');
+    if (!c || !sfDeck) return;
+    var flipped = c.className.indexOf('is-flipped') !== -1;
+    c.className = c.className.replace(' is-flipped', '') + (flipped ? '' : ' is-flipped');
+    sfDeck.seen[sfDeck.at] = 1;
+  }
+
+  function sfDeckGo(idx) {
+    if (!sfDeck) return;
+    var stage = document.getElementById('fc-stage');
+    if (!stage) return;
+    if (idx < 0 || idx >= sfDeck.items.length || idx === sfDeck.at) return;
+    sfDeck.at = idx;
+    /* Rebuilt rather than re-faced: a card that flips back to its front on
+       the way out shows the previous card's answer for half a second. */
+    stage.innerHTML = deckCardHtml(sfDeck.items[idx]);
+    var card = document.getElementById('fc-card');
+    if (card) {
+      card.style.animation = 'none';
+      void card.offsetWidth;
+      card.style.animation = 'fadeUp .34s cubic-bezier(.16,1,.3,1) both';
+    }
+    var pips = document.querySelectorAll('#fc-pips .fc-pip'), i;
+    for (i = 0; i < pips.length; i++) {
+      pips[i].className = 'fc-pip' + (i === idx ? ' is-now' : (i < idx ? ' is-done' : ''));
+    }
+    var prev = document.getElementById('fc-prev'), next = document.getElementById('fc-next');
+    if (prev) prev.disabled = idx === 0;
+    if (next) next.disabled = idx === sfDeck.items.length - 1;
+    var fl = document.querySelector('#session-card .card-footer .footer-left');
+    if (fl) fl.textContent = 'Card ' + (idx + 1) + ' of ' + sfDeck.items.length;
+  }
+
   /* ── THE LESSON PAGER ──────────────────────────────────────
      State for the lesson card while it is on screen. Null on every other
      card, and nulled at the top of renderCardInner - a stale pane list would
@@ -2722,6 +2913,7 @@
     currentCardType = (card && card.type) || '';
     swpState = null;   // a previous scaffold must not leak into this card
     sfLesson = null;   // and neither must a previous lesson's parts
+    sfDeck = null;     // nor a previous day's flashcards
 
     if (card.type === 'pretest-intro') {
       html = buildCard('Quick Check', 'Before we start — test yourself!', false,
@@ -2835,26 +3027,11 @@
         lpSection(panes, conItems, 'Core concepts', 'More concepts', 3);
       }
 
-      // ── MISCONCEPTIONS — "you might think X, but actually Y" ──
-      // Research-backed: directly confronting a wrong belief corrects it far
-      // better than only stating the right answer, because the student has to
-      // notice the conflict with what they already believed.
-      if (day.misconceptions && day.misconceptions.length > 0) {
-        var mcItems = [];
-        day.misconceptions.forEach(function(mc) {
-          if (!mc || !mc.believe || !mc.actually) return;
-          mcItems.push('<div style="margin-bottom:.7rem;padding:.75rem .9rem;background:#fff8e0;border-radius:12px;border-left:3px solid #f59e0b;">' +
-            '<div style="display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.4rem;">' +
-            '<span style="flex-shrink:0;font-size:0.62rem;font-weight:800;letter-spacing:.06em;color:#92400e;background:rgba(245,158,11,.22);padding:.15rem .4rem;border-radius:4px;margin-top:.1rem;">MYTH</span>' +
-            '<div style="font-size:0.8rem;color:#92400e;line-height:1.5;text-decoration:line-through;text-decoration-color:rgba(146,64,14,.4);">' + mc.believe + '</div></div>' +
-            '<div style="display:flex;gap:.5rem;align-items:flex-start;">' +
-            '<span style="flex-shrink:0;font-size:0.62rem;font-weight:800;letter-spacing:.06em;color:#065f46;background:rgba(56,191,161,.22);padding:.15rem .4rem;border-radius:4px;margin-top:.1rem;">FACT</span>' +
-            '<div style="font-size:0.82rem;color:var(--ink);line-height:1.5;font-weight:600;">' + mc.actually + '</div></div>' +
-            (mc.why ? '<div style="font-size:0.74rem;color:var(--muted);margin-top:.45rem;font-style:italic;padding-left:.2rem;">Why it trips people up: ' + mc.why + '</div>' : '') +
-            '</div>');
-        });
-        lpSection(panes, mcItems, 'Common traps', 'More traps', 2, '#d97706');
-      }
+      /* The day's traps are NOT here any more - they are flashcards, on the
+         deck that also carries the vocabulary. A misconception is almost
+         always about a key term, and the two were on different cards with
+         the definitions read as a list and the traps read as prose. See
+         deckItems(). */
 
       // ── REAL-WORLD CASE STUDY — concrete anchor for an abstract concept ──
       if (day.caseStudy && day.caseStudy.title && day.caseStudy.what) {
@@ -2911,18 +3088,23 @@
                          'Got it →', false);
       }
     }
-    else if (card.type === 'terms') {
-      var termsHtml = '<div class="terms-list">';
-      (day.keyTerms || []).forEach(function(t) {
-        if (!t || !t.term || !t.definition) return;
-        if (t.term === 'undefined' || t.definition === 'undefined') return;
-        termsHtml += '<div class="term-item"><div class="term-word">' + t.term + '</div><div class="term-def">' + t.definition + '</div></div>';
-      });
-      if (termsHtml === '<div class="terms-list">') {
-        termsHtml += '<div class="term-item"><div class="term-def">Key terms will appear here as you study.</div></div>';
-      }
-      termsHtml += '</div>';
-      html = buildCard('Key Terms', 'Words to Know', false, termsHtml, 'Learn these', 'Next →', false);
+    else if (card.type === 'flashcards') {
+      /* Vocabulary and the day's traps, on one deck. This replaced the
+         key-terms card, which listed every term with its definition beside
+         it - reading a glossary, not recalling anything - and the lesson
+         card's separate "Common traps" part. A trap is usually about a
+         term, so they belong on the same deck. */
+      var items = deckItems(day);
+      if (!items.length) { showNextCard(); return; }
+      sfDeck = { items: items, at: 0, seen: {} };
+      var kinds = 0, tr = 0, j;
+      for (j = 0; j < items.length; j++) { if (items[j].kind === 'trap') tr++; }
+      kinds = tr && tr < items.length ? 2 : 1;
+      html = buildCard('Before you practise',
+        kinds === 2 ? 'Know these, watch for these'
+                    : (tr ? 'Watch out for these' : 'Words to know'),
+        false, deckHtml(items),
+        'Card 1 of ' + items.length, 'Got it \u2192', false);
     }
     else if (card.type === 'question') {
       /* The badge is chosen inside renderQuestion, from the card.
@@ -14398,13 +14580,19 @@ var SFBoard = (function () {
          - which is what makes it safe to ask the learner to finish it. */
       parallel = !!built;
     }
-    if (!built) { built = procedureWorked(day); if (built) kicker = 'How it works'; }
+    /* The procedure is NOT an example. Re-plating day.steps as a solution is
+       what produced a board headed "HOW IT WORKS" over an empty problem
+       line, saying the same four things the lesson card had just said.
+       opts.instanceOnly - which the opening board passes - refuses it. */
+    if (!built && !opts.instanceOnly) {
+      built = procedureWorked(day); if (built) kicker = 'How it works';
+    }
     /* Concepts are the weakest source: a list of terms is not a worked
        anything, and each panel can only be drawn as "where you are in the
        list". briefFor therefore asks for it only after its own subject scenes
        have declined - a geography day is better served by the map its pillars
        can actually fill, and a dated history day by the timeline. */
-    if (!built && opts.concepts) {
+    if (!built && opts.concepts && !opts.instanceOnly) {
       built = conceptWorked(day);
       if (built) kicker = 'The idea, step by step';
     }
@@ -15158,6 +15346,20 @@ var SFBoard = (function () {
     return null;
   }
 
+  /** The opening board: a REAL worked instance, or nothing.
+
+      Separate from briefFor on purpose. briefFor will happily fall through
+      to a map, a timeline or a list of the day's own steps when no example
+      exists - useful when something has to be drawn, and exactly wrong for
+      this slot, because all of those are built from the same day.steps the
+      lesson card is already showing. Here the rule is absolute: the model's
+      workedExample, or the synthesised parallel maths problem, or no card. */
+  function workedInstanceFor(day, subject) {
+    var spec = workedFor(day, subject, { concepts: false, instanceOnly: true });
+    if (!spec) return null;
+    return SFBoard.build(spec) ? spec : null;
+  }
+
   /** Build a board spec from a question just answered, or null. */
   function fromWrongAnswer(q, day) {
     q = q || {}; day = day || {};
@@ -15280,6 +15482,7 @@ var SFBoard = (function () {
     briefFor: briefFor,
     outlineFor: outlineFor,
     workedFor: workedFor,
+    workedInstanceFor: workedInstanceFor,
     fromWrongAnswer: fromWrongAnswer,
     adapt: adapt,
     hasSeenTopic: hasSeenTopic,
@@ -15457,7 +15660,7 @@ var SFBoard = (function () {
     /* Walkthrough requested from a wrong answer. */
     /* Opening whiteboard. Same render path as the walkthrough, so it inherits
        the stepped reveal, the tap targets and the Next control. */
-    if (card && (card.type === 'sfwb-brief' || card.type === 'sfwb-outline') && mount) {
+    if (card && card.type === 'sfwb-brief' && mount) {
       try {
         /* Clear the mount first. SFBoard.render appends, and renderCardInner
            is what normally overwrites #session-card - but this branch returns

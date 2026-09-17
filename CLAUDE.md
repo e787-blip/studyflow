@@ -80,8 +80,8 @@ This is the highest-risk function in the codebase. Read it fully before editing.
 
 The flow:
 
-1. Opening cards — welcome, whiteboard **outline**, whiteboard **worked**,
-   lesson, key terms
+1. Opening cards — welcome, lesson, flashcards, whiteboard **worked**
+   (see "The opening, and what it stopped saying three times")
 2. Pre-test (day 1 only) — 3 questions drawn from `simpleQuestions`
 3. Main loop over `regularQuestions` (everything **not** in `SPECIAL_TYPES`)
 4. Targeted injectors splice in each special type at fixed positions
@@ -795,7 +795,7 @@ Three entry points:
 
 | Entry | Function | Status |
 |---|---|---|
-| Opening board (card 2) | `briefFor(day, subject)` → `sfwb-brief` card | Active |
+| Opening board (after the lesson) | **`workedInstanceFor(day, subject)`** → `sfwb-brief` card. A real example or nothing; `briefFor` is no longer what the opening calls | Active |
 | Lesson-card replacement | `fromDay(day)` | **Gated off** by `LESSON_CARD_STEPPED`. It was never actually dormant — it builds from `day.steps` and fired on the first view of every topic, which is where the lesson card kept losing its diagram. |
 | Wrong-answer walkthrough | `fromWrongAnswer(q, day)` | Active |
 
@@ -821,53 +821,64 @@ and returns null if under ~60% resolve. That's correct; the fallback handles it.
 falsy. A scene that builds but returns false shows the learner *nothing*, with no
 error. Always verify `render()` returns true, not just that `build()` works.
 
-### The opening sequence: outline, then worked
-
-`buildOpeningBoard()` returns an **array**, and the queue is:
+### The opening, and what it stopped saying three times
 
 ```
-welcome  ->  sfwb-outline  ->  sfwb-brief  ->  lesson
-             (the map)        (the method)
+welcome  ->  lesson  ->  flashcards  ->  sfwb-brief  ->  practice
+(topic)      (teach)     (words+traps)   (one example)
 ```
 
-`outlineFor(day, subject)` builds the outline from the day's `steps`, else its
-`concepts`, else its `pillars` — a numbered row per idea, label and detail. It
-is the **`ideas`** scene, and it is the card that answers "what is today
-about". The worked board then teaches one piece of it.
+It used to be `welcome -> sfwb-outline -> sfwb-brief -> lesson -> terms`,
+and it was **fourteen screens before the first question** with the same
+material on three of them. `outlineFor` built a numbered list from
+`day.steps`; `briefFor` fell through to `procedureWorked`, which builds
+from `day.steps`; and the lesson card's "How it works" part prints
+`day.steps`. On the photosynthesis day a learner met "Chlorophyll in the
+thylakoid absorbs photons" three times before answering anything.
 
-**Every row can carry its own picture**, drawn by the same `SFStepVisual`
-chain the worked board uses. Three rules, all paid for:
+The second board was worse than redundant. Re-plated as a solution, its
+header read **"HOW IT WORKS" over an empty problem line** — `spec.problem`
+is `''` on any day with no `workedExample` — and each panel blew one
+sentence up to headline size and asked "Why does this work?" about a fact.
+It called itself a worked example on nine subjects where no example was
+being worked.
 
-- **The picture goes BELOW the text, across the row** — 470x136. Beside the
-  text was the first attempt and could not work: the kit draws 298–430 units
-  wide, a side slot leaves ~250 once the text has its column, and every
-  diagram landed at 0.27–0.58 scale. 9px labels rendered at 2.4–5.3px. The
-  diagrams were all there and not one word was readable.
-- **A picture that would shrink below 0.68 is dropped** and the row stays
-  text-only. `concept` comes back 340x346 and `cycle` 304x253; in a wide short
-  row those are a third size. The same rule `Scene.worked` applies to its own
-  slot.
-- **`ctx.labels` is passed EMPTY on purpose.** `forStep`'s last resort is
-  `progressStrip`, which on this card would stamp the same picture of the list
-  onto every row of the list.
+What changed:
 
-A row whose idea has nothing drawable gets no picture. That is the honest
-outcome for a bare definition, and roughly half the rows on a definition-only
-day take it.
+- **`sfwb-outline` is gone.** `Scene.ideas` and `outlineFor` are still
+  there and still work; nothing queues them. The steps live once, on the
+  lesson card.
+- **The opening board is `workedInstanceFor`, not `briefFor`.** It returns
+  a board ONLY for `day.workedExample` or the synthesised parallel maths
+  problem — `opts.instanceOnly` refuses `procedureWorked` and
+  `conceptWorked`. A day with no real example gets **no board**, which is
+  the honest outcome: a walkthrough with nothing to walk through is not
+  worth a screen. `briefFor` keeps its old fall-through behaviour for any
+  other caller; it is simply not what the opening asks.
+- **The board moved to AFTER the lesson.** An example comes after the
+  thing it is an example of.
+- **The key-terms card and the lesson's "Common traps" part became one
+  deck of flashcards.** See below.
 
-Opening straight onto step 1 of a worked solution gave the learner no map of
-where that step sat, which is what the outline fixes.
+### The flashcard deck — `deckItems`, `sfDeckGo`, `sfDeckFlip`
 
-Either card can be absent — a day with no procedure and no concepts gets no
-outline, a day the board cannot build for gets no worked card — and
-`buildOpeningBoard` returns `[]` when neither builds, so the session simply
-starts on the lesson. Three places must agree that `sfwb-outline` is a
-teaching card: the `TEACHING` map in `applyFeynmanOrder`, the `renderCard`
-dispatch in the integration layer, and the queue loop.
+Vocabulary and the day's misconceptions on one card, turned one at a time.
+Traps come first: a misconception names something the learner probably
+believes right now, and putting them after six definitions is where
+attention has already gone.
 
-The outline is revealed at **420ms** a row rather than the standard 1500ms
-(`spec.outline` sets the pace). A six-row outline at the normal pace spends
-nine seconds mostly blank, which is the opposite of orienting.
+- **A term and its trap belong together** — the trap is usually *about*
+  the term. They were on different cards, one read as a glossary and one
+  as prose.
+- **Turning a card is retrieval; reading a list is not.** The old
+  `terms` card printed every term next to its definition.
+- **The `match` question stays** in the practice run. The deck is the
+  study pass, the match card is the test.
+- **Dark mode needs its own rules.** A trap card is cream, and cream with
+  `--ink` text on it in dark mode is light type on a light card. Both
+  faces get a dark ground — there are `body.dark .fc-*` rules for this.
+- `renderCardInner` skips straight past the card when `deckItems` is empty,
+  and `buildQueue` does not queue it in the first place.
 
 ### `Scene.worked` — the sideways worked example
 
@@ -1094,8 +1105,11 @@ What to check after any `buildQueue` or renderer change:
 14. The opening board is `worked` or a subject scene (`map`, `timeline`,
     `compare`, `cycle`, `parts`, `steps`) — **never `brief`/`hero`**, which is
     the identical generic node card every subject used to open on
-14b. `sfwb-outline` comes **before** `sfwb-brief` and the two are adjacent,
-    directly after `welcome`
+14b. The opening is `welcome > lesson > flashcards > sfwb-brief`, in that
+    order, and **`sfwb-outline` appears nowhere**. A day with no
+    `workedExample` and no maths gets no `sfwb-brief` at all — assert its
+    absence, and assert that a day WITH one gets it, or the "no fake
+    example" rule silently becomes "no example ever"
 14e. The ideas card builds and renders on all 10 subjects, with **no empty
     picture slot** and **no picture scaled under 0.66**; a model-supplied
     `flow`/`compare` per idea is drawn, a tall `concept` one is refused
@@ -1251,6 +1265,17 @@ memory", which is a slogan; every question card uses that slot for the score.
 frontend and `api/*.js` together. There is no build step, so a push is the deploy.
 
 ## Open items
+
+- **The opening board now depends on the model returning `workedExample`,
+  and that has still never been checked against a real run.** Maths is
+  safe: `buildParallelMath` synthesises one. The other nine subjects get a
+  walkthrough only if the model sends the field — the prompt asks for it on
+  every day, and asks specifically for "a real instance: how one specific
+  example of this topic actually plays out" on non-quantitative subjects,
+  but nobody has yet looked at what comes back. If it turns out the model
+  omits it, those subjects have no walkthrough card at all, which is the
+  deliberate trade (no fake examples) but not a good place to stay.
+  **Generate one plan and look.**
 
 - **Nothing generated by a real model run has been checked yet.** Three fields
   are wired end to end, prompted, validated and tested against hand-written
