@@ -12,7 +12,13 @@
    60000 leaves generous headroom over the current prompt plus the 3500-char
    notes budget app.html allows. */
 const MAX_PROMPT_CHARS = 60000;
-const FETCH_TIMEOUT_MS = 45000; // 45s server-side (Vercel limit is 60s)
+/* A real day comes back in about forty seconds - measured, not guessed -
+   so a 45s abort left five seconds of headroom and days were being killed
+   just short of the finish. vercel.json now asks for the full 60s the
+   platform allows; this stops a little short of it so the function returns
+   a JSON error rather than being killed by the platform, which the client
+   cannot tell apart from a network failure. */
+const FETCH_TIMEOUT_MS = 55000;
 
 function fetchWithTimeout(url, opts) {
   opts = opts || {};

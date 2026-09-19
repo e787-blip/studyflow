@@ -300,6 +300,38 @@ Two rules that are easy to break:
 
 ---
 
+### The subject palette — enforced, not requested
+
+`app.html` builds a per-subtopic JSON schema, a quota line and a QUESTION
+TYPE LOCK. All of it is **asking**. A model that returned a `wordproblem` on
+a biology day broke no rule the code checked, and nothing downstream looked:
+the card rendered, and a learner studying photosynthesis got a maths word
+problem.
+
+Two sources, and the second was self-inflicted:
+
+1. The plan, where the model ignored the schema.
+2. **`generateMoreQuestions`, the mid-session top-up, which literally asked
+   science for word problems** — "at least 2 wordproblem wherever the topic
+   carries a quantity, formula or rate", which describes most of science.
+   That rule now asks for `estimate` instead, which is the science palette's
+   own quantitative format, and says NEVER wordproblem in as many words.
+
+`holdToPalette(questions, qType, day)` is the enforcement, and **every
+question passes through it** — the plan's and the top-up's.
+
+- **The palette travels with the day.** `subjectPalette()` in `app.html`
+  computes the union of that subject's subtopic `types` and stores it as
+  `day.allowedTypes`. Computed, not hand-listed, so it cannot drift from
+  `SUBTOPICS` the way two copies of a list always do.
+- `PALETTE_FALLBACK` in `lesson.html` covers plans saved before that field
+  existed. It is the only mirrored copy, and it exists solely for old plans.
+- **A thin session is worse than an off-type question**, so if holding the
+  line would leave fewer than 4 questions the strays are kept and a warning
+  is logged. **Maths is exempt from that mercy** — its mix IS the point
+  (invariant 1), and `buildFallbackQuestions` can synthesise equations, so
+  dropping costs it nothing.
+
 ## Invariants — do not break these
 
 ### 1. Math must stay ~80% solving work, and must not be one shape repeated
@@ -1338,6 +1370,41 @@ different things.
   one screen whose job is to say what to restudy. `recordMiss(userAns,
   explanation)` is the shared path; call it from any grader that does not
   go through `handleResult`.
+
+### Plan generation must survive a lost day
+
+A day takes ~40 seconds. Every day used to fire at once, and the first to
+exhaust its retries set `failed = true` and discarded the whole plan —
+thirteen good days thrown away because the fourteenth timed out. From
+outside that is "Failed to fetch", nothing saved, start again. It happened
+on a **three**-day plan during testing.
+
+- **Days go out in waves of `WAVE_SIZE` (3)**, not all at once.
+- **A failed day is absent from the plan, not fatal.** Only a plan with no
+  days at all stops anything.
+- `isFinal` is reassigned to the surviving last day — it is set from a day's
+  position at generation time, so a dropped last day left nothing marked
+  final.
+- The global timeout scales with the day count instead of a flat 90s, which
+  one slow day plus its retries could exceed on its own.
+- `FETCH_TIMEOUT_MS` is 55s against the 60s `maxDuration` now declared in
+  `vercel.json`. It stops short of the platform limit on purpose: the
+  function returns a JSON error rather than being killed, and the client
+  cannot tell a platform kill apart from a network failure.
+
+### Key definitions must survive the model's shape
+
+`keyTerms` arrive as plain **strings** whenever the model ignores the object
+schema — already documented as happening to `steps`. `deckItems` required
+both a term and a definition, so every string was dropped, the deck came
+back empty, and `buildQueue` skipped the flashcards card entirely. The
+learner got no key definitions at all, and it was silent: an empty deck
+looks exactly like a day with no vocabulary.
+
+It now looks a missing definition up in `concepts` by name, and falls back
+to building cards from `concepts` outright. Tested against five shapes:
+objects, strings-with-matching-concepts, strings-without, concepts-only, and
+genuinely nothing.
 
 ## Open items
 

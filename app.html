@@ -2267,6 +2267,45 @@
      be dealt out across the subtopics that are genuinely present.
      The subject line counts triple - it is what the learner actually meant,
      and one stray word deep in the notes should not outvote it. */
+  /* EVERY QUESTION TYPE THIS SUBJECT IS ALLOWED TO PRODUCE.
+
+     The per-subtopic `types` lists already say what a day should ask for,
+     and buildQuestionSchema turns them into the JSON the model is handed -
+     but that is all prompt. A model that returns a wordproblem on a biology
+     day is not breaking a rule the code enforces, and nothing downstream
+     noticed: the question rendered, and a learner studying photosynthesis
+     got a maths word problem.
+
+     So the union of a subject's subtopic types is recorded ON THE DAY at
+     generation time, and lesson.html holds every question to it - including
+     the ones it tops up mid-session, which is the other place off-subject
+     types came from. Computed rather than hand-listed, so it cannot drift
+     from SUBTOPICS the way two copies of a list always do. */
+  function subjectPalette(subjectType) {
+    /* Maths is not in SUBTOPICS - its mix is MATH_MIX and the synthesis
+       floor - so its palette is stated here, and it is deliberately narrow.
+       See invariant 1: adding a type to maths lowers the solving share. */
+    if (subjectType === 'math') return ['bigequation', 'wordproblem', 'errorspot'];
+
+    var list = SUBTOPICS[subjectType], seen = {}, out = [], i, j, t;
+    if (list) {
+      for (i = 0; i < list.length; i++) {
+        for (j = 0; j < (list[i].types || []).length; j++) {
+          /* 'sequence:process' and 'twopart:passage' are one type with a
+             hint after the colon. The palette wants the type. */
+          t = String(list[i].types[j]).split(':')[0];
+          if (t && !seen[t]) { seen[t] = 1; out.push(t); }
+        }
+      }
+    }
+    /* Always permitted, because lesson.html synthesises them rather than
+       asking the model: the teach-it-back card, and the vocabulary match
+       card that every non-maths subject gets. */
+    if (!seen.write) out.push('write');
+    if (!seen.match) out.push('match');
+    return out;
+  }
+
   function resolveSubtopics(subjectType, subjectText, notes) {
     var list = SUBTOPICS[subjectType];
     if (!list) return [];
@@ -3510,6 +3549,10 @@
           })();
           day.isFinal    = !!isLast;
           day.completed  = false;
+          /* Travels with the day into localStorage, so the session runtime
+             can hold every question - generated or topped up - to the
+             subject it belongs to. */
+          day.allowedTypes = subjectPalette(subjectType);
           sanitizeDayQuestions(day);
           callback(null, day);
         })
@@ -3525,46 +3568,51 @@
       tryFetch();
     }
 
-    // ── Global timeout: 90s ──
-    var timeoutId = setTimeout(function() {
-      clearTimeout(timeoutId);
-      showFatalError(1, function() { generateAllParallel(); });
-    }, 90000);
+    /* How many days are in flight at once. A day is a ~29k-character prompt
+       coming back with ~18k characters of JSON and takes about forty
+       seconds; firing fourteen of those simultaneously is how day 3 came
+       back "Failed to fetch" on a three-day plan. */
+    var WAVE_SIZE = 3;
 
-    // ── PARALLEL generation — all days fire at once ──
-    function generateAllParallel() {
-      var results   = new Array(numDays); // indexed [0..numDays-1]
-      var completed = 0;
-      var failed    = false;
+    /* Global timeout, scaled to the work. It was a flat 90 seconds - and a
+       single failing day retries three times with backoff, so one slow day
+       could spend more than ninety seconds on its own and trip this,
+       throwing away every day that had already succeeded. */
+    var globalMs = Math.max(120000, 45000 * Math.ceil(numDays / WAVE_SIZE) + 60000);
+    var timeoutId = setTimeout(function() { finish(true); }, globalMs);
 
-      setProgress('Building your ' + strategy.label + ' plan\u2026');
+    /* ── Generation runs in WAVES, and a lost day does not lose the plan ──
 
-      for (var n = 1; n <= numDays; n++) {
-        (function(dayNum) {
-          generateDay(dayNum, numDays, subjectType, strategy, function(err, day) {
-            if (failed) return; // another day already fatal-errored
+       Every day used to fire at once, and the first one to exhaust its
+       retries set failed=true, which discarded the whole plan - thirteen
+       good days thrown away because the fourteenth timed out. That is what
+       "Failed to fetch" looked like from outside: nothing saved, no plan,
+       start again.
 
-            if (err) {
-              failed = true;
-              clearTimeout(timeoutId);
-              showFatalError(dayNum, function() { failed = false; generateAllParallel(); });
-              return;
-            }
+       Two changes. Days go out WAVE_SIZE at a time, so fourteen days are not
+       fourteen concurrent forty-second calls competing for one function; and
+       a day that fails is simply absent from the plan rather than fatal.
+       Only a plan with NO days at all is worth stopping for. */
+    var results, completed, settled, nextDay, done;
 
-            results[dayNum - 1] = day;
-            completed++;
-
-            // Update progress counter
-            setProgress('Building your ' + strategy.label + ' plan\u2026 ' + completed + '/' + numDays + ' done');
-
-            if (completed === numDays) {
-              // All days finished — filter any undefined slots then save and redirect
+    function finish(fromTimeout) {
+      if (done) return;
+      done = true;
+      {
+            if (fromTimeout) console.warn('[gen] global timeout - saving what arrived');
+              // Save whatever came back, in order, holes removed.
               clearTimeout(timeoutId);
               allDays = results.filter(function(d){ return d != null; });
 
               if (allDays.length === 0) {
-                showFatalError(1, function() { failed = false; generateAllParallel(); });
+                done = false;
+                showFatalError(1, function() { generateAllParallel(); });
                 return;
+              }
+              /* isFinal is set from a day's position at generation time, so
+                 if the real last day was dropped nothing is marked final. */
+              if (!allDays[allDays.length - 1].isFinal) {
+                allDays[allDays.length - 1].isFinal = true;
               }
               checkpointPlan();
 
@@ -3591,10 +3639,45 @@
               SFStore.setItem('studyflow_current_day', '0');
               cleanupBgHandlers();
               window.location.href = 'dashboard.html';
-            }
-          });
-        })(n);
       }
+    }
+
+    function generateAllParallel() {
+      results = new Array(numDays);
+      completed = 0; settled = 0; nextDay = 1; done = false;
+      setProgress('Building your ' + strategy.label + ' plan\u2026');
+
+      function pump() {
+        while (nextDay <= numDays && (nextDay - 1 - settled) < WAVE_SIZE) {
+          launch(nextDay);
+          nextDay++;
+        }
+      }
+
+      function onSettled() {
+        settled++;
+        setProgress('Building your ' + strategy.label + ' plan\u2026 ' +
+                    completed + '/' + numDays + ' done');
+        if (settled === numDays) finish(false);
+        else pump();
+      }
+
+      function launch(dayNum) {
+        generateDay(dayNum, numDays, subjectType, strategy, function(err, day) {
+          if (done) return;
+          if (err) {
+            /* Noted and skipped. The plan is worth more than the day. */
+            console.warn('[gen] day ' + dayNum + ' dropped:', err.message);
+            onSettled();
+            return;
+          }
+          results[dayNum - 1] = day;
+          completed++;
+          onSettled();
+        });
+      }
+
+      pump();
     }
     generateAllParallel();
   }

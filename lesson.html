@@ -1534,6 +1534,91 @@
     return cards;
   }
 
+  /* ── THE SUBJECT PALETTE ───────────────────────────────────────
+     What each subject is allowed to ask, enforced rather than requested.
+
+     app.html builds a per-subtopic JSON schema and a quota line, and the
+     prompt carries a QUESTION TYPE LOCK - all of which is still just asking.
+     A model that returns a wordproblem on a biology day breaks no rule the
+     code checks, and nothing downstream looked: the card rendered, and a
+     learner studying photosynthesis was handed a maths word problem.
+
+     Two sources of off-subject questions, and both go through here:
+       1. the plan, where the model ignored the schema;
+       2. generateMoreQuestions, the mid-session top-up, which writes its own
+          format rule and knew nothing about the subject's palette.
+
+     Plans generated from now on CARRY their palette (day.allowedTypes,
+     computed in app.html from SUBTOPICS so it cannot drift). The table below
+     is only for plans saved before that field existed. */
+  var PALETTE_FALLBACK = {
+    math:       ['bigequation', 'wordproblem', 'errorspot'],
+    science:    ['twopart', 'sequence', 'classify', 'matchpairs', 'fill', 'mcq',
+                 'estimate', 'truefalse', 'write', 'tracetable', 'corroborate', 'match'],
+    psychology: ['mcq', 'truefalse', 'scenario', 'fill', 'write', 'twopart',
+                 'corroborate', 'estimate', 'matchpairs', 'match'],
+    geography:  ['mcq', 'truefalse', 'classify', 'sequence', 'fill', 'twopart',
+                 'highlight', 'estimate', 'matchpairs', 'write', 'match'],
+    economics:  ['mcq', 'truefalse', 'scenario', 'wordproblem', 'fill', 'twopart',
+                 'tracetable', 'estimate', 'matchpairs', 'write', 'match'],
+    cs:         ['mcq', 'truefalse', 'errorspot', 'classify', 'fill', 'write',
+                 'twopart', 'tracetable', 'highlight', 'estimate', 'matchpairs', 'match'],
+    history:    ['passage', 'mcq', 'truefalse', 'classify', 'sequence', 'fill',
+                 'twopart', 'corroborate', 'highlight', 'matchpairs', 'write', 'match'],
+    english:    ['passage', 'readingset', 'mcq', 'truefalse', 'write', 'fill',
+                 'twopart', 'corroborate', 'highlight', 'matchpairs', 'match'],
+    language:   ['sentence', 'mcq', 'truefalse', 'fill', 'twopart', 'highlight',
+                 'matchpairs', 'write', 'match'],
+    general:    ['mcq', 'truefalse', 'fill', 'write', 'twopart', 'highlight',
+                 'matchpairs', 'estimate', 'match']
+  };
+
+  function paletteFor(qType, dayObj) {
+    var arr = dayObj && dayObj.allowedTypes;
+    if (Object.prototype.toString.call(arr) !== '[object Array]' || !arr.length) {
+      arr = PALETTE_FALLBACK[qType];
+    }
+    if (!arr || !arr.length) return null;      // unknown subject: do not filter
+    var set = {}, i;
+    for (i = 0; i < arr.length; i++) set[String(arr[i]).split(':')[0]] = 1;
+    /* Synthesised by the session rather than asked of the model. */
+    set.write = 1;
+    if (qType !== 'math') set.match = 1;
+    return set;
+  }
+
+  function holdToPalette(qs, qType, dayObj) {
+    var set = paletteFor(qType, dayObj);
+    if (!set || Object.prototype.toString.call(qs) !== '[object Array]') return qs;
+    var kept = [], dropped = [], i;
+    for (i = 0; i < qs.length; i++) {
+      if (qs[i] && set[String(qs[i].type || '').toLowerCase()]) kept.push(qs[i]);
+      else dropped.push(qs[i]);
+    }
+    if (!dropped.length) return qs;
+    /* A thin session is worse than an off-type question. If holding the line
+       would leave almost nothing to practise, keep the strays and say so -
+       the top-up cannot always refill in time.
+
+       MATHS IS EXEMPT FROM THAT MERCY. Its whole mix is the point: invariant
+       1 puts it at ~80% solving work, and a maths day that arrives as
+       multiple choice is the exact failure enforceFormatMix exists to
+       prevent. It also has the only real synthesiser - buildFallbackQuestions
+       can write equations - so dropping costs nothing it cannot replace. */
+    if (kept.length < 4 && qType !== 'math') {
+      if (window.console && console.warn) {
+        console.warn('[palette] ' + qType + ': keeping ' + dropped.length +
+          ' off-palette question(s) - only ' + kept.length + ' would remain');
+      }
+      return qs;
+    }
+    if (window.console && console.warn) {
+      console.warn('[palette] ' + qType + ': dropped ' +
+        dropped.map(function (q) { return q && q.type; }).join(', '));
+    }
+    return kept;
+  }
+
   function buildQueue() {
     // If generation stripped every question, rebuild from the day's own
     // content BEFORE the queue is assembled, so the session has real
@@ -1564,6 +1649,9 @@
        choice. Derive it from the same signals buildQueue already uses for
        isMath, so the two can never disagree. */
     questions = enforceFormatMix(questions, resolveSubjectType(plan, day), day && day.title, true);
+    /* And then held to the subject's own palette - see holdToPalette. This
+       is what stops a word problem arriving on a biology day. */
+    questions = holdToPalette(questions, resolveSubjectType(plan, day), day);
     day.questions = questions;
 
     /* The whiteboard is built here but queued later - see below. Placing it at
@@ -2331,9 +2419,21 @@
       language:
         '7. FORMAT: at least 4 "fill" where the blank is a form the learner must\n' +
         '   PRODUCE (conjugate, decline, agree), at least 2 "write". At most 3 mcq.\n',
+      /* THIS RULE ASKED SCIENCE FOR WORD PROBLEMS, and that is exactly where
+         they came from. "at least 2 wordproblem wherever the topic carries a
+         quantity, formula or rate" describes most of science, so a biology
+         session topped itself up with maths word problems - a format science
+         never asks for in its own schema, and one QUANTITATIVE_SUBJECTS
+         deliberately restricts to maths and economics (invariant 8).
+
+         What the rule was reaching for is real: science does want quantitative
+         reasoning. "estimate" is the format for that, it is in the science
+         palette, and it is a number judged inside a tolerance band rather than
+         a staged maths problem wearing a lab coat. */
       science:
-        '7. FORMAT: mix mcq with at least 2 "wordproblem" wherever the topic carries a\n' +
-        '   quantity, formula or rate, and at least 1 "classify" or "sequence".\n',
+        '7. FORMAT: mix mcq and truefalse with at least 1 "estimate" wherever the\n' +
+        '   topic carries a quantity, and at least 1 "classify" or "sequence".\n' +
+        '   NEVER "wordproblem" - that is a maths format and this is not maths.\n',
       general:
         '7. Mix formats: mcq, truefalse, and at least one "sequence" or "classify"\n' +
         '   if the topic has any order or grouping. Vary difficulty.\n'
@@ -2409,6 +2509,10 @@
             return eq && eq.includes(qtl.substring(0, 15));
           });
         });
+        /* Held to the same palette the plan's own questions are held to.
+           The prompt above asks for the right formats; this is what makes
+           it true. */
+        newQs = holdToPalette(newQs, lockType, day);
         questionBuffer = questionBuffer.concat(newQs);
       }
       generatingNew = false;
@@ -2845,16 +2949,67 @@
       out.push({ kind: 'trap', front: fmStr(m.believe), back: fmStr(m.actually),
                  note: fmStr(m.why) });
     }
+    /* A definition for a bare term, from anywhere the day has one.
+
+       keyTerms arrive as plain STRINGS whenever the model ignores the object
+       schema - which it does on some days and not others, from the same
+       prompt, and it is already documented as happening to steps too. A
+       string has no definition, so every one of them was dropped, and on a
+       day where the model happened to answer that way the deck came back
+       EMPTY: buildQueue then skipped the card entirely and the learner got
+       no key definitions at all. That is the "definitions aren't even
+       showing" report, and it is silent - an empty deck looks exactly like
+       a day that had no vocabulary. */
+    function defineFrom(name) {
+      var lists = [dayObj && dayObj.concepts, dayObj && dayObj.keyTerms], li, j, c, nm;
+      var want = fmStr(name).toLowerCase();
+      for (li = 0; li < lists.length; li++) {
+        var arr = lists[li];
+        if (Object.prototype.toString.call(arr) !== '[object Array]') continue;
+        for (j = 0; j < arr.length; j++) {
+          c = arr[j];
+          if (!c || typeof c === 'string') continue;
+          nm = fmStr(c.name || c.term || c.label).toLowerCase();
+          if (nm && nm === want) {
+            var d = fmStr(c.definition || c.description || c.detail || c.body);
+            if (d) return d;
+          }
+        }
+      }
+      return '';
+    }
+
     for (i = 0; i < terms.length && out.length < 8; i++) {
       t = terms[i];
       if (!t) continue;
-      var term = typeof t === 'string' ? fmStr(t) : fmStr(t.term);
-      var def  = typeof t === 'string' ? '' : fmStr(t.definition);
+      var term = typeof t === 'string' ? fmStr(t) : fmStr(t.term || t.name || t.label);
+      var def  = typeof t === 'string' ? '' : fmStr(t.definition || t.description || t.detail);
+      if (!def && term) def = defineFrom(term);
       if (!term || !def) continue;
       if (term === 'undefined' || def === 'undefined') continue;
       out.push({ kind: 'term', front: term, back: def, note: '' });
     }
+
+    /* Still nothing to show? The day's concepts ARE definitions - a name and
+       what it means - and a session with vocabulary in it should never open
+       without the card that teaches it. */
+    if (!out.length || !hasTermCard(out)) {
+      var cs = (dayObj && dayObj.concepts) || [];
+      for (i = 0; i < cs.length && out.length < 8; i++) {
+        var c2 = cs[i];
+        if (!c2 || typeof c2 === 'string') continue;
+        var cn = fmStr(c2.name || c2.title || c2.term);
+        var cd = fmStr(c2.definition || c2.description || c2.detail);
+        if (!cn || !cd) continue;
+        out.push({ kind: 'term', front: cn, back: cd, note: '' });
+      }
+    }
     return out;
+  }
+
+  function hasTermCard(list) {
+    for (var i = 0; i < list.length; i++) if (list[i].kind === 'term') return true;
+    return false;
   }
 
   function deckCardHtml(it) {
