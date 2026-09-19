@@ -2700,7 +2700,13 @@
       (fmStr(d.microTopic) ? 'SPECIFICALLY: ' + fmStr(d.microTopic).slice(0, 120) + '\n' : '') +
       'IT TEACHES: ' + fmStr(d.content).slice(0, 700) + '\n' +
       (points.length ? 'KEY POINTS: ' + points.join(' | ') + '\n' : '') +
-      (terms.length ? 'TERMS TO LABEL: ' + terms.join(', ') + '\n' : '') +
+      /* Offered, never demanded. Asked to LABEL these terms, the model
+         labelled all of them - including "Stomata", which it placed as a
+         dot inside a chloroplast. Stomata are pores in a leaf. A term list
+         read as an instruction produces a drawing that contains whatever
+         was on the list, whether or not it belongs in the picture. */
+      (terms.length ? 'TERMS THAT MAY BE RELEVANT (use only the ones that genuinely\n' +
+        'appear in what you draw - ignore the rest): ' + terms.join(', ') + '\n' : '') +
       '\nDraw the THING this lesson is about, as it actually looks or works - a leaf, a\n' +
       'call stack, a trebuchet, a river meander, the layers of the atmosphere, an orbit.\n' +
       'Draw the part THIS lesson covers, not the whole subject. Do NOT draw boxes with\n' +
@@ -2717,10 +2723,26 @@
       'COLOURS ARE NAMES, never hex: ink muted rule paper faint, blue blueFill blueInk,\n' +
       'green greenFill greenInk, red redFill redInk, violet violetFill violetInk,\n' +
       'teal tealFill tealInk, amber amberFill amberInk, pink pinkFill pinkInk, none.\n' +
+      /* It reached for "yellow" for a photon, which is not in the palette and
+         fell back to the default. Naming the miss is cheaper than widening
+         the palette. */
+      'There is NO yellow, orange, grey, black or white - use amber for yellow,\n' +
+      'muted for grey, ink for black, paper for white.\n' +
       'Path data may only use M L H V Q C A Z and numbers.\n' +
-      'RULES: 8 to 40 shapes. LABEL EVERY PART - a shape nobody can name teaches\n' +
-      'nothing. Put each label in empty space near the thing it names, at least 12\n' +
-      'units clear of it, never on top. Keep labels under 22 characters.\n' +
+      'RULES: 8 to 40 shapes. Keep labels under 22 characters.\n' +
+      /* "at least 12 units clear of it, never on top" was already there and
+         was ignored: "Stroma" landed on the thylakoid's own edge and
+         "Thylakoid" floated 50 units left of the thing it named. A rule the
+         model can CHECK works better than a rule it has to judge. */
+      'LABEL PLACEMENT, and this is the part that usually goes wrong:\n' +
+      '  - Work out where your shapes are BEFORE you place a label. A label\n' +
+      '    whose x,y falls inside any other shape is wrong.\n' +
+      '  - Put labels in the outer margin - above, below, or to the side of the\n' +
+      '    drawing - not in the middle of it.\n' +
+      '  - If a label cannot sit next to its part, draw a short thin line from\n' +
+      '    the label to the part: {"s":"line","stroke":"rule","sw":1}.\n' +
+      '  - A label must touch or point at the thing it names. A word floating\n' +
+      '    in space near nothing is worse than no label.\n' +
       'If this lesson is purely abstract and there is genuinely nothing to draw,\n' +
       'return {"type":"none"} rather than inventing a picture.\n\n' +
       'Return exactly: {"type":"drawing","title":"short caption","w":440,"h":250,"shapes":[...]}';
@@ -9688,10 +9710,39 @@
           if (!t) continue;
           var anchor = String(sh.anchor || 'middle').toLowerCase();
           if (anchor !== 'start' && anchor !== 'end') anchor = 'middle';
+          /* EVERY LABEL GETS A HALO, and this is not decoration.
+
+             Two live runs against the real model produced good anatomy and
+             bad label placement: "Stroma" written across the thylakoid's own
+             edge, "Chlorophyll" over a cluster of circles, "ATP Synthase"
+             inside a filled box in a colour that vanished against it. The
+             prompt already said "at least 12 units clear, never on top", and
+             tightening it further moved the problem around rather than
+             fixing it - placing text in a space it cannot measure is not
+             something a language model is good at.
+
+             The renderer CAN measure it, or rather it can make the question
+             moot: a paper-coloured stroke drawn behind the glyphs, via
+             paint-order, keeps a label legible over any fill, any stroke,
+             any colour. It is what maps do with place names over terrain.
+             Cheap, total, and it cannot make a well-placed label worse. */
+          var tsz = r1(num(sh.size, 7, 26, 11));
+          /* White text is invisible here, whatever the model intended.
+
+             It asked for fill "paper" on a label it had placed inside a
+             filled box - reasonable if the box were dark, and this palette
+             has no dark fills. Against the card, and against the halo
+             below, it rendered as nothing at all. A near-white label is
+             always a mistake on this surface, so it is corrected rather
+             than honoured. */
+          var tfill = (fill === 'none' || fill === PAINT.paper ||
+                       fill === PAINT.faint || fill === PAINT.rule) ? PAINT.ink : fill;
           body += '<text x="' + r1(num(sh.x, 0, W, W / 2)) + '" y="' + r1(num(sh.y, 8, H, H / 2)) +
-            '" text-anchor="' + anchor + '" font-size="' + r1(num(sh.size, 7, 26, 11)) +
+            '" text-anchor="' + anchor + '" font-size="' + tsz +
             '" font-weight="' + (num(sh.weight, 400, 800, 600) >= 650 ? 700 : 600) +
-            '" fill="' + (fill === 'none' ? PAINT.ink : fill) + '"' + opAttr + '>' + esc(t) + '</text>';
+            '" fill="' + tfill + '"' +
+            ' stroke="' + PAINT.paper + '" stroke-width="' + r1(Math.max(2.4, tsz * 0.3)) +
+            '" stroke-linejoin="round" paint-order="stroke"' + opAttr + '>' + esc(t) + '</text>';
           drew++; labels++;
         }
       }

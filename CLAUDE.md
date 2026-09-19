@@ -574,6 +574,25 @@ On a hub layout (`concept`, `parts`) pass the topic as `center` and leave
 `title` empty — passing both prints the topic twice, once above the drawing and
 once inside it. The card captions the diagram underneath anyway.
 
+### Labels get a halo, because placement is what the model gets wrong
+
+Two live runs produced good anatomy and bad label placement: "Stroma"
+written across the thylakoid's own edge, "Chlorophyll" over a cluster of
+circles, "ATP Synthase" in `fill:"paper"` inside a filled box — white text,
+invisible. The prompt already demanded "at least 12 units clear, never on
+top"; tightening it moved the problem rather than fixing it. Placing text
+in a space it cannot measure is not something a language model is good at.
+
+Two renderer guards, and they are worth more than any amount of prompt:
+
+- **Every label is drawn with a paper-coloured stroke behind the glyphs**
+  (`paint-order="stroke"`). It is what maps do with place names over
+  terrain: the label stays readable over any fill, and it cannot make a
+  well-placed label worse.
+- **A near-white text fill is coerced to ink.** `paper`, `faint` and `rule`
+  are invisible on this card and against the halo. The model asked for
+  white text expecting a dark box; this palette has no dark fills.
+
 ### The illustration is drawn WHEN THE LESSON IS OPENED
 
 `requestLessonArt(day)` fires from `init()`, on the same `api/generate`
@@ -1322,8 +1341,30 @@ different things.
 
 ## Open items
 
-- **The opening board now depends on the model returning `workedExample`,
-  and that has still never been checked against a real run.** Maths is
+- **CHECKED AGAINST A REAL RUN (Sept 2026).** One day was generated against
+  the live endpoint with real notes. What came back:
+  `workedExample` ✓ (a real problem, 4 steps, and it did NOT reuse any of the
+  day's questions), `concepts[].visual` ✓ on all three concepts, all using
+  allowed wide-and-short layouts (flow, flow, parts), `diagram` ✓ as
+  `{"type":"drawing"}` with 20 shapes. So all three of the long-unverified
+  fields do come back. Two things that did NOT hold:
+  **`workedExample.line` broke the 40-character cap on 2 of 4 steps** (48 and
+  57 chars) — the board shrinks text to fit, so it degrades rather than
+  breaks, but it is small on a phone. There is no validator behind that cap.
+  **The plan-time drawing was boxes with nouns in them** — 3 rects, 15 texts,
+  2 lines, no paths or circles — which is the one thing the drawing prompt
+  explicitly forbids. The same model on the same topic, asked by the
+  dedicated ~3k lesson-entry art prompt, drew an actual chloroplast with a
+  thylakoid, electron transport, ATP synthase and the proton gradient. **A
+  focused prompt gets a real picture; the same request buried in the 29k day
+  prompt gets a box diagram.** That is the strongest argument for generating
+  art at lesson entry, and it is not about freshness.
+  **A day takes ~40s to generate** against a 45s server timeout, and three
+  days fire in parallel — day 3 failed all three retries with "Failed to
+  fetch" during this test, and no plan was saved. Plan creation is
+  fragile at 3 days and presumably worse at 7 or 14. Worth fixing.
+
+- **The opening board depends on the model returning `workedExample`** Maths is
   safe: `buildParallelMath` synthesises one. The other nine subjects get a
   walkthrough only if the model sends the field — the prompt asks for it on
   every day, and asks specifically for "a real instance: how one specific
