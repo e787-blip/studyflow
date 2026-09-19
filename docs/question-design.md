@@ -147,6 +147,129 @@ last two — is the evidence-backed way to hand the work back as skill grows.
 Both would change this board from something you read into something you do.
 Neither is built.
 
+## 7. What each subject should ask — measured, then checked against the evidence
+
+### First, what the palettes actually do now
+
+Every subtopic's `types` list was classified as **producing** an answer
+(`fill`, `write`, `sentence`, `estimate`, `tracetable`, `bigequation`,
+`wordproblem`) or **choosing / arranging** one (`mcq`, `truefalse`,
+`matchpairs`, `highlight`, `classify`, `sequence`, `errorspot`, `passage`,
+`readingset`, `corroborate`, `scenario`, `twopart`):
+
+| Subject | Produce share | | Subject | Produce share |
+|---|---|---|---|---|
+| history | **14%** | | geography | 33% |
+| general | 22% | | science | 33% |
+| english | 25% | | language | 38% |
+| psychology | 26% | | economics | **48%** |
+| cs | 30% | | | |
+
+**A 3.4× spread, and nothing decided it.** These lists were written subject
+by subject; no one ever put them side by side. Two caveats on the number
+before drawing conclusions from it: `twopart` is counted as *choosing*
+although its Part B is usually a written justification, so every
+twopart-heavy subject is understated; and section 1 of this document already
+warns that producing beats choosing **less than people assume**. The spread
+is the finding, not the direction.
+
+The sharper version of the same measurement: **six subtopics contain no
+written production at all** — `history/civics`, `history/era`,
+`english/reading`, `english/literature`, `language/grammar`,
+`language/vocab`.
+
+### Language, since it was asked about specifically
+
+Language already has three subtopics — `grammar`, `reading`, `vocab` — like
+every other non-maths subject. Maths is the only one without, deliberately.
+
+The finding that matters for it is **symmetry of practice and outcome**:
+productive retrieval practice produces productive knowledge, receptive
+practice produces receptive knowledge, and on a productive test the
+productive condition wins outright while on a receptive test the two tie
+([receptive vs productive retrieval](https://www.researchgate.net/publication/303939278_The_Effects_of_Receptive_and_Productive_Word_Retrieval_Practice_on_Second_Language_Vocabulary_Learning);
+[retrieval formats](https://www.cambridge.org/core/journals/studies-in-second-language-acquisition/article/abs/effects-of-learning-direction-in-retrieval-practice-on-efl-vocabulary-learning/159EE50F4B8835207764FB1B11077F29)).
+Recall formats beat recognition for productive orthographic knowledge;
+recognition is the reasonable choice only when spelling is not the point.
+
+`language/vocab` currently reads `matchpairs, matchpairs, fill, fill, mcq,
+mcq, sentence, twopart, truefalse` — **five of nine are recognition**
+(2 matchpairs, 2 mcq, truefalse). If the goal of studying vocabulary is to
+be able to *use* the word, that mix trains the half the learner is not being
+tested on. The cheap correction is to drop one `matchpairs` and one `mcq`
+for a `write` and a second `sentence`.
+
+For grammar the meta-analytic picture is that **explicit instruction beats
+implicit**, and explicit explanation combined with *guided production*
+beats exposure alone
+([Norris & Ortega revisited](https://benjamins.com/catalog/sibil.48.18goo);
+[forms of explicit instruction](https://onlinelibrary.wiley.com/doi/10.1111/flan.12726);
+[35 years of form-focused instruction](https://journals.sagepub.com/doi/10.1177/1362168818776671)).
+`language/grammar` has `sentence` twice, which is exactly right, and no
+`write` at all.
+
+### Computer science — the clearest single win available
+
+**Parsons problems** — reorder given code lines into a working program —
+produce the same pre-to-post learning gains as writing the equivalent code,
+significantly faster, at lower cognitive load
+([Parsons vs writing/fixing code](https://dx.doi.org/10.1145/3141880.3141895);
+[efficiency and cognitive load](https://dl.acm.org/doi/10.1145/3411764.3445292)).
+
+StudyFlow already has the format. `sequence` is a Parsons problem the moment
+its items are lines of code, and `cs/programming` and `cs/algorithms`
+already carry `sequence:trace`. What is missing is telling the model that is
+what it is. One caveat from the same literature and it matters for this
+audience: **distractor lines reduce learning efficiency for young novices**,
+so a school-age Parsons problem should contain only lines that belong.
+
+### Science — the format is already right, one addition
+
+Two-tier diagnostics are validated for exposing misconceptions: tier one
+asks the fact, tier two asks the reason, and the pair distinguishes
+understanding from a lucky guess. `twopart` is that format and it already
+leads all three science subtopics.
+
+The addition worth making is **Predict–Observe–Explain**: commit to a
+prediction *before* being shown the outcome. One study reports
+misconceptions falling from 57% to 5%
+([POE and misconceptions](https://www.atlantis-press.com/article/125928573.pdf);
+[POE as diagnosis](https://www.academia.edu/26222673/The_Effectiveness_of_Predict_Observe_Explain_Tasks_in_Diagnosing_Students_Understanding_of_Science_and_in_Identifying_Their_Levels_of_Achievement)).
+That is the same mechanism as the prediction step now on the maths worked
+board — withhold the answer until the learner has committed — and it needs
+no new question type, only a `twopart` whose Part A is a prediction.
+
+### History — the outlier, and the missing skill
+
+Reading Like a Historian names **four** skills: sourcing, contextualization,
+corroboration, close reading. A document-based intervention built on them
+showed significant effects on historical thinking, transfer to contemporary
+issues, factual knowledge **and** general reading comprehension
+([RLH intervention](https://www.tandfonline.com/doi/abs/10.1080/07370008.2011.634081);
+[AIR project summary](https://www.air.org/project/reading-historian-preparing-students-understand-past-and-present)).
+
+StudyFlow covers three of the four: `passage:sourcing`, `corroborate`, and
+`highlight`/`passage` for close reading. **Contextualization is absent** —
+nothing asks the learner to place a document in its moment. And history is
+the least productive subject in the app at 14%, with two of its three
+subtopics containing no writing at all, in a discipline whose assessed
+output is an argument from evidence.
+
+### What this does not establish
+
+- **The 3.4× spread is not itself evidence of a problem.** Disciplines
+  differ in what competent performance looks like, and the produce/choose
+  classification above is crude — `twopart` is scored as choosing even
+  though its second tier is usually written.
+- **No effect size here is specific to a 30-minute phone session with a
+  generative model writing the questions.** Parsons problems were studied in
+  CS1 courses, POE in classrooms with an actual demonstration to observe,
+  RLH over six months of document work. Nothing says the gains survive the
+  translation.
+- **Nothing was measured on StudyFlow's own learners.** Every number above
+  comes from the literature; the only thing measured here is what the
+  palettes currently contain.
+
 ## What none of this establishes
 
 - **The specific counts.** That reading comprehension gets four passage
@@ -175,6 +298,17 @@ Neither is built.
 - [How fading worked solution steps works — a cognitive load perspective (Renkl & Atkinson)](https://link.springer.com/article/10.1023/B:TRUC.0000021815.74806.f6)
 - [Transitioning from studying examples to solving problems: self-explanation prompts and fading](https://mrbartonmaths.com/resourcesnew/8.%20Research/Making%20the%20most%20of%20examples/Fading%20out%20and%20Prompts.pdf)
 - [The effect of worked examples on learning solution steps and knowledge transfer](https://www.tandfonline.com/doi/full/10.1080/01443410.2023.2273762)
+- [Receptive and productive word retrieval practice in L2 vocabulary](https://www.researchgate.net/publication/303939278_The_Effects_of_Receptive_and_Productive_Word_Retrieval_Practice_on_Second_Language_Vocabulary_Learning)
+- [Effects of learning direction in retrieval practice on EFL vocabulary (SSLA)](https://www.cambridge.org/core/journals/studies-in-second-language-acquisition/article/abs/effects-of-learning-direction-in-retrieval-practice-on-efl-vocabulary-learning/159EE50F4B8835207764FB1B11077F29)
+- [Norris & Ortega revisited: implicit and explicit L2 instruction](https://benjamins.com/catalog/sibil.48.18goo)
+- [Effects of different forms of explicit instruction on L2 development (meta-analysis)](https://onlinelibrary.wiley.com/doi/10.1111/flan.12726)
+- [Thirty-five years of ISLA on form-focused instruction (meta-analysis)](https://journals.sagepub.com/doi/10.1177/1362168818776671)
+- [Solving Parsons problems versus fixing and writing code](https://dx.doi.org/10.1145/3141880.3141895)
+- [Problem-solving efficiency and cognitive load for adaptive Parsons problems](https://dl.acm.org/doi/10.1145/3411764.3445292)
+- [Predict-Observe-Explain and misconceptions](https://www.atlantis-press.com/article/125928573.pdf)
+- [POE tasks for diagnosing understanding](https://www.academia.edu/26222673/The_Effectiveness_of_Predict_Observe_Explain_Tasks_in_Diagnosing_Students_Understanding_of_Science_and_in_Identifying_Their_Levels_of_Achievement)
+- [Reading Like a Historian: a document-based curriculum intervention](https://www.tandfonline.com/doi/abs/10.1080/07370008.2011.634081)
+- [Reading Like a Historian project summary (AIR)](https://www.air.org/project/reading-historian-preparing-students-understand-past-and-present)
 - [Multiple representations (mathematics education)](https://en.wikipedia.org/wiki/Multiple_representations_(mathematics_education))
 - [Multiple Representations — SERP Institute](https://www.serpinstitute.org/sensemaking/multiple-representations)
 - [Evidence-Based Selected Response questions](https://support.focalpointk12.com/hc/en-us/articles/115002565992-How-do-I-create-an-Evidence-Based-Selected-Response-Question-EBSR)
