@@ -3040,7 +3040,32 @@
         '   {"layout":"flow|cycle|parts|concept|compare|timeline|hierarchy","title":"","items":[],"center":""}\n' +
         '   Omit "visual" when the step does not need one - a wrong picture is worse than none.\n' +
 
-        '5. diagram: every topic should get one. Use a hand-drawn template when the topic matches one, otherwise build a custom diagram.\n' +
+        '5. diagram: every topic should get one, and it should be MADE FOR THIS LESSON.\n' +
+        /* THE ORDER OF THIS DECISION IS THE WHOLE POINT.
+
+           Drawing was introduced at the bottom of this section as "when NONE
+           of the above fits" - the last resort after 23 templates and 11 box
+           layouts. A model reading that reaches for a template every time,
+           because something always loosely fits, and the result is that a
+           lesson on the light reactions gets the same stock leaf as a lesson
+           on C4 plants. Stock art is not a picture of this lesson.
+
+           So the decision now runs the other way: draw the thing if it has a
+           shape, use a layout if the material is a relationship, and take a
+           template only when the topic IS that template. */
+        '   Decide in this order:\n' +
+        '   a) Is this lesson about a THING WITH A SHAPE - something you could point at or\n' +
+        '      sketch? A leaf, a trebuchet, a call stack, the atmosphere, an eye, a bridge,\n' +
+        '      a sarcomere, an orbit, a river meander. If so DRAW IT: {"type":"drawing"}, below.\n' +
+        '      This is the best answer and it is available for every topic. Prefer it.\n' +
+        '   b) Otherwise, is the material a RELATIONSHIP between ideas - an order, a cycle,\n' +
+        '      a set of causes, a ranking, a contrast? Use a custom layout and name the\n' +
+        '      "relation", below.\n' +
+        '   c) Only if the topic IS one of the 23 named templates, and the lesson is about\n' +
+        '      that whole topic rather than one corner of it, use the template.\n' +
+        '      A lesson on "photosynthesis" may use the template. A lesson on "the light\n' +
+        '      reactions in the thylakoid" should be DRAWN - the template shows the whole\n' +
+        '      leaf and says nothing about this day.\n' +
         /* Every name here must match a template in curatedDiagramSVG() in
            lesson.html. Listing one that does not exist is not an error - the
            kit quietly falls back to a generic custom diagram - so the failure
@@ -3054,9 +3079,28 @@
         '   multiplying; triangle for angles or area; states-of-matter for solid/liquid/gas; solar-system for\n' +
         '   orbits, planets, day and year; rock-cycle for igneous/sedimentary/metamorphic and how one becomes another.\n' +
         '   Custom (use this for ANY topic with no template - history, literature, maths, law, music, anything):\n' +
-        '   {"type":"custom","layout":"flow|cycle|timeline|hierarchy|parts|concept","title":"short title","items":["...","...","..."]}\n' +
+        '   {"type":"custom","relation":"...","layout":"flow|cycle|timeline|hierarchy|parts|concept|converge","title":"short title","items":["...","...","..."]}\n' +
+        /* THE RELATION IS THE IMPORTANT FIELD. The shape of a diagram is a
+           claim about the material: a hub with spokes says "these are
+           unordered parts of one thing", a chain says "this order matters",
+           arrows converging say "these each caused that". Choosing the shape
+           by keyword made those claims by accident - "ambition drives the
+           PLOT" matched the graph pattern and Macbeth was drawn as a line
+           chart with guilt rising up an axis labelled Amount. Naming the
+           relationship instead lets lesson.html pick a form that says what
+           the content says. */
+        '   FIRST decide "relation" - what the material actually IS. This matters more than the layout:\n' +
+        '     sequence   one thing after another, order matters (stages, procedures, life cycles in one pass)\n' +
+        '     cycle      the last step feeds the first\n' +
+        '     causes     several separate things that each led to ONE outcome - use with "outcome":"the thing explained"\n' +
+        '     hierarchy  ranked or nested levels\n' +
+        '     contrast   two things set against each other\n' +
+        '     structure  a whole and the parts it is made of, no order between them\n' +
+        '     timeline   dated events\n' +
+        '     network    related ideas with no order and no ranking (use this only when none of the others fit)\n' +
         '   - flow = ordered steps or a causal chain; cycle = a repeating loop; timeline = dated events;\n' +
-        '     hierarchy = ranked levels, broadest last; parts = a whole and its components; concept = an idea and related terms.\n' +
+        '     hierarchy = ranked levels, broadest last; parts = a whole and its components; concept = an idea and related terms;\n' +
+        '     converge = several causes arriving at one outcome (needs "outcome").\n' +
         /* These four draw shapes the box-and-arrow layouts cannot. Each needs
            its own fields, and each declines and falls back when they are
            missing, so a wrong choice costs a plainer diagram, never a broken
@@ -3076,10 +3120,12 @@
         '   Custom comparison uses a different shape:\n' +
         '   {"type":"custom","layout":"compare","title":"A vs B","left":{"title":"A","items":["..."]},"right":{"title":"B","items":["..."]}}\n' +
         '   Put each fact on the side it actually belongs to - never guess an attribution.\n' +
-        '\nDRAW IT YOURSELF - {"type":"drawing"} - when NONE of the above fits.\n' +
-        '   The templates cover 23 topics and the custom layouts are boxes and arrows. If this\n' +
-        '   lesson is about a THING with a shape - a trebuchet, the layers of the atmosphere,\n' +
-        '   an eye, a volcano, a bridge truss, a sarcomere, a castle keep, an orbit - draw it.\n' +
+        '\nDRAW IT YOURSELF - {"type":"drawing"} - THE PREFERRED ANSWER (see 5a).\n' +
+        '   The templates cover 23 topics and the custom layouts are boxes and arrows. Neither\n' +
+        '   was made for the lesson in front of you; this is. If the lesson is about a thing\n' +
+        '   with a shape - a trebuchet, the layers of the atmosphere, an eye, a volcano, a\n' +
+        '   bridge truss, a sarcomere, a castle keep, an orbit, a call stack - draw it, and\n' +
+        '   draw the part THIS day is about rather than the whole subject.\n' +
         '   Shape: {"type":"drawing","title":"short title","w":440,"h":250,"shapes":[ ... ]}\n' +
         '   Canvas: x goes right from 0, y goes DOWN from 0. Keep everything inside w and h.\n' +
         '   Each entry in "shapes" is one of:\n' +
@@ -3220,7 +3266,7 @@
         'Labels must come from the actual notes. Keep each label under 20 characters.\n' +
         '\nFINAL CHECK: Before outputting, reread every question you wrote. Verify each one is about "' + subject + '". Replace anything that is not.\n' +
         '\nOUTPUT: ONLY valid compact JSON. No markdown. Replace ALL empty strings with REAL content.\n\n' +
-        '{"title":"","microTopic":"","briefing":"","content":"","steps":[],"diagram":{"type":"none","label":""},' +
+        '{"title":"","microTopic":"","briefing":"","content":"","steps":[],"diagram":{"type":"none","relation":"","label":""},' +
         /* The main-ideas card draws one row per concept and asks each for its
            own picture. Without "visual" in the shape here the model returns
            none, and every row silently falls back to text only. */
@@ -3408,6 +3454,30 @@
               w: Number(d.w) || 440, h: Number(d.h) || 250,
               shapes: kept
             };
+          })();
+
+          /* Keep only a relation we know how to draw. A relation is a claim
+             about the material and lesson.html turns it straight into a
+             shape, so an unrecognised one silently becomes the default web
+             of related ideas - which is the wrong claim for anything
+             ordered or causal. Dropping it makes lesson.html fall back to
+             reading the content, which at least knows it is guessing. */
+          (function () {
+            var REL = { sequence:1, process:1, steps:1, chain:1, cycle:1, loop:1,
+                        causes:1, converge:1, causal:1, hierarchy:1, ranking:1,
+                        taxonomy:1, contrast:1, comparison:1, structure:1,
+                        anatomy:1, parts:1, timeline:1, chronology:1,
+                        relationship:1, correlation:1, network:1, web:1 };
+            var dd = day.diagram;
+            if (!dd || typeof dd !== 'object') return;
+            var r = String(dd.relation || '').trim().toLowerCase();
+            if (r && !REL[r]) delete dd.relation;
+            /* A converging diagram with nothing to converge on draws arrows
+               pointing at an empty box. */
+            if ((r === 'causes' || r === 'converge' || r === 'causal') &&
+                !String(dd.outcome || '').trim()) {
+              delete dd.relation;
+            }
           })();
 
           // Validate the AI-supplied diagram spec. If the type is unknown or

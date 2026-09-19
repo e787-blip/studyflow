@@ -574,6 +574,40 @@ On a hub layout (`concept`, `parts`) pass the topic as `center` and leave
 `title` empty — passing both prints the topic twice, once above the drawing and
 once inside it. The card captions the diagram underneath anyway.
 
+### The illustration is drawn WHEN THE LESSON IS OPENED
+
+`requestLessonArt(day)` fires from `init()`, on the same `api/generate`
+endpoint the question top-up already uses — no new backend, no new key.
+
+Everything else about a day is generated days in advance. The picture used
+to be too: the model named one of 23 stock templates or described a
+box-and-arrow layout, and whatever it chose was frozen into localStorage.
+A lesson on the light reactions got the same leaf as a lesson on C4
+plants, because the leaf is the only leaf there is.
+
+Three properties make a runtime call safe here, and all three must stay:
+
+1. **It never blocks.** `diagramForDay` has already drawn something from
+   the day's own material before this is asked for, so the card is whole on
+   arrival. The drawing replaces it when it lands; if it never lands,
+   nothing is missing. There is no spinner because there is nothing to wait
+   for.
+2. **`SFSceneKit` is the judge**, exactly as it is for a stored spec —
+   fixed shape vocabulary, colours by name, coordinates clamped, path data
+   grammar-checked. A hostile or malformed response returns null and the
+   local diagram stays. Tested with `{"s":"script"}` and with `<script>` in
+   a path.
+3. **The answer is cached onto the day** (`day.generatedArt`, persisted into
+   the plan). A revisit spends nothing. `null` is cached too — a lesson the
+   model says has nothing drawable must not be asked about on every open.
+
+`applyLessonArt` rewrites **both** the DOM node `#lesson-art` and
+`sfLesson.panes[0].html`. Only the DOM and the drawing vanishes the moment
+the learner turns to another part of the lesson and back.
+
+Cost is one extra call per lesson, first visit only; the prompt is ~2,300
+characters.
+
 ### `SFSceneKit` — drawing anything, from a spec written with the lesson
 
 The 23 curated templates are hand-drawn and keyword-matched, so they cover 23
@@ -1263,6 +1297,28 @@ memory", which is a slogan; every question card uses that slot for the score.
 
 `main` is the live branch. Push to GitHub and Vercel rebuilds automatically —
 frontend and `api/*.js` together. There is no build step, so a push is the deploy.
+
+### The score and the banner must come from the same number
+
+The results screen read **88%** over "7/8 correct" and, directly beneath,
+**"Perfect session — every answer correct!"**. Both were true about
+different things.
+
+- **The teach-it-back card is not scored.** `submitWrite` incremented
+  `totalAnswered` and there is no `correctCount++` anywhere that can answer
+  it — it is graded out of ten by a tutor prompt, asynchronously. So every
+  Feynman card silently counted as a miss. An explanation is not a question
+  with a correct answer; it is now kept out of the percentage entirely.
+- **The banner is keyed off the score, not the list.** It tested
+  `wrongItems.length === 0`, and `wrongItems` is only as complete as the
+  graders that remember to fill it. It now tests `correctCount >=
+  totalAnswered`, which is the same number printed above it.
+- **Six graders score themselves** — graph, scaffold, errorspot, sequence,
+  match, write — and none of them recorded a miss, so missing one lowered
+  the percentage and then failed to appear under "What to study more", the
+  one screen whose job is to say what to restudy. `recordMiss(userAns,
+  explanation)` is the shared path; call it from any grader that does not
+  go through `handleResult`.
 
 ## Open items
 

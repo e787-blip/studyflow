@@ -1254,6 +1254,15 @@
        re-taken indefinitely, inflating the streak and letting a learner
        re-answer questions they have already been graded on. */
     if (alreadyDone()) { showAlreadyDone(); return; }
+
+    /* Ask for the illustration NOW, at the moment the lesson is entered,
+       and let it arrive whenever it arrives. It is deliberately not awaited:
+       the welcome card is already on screen by the time the request is in
+       flight, and the lesson card behind it draws its own picture from the
+       day's material - so the only thing this can do is improve the card,
+       never delay it. */
+    requestLessonArt(day);
+
     buildQueue();
     logSessionShape();
     startTimer();
@@ -2642,6 +2651,159 @@
               typeof window.Whiteboard.deriveBeats === 'function');
   }
 
+  /* ── THE ILLUSTRATION IS DRAWN WHEN THE LESSON IS OPENED ─────────────
+     Not at plan time, and not from a library.
+
+     Everything else about a day is generated days in advance, when the plan
+     is built, and the picture used to be no different: the model either
+     named one of 23 stock templates or described a box-and-arrow layout,
+     and whatever it chose was frozen into localStorage. A lesson on the
+     light reactions got the same leaf as a lesson on C4 plants, because the
+     leaf is the only leaf there is.
+
+     This asks for a drawing of THIS lesson at the moment the learner opens
+     it, on the same api/generate endpoint the question top-up already uses
+     - so there is no new backend and no new key. Three rules make it safe
+     to do at runtime:
+
+       1. It never blocks. diagramForDay has already drawn something from
+          the day's own material by the time this is asked for, so the card
+          is complete on arrival; the drawing replaces it when it lands, and
+          if it never lands nothing is missing.
+       2. It is validated by SFSceneKit, which is the security boundary -
+          a fixed shape vocabulary, colours by name, every coordinate
+          clamped, path data grammar-checked. The model cannot return
+          markup, only a drawing or nothing.
+       3. It is cached onto the day afterwards, so revisiting a lesson does
+          not spend another call. Generated on first entry, not premade. */
+  var lessonArt = { state: 'idle', spec: null };
+
+  function artPromptFor(d) {
+    function pick(arr, keys, n) {
+      var out = [], i, k, v;
+      arr = (Object.prototype.toString.call(arr) === '[object Array]') ? arr : [];
+      for (i = 0; i < arr.length && out.length < n; i++) {
+        v = '';
+        if (typeof arr[i] === 'string') v = arr[i];
+        else if (arr[i]) { for (k = 0; k < keys.length; k++) { if (arr[i][keys[k]]) { v = arr[i][keys[k]]; break; } } }
+        v = fmStr(v);
+        if (v) out.push(v.slice(0, 90));
+      }
+      return out;
+    }
+    var points = pick(d.steps, ['action', 'step', 'title'], 6);
+    if (!points.length) points = pick(d.concepts, ['name', 'title'], 6);
+    var terms = pick(d.keyTerms, ['term', 'name'], 6);
+
+    return 'Draw ONE illustration for the lesson below. Return ONLY JSON, no markdown.\n\n' +
+      'LESSON: ' + fmStr(d.title).slice(0, 120) + '\n' +
+      (fmStr(d.microTopic) ? 'SPECIFICALLY: ' + fmStr(d.microTopic).slice(0, 120) + '\n' : '') +
+      'IT TEACHES: ' + fmStr(d.content).slice(0, 700) + '\n' +
+      (points.length ? 'KEY POINTS: ' + points.join(' | ') + '\n' : '') +
+      (terms.length ? 'TERMS TO LABEL: ' + terms.join(', ') + '\n' : '') +
+      '\nDraw the THING this lesson is about, as it actually looks or works - a leaf, a\n' +
+      'call stack, a trebuchet, a river meander, the layers of the atmosphere, an orbit.\n' +
+      'Draw the part THIS lesson covers, not the whole subject. Do NOT draw boxes with\n' +
+      'nouns in them; that is a different feature and it does it better.\n' +
+      'Canvas: w 440, h 250. x goes right from 0, y goes DOWN from 0. Stay inside.\n' +
+      'Shapes, each an entry in "shapes":\n' +
+      '  {"s":"rect","x":,"y":,"w":,"h":,"r":8,"fill":"blueFill","stroke":"blue"}\n' +
+      '  {"s":"circle","x":,"y":,"r":,"fill":"","stroke":""}\n' +
+      '  {"s":"ellipse","x":,"y":,"rx":,"ry":,"fill":"","stroke":""}\n' +
+      '  {"s":"line","x1":,"y1":,"x2":,"y2":,"stroke":"ink","sw":2,"arrow":true,"dash":true}\n' +
+      '  {"s":"path","d":"M10 10 Q60 0 110 10","stroke":"ink","fill":"none","arrow":true}\n' +
+      '  {"s":"poly","points":"10,90 60,20 110,90","fill":"faint","stroke":"ink"}\n' +
+      '  {"s":"text","x":,"y":,"t":"label","size":10,"anchor":"middle|start|end","fill":"ink"}\n' +
+      'COLOURS ARE NAMES, never hex: ink muted rule paper faint, blue blueFill blueInk,\n' +
+      'green greenFill greenInk, red redFill redInk, violet violetFill violetInk,\n' +
+      'teal tealFill tealInk, amber amberFill amberInk, pink pinkFill pinkInk, none.\n' +
+      'Path data may only use M L H V Q C A Z and numbers.\n' +
+      'RULES: 8 to 40 shapes. LABEL EVERY PART - a shape nobody can name teaches\n' +
+      'nothing. Put each label in empty space near the thing it names, at least 12\n' +
+      'units clear of it, never on top. Keep labels under 22 characters.\n' +
+      'If this lesson is purely abstract and there is genuinely nothing to draw,\n' +
+      'return {"type":"none"} rather than inventing a picture.\n\n' +
+      'Return exactly: {"type":"drawing","title":"short caption","w":440,"h":250,"shapes":[...]}';
+  }
+
+  function requestLessonArt(d) {
+    if (!d || lessonArt.state === 'loading') return;
+    /* Already drawn for this day on a previous visit. */
+    if (d.generatedArt) {
+      lessonArt.spec = d.generatedArt; lessonArt.state = 'done';
+      applyLessonArt();
+      return;
+    }
+    if (d.generatedArt === null) return;   // asked once, nothing to draw
+    if (!fmStr(d.content) && !fmStr(d.title)) return;
+
+    lessonArt.state = 'loading';
+    fetch('api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: artPromptFor(d) })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var raw = String((data && (data.result || data.plan)) || '');
+      var m = raw.match(/\{[\s\S]*\}/);
+      var spec = null;
+      if (m) { try { spec = JSON.parse(m[0]); } catch (e) { spec = null; } }
+
+      /* SFSceneKit is the judge. If it refuses the spec there is no
+         drawing - the locally built diagram stays, which is why this can
+         never leave the card worse than it started. */
+      var svg = null;
+      if (spec && spec.shapes) {
+        try { svg = SFSceneKit.fromSpec(spec); } catch (e) { svg = null; }
+      }
+      lessonArt.state = 'done';
+      lessonArt.spec = svg ? spec : null;
+      cacheLessonArt(svg ? spec : null);
+      if (svg) applyLessonArt();
+    })
+    .catch(function () { lessonArt.state = 'done'; });
+  }
+
+  /* Remember the answer on the day itself, so a second visit is instant and
+     costs nothing. null is remembered too - a lesson with nothing drawable
+     should not be asked about again every time it is opened. */
+  function cacheLessonArt(spec) {
+    try {
+      day.generatedArt = spec;
+      if (plan && plan.days && plan.days[dayIndex]) {
+        plan.days[dayIndex].generatedArt = spec;
+        SFStore.setItem('studyflow_plan', JSON.stringify(plan));
+      }
+    } catch (e) { /* storage full or unavailable - the art still shows now */ }
+  }
+
+  /* Swap the drawing in wherever the lesson card is showing its picture.
+     The pane HTML is updated as well as the DOM, so turning to another part
+     and back does not bring the old diagram with it. */
+  function applyLessonArt() {
+    if (!lessonArt.spec) return;
+    var svg = null;
+    try { svg = SFSceneKit.fromSpec(lessonArt.spec); } catch (e) { svg = null; }
+    if (!svg) return;
+    var caption = fmStr(lessonArt.spec.title) || fmStr(day.title);
+    var inner = svg + '<div style="font-size:0.68rem;color:var(--muted);margin-top:.4rem;' +
+      'text-transform:uppercase;letter-spacing:.06em;font-weight:600;">' + esc(caption) + '</div>';
+
+    if (sfLesson && sfLesson.panes && sfLesson.panes.length) {
+      sfLesson.panes[0].html = sfLesson.panes[0].html.replace(
+        /<div id="lesson-art"[^>]*>[\s\S]*?<\/div>\s*(?=<div class="content-text")/,
+        '<div id="lesson-art" style="text-align:center;padding:.75rem;background:var(--soft);border-radius:14px;">' + inner + '</div>');
+    }
+    var host = document.getElementById('lesson-art');
+    if (host) {
+      host.innerHTML = inner;
+      host.style.animation = 'none';
+      void host.offsetWidth;
+      host.style.animation = 'fadeUp .45s cubic-bezier(.16,1,.3,1) both';
+    }
+  }
+
   /* ── THE WATCH-OUT DECK ────────────────────────────────────
      Key terms and the day's traps, as cards you turn. State for the deck
      while it is on screen; null on every other card. */
@@ -2982,13 +3144,21 @@
          `day.diagram.type !== 'none'`, and app.html defaults that field to
          'none', so every day where the model skipped the field showed no
          diagram at all. */
+      /* Drawn locally, from this day's own material, so the card is whole
+         the moment it opens. If the illustration requested on entry has
+         already landed it is used instead; if it lands later,
+         applyLessonArt swaps it into #lesson-art in place. */
       var dgm = diagramForDay(day);
       var dgmHtml = '';
-      if (dgm && dgm.svg) {
-        dgmHtml = '<div style="text-align:center;padding:.75rem;background:var(--soft);border-radius:14px;">' +
-          dgm.svg +
+      var artSvg = null;
+      if (lessonArt.spec) {
+        try { artSvg = SFSceneKit.fromSpec(lessonArt.spec); } catch (e) { artSvg = null; }
+      }
+      if (artSvg || (dgm && dgm.svg)) {
+        dgmHtml = '<div id="lesson-art" style="text-align:center;padding:.75rem;background:var(--soft);border-radius:14px;">' +
+          (artSvg || dgm.svg) +
           '<div style="font-size:0.68rem;color:var(--muted);margin-top:.4rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">' +
-          esc(dgm.caption) + '</div></div>';
+          esc(artSvg ? (fmStr(lessonArt.spec.title) || fmStr(day.title)) : dgm.caption) + '</div></div>';
       }
 
       /* Part one: look at it, then read it. */
@@ -3675,6 +3845,7 @@
       currentStreak = 0;
       fb.className = 'feedback-box show wrong-fb';
       fb.innerHTML = '<div class="feedback-label">✗ Not quite</div><div class="feedback-text">The correct y-intercept was <strong>' + gs.target + '</strong>. ' + (gs.explanation || '') + '</div>';
+      recordMiss(String(gs.current), gs.explanation);
       flashCard(false);
     }
     enableNext();
@@ -4710,6 +4881,7 @@
     currentAnswered = true;
     totalAnswered++;
     if (perfect) correctCount++;
+    else recordMiss('', swpState.explanation);
     showFeedback(perfect, swpState.explanation ||
       'Each step feeds the next \u2014 that chain is the method, not the individual numbers.');
     enableNext();
@@ -4921,6 +5093,7 @@
       });
       fb.className = 'feedback-box show wrong-fb';
       fb.innerHTML = '<div class="feedback-label">✗ Not this one</div><div class="feedback-text">' + (explanation || 'The correct step is highlighted in green.') + '</div>';
+      recordMiss(btn ? fmStr(btn.textContent).slice(0, 60) : '', explanation);
       flashCard(false);
     }
     enableNext();
@@ -5203,6 +5376,7 @@
       currentStreak = 0;
       fb.className = 'feedback-box show wrong-fb';
       fb.innerHTML = '<div class="feedback-label">✗ Not quite</div><div class="feedback-text">' + (window._seqState.explanation || 'Check the correct order shown above.') + '</div>';
+      recordMiss(currentOrder.join(' \u2192 ').slice(0, 80), window._seqState.explanation);
       flashCard(false);
     }
     enableNext();
@@ -6320,6 +6494,26 @@
     updateStreak();
   }
 
+  /* Record a miss from a grader that does its own scoring.
+
+     handleResult is the shared path and it both scores AND remembers, but
+     six card types grade themselves - the graph, the scaffold, errorspot,
+     sequence, match and the write card. They incremented totalAnswered and
+     correctCount directly and never touched wrongItems, so missing one of
+     them lowered the percentage and then failed to appear under "What to
+     study more" - the one screen whose whole job is to say what to restudy.
+
+     Call this wherever a self-scoring grader decides the answer was wrong. */
+  function recordMiss(userAns, explanation) {
+    var q = sessionCards[cardIndex - 1] ? sessionCards[cardIndex - 1].q : null;
+    wrongItems.push({
+      q: q || { question: 'Question', explanation: explanation || '' },
+      userAns: userAns || '\u2014',
+      explanation: explanation || (q && q.explanation) || ''
+    });
+    if (q) updateSM2(q, false);
+  }
+
   function handleResult(isCorrect, explanation, wrongEl) {
     if (isCorrect) {
       correctCount++;
@@ -6455,7 +6649,18 @@
       return;
     }
     currentAnswered = true;
-    totalAnswered++;
+    /* NOT SCORED, deliberately. This card is graded out of ten by the tutor
+       prompt below, asynchronously, and there is no correctCount++ anywhere
+       that can answer this totalAnswered++ - so every teach-it-back card
+       counted as a miss. A session where the learner got every question
+       right came out as 7/8 = 88% with an empty wrongItems list, so the
+       header said 88% while the banner underneath said "Perfect session -
+       every answer correct". Both were telling the truth about different
+       things: there WAS no wrong question, and the percentage was counting
+       an explanation as one.
+
+       An explanation is not a question with a correct answer. It is kept
+       out of the percentage entirely rather than being scored as a pass. */
     document.querySelector('.write-submit').style.display = 'none';
     document.getElementById('write-analyzing').classList.add('show');
 
@@ -6764,7 +6969,11 @@
     });
 
     var wrongHtml = '';
-    if (wrongItems.length === 0 && totalAnswered > 0) {
+    /* Tested against the SCORE, not against the list. The list is only as
+       complete as the graders that remember to fill it, and the number
+       above this banner comes from correctCount - so keying the banner off
+       wrongItems let the two contradict each other on screen. */
+    if (correctCount >= totalAnswered && totalAnswered > 0) {
       wrongHtml = '<div style="background:#d1faf0;border:1.5px solid #38bfa1;border-radius:14px;padding:1.2rem;text-align:center;color:#1a9e80;font-weight:600;font-size:1rem;margin-bottom:1.5rem;">Perfect session — every answer correct!</div>';
     } else if (wrongItems.length > 0) {
       wrongHtml = '<div class="wrong-reviews"><h3>What to study more</h3>';
@@ -8441,6 +8650,70 @@
     var MARGIN = 14;
 
     /* Sequential process: horizontal when it fits, vertical when it doesn't. */
+    /* CONVERGE — several things bearing on one outcome.
+
+       "Causes of the French Revolution" was drawn as a hub with spokes,
+       which is the shape for parts of a whole: it says these three things
+       ARE the Revolution, unordered and equal, with no direction. The
+       content says something quite different - debt AND the estates AND
+       Enlightenment ideas each pushed TOWARDS an event. Same three labels,
+       opposite claim.
+
+       Arrows are the whole point here. People read a diagram without them
+       as structural and the same diagram with them as functional, so a
+       causal claim without arrows is not merely plainer, it is a different
+       statement. The outcome sits on the right because time runs left to
+       right; the causes stack on the left because their order does not
+       matter and their number does. */
+    function buildConverge(title, items, outcome) {
+      var n = items.length, i;
+      if (n < 2 || !outcome) return null;
+      if (n > 5) { items = items.slice(0, 5); n = 5; }
+
+      var CW = 150, OW = 150, GAP = 62, padX = 12;
+      var causes = [], lines, h;
+      var stackH = 0, VGAP = 12;
+      for (i = 0; i < n; i++) {
+        lines = wrap(items[i], CW - padX * 2, NODE_SIZE, 700, 3);
+        h = Math.max(34, 14 + lines.length * NODE_SIZE * 1.32);
+        causes.push({ lines: lines, h: h });
+        stackH += h + (i < n - 1 ? VGAP : 0);
+      }
+
+      var oLines = wrap(outcome, OW - padX * 2, NODE_SIZE + 0.5, 700, 3);
+      var oH = Math.max(46, 18 + oLines.length * (NODE_SIZE + 0.5) * 1.32);
+
+      var w = MARGIN * 2 + CW + GAP + OW;
+      var tb = titleBlock(title, w);
+      var top = tb.h + 8;
+      var bodyH = Math.max(stackH, oH);
+      var hgt = top + bodyH + MARGIN;
+
+      var svg = open(w, hgt) + tb.svg;
+      var x0 = MARGIN, x1 = MARGIN + CW + GAP;
+      var y = top + (bodyH - stackH) / 2;
+      var oY = top + (bodyH - oH) / 2;
+      var oCx = x1 + OW / 2, oCy = oY + oH / 2;
+
+      for (i = 0; i < n; i++) {
+        var c = pal(i);
+        svg += roundRect(x0, y, CW, causes[i].h, 9, c);
+        svg += multiT(x0 + CW / 2, y + causes[i].h / 2, causes[i].lines,
+                      { size: NODE_SIZE, weight: 700, fill: c.t });
+        /* Every arrow lands on the outcome's left edge rather than its
+           centre, so five of them do not converge into one illegible knot
+           of arrowheads on top of the label. */
+        var ty = oCy + (i - (n - 1) / 2) * Math.min(14, oH / (n + 1));
+        svg += arrow(x0 + CW + 5, y + causes[i].h / 2, x1 - 6, ty);
+        y += causes[i].h + VGAP;
+      }
+
+      var oc = pal(5);
+      svg += roundRect(x1, oY, OW, oH, 11, oc, 2.2);
+      svg += multiT(oCx, oCy, oLines, { size: NODE_SIZE + 0.5, weight: 700, fill: oc.t });
+      return svg + '</svg>';
+    }
+
     function buildFlow(title, items) {
       var n = items.length, i;
       var padX = 12, minW = 70, maxNodeW = 150;
@@ -9169,6 +9442,16 @@
       }
 
       if (items.length < 2) return null;
+
+      if (layout === 'converge' || layout === 'causes') {
+        /* The outcome is the thing being explained. Without one there is
+           nothing to converge ON, and the honest fallback is the plain
+           chain rather than arrows pointing at nothing. */
+        var oc2 = clean(spec.outcome || spec.center || spec.result || '');
+        var cv = oc2 ? buildConverge(title, items, oc2) : null;
+        if (cv) return cv;
+        layout = 'flow';
+      }
 
       switch (layout) {
         case 'cycle':      return buildCycle(title, items);
@@ -10624,7 +10907,57 @@
   }
 
   /* Which layout suits this day's material? Read from the day's own words. */
+  /* What the model SAID the material is, mapped to a shape.
+
+     This is the Principle of Correspondence, wired up: the form of a
+     diagram is itself a claim, so it should come from the relationship in
+     the content rather than from whichever keyword happened to appear.
+     Everything below this is the fallback for a day where the model did
+     not say. */
+  var DG_RELATION_LAYOUT = {
+    sequence: 'flow', process: 'flow', steps: 'flow', chain: 'flow',
+    cycle: 'cycle', loop: 'cycle',
+    causes: 'converge', converge: 'converge', 'causal': 'converge',
+    hierarchy: 'hierarchy', ranking: 'hierarchy', taxonomy: 'hierarchy',
+    contrast: 'compare', comparison: 'compare',
+    structure: 'parts', anatomy: 'parts', 'parts': 'parts',
+    timeline: 'timeline', chronology: 'timeline',
+    relationship: 'graph', correlation: 'graph',
+    network: 'concept', web: 'concept'
+  };
+
+  function dgRelationLayout(d) {
+    var r = d && ((d.diagram && d.diagram.relation) || (d.visual && d.visual.relation) || d.relation);
+    if (!r) return '';
+    return DG_RELATION_LAYOUT[String(r).trim().toLowerCase()] || '';
+  }
+
+  /* A chart claims two measurable quantities and a direction between them.
+     Drawing one when the material names neither is not a plainer picture,
+     it is a false statement.
+
+     "Theme and Symbolism in Macbeth" was drawn as a line chart with
+     Ambition, Guilt and Fate rising along an axis labelled Amount, because
+     the content says "ambition drives the PLOT" and the graph pattern
+     matches \bplot\b. The picture asserted that guilt is a quantity
+     measured over time. Nothing in the notes said that, and the reason it
+     survived review is that a line chart looks like rigour. */
+  var DG_QUANTITY = /\b(rate|amount|level|number|quantity|price|cost|speed|temperature|mass|volume|pressure|concentration|percentage|percent|population|income|demand|supply|distance|time|energy|force|frequency|growth|score|size|height|weight|profit|revenue|degrees?|units?)\b/;
+
+  function dgNamesQuantities(d) {
+    var t = (dgClean(d && d.title) + ' ' + dgClean(d && d.microTopic) + ' ' +
+             dgClean(d && d.content)).toLowerCase();
+    var hits = {}, m, re = new RegExp(DG_QUANTITY.source, 'g'), n = 0;
+    while ((m = re.exec(t)) !== null) { if (!hits[m[1]]) { hits[m[1]] = 1; n++; } }
+    /* Two distinct named quantities, or an explicit statement that one
+       moves with the other. One quantity is a number, not a relationship. */
+    return n >= 2 || /\bas .{2,30} (?:increases|decreases|rises|falls)\b/.test(t);
+  }
+
   function dgLayoutFor(d, hasSteps) {
+    var declared = dgRelationLayout(d);
+    if (declared) return declared;
+
     var t = (dgClean(d && d.title) + ' ' + dgClean(d && d.microTopic) + ' ' +
              dgClean(d && d.content).slice(0, 400)).toLowerCase();
 
@@ -10636,7 +10969,8 @@
        patterns, and while graph came first every two-by-two classification was
        drawn as a line chart. */
     if (/two axes|quadrant|\bmatrix\b|classified? by|sorted? on|high and low|four (?:types|groups|kinds)/.test(t)) return 'matrix';
-    if (/\bgraph\b|\bplot(ted|s)?\b|\bcurve\b|\baxis\b|\baxes\b|correlation|\btrend\b|\brate of\b|over time|relationship between|as .* increases/.test(t)) return 'graph';
+    if (/\bgraph\b|\bplot(ted|s)?\b|\bcurve\b|\baxis\b|\baxes\b|correlation|\btrend\b|\brate of\b|over time|relationship between|as .* increases/.test(t) &&
+        dgNamesQuantities(d)) return 'graph';
     if (/\bpercent|\b\d+\s*%|how much|\bfigures?\b|\bdata\b|\bstatistics?\b|compare the (?:size|amount|number)/.test(t)) return 'bars';
 
     if (/\bcycle\b|\bloop\b|repeating|recurring|feedback|circulat|\bseasons\b|\brotation\b|renew/.test(t)) return 'cycle';
@@ -10644,6 +10978,13 @@
     if (/parts of|structure of|anatomy|components|made up of|consists? of|layers of|\borganelles?\b|\bregions?\b/.test(t)) return 'parts';
     if (/hierarch|\bpyramid\b|\btiers?\b|ranked|classification|taxonom|trophic/.test(t)) return 'hierarchy';
     if (/\bversus\b|\bvs\.?\b|compared with|difference between|contrast/.test(t)) return 'compare';
+    /* Several things bearing on one outcome. Tested late, and only on
+       unordered material: a procedure that happens to use the word "causes"
+       is still a procedure. */
+    if (!hasSteps &&
+        /\bcauses? of\b|\breasons? for\b|\bfactors? (?:in|behind|leading)\b|led to|contributed to|\bwhy .{3,40} (?:happened|occurred|began|collapsed|failed)\b/.test(t)) {
+      return 'converge';
+    }
     /* Ordered material is a flow; everything else is a web of related ideas. */
     return hasSteps ? 'flow' : 'concept';
   }
@@ -10655,6 +10996,7 @@
      because the kit had no builder for them. They have real ones now, so a
      spec asking for a chart gets a chart. */
   var DG_VISUAL_LAYOUT = {
+    converge: 'converge', causes: 'converge',
     timeline: 'timeline', flow: 'flow', cycle: 'cycle', parts: 'parts',
     compare: 'compare', concept: 'concept', web: 'concept', bars: 'bars',
     map: 'concept', balance: 'venn', arcGraph: 'graph', graph: 'graph',
@@ -10712,6 +11054,22 @@
        topic as BOTH the diagram title and the hub printed it twice, once above
        the drawing and once inside it. The card already captions the diagram
        underneath, so the hub keeps the name and the title is dropped. */
+    /* The outcome is what the day is about: "Causes of the French
+       Revolution" converges on the Revolution. Strip the causal preamble
+       and what is left is the thing being explained. */
+    if (layout === 'converge') {
+      var outcome = title.replace(
+        /^(?:the\s+)?(?:main\s+|key\s+|major\s+)?(?:causes?|reasons?|factors?)\s+(?:of|for|behind)\s+(?:the\s+|an?\s+)?/i, '');
+      outcome = dgClean(outcome) || title;
+      if (outcome.length > 28) outcome = outcome.slice(0, 26).replace(/\s\S*$/, '') + '\u2026';
+      /* Same words on both ends teaches nothing - fall back to the chain. */
+      if (outcome.toLowerCase() === title.toLowerCase() && items.length >= 3) {
+        return { type: 'custom', layout: 'flow', title: title, items: items };
+      }
+      return { type: 'custom', layout: 'converge', title: '',
+               outcome: outcome, items: items };
+    }
+
     if (layout === 'concept' || layout === 'parts') {
       var hub = title.replace(
         /^(?:the\s+)?(?:main\s+)?(?:parts|structure|anatomy|components|regions|layers|sections|elements)\s+of\s+(?:the\s+|an?\s+)?/i, '');
@@ -10732,9 +11090,21 @@
     if (!d) return null;
     var svg = null, title = dgClean(d.title);
 
-    /* 1. What the model asked for. */
+    /* 1. What the model asked for.
+
+          A declared relation with no layout beside it is the common case -
+          naming the relationship is the easier half of the request - so the
+          shape is filled in from it here rather than falling through to the
+          switch's default. */
     if (d.diagram && d.diagram.type && d.diagram.type !== 'none') {
-      try { svg = generateDiagramSVG(d.diagram); } catch (e) { svg = null; }
+      var mSpec = d.diagram;
+      var mRel = dgRelationLayout(d);
+      if (mRel && !mSpec.layout) {
+        mSpec = {};
+        for (var mk in d.diagram) if (Object.prototype.hasOwnProperty.call(d.diagram, mk)) mSpec[mk] = d.diagram[mk];
+        mSpec.layout = mRel;
+      }
+      try { svg = generateDiagramSVG(mSpec); } catch (e) { svg = null; }
       if (svg) return { svg: svg, caption: dgClean(d.diagram.label) || title };
     }
 
@@ -10751,18 +11121,35 @@
       if (svg) return { svg: svg, caption: dgClean(d.visual.title || d.visual.label) || title };
     }
 
-    /* 3. Built from this lesson's own material. */
+    /* 3. BUILT FROM THIS LESSON'S OWN MATERIAL.
+
+          This is the one that should usually win, and the reason is that it
+          is made for the day in front of the learner. `specFromDayStructure`
+          reads the day's steps, concepts, terms and pillars and picks a
+          shape from the relationship between them - so two lessons never
+          get the same picture, and a lesson about the light reactions does
+          not get the same drawing as one about C4 plants.
+
+          The curated templates below are stock art. They are good stock
+          art, and there are 23 of them, but the leaf is the same leaf for
+          every photosynthesis lesson ever generated. Ranking them above
+          this was a mistake made and reverted in one sitting: it produced
+          better-looking pictures and less relevant ones. Stock is what you
+          reach for when nothing bespoke can be built, which is what it is
+          now - last. */
     var ds = specFromDayStructure(d);
     if (ds) {
       try { svg = generateDiagramSVG(ds); } catch (e) { svg = null; }
       if (svg) return { svg: svg, caption: ds.title || title };
     }
 
-    /* 4. Last try: let the curated matcher read the topic itself. A day about
-          photosynthesis should get the photosynthesis drawing even if every
-          structured field came back empty. */
-    if (title) {
-      try { svg = generateDiagramSVG(title + ' ' + dgClean(d.microTopic)); } catch (e) { svg = null; }
+    /* 4. A hand-drawn template, matched on the TITLE and microTopic only -
+          never the body prose, where these patterns fire on a stray word.
+          Reached only when the day carried too little structure to draw
+          anything of its own. */
+    var named = dgClean(dgClean(d.title) + ' ' + dgClean(d.microTopic));
+    if (named) {
+      try { svg = curatedDiagramSVG(named); } catch (e) { svg = null; }
       if (svg) return { svg: svg, caption: title };
     }
 
