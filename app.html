@@ -3607,10 +3607,12 @@
                times each with "Failed to fetch" and the plan came back with
                one day out of three.
 
-               Twelve and twenty-four seconds put the second and third
-               attempts on the other side of a typical generation instead of
-               inside it. */
-            setTimeout(tryFetch, attempt * 12000);
+               With WAVE_SIZE at 1 nothing else is in flight to wait for, so
+               this only has to outlast a transient blip. It stays modest on
+               purpose: a BACKGROUNDED TAB clamps setTimeout hard, and a 12s
+               backoff there stretched into minutes of a plan that looked
+               hung. Long backoffs and background throttling do not mix. */
+            setTimeout(tryFetch, attempt * 4000);
           } else {
             callback(new Error('Day ' + dayNum + ' failed after ' + MAX_RETRIES + ' attempts'));
           }
@@ -3624,18 +3626,30 @@
        seconds; firing fourteen of those simultaneously is how day 3 came
        back "Failed to fetch" on a three-day plan.
 
-       TWO, not three. Three parallel 15-second calls to this endpoint all
-       succeed - measured - but three parallel FORTY-second ones do not:
-       one returns and the other two are refused. Duration is what the
-       endpoint minds, not request count, so the wave is sized for the call
-       a day actually makes. */
-    var WAVE_SIZE = 2;
+       ONE. Serial. Measured against the live endpoint twice: three parallel
+       FORTY-second day calls return exactly one plan day and refuse the
+       other two, while three parallel FIFTEEN-second calls all succeed. The
+       endpoint tolerates concurrency; it does not tolerate concurrent long
+       calls, which is what a day is.
+
+       Waves of two were tried in between and did not help, because two
+       concurrent day calls is already one too many.
+
+       The cost is honest and it is real: a day takes ~40s, so a 3-day plan
+       is about two minutes and a 14-day plan about nine. That is the price
+       of a plan that arrives at all, and it is worth revisiting if the
+       endpoint ever gets faster - but do NOT raise this without measuring
+       long calls specifically. Short ones will always look fine. */
+    var WAVE_SIZE = 1;
 
     /* Global timeout, scaled to the work. It was a flat 90 seconds - and a
        single failing day retries three times with backoff, so one slow day
        could spend more than ninety seconds on its own and trip this,
        throwing away every day that had already succeeded. */
-    var globalMs = Math.max(120000, 45000 * Math.ceil(numDays / WAVE_SIZE) + 60000);
+    /* Serial now, so the ceiling is per-day rather than per-wave, plus room
+       for retries. A 14-day plan is allowed ~11 minutes before this fires and
+       saves whatever has arrived. */
+    var globalMs = Math.max(150000, 45000 * Math.ceil(numDays / WAVE_SIZE) + 60000);
     var timeoutId = setTimeout(function() { finish(true); }, globalMs);
 
     /* ── Generation runs in WAVES, and a lost day does not lose the plan ──
