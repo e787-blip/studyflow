@@ -3597,7 +3597,20 @@
         .catch(function(err) {
           console.warn('[gen] day ' + dayNum + ' attempt ' + attempt + ':', err.message);
           if (attempt < MAX_RETRIES) {
-            setTimeout(tryFetch, Math.pow(2, attempt - 1) * 1200);
+            /* BACKOFF MUST OUTLAST THE CALL IT IS BACKING OFF FROM.
+
+               This was 1.2s then 2.4s. A day takes about FORTY seconds, so
+               every retry landed while the first day was still running -
+               all three attempts burned inside a single day's window, in
+               under four seconds, and the day was dropped. Measured on the
+               live endpoint: day 1 succeeded, days 2 and 3 failed three
+               times each with "Failed to fetch" and the plan came back with
+               one day out of three.
+
+               Twelve and twenty-four seconds put the second and third
+               attempts on the other side of a typical generation instead of
+               inside it. */
+            setTimeout(tryFetch, attempt * 12000);
           } else {
             callback(new Error('Day ' + dayNum + ' failed after ' + MAX_RETRIES + ' attempts'));
           }
@@ -3609,8 +3622,14 @@
     /* How many days are in flight at once. A day is a ~29k-character prompt
        coming back with ~18k characters of JSON and takes about forty
        seconds; firing fourteen of those simultaneously is how day 3 came
-       back "Failed to fetch" on a three-day plan. */
-    var WAVE_SIZE = 3;
+       back "Failed to fetch" on a three-day plan.
+
+       TWO, not three. Three parallel 15-second calls to this endpoint all
+       succeed - measured - but three parallel FORTY-second ones do not:
+       one returns and the other two are refused. Duration is what the
+       endpoint minds, not request count, so the wave is sized for the call
+       a day actually makes. */
+    var WAVE_SIZE = 2;
 
     /* Global timeout, scaled to the work. It was a flat 90 seconds - and a
        single failing day retries three times with backoff, so one slow day
