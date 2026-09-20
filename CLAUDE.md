@@ -1456,6 +1456,42 @@ genuinely nothing.
 
 ## Open items
 
+- **THE ONE TO PICK UP FIRST: verify serial plan generation with the tab in
+  front.** Measured twice against the live endpoint: three parallel
+  ~40-second day calls return **one** plan day and refuse the other two with
+  "Failed to fetch", while three parallel ~15-second calls all succeed. The
+  endpoint tolerates concurrency but not concurrent *long* calls. `WAVE_SIZE`
+  is therefore **1** and the backoff is 4s. That reasoning is sound and the
+  measurements are real, **but the serial path was never confirmed end to
+  end**, because a hidden browser pane (`visibilityState: 'hidden'`) throttles
+  background timers hard enough to stall a multi-minute generation. Run a
+  2-day plan with the window actually in front and watch it finish. Expect
+  ~40s a day: 3 days ≈ 2 min, 14 days ≈ 9 min. **Do not raise `WAVE_SIZE`
+  without measuring LONG calls specifically** — short ones always look fine.
+
+- **RUN THROUGH VERIFIED (Sept 2026), on a real generated science plan.**
+  Notes deliberately stuffed with numbers (430 nm, 662 nm, 3 pH units, 6 CO₂,
+  18 ATP, 12 NADPH) — the exact trigger that used to produce maths word
+  problems. What the session actually did:
+  questions came back `twopart, sequence, classify, matchpairs, fill, mcq,
+  estimate, truefalse, write` — **no wordproblem, no bigequation**;
+  opening order was `welcome > lesson > flashcards > sfwb-brief`;
+  the lesson illustration generated **on entry** (28 shapes: thylakoid, PSII
+  → PSI → ATP synthase, H⁺ gradient, water in);
+  the deck built 6 cards, traps first;
+  the worked board showed 4 panels with **zero numbered badges** and a
+  working "Why does this work?" reveal;
+  the results screen read **38% over 3/8 with no "Perfect session" banner**
+  and "What to study more" correctly listing all 5 misses.
+
+- **The worked example is not covered by the CONTENT LOCK.** That lock is
+  written into the question-generation section of the prompt; `workedExample`
+  has its own section and no equivalent rule. The live run produced
+  *"6 CO₂ input requires ? ATP and ? NADPH"* — defensible stoichiometry that
+  is genuinely in the notes, but it is the shape a learner would call a maths
+  problem. If the maths-in-science complaint comes back, look here first.
+
+
 - **CHECKED AGAINST A REAL RUN (Sept 2026).** One day was generated against
   the live endpoint with real notes. What came back:
   `workedExample` ✓ (a real problem, 4 steps, and it did NOT reuse any of the
