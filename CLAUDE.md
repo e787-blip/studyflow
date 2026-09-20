@@ -300,6 +300,54 @@ Two rules that are easy to break:
 
 ---
 
+### What each subject asks, and why — the evidence is in the palettes
+
+The mixes were written subject by subject and never compared. Put side by
+side they ran from **14% producing an answer (history) to 48% (economics)**,
+a 3.4× spread nothing decided, with six subtopics containing no written
+production at all. The research and the measurement are in
+[docs/question-design.md §7](docs/question-design.md). What changed:
+
+| Subject | Was | Now | Change |
+|---|---|---|---|
+| language | 38% | **50%** | vocab was 5-of-9 recognition; one matchpairs and one mcq became a second `sentence` and a `write` |
+| english | 25% | **33%** | `reading` and `literature` had no writing at all |
+| history | 14% | **21%** | `civics` and `era` had no writing at all |
+
+- **Language vocabulary is production-first now.** Productive retrieval
+  builds productive knowledge and receptive builds receptive; recall beats
+  recognition for being able to *use* a word. A vocab mix that is mostly
+  matching trains the half the learner is not tested on.
+- **`sequence:parsons` is a Parsons problem** — reorder given lines of code.
+  Same pre-to-post gains as writing the equivalent code, faster, lower load,
+  and StudyFlow already had the format: a `sequence` over code lines IS one.
+  **No distractor lines** — they reduce learning efficiency for young
+  novices, which is this app's entire audience.
+- **Science's twopart leads with a PREDICTION where the topic allows.**
+  Predict-Observe-Explain: committing before seeing the outcome is what
+  shifts a misconception; being told the right answer does not.
+- **`passage:context` is contextualization**, the fourth Reading Like a
+  Historian skill and the one the history palettes never asked for. Sourcing,
+  corroboration and close reading were all covered. It renders as "Putting
+  It In Context" and is badged a primary source.
+
+`cs/algorithms` still has no prose writing. That is deliberate — it produces
+through `tracetable` and `estimate`, and every session already ends with two
+Feynman write cards.
+
+### The CONTENT lock — because locking the type was not enough
+
+`holdToPalette` stops a science day returning `{"type":"wordproblem"}`. It
+does **not** stop the same day returning an `mcq` or an `estimate` whose
+content is a maths word problem in a lab coat — *"a plant absorbs 12 photons
+per second for 5 seconds, how many photons?"* typed as an estimate is still
+a maths question, and that is what was actually reaching learners.
+
+So the prompt now carries a CONTENT LOCK alongside the type lock, and the
+test it states is mechanical: **strip the subject words out, and if the
+question still has one right answer, it was never about the subject.**
+Numbers are welcome when the subject is what makes them mean anything.
+
 ### The subject palette — enforced, not requested
 
 `app.html` builds a per-subtopic JSON schema, a quota line and a QUESTION

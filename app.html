@@ -2024,6 +2024,14 @@
     if (type === 'fill')      return '{"type":"fill","question":"","answer":"",' + tail;
     if (type === 'write')     return '{"type":"write","question":"","modelAnswer":"",' + tail;
     if (type === 'classify')  return '{"type":"classify","question":"Sort:","categoryA":"","categoryB":"","itemsA":["","",""],"itemsB":["","",""],' + tail;
+    /* A Parsons problem: reorder given lines of code into a working program.
+       Same pre-to-post gains as writing the equivalent code, faster and at
+       lower cognitive load - and StudyFlow already had the format, because a
+       sequence question over lines of code IS one. The only thing missing was
+       saying so. NOTE: no distractor lines. Distractors reduce learning
+       efficiency for young novices, and this app's learners are school age. */
+    if (type === 'sequence' && variant === 'parsons')
+      return '{"type":"sequence","question":"Put these lines in the order that makes the program work:","items":["","","",""],' + tail;
     if (type === 'sequence')  return '{"type":"sequence","question":"Put these in the order they happen:","items":["","","",""],' + tail;
     if (type === 'sentence')  return '{"type":"sentence","question":"","words":["","",""],"translation":"",' + tail;
     if (type === 'passage')   return '{"type":"passage","questionType":"' + (variant || 'main-idea') + '","passage":"","question":"","options":["","","",""],"correctIndex":' + idx + ',' + tail;
@@ -2099,12 +2107,12 @@
       { key:'life', label:'Life science',
         terms:['cell','cells','biolog','organism','photosynthesis','respiration','genetic','dna','rna','evolution','ecosystem','enzyme','mitosis','meiosis','protein','bacteria','virus','plant','animal','digest','circulat','nervous','immune','heredity','chromosome'],
         types:['twopart','sequence:process','classify','matchpairs','fill','mcq','estimate','truefalse','write'],
-        guide:'ASK: the order of a real process and what each stage produces, and what breaks if one stage fails. AVOID: naming a structure with no function attached.',
+        guide:'ASK: the order of a real process and what each stage produces, and what breaks if one stage fails. Where the topic allows, make the twopart Part A a prediction and Part B the mechanism. AVOID: naming a structure with no function attached. AVOID any question that is really arithmetic with science words on it.',
         visual:'a cycle or flow for a process, parts for a structure.' },
       { key:'physical', label:'Physical science',
         terms:['force','forces','motion','energy','atom','atoms','molecul','chemical','reaction','element','compound','physics','chemistry','electric','magnet','heat','thermal','wave','waves','light','sound','gravity','friction','momentum','acid','base','periodic'],
         types:['twopart','estimate','tracetable','mcq','fill','classify','truefalse','mcq','write'],
-        guide:'ASK: predict what happens to one quantity when another changes, and why. AVOID: recall of a definition with nothing to reason about.',
+        guide:'ASK: PREDICT FIRST. Make the twopart Part A a prediction - what happens to one quantity when another changes - and Part B the reason. Committing to a prediction before seeing the outcome is what shifts a misconception; being told the right answer does not. AVOID: recall of a definition with nothing to reason about. AVOID any question that is really arithmetic with science words on it.',
         visual:'a graph for a relationship, compare for two opposing cases.' },
       { key:'earth', label:'Earth and space science',
         terms:['earth','rock','rocks','mineral','volcan','earthquake','plate','tectonic','weather','climate','atmosphere','ocean','erosion','fossil','planet','solar','star','moon','space','galaxy','water cycle','carbon cycle'],
@@ -2115,7 +2123,7 @@
     english: [
       { key:'reading', label:'Reading comprehension',
         terms:['reading','comprehension','main idea','inference','infer','summar','nonfiction','informational','passage','central idea','text evidence','author.s purpose'],
-        types:['readingset','highlight','readingset','twopart:passage','mcq','fill','truefalse'],
+        types:['readingset','highlight','readingset','twopart:passage','mcq','fill','write'],
         guide:'ASK: what the passage itself supports - the idea it builds, what it implies without stating, and what a word means in this sentence. Every question must be answerable from the passage alone. AVOID: outside knowledge, and opinion questions with no right answer.',
         visual:'a concept hub around the central idea, or compare for two viewpoints.' },
       { key:'grammar', label:'Grammar and mechanics',
@@ -2125,14 +2133,14 @@
         visual:'compare a correct and an incorrect form side by side.' },
       { key:'literature', label:'Literary analysis',
         terms:['literature','literary','novel','poem','poetry','shakespeare','theme','symbol','metaphor','character','narrat','imagery','tone','motif','protagonist','setting','plot','figurative'],
-        types:['readingset','corroborate','twopart:passage','highlight','mcq','fill','matchpairs','truefalse'],
+        types:['readingset','corroborate','twopart:passage','highlight','mcq','fill','write','truefalse'],
         guide:'ASK: what a specific choice achieves in a specific passage, with the text quoted in the question. AVOID: naming a device with no text attached to it.',
         visual:'a concept hub for theme, compare for two characters, timeline for plot.' }
     ],
     history: [
       { key:'civics', label:'Civics and government',
         terms:['civics','government','constitution','congress','senate','parliament','bill','law','court','supreme','amendment','voting','election','democracy','citizen','branch','federal','judicial','legislat','executive','rights'],
-        types:['twopart','sequence:process','highlight','matchpairs','scenario','passage:sourcing','mcq','fill','truefalse'],
+        types:['twopart','sequence:process','highlight','write','scenario','passage:sourcing','mcq','fill','truefalse'],
         guide:'ASK: how a process actually moves - who acts, in what order, and what stops it. Apply a rule to a short concrete case. AVOID: counting seats or naming office-holders as trivia.',
         visual:'a flow for how a process moves, hierarchy for who answers to whom.' },
       { key:'social', label:'Social and economic history',
@@ -2142,7 +2150,10 @@
         visual:'compare before and after, or a bar chart when the notes carry real figures.' },
       { key:'era', label:'Events and eras',
         fallback:true,
-        types:['corroborate','passage:sourcing','passage:cause-effect','sequence:chronology','twopart','mcq','classify','fill','matchpairs','truefalse'],
+        /* passage:context is the fourth Reading Like a Historian skill -
+           contextualization - and it was the one this app did not ask for.
+           Sourcing, corroboration and close reading were all covered. */
+        types:['corroborate','passage:sourcing','passage:context','sequence:chronology','twopart','mcq','write','fill','classify','truefalse'],
         guide:'ASK: causes, consequences, motives and order. Tie an event to what it produced. AVOID: bare date recall unless the notes stress the chronology.',
         visual:'a timeline for anything dated, flow for a causal chain.' }
     ],
@@ -2200,12 +2211,12 @@
     cs: [
       { key:'programming', label:'Programming fundamentals',
         terms:['variable','loop','loops','function','conditional','if statement','syntax','debug','python','javascript','java','code','coding','program','string','array','input','output','boolean','operator'],
-        types:['tracetable','twopart','errorspot','sequence:trace','mcq','fill','write','truefalse','matchpairs'],
+        types:['tracetable','twopart','errorspot','sequence:parsons','mcq','fill','write','truefalse','matchpairs'],
         guide:'ASK: trace what the code does line by line with a given input, or find the one line that breaks it. AVOID: syntax trivia a reference would answer.',
         visual:'a flow for control flow, compare for two versions of the code.' },
       { key:'algorithms', label:'Algorithms and data structures',
         terms:['algorithm','sort','sorting','search','recursion','recursive','complexity','big.o','stack','queue','tree','graph','hash','linked list','data structure','traversal','binary'],
-        types:['tracetable','twopart','estimate','sequence:trace','classify','mcq','truefalse','errorspot','matchpairs'],
+        types:['tracetable','twopart','estimate','sequence:parsons','classify','mcq','truefalse','errorspot','matchpairs'],
         guide:'ASK: the order of steps on a concrete input, and which approach costs more as the input grows. AVOID: quoting a complexity without reasoning to it.',
         visual:'a flow for the steps, graph for how cost grows, compare for two approaches.' },
       { key:'systems', label:'Theory and systems',
@@ -2217,7 +2228,10 @@
     language: [
       { key:'grammar', label:'Grammar and conjugation',
         terms:['conjugat','tense','verb','grammar','gender','plural','article','pronoun','adjective','agreement','preterite','subjunctive','imperfect','case','declension','past tense','present tense'],
-        types:['matchpairs','sentence','sentence','highlight','fill','fill','mcq','twopart','truefalse'],
+        /* Explicit instruction beats implicit, and explicit explanation with
+           guided production beats exposure alone - so the matchpairs becomes
+           a write, where the learner states the rule in their own words. */
+        types:['write','sentence','sentence','highlight','fill','fill','mcq','twopart','truefalse'],
         guide:'ASK: produce or correct a real sentence - conjugate it, fix it, reorder it. AVOID: asking about grammar terminology in the abstract.',
         visual:'compare two forms, or a 2x2 matrix for a conjugation pattern.' },
       { key:'reading', label:'Reading and conversation',
@@ -2227,7 +2241,12 @@
         visual:'compare two ways of saying the same thing.' },
       { key:'vocab', label:'Vocabulary',
         fallback:true,
-        types:['matchpairs','matchpairs','fill','fill','mcq','mcq','sentence','twopart','truefalse'],
+        /* Was matchpairs x2 + mcq x2 + truefalse - five of nine recognition,
+           which trains the half of word knowledge the learner is not tested
+           on. Productive retrieval builds productive knowledge; recall beats
+           recognition for producing a word. One matchpairs and one mcq become
+           a second sentence and a write. */
+        types:['matchpairs','fill','fill','sentence','sentence','write','mcq','twopart','truefalse'],
         guide:'ASK: the word used inside a sentence that fixes its meaning. AVOID: bare word-to-word pairs with no context.',
         visual:'a concept hub grouping words by theme.' }
     ],
@@ -3229,6 +3248,25 @@
         'Do NOT use any other type, even if the notes contain numbers, dates, steps or formulas.\n' +
         'A question that involves counting or arithmetic is still a question about THIS subject - ask it as one of the\n' +
         'types listed above, not as a "wordproblem" or "bigequation", unless those types appear in the list.\n' +
+        /* THE TYPE LOCK WAS NOT ENOUGH, and this is the half it was missing.
+           Locking the type stops a science day returning {"type":"wordproblem"};
+           it does not stop the same day returning an mcq or an estimate whose
+           content is a maths word problem in a lab coat - "a train travels 60km
+           in 2 hours, what is its speed" typed as an estimate is still a maths
+           question, and that is what was actually reaching learners. The lock
+           has to be about what the question TESTS, not what it is labelled. */
+        '\nCONTENT LOCK - this matters as much as the type:\n' +
+        'Every question must be answerable only by someone who understands THIS SUBJECT. If a question could be\n' +
+        'answered correctly by a person who knows no ' + String(subjectType).toUpperCase() + ' at all, just by doing arithmetic on\n' +
+        'the numbers in the question, it is a maths question and it does not belong here. Delete it and ask a real one.\n' +
+        'Numbers are welcome when the SUBJECT is what makes them meaningful.\n' +
+        'SCIENCE - BAD: "A plant absorbs 12 photons per second for 5 seconds. How many photons?" (arithmetic; the\n' +
+        '  science is decoration). GOOD: "Light intensity doubles but the rate of photosynthesis barely changes.\n' +
+        '  Which factor is most likely limiting?" (needs the actual concept).\n' +
+        'HISTORY - BAD: "The war lasted from 1914 to 1918. How many years?" GOOD: "Which of these was true of the\n' +
+        '  alliance system BEFORE 1914, and what does that suggest about how quickly the war spread?"\n' +
+        'The same test applies to every subject: strip the subject words out, and if the question still has one\n' +
+        'right answer, it was never about the subject.\n' +
         '\nFILL-IN-THE-BLANK RULES (type "fill") - these are strict:\n' +
         '1. The question MUST be a complete declarative SENTENCE, never an instruction or command.\n' +
         '2. It MUST contain exactly one blank written as ________ (8 underscores).\n' +

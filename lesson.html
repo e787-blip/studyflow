@@ -4065,7 +4065,12 @@
       'detail':         'Reading Detail',
       'sourcing':       'Source Analysis',
       'cause-effect':   'Cause & Effect',
-      'perspective':    'Historical Perspective'
+      'perspective':    'Historical Perspective',
+      /* Contextualization - the fourth Reading Like a Historian skill, and
+         the one the history palettes never asked for. Sourcing, corroboration
+         and close reading were all covered; nothing asked the learner to
+         place a document in the moment it was written. */
+      'context':        'Putting It In Context'
     }[q.questionType] || 'Reading Comprehension';
 
     var optHtml = '<div class="q-options">';
@@ -4075,7 +4080,7 @@
     });
     optHtml += '</div>';
 
-    var isHistorySource = ['sourcing','cause-effect','perspective'].indexOf(q.questionType) !== -1;
+    var isHistorySource = ['sourcing','cause-effect','perspective','context'].indexOf(q.questionType) !== -1;
     var passageLabel = isHistorySource ? 'EXCERPT' : 'PASSAGE';
 
     // For vocab-in-context: highlight the target word in the passage
