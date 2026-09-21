@@ -2833,7 +2833,28 @@
       'There is NO yellow, orange, grey, black or white - use amber for yellow,\n' +
       'muted for grey, ink for black, paper for white.\n' +
       'Path data may only use M L H V Q C A Z and numbers.\n' +
+      /* THE MODEL COPIES THE EXAMPLE, NOT THE INSTRUCTIONS.
+
+         This prompt had NO example, and the one in app.html was "layers of
+         the atmosphere" drawn as four rectangles - so the model's idea of a
+         drawing was boxes. Asked for the light reactions it returned circles
+         with "PSII", "PSI" and "ATP" written in them joined by arrows: a
+         flowchart with biology words, which is the one thing the prompt
+         explicitly forbids and the thing it had been shown.
+
+         The rules below are the ones that can be CHECKED while drawing, and
+         the example is a real cross-section. Both matter; the example
+         matters more. */
       'RULES: 8 to 40 shapes. Keep labels under 22 characters.\n' +
+      'DRAW THE THING, NOT A FLOWCHART. This is the part that goes wrong:\n' +
+      '  - At least 6 shapes must be "path" or "poly". A picture made only of\n' +
+      '    rects, circles and text is a flowchart, and you were asked for a picture.\n' +
+      '  - NEVER put an acronym or a name inside a circle or a box - no {PSII},\n' +
+      '    {ATP}, {DNA} in a bubble. That is a label pretending to be a drawing.\n' +
+      '    Draw the structure; put its name OUTSIDE with a thin leader line to it.\n' +
+      '  - Draw it the way a textbook would: a cross-section, a cutaway or a side\n' +
+      '    view of the real thing, with its real proportions and its real shape.\n' +
+      '  - Arrows show movement or change. They are not how parts connect.\n' +
       /* "at least 12 units clear of it, never on top" was already there and
          was ignored: "Stroma" landed on the thylakoid's own edge and
          "Thylakoid" floated 50 units left of the thing it named. A rule the
@@ -2849,7 +2870,30 @@
       '    in space near nothing is worse than no label.\n' +
       'If this lesson is purely abstract and there is genuinely nothing to draw,\n' +
       'return {"type":"none"} rather than inventing a picture.\n\n' +
-      'Return exactly: {"type":"drawing","title":"short caption","w":440,"h":250,"shapes":[...]}';
+      'This is the LEVEL of drawing expected - a leaf in cross-section. Note the\n' +
+      'curved outline, the real internal structures, and every label sitting\n' +
+      'outside on a leader line. Match this for YOUR topic, whatever it is:\n' +
+      '{"type":"drawing","title":"A leaf in cross-section","w":440,"h":250,"shapes":[\n' +
+      ' {"s":"path","d":"M60 70 Q220 52 380 70 L380 168 Q220 186 60 168 Z","fill":"greenFill","stroke":"green","sw":2},\n' +
+      ' {"s":"path","d":"M60 70 Q220 52 380 70","stroke":"ink","sw":2.5,"fill":"none"},\n' +
+      ' {"s":"path","d":"M92 78 Q96 74 100 78 L100 112 Q96 116 92 112 Z","fill":"paper","stroke":"green"},\n' +
+      ' {"s":"path","d":"M112 78 Q116 74 120 78 L120 112 Q116 116 112 112 Z","fill":"paper","stroke":"green"},\n' +
+      ' {"s":"path","d":"M132 78 Q136 74 140 78 L140 112 Q136 116 132 112 Z","fill":"paper","stroke":"green"},\n' +
+      ' {"s":"circle","x":110,"y":132,"r":11,"fill":"paper","stroke":"green"},\n' +
+      ' {"s":"circle","x":140,"y":143,"r":9,"fill":"paper","stroke":"green"},\n' +
+      ' {"s":"circle","x":168,"y":130,"r":10,"fill":"paper","stroke":"green"},\n' +
+      ' {"s":"path","d":"M236 120 Q252 108 268 120 Q252 132 236 120 Z","fill":"blueFill","stroke":"blue"},\n' +
+      ' {"s":"path","d":"M236 136 Q252 126 268 136 Q252 146 236 136 Z","fill":"redFill","stroke":"red"},\n' +
+      ' {"s":"path","d":"M300 168 Q308 156 316 168","stroke":"green","sw":2.5,"fill":"none"},\n' +
+      ' {"s":"path","d":"M324 168 Q332 156 340 168","stroke":"green","sw":2.5,"fill":"none"},\n' +
+      ' {"s":"line","x1":118,"y1":74,"x2":118,"y2":48,"stroke":"rule","sw":1},\n' +
+      ' {"s":"text","x":118,"y":42,"t":"Palisade cells","size":9,"fill":"ink"},\n' +
+      ' {"s":"line","x1":150,"y1":150,"x2":150,"y2":196,"stroke":"rule","sw":1},\n' +
+      ' {"s":"text","x":150,"y":208,"t":"Spongy mesophyll","size":9,"fill":"ink"},\n' +
+      ' {"s":"line","x1":320,"y1":172,"x2":320,"y2":200,"stroke":"rule","sw":1},\n' +
+      ' {"s":"text","x":322,"y":212,"t":"Stoma and guard cells","size":9,"fill":"ink"}]}\n\n' +
+      'Now draw YOUR lesson to that standard. Return exactly:\n' +
+      '{"type":"drawing","title":"short caption","w":440,"h":250,"shapes":[...]}';
   }
 
   function requestLessonArt(d) {
