@@ -10015,6 +10015,9 @@
       var W = num(spec.w || spec.width, 160, 900, 460);
       var H = num(spec.h || spec.height, 100, 700, 260);
       var body = '', drew = 0, labels = 0, needArrow = false;
+      /* Whether the kit draws its own caption at the top, which decides how
+         much headroom a label has to leave below it. */
+      var titled = !!String(spec.title || '').trim();
 
       for (var i = 0; i < shapes.length && i < 80; i++) {
         var sh = shapes[i];
@@ -10104,7 +10107,30 @@
              than honoured. */
           var tfill = (fill === 'none' || fill === PAINT.paper ||
                        fill === PAINT.faint || fill === PAINT.rule) ? PAINT.ink : fill;
-          body += '<text x="' + r1(num(sh.x, 0, W, W / 2)) + '" y="' + r1(num(sh.y, 8, H, H / 2)) +
+          /* KEEP THE WHOLE WORD ON THE CANVAS.
+
+             x was clamped to 0..W, which keeps the anchor POINT inside and
+             lets the text itself hang off the edge: a middle-anchored
+             "Stroma" at x=10 puts half the word outside the viewBox, where
+             it is simply cut off. Live output had "Lumen" and "Stroma"
+             sliced down the middle by the left edge.
+
+             Width is estimated from the glyph count - there is no measuring
+             context here - and the anchor decides which side needs the
+             room. */
+          var tw = t.length * tsz * 0.55;
+          var loX = anchor === 'start' ? 4 : (anchor === 'end' ? tw + 4 : tw / 2 + 4);
+          var hiX = anchor === 'start' ? W - tw - 4 : (anchor === 'end' ? W - 4 : W - tw / 2 - 4);
+          if (hiX < loX) { loX = hiX = W / 2; }          // wider than the canvas: centre it
+          var tx = num(sh.x, 0, W, W / 2);
+          if (tx < loX) tx = loX; else if (tx > hiX) tx = hiX;
+          /* Below the title band. A label at y=14 lands on top of the
+             caption the kit draws at y=16 - live output had "Photons"
+             printed through the title. */
+          var tyLo = titled ? 30 : 8;
+          var ty = num(sh.y, 0, H, H / 2);
+          if (ty < tyLo) ty = tyLo;
+          body += '<text x="' + r1(tx) + '" y="' + r1(ty) +
             '" text-anchor="' + anchor + '" font-size="' + tsz +
             '" font-weight="' + (num(sh.weight, 400, 800, 600) >= 650 ? 700 : 600) +
             '" fill="' + tfill + '"' +

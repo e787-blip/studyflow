@@ -679,6 +679,35 @@ On a hub layout (`concept`, `parts`) pass the topic as `center` and leave
 `title` empty — passing both prints the topic twice, once above the drawing and
 once inside it. The card captions the diagram underneath anyway.
 
+### Two more label guards, both from looking at live output
+
+- **Keep the whole WORD on the canvas, not just the anchor point.** `x` was
+  clamped to 0..W, which lets a middle-anchored label hang half off the edge.
+  Live output had "Lumen" and "Stroma" sliced down the middle by the left
+  border. Width is estimated from the glyph count — there is no measuring
+  context inside the kit — and the anchor decides which side needs the room.
+- **Labels stay below the title band.** The kit draws its own caption at
+  y=16; a model label at y=14 printed straight through it. Anything above
+  y=30 is pushed down when a title is present.
+
+### What generated art still is not
+
+The exemplar took the light-reactions drawing from **0 paths** to **14 paths
+and polys out of 32 shapes** — a real membrane, real pump arrows, an ATP
+synthase built from triangles. It is a genuine schematic now rather than a
+flowchart.
+
+It is still **not textbook anatomical art**, and two runs suggest a shape
+vocabulary plus one prompt will not get there reliably: complexes still come
+out as circles with "PSII" in them, and composition is hit and miss. The 23
+curated templates ARE that quality where they match.
+
+There is a real tension here and it has not been settled: bespoke-but-schematic
+(generated, always on topic) versus stock-but-beautiful (curated, only 23
+topics). The order today is **model drawing → the day's own material →
+curated last**, chosen deliberately — see "Who owns the lesson card". If the
+pictures still disappoint, that ordering is the lever, not the prompt.
+
 ### The model copies the EXAMPLE, not the instructions
 
 Asked for the light reactions, the lesson-entry art prompt returned circles
