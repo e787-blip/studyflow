@@ -320,6 +320,17 @@
     .fc-card { transition:none; }
   }
 
+  /* Label-the-diagram */
+  .ld-fig { background:var(--soft); border-radius:14px; padding:.7rem; margin-bottom:.9rem; }
+  .ld-rows { display:flex; flex-direction:column; gap:.45rem; }
+  .ld-row { display:flex; align-items:center; gap:.55rem; }
+  .ld-num { flex:0 0 22px; height:22px; border-radius:50%; background:var(--blue-light);
+    color:var(--blue); font-size:.72rem; font-weight:800; display:flex;
+    align-items:center; justify-content:center; }
+  .ld-sel { flex:1 1 auto; min-width:0; padding:.45rem .55rem; border:1.5px solid var(--border);
+    border-radius:9px; font-family:inherit; font-size:.85rem; background:var(--white); color:var(--ink); }
+  body.dark .ld-fig { background:#1e2336; }
+
   /* KEY TERMS */
   .terms-list { display:flex; flex-direction:column; gap:.55rem; }
   .term-item { background:var(--soft); border:1.5px solid var(--border); border-radius:12px; padding:.85rem 1.1rem; }
@@ -1554,23 +1565,23 @@
   var PALETTE_FALLBACK = {
     math:       ['bigequation', 'wordproblem', 'errorspot'],
     science:    ['twopart', 'sequence', 'classify', 'matchpairs', 'fill', 'mcq',
-                 'estimate', 'truefalse', 'write', 'tracetable', 'corroborate', 'match'],
+                 'estimate', 'truefalse', 'write', 'tracetable', 'corroborate', 'match', 'labeldiagram'],
     psychology: ['mcq', 'truefalse', 'scenario', 'fill', 'write', 'twopart',
-                 'corroborate', 'estimate', 'matchpairs', 'match'],
+                 'corroborate', 'estimate', 'matchpairs', 'match', 'labeldiagram'],
     geography:  ['mcq', 'truefalse', 'classify', 'sequence', 'fill', 'twopart',
-                 'highlight', 'estimate', 'matchpairs', 'write', 'match'],
+                 'highlight', 'estimate', 'matchpairs', 'write', 'match', 'labeldiagram'],
     economics:  ['mcq', 'truefalse', 'scenario', 'wordproblem', 'fill', 'twopart',
-                 'tracetable', 'estimate', 'matchpairs', 'write', 'match'],
+                 'tracetable', 'estimate', 'matchpairs', 'write', 'match', 'labeldiagram'],
     cs:         ['mcq', 'truefalse', 'errorspot', 'classify', 'fill', 'write',
-                 'twopart', 'tracetable', 'highlight', 'estimate', 'matchpairs', 'match'],
+                 'twopart', 'tracetable', 'highlight', 'estimate', 'matchpairs', 'match', 'labeldiagram'],
     history:    ['passage', 'mcq', 'truefalse', 'classify', 'sequence', 'fill',
-                 'twopart', 'corroborate', 'highlight', 'matchpairs', 'write', 'match'],
+                 'twopart', 'corroborate', 'highlight', 'matchpairs', 'write', 'match', 'labeldiagram'],
     english:    ['passage', 'readingset', 'mcq', 'truefalse', 'write', 'fill',
-                 'twopart', 'corroborate', 'highlight', 'matchpairs', 'match'],
+                 'twopart', 'corroborate', 'highlight', 'matchpairs', 'match', 'labeldiagram'],
     language:   ['sentence', 'mcq', 'truefalse', 'fill', 'twopart', 'highlight',
-                 'matchpairs', 'write', 'match'],
+                 'matchpairs', 'write', 'match', 'labeldiagram'],
     general:    ['mcq', 'truefalse', 'fill', 'write', 'twopart', 'highlight',
-                 'matchpairs', 'estimate', 'match']
+                 'matchpairs', 'estimate', 'match', 'labeldiagram']
   };
 
   function paletteFor(qType, dayObj) {
@@ -1669,7 +1680,7 @@
     // every other type has its own dedicated renderer and must be excluded here.
     /* Kept in sync with SPECIAL_TYPES below - a sequence question drawn into
        the pre-test would still be spliced in later by its own injector. */
-    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1 };
+    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1, labeldiagram:1 };
     var simpleQuestions = questions.filter(function(q){ return !SPECIAL_TYPES_PRETEST[q.type]; });
     var shuffled = simpleQuestions.slice().sort(function(){ return Math.random() - 0.5; });
 
@@ -1753,7 +1764,7 @@
        main loop queued it once and the injector spliced the very same question
        in again - every history and geography day showed its "order these
        events" question twice. Every type with its own injector belongs here. */
-    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1 };
+    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1, labeldiagram:1 };
     var fillQuestions = questions.filter(function(q){ return q.type === 'fill'; });
     var regularQuestions = questions.filter(function(q){ return !SPECIAL_TYPES[q.type]; });
     var shuffled = regularQuestions.slice().sort(function(){ return Math.random() - 0.5; });
@@ -1984,6 +1995,22 @@
     errorSpotQs.forEach(function(q, i) {
       var insertAt5 = injectSpread(i, errorSpotQs.length, 1);
       sessionCards.splice(insertAt5, 0, { type: 'errorspot', q: q });
+    });
+
+    /* Label the diagram. Ungated on subject like every other injector - a
+       labelling question exists only because a schema asked for one.
+
+       The filter is the exception worth having: labelDiagramOk actually
+       RENDERS the drawing through SFSceneKit before the card is queued. A
+       labelling card whose picture the kit refuses is unanswerable, and the
+       honest thing is for it never to reach the queue rather than to arrive
+       as numbered pins floating over nothing. */
+    var labelQs = (day.questions || []).filter(function(q){
+      return q.type === 'labeldiagram' && labelDiagramOk(q);
+    });
+    labelQs.forEach(function(q, i) {
+      var insertAtL = injectSpread(i, labelQs.length, 2);
+      sessionCards.splice(insertAtL, 0, { type: 'labeldiagram', q: q });
     });
 
     // Feynman write — AI-generated write questions from science/history/english/general schemas
@@ -2273,7 +2300,7 @@
 
     /* Types with a dedicated renderer are honoured directly. */
     var DIRECT = {
-      bigequation: 1, wordproblem: 1, errorspot: 1, sequence: 1, sentence: 1,
+      bigequation: 1, wordproblem: 1, errorspot: 1, sequence: 1, sentence: 1, labeldiagram: 1,
       match: 1, classify: 1, graph: 1, passage: 1, write: 1, scenario: 1,
       fill: 1,
       twopart: 1, corroborate: 1, highlight: 1, tracetable: 1, matchpairs: 1,
@@ -2547,7 +2574,7 @@
     /* The visible check/submit control on the current card, whatever type it is. */
     var ids = ['fill-btn', 'seq-check-btn', 'classify-check-btn', 'write-submit',
                'graph-check-btn', 'match-check-btn',
-               'mp-check-btn', 'tt-check-btn', 'est-check-btn'];
+               'mp-check-btn', 'tt-check-btn', 'est-check-btn', 'ld-check-btn'];
     var i, el;
     for (i = 0; i < ids.length; i++) {
       el = document.getElementById(ids[i]);
@@ -3554,6 +3581,7 @@
     else if (card.type === 'highlight')   { html = renderHighlight(card.q); }
     else if (card.type === 'tracetable')  { html = renderTraceTable(card.q); }
     else if (card.type === 'matchpairs')  { html = renderMatchPairs(card.q); }
+    else if (card.type === 'labeldiagram'){ html = renderLabelDiagram(card.q); }
     else if (card.type === 'estimate')    { html = renderEstimate(card.q); }
     else if (card.type === 'done') {
       html = buildCard('Session Complete', 'Great work today!', false,
@@ -5842,6 +5870,13 @@
        seconds are there in one day?". */
     if (type === 'estimate')    return 'How to estimate: ' + trim(stem, 70);
     if (type === 'readingset')  return 'How to find the main idea and the evidence for it in a text';
+    /* A labelling stem is an instruction - "Label each numbered part" - so
+       the concept is the thing that was labelled. Invariant 4. */
+    if (type === 'labeldiagram') {
+      var ldn = trim((q.drawing && q.drawing.title) || q.diagramName || topic, 55);
+      return ldn ? ('The parts of ' + ldn + ', and what each one does')
+                 : 'The parts of ' + topic + ', and what each one does';
+    }
 
     /* Give them the real expression to work, not a description of one. */
     if (type === 'bigequation') {
@@ -6290,6 +6325,134 @@
      matters (word to translation, representation to representation, term to
      function). A select per row rather than click-to-pair: far less state to
      get wrong, and it works with a keyboard. */
+  /* ── LABEL THE DIAGRAM ───────────────────────────────────────
+     A drawing with numbered pins on it, and a menu per pin.
+
+     This is the one format in the app where the learner acts ON a picture
+     rather than reading one. Drawing-to-learn is the largest effect in the
+     visual literature (g ≈ 0.69 across 53 studies), and the caveat attached
+     to it is that unsupported "draw something" does little - the gain comes
+     from scaffolded work against a given structure, which is exactly a
+     labelling task.
+
+     The drawing goes through SFSceneKit like every other model-authored
+     picture, so the same guards apply. Pins are drawn by US, over the top,
+     after the kit has returned - the model supplies coordinates, never
+     markup. */
+  function labelPinsSvg(svg, pins) {
+    /* Injected before the closing tag so the pins share the drawing's own
+       viewBox and scale with it. The kit's output always ends '</svg>'. */
+    var marks = '', i;
+    for (i = 0; i < pins.length; i++) {
+      var x = pins[i].x, y = pins[i].y;
+      marks += '<circle cx="' + x + '" cy="' + y + '" r="10" fill="#ffffff" stroke="#4a7cf6" stroke-width="2"/>' +
+               '<text x="' + x + '" y="' + (y + 3.6) + '" text-anchor="middle" font-size="10.5" ' +
+               'font-weight="700" fill="#1e40af">' + (i + 1) + '</text>';
+    }
+    return svg.replace(/<\/svg>\s*$/, marks + '</svg>');
+  }
+
+  /* Block 1 has no list() - that helper lives in block 2 with the whiteboard. */
+  function ldArr(v) {
+    return Object.prototype.toString.call(v) === '[object Array]' ? v : [];
+  }
+
+  function labelDiagramOk(q) {
+    /* Queue-time check: a labelling card with no drawable picture is an
+       unanswerable card, so it is never queued rather than rendered empty. */
+    if (!q || typeof SFSceneKit === 'undefined') return false;
+    var pins = ldArr(q.pins).filter(function (p) {
+      return p && fmStr(p.answer) && isFinite(p.x) && isFinite(p.y);
+    });
+    if (pins.length < 2) return false;
+    var svg = null;
+    try { svg = SFSceneKit.fromSpec(q.drawing || q.diagram); } catch (e) { svg = null; }
+    return !!svg;
+  }
+
+  function renderLabelDiagram(q) {
+    var pins = ldArr(q.pins).filter(function (p) {
+      return p && fmStr(p.answer) && isFinite(p.x) && isFinite(p.y);
+    }).slice(0, 6);
+
+    var svg = null;
+    try { svg = SFSceneKit.fromSpec(q.drawing || q.diagram); } catch (e) { svg = null; }
+    if (!svg || pins.length < 2) return renderMatchPairs(q);   // never a blank card
+
+    /* Every pin's answer is an option, plus any extra the model supplied,
+       shuffled so position cannot leak the key. */
+    var opts = [], seen = {}, i;
+    for (i = 0; i < pins.length; i++) {
+      var a = fmStr(pins[i].answer);
+      if (a && !seen[a.toLowerCase()]) { seen[a.toLowerCase()] = 1; opts.push(a); }
+    }
+    var extra = ldArr(q.options || q.distractors);
+    for (i = 0; i < extra.length && opts.length < 9; i++) {
+      var e = fmStr(extra[i]);
+      if (e && !seen[e.toLowerCase()]) { seen[e.toLowerCase()] = 1; opts.push(e); }
+    }
+    opts.sort(function () { return Math.random() - 0.5; });
+    var optTags = opts.map(function (o) {
+      return '<option value="' + esc(o) + '">' + esc(o) + '</option>';
+    }).join('');
+
+    var rows = pins.map(function (p, idx) {
+      return '<div class="ld-row">' +
+        '<span class="ld-num">' + (idx + 1) + '</span>' +
+        '<select class="ld-sel" data-i="' + idx + '">' +
+        '<option value="">\u2014 choose \u2014</option>' + optTags + '</select></div>';
+    }).join('');
+
+    window._labelState = { q: q, pins: pins };
+
+    var body = '<div class="q-meta"><span class="q-type-label" style="background:#eef2ff;color:#4338ca;">Label the diagram</span>' +
+      '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
+      '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.question || 'Label each numbered part.') + '</div>' +
+      '<div class="ld-fig">' + labelPinsSvg(svg, pins) + '</div>' +
+      '<div class="ld-rows">' + rows + '</div>' +
+      '<button class="fill-submit" id="ld-check-btn" onclick="checkLabelDiagram()" style="margin-top:.7rem;">Check answers</button>' +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Work from the part you are surest of.') + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">\u2726 Label it</div><h2>' +
+      esc(day.title || 'Label the diagram') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">Tap each menu</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next \u2192</button></div></div>';
+  }
+
+  function checkLabelDiagram() {
+    var st = window._labelState;
+    if (!st || currentAnswered) return;
+    currentAnswered = true;
+    totalAnswered++;
+    var sels = document.querySelectorAll('.ld-sel'), right = 0, k;
+    for (k = 0; k < sels.length; k++) {
+      var want = st.pins[k] ? fmStr(st.pins[k].answer) : '';
+      var got = sels[k].value;
+      sels[k].disabled = true;
+      if (got && got.toLowerCase() === want.toLowerCase()) {
+        right++; sels[k].style.borderColor = '#10b981'; sels[k].style.background = '#ecfdf5';
+      } else {
+        sels[k].style.borderColor = '#ef4444'; sels[k].style.background = '#fef2f2';
+        /* Show what it should have been - a wrong label with no correction
+           teaches the wrong label twice. */
+        var opt = document.createElement('option');
+        opt.value = want; opt.textContent = want + '  \u2190 correct';
+        sels[k].appendChild(opt); sels[k].value = want;
+      }
+    }
+    var all = right === st.pins.length && st.pins.length > 0;
+    var btn = document.getElementById('ld-check-btn');
+    if (btn) btn.disabled = true;
+    if (all) spawnConfetti();
+    handleResult(all, (all ? '' : right + ' of ' + st.pins.length + ' labelled. ') +
+                 (st.q.explanation || ''), btn);
+    enableNext();
+  }
+
   function renderMatchPairs(q) {
     var pairs = (q.pairs || []).filter(function (p) { return p && p.left && p.right; });
     var rights = pairs.map(function (p) { return p.right; }).slice();

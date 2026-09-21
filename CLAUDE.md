@@ -335,6 +335,31 @@ production at all. The research and the measurement are in
 through `tracetable` and `estimate`, and every session already ends with two
 Feynman write cards.
 
+### `labeldiagram` — the learner acts on the picture
+
+A drawing with numbered pins and a menu per pin. It is the only format in
+the app where the learner does something TO an image rather than reading
+one, and it exists because drawing-to-learn is the largest effect in the
+visual-learning literature (g ≈ 0.69) with one caveat: unsupported "draw
+something" does little, the gain comes from scaffolded work against a given
+structure. Labelling is exactly that.
+
+- **The drawing goes through `SFSceneKit`** like every other model-authored
+  picture, so the same guards apply. **The pins are drawn by us**, over the
+  kit's output, from coordinates — the model never supplies markup for them.
+- **`labelDiagramOk` runs at QUEUE time and actually renders the drawing.**
+  A labelling card whose picture the kit refuses is unanswerable, so it never
+  reaches the queue rather than arriving as pins floating over nothing. This
+  is the one injector with a filter, and that is why.
+- **Two pins may never share an answer** — ungradeable whichever the learner
+  picks. `sanitizeDayQuestions` refuses those, and pins outside the canvas.
+- **A wrong pin is corrected in place**, not just reddened: the select is
+  given the right answer and set to it. A wrong label left on screen teaches
+  the wrong label twice.
+- In the palettes of `science/life`, `science/earth`, `geography/physical`
+  and `psychology/bioCog` — the subtopics whose material has things with
+  parts. **Not maths.**
+
 ### The CONTENT lock — because locking the type was not enough
 
 `holdToPalette` stops a science day returning `{"type":"wordproblem"}`. It
@@ -653,6 +678,31 @@ looks exactly like "this topic did not need one".
 On a hub layout (`concept`, `parts`) pass the topic as `center` and leave
 `title` empty — passing both prints the topic twice, once above the drawing and
 once inside it. The card captions the diagram underneath anyway.
+
+### The model copies the EXAMPLE, not the instructions
+
+Asked for the light reactions, the lesson-entry art prompt returned circles
+with "PSII", "PSI" and "ATP" written in them joined by arrows — a flowchart
+with biology words, which the prompt forbids in so many words.
+
+The cause was not the instructions. **`artPromptFor` had no example at all**,
+and the only example in `app.html` was "layers of the atmosphere" drawn as
+four rectangles. The model was being shown boxes and told not to draw boxes.
+
+Both prompts now carry **a leaf in cross-section** — a curved outline,
+palisade columns, spongy cells, a vascular bundle, guard cells, every label
+outside on a leader line. It was rendered and looked at before being pasted
+in. Three checkable rules sit beside it:
+
+- **At least 6 shapes must be `path` or `poly`.** A picture made only of
+  rects, circles and text is a flowchart.
+- **Never an acronym inside a circle.** That is a label pretending to be a
+  drawing; draw the structure and put its name outside on a leader line.
+- **Draw it the way a textbook would** — cross-section, cutaway or side
+  view, real proportions.
+
+If drawings go back to being boxes, check the example first. It is the part
+the model actually obeys.
 
 ### Labels get a halo, because placement is what the model gets wrong
 

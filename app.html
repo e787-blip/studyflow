@@ -2049,7 +2049,8 @@
     /* One passage, several questions against it - the shape reading
        comprehension is actually practised in. buildQueue expands this into a
        passage card followed by its questions. */
-    if (type === 'readingset')  return '{"type":"readingset","title":"","passage":"","questions":[{"question":"What is the main idea of the passage?","options":["","","",""],"correctIndex":' + idx + ',"questionType":"main-idea"},{"question":"","options":["","","",""],"correctIndex":' + ((i + 1) % 4) + ',"questionType":"inference"},{"question":"","options":["","","",""],"correctIndex":' + ((i + 2) % 4) + ',"questionType":"vocab-in-context"}],' + tail;
+    if (type === 'labeldiagram') return '{"type":"labeldiagram","question":"Label each numbered part.","drawing":{"title":"","w":440,"h":250,"shapes":[]},"pins":[{"x":0,"y":0,"answer":""},{"x":0,"y":0,"answer":""},{"x":0,"y":0,"answer":""}],"options":["",""],' + tail;
+    if (type === 'readingset')  return '{"type":"readingset"',"title":"","passage":"","questions":[{"question":"What is the main idea of the passage?","options":["","","",""],"correctIndex":' + idx + ',"questionType":"main-idea"},{"question":"","options":["","","",""],"correctIndex":' + ((i + 1) % 4) + ',"questionType":"inference"},{"question":"","options":["","","",""],"correctIndex":' + ((i + 2) % 4) + ',"questionType":"vocab-in-context"}],' + tail;
     return '';
   }
 
@@ -2068,7 +2069,8 @@
                      wordproblem:'Wordproblem', twopart:'Two-part', corroborate:'Corroborate',
                      highlight:'Find-the-evidence', tracetable:'Trace table',
                      matchpairs:'Match pairs', estimate:'Estimate',
-                     readingset:'Reading set (passage + 3 questions)' };
+                     readingset:'Reading set (passage + 3 questions)',
+                     labeldiagram:'Label the diagram' };
 
   /* The quota line the model reads is counted from the same list the schema is
      built from, so the two can no longer drift apart. They were two hand-kept
@@ -2106,7 +2108,7 @@
     science: [
       { key:'life', label:'Life science',
         terms:['cell','cells','biolog','organism','photosynthesis','respiration','genetic','dna','rna','evolution','ecosystem','enzyme','mitosis','meiosis','protein','bacteria','virus','plant','animal','digest','circulat','nervous','immune','heredity','chromosome'],
-        types:['twopart','sequence:process','classify','matchpairs','fill','mcq','estimate','truefalse','write'],
+        types:['twopart','labeldiagram','sequence:process','classify','matchpairs','fill','mcq','truefalse','write'],
         guide:'ASK: the order of a real process and what each stage produces, and what breaks if one stage fails. Where the topic allows, make the twopart Part A a prediction and Part B the mechanism. AVOID: naming a structure with no function attached. AVOID any question that is really arithmetic with science words on it.',
         visual:'a cycle or flow for a process, parts for a structure.' },
       { key:'physical', label:'Physical science',
@@ -2116,7 +2118,7 @@
         visual:'a graph for a relationship, compare for two opposing cases.' },
       { key:'earth', label:'Earth and space science',
         terms:['earth','rock','rocks','mineral','volcan','earthquake','plate','tectonic','weather','climate','atmosphere','ocean','erosion','fossil','planet','solar','star','moon','space','galaxy','water cycle','carbon cycle'],
-        types:['twopart','sequence:process','matchpairs','corroborate','mcq','fill','truefalse','classify','write'],
+        types:['twopart','labeldiagram','sequence:process','corroborate','mcq','fill','truefalse','classify','write'],
         guide:'ASK: how one stage of a cycle feeds the next, and what evidence shows it happened. AVOID: naming layers or categories with no process attached.',
         visual:'a cycle for anything that repeats, timeline for anything dated.' }
     ],
@@ -2160,7 +2162,7 @@
     geography: [
       { key:'physical', label:'Physical geography',
         terms:['river','rivers','mountain','glacier','erosion','delta','climate','weather','biome','desert','rainforest','tectonic','volcano','earthquake','coast','landform','ecosystem','monsoon','hydrolog'],
-        types:['twopart','sequence:process','estimate','matchpairs','mcq','fill','classify','truefalse','write'],
+        types:['twopart','labeldiagram','sequence:process','estimate','mcq','fill','classify','truefalse','write'],
         guide:'ASK: how a physical process produces the landform or pattern you can observe, and where. AVOID: naming a feature with no process behind it.',
         visual:'a cycle or flow for the process, map only for real named places.' },
       { key:'human', label:'Human geography',
@@ -2182,7 +2184,7 @@
         visual:'compare two study designs, or a 2x2 matrix for variable types.' },
       { key:'bioCog', label:'Biological and cognitive',
         terms:['brain','neuron','neural','cortex','memory','cognit','perception','attention','sensation','encoding','retrieval','sleep','conditioning','learning','language','neurotransmitter','hormone'],
-        types:['twopart','sequence:process','matchpairs','fill','mcq','truefalse','write','classify','estimate'],
+        types:['twopart','labeldiagram','sequence:process','fill','mcq','truefalse','write','classify','estimate'],
         guide:'ASK: the path information takes and where it breaks down. AVOID: asking who discovered something, which tests trivia rather than understanding.',
         visual:'a flow for a processing path, parts for brain structure.' },
       { key:'social', label:'Social and developmental',
@@ -2791,6 +2793,32 @@
           q.pairs = pp;
           return true;
         }
+        if (q.type === 'labeldiagram') {
+          /* Needs a drawing AND pins that sit on it. The renderer checks the
+             drawing again through SFSceneKit - that is the security boundary
+             and it stays - but a card with two pins in the same spot, or an
+             answer repeated across pins, is ungradeable however well it
+             draws, so it is refused here. */
+          var dw = q.drawing || q.diagram;
+          if (!dw || !Array.isArray(dw.shapes) || dw.shapes.length < 4) return false;
+          var W = Number(dw.w) || 440, H = Number(dw.h) || 250;
+          var seenA = {}, pins = (q.pins || []).filter(function (pn) {
+            if (!pn) return false;
+            var a = String(pn.answer || '').trim();
+            var px = parseFloat(pn.x), py = parseFloat(pn.y);
+            if (!a || !isFinite(px) || !isFinite(py)) return false;
+            if (px < 0 || px > W || py < 0 || py > H) return false;   // pin off the picture
+            var key = a.toLowerCase();
+            if (seenA[key]) return false;      // same label on two pins: ungradeable
+            seenA[key] = 1;
+            pn.x = px; pn.y = py; pn.answer = a;
+            return true;
+          });
+          if (pins.length < 2) return false;
+          q.pins = pins.slice(0, 6);
+          q.options = (q.options || []).filter(function (o) { return String(o || '').trim(); });
+          return true;
+        }
         if (q.type === 'estimate') {
           if (!qText) return false;
           var ev = parseFloat(q.answer);
@@ -3178,6 +3206,24 @@
         '   Custom comparison uses a different shape:\n' +
         '   {"type":"custom","layout":"compare","title":"A vs B","left":{"title":"A","items":["..."]},"right":{"title":"B","items":["..."]}}\n' +
         '   Put each fact on the side it actually belongs to - never guess an attribution.\n' +
+        /* The one question format where the learner acts ON a picture rather
+           than reading one. Drawing-to-learn is the largest effect in the
+           visual-learning literature, and the caveat is that unsupported
+           "draw something" does little - the gain comes from scaffolded work
+           against a given structure, which is what labelling is. */
+        '\nLABEL THE DIAGRAM - {"type":"labeldiagram"} - when the topic has a THING WITH PARTS.\n' +
+        '   A cell, a leaf, a heart, a volcano, a wave, a circuit, a river, an eye, a neuron.\n' +
+        '   You draw it with the SAME shape vocabulary as "drawing" below, then put numbered\n' +
+        '   pins on it and say what each pin is. The learner picks a label for each pin.\n' +
+        '   {"type":"labeldiagram","question":"Label each numbered part.",\n' +
+        '    "drawing":{"title":"","w":440,"h":250,"shapes":[ ...same shapes as below... ]},\n' +
+        '    "pins":[{"x":118,"y":92,"answer":"Palisade layer"},{"x":150,"y":140,"answer":"Spongy mesophyll"}],\n' +
+        '    "options":["Xylem","Cuticle"],"explanation":""}\n' +
+        '   - 2 to 6 pins. Each x,y must sit ON the part it names, inside the canvas.\n' +
+        '   - Two pins may NEVER share an answer - the card cannot be graded if they do.\n' +
+        '   - "options" are extra wrong labels. The pin answers are added automatically.\n' +
+        '   - Do NOT write the part names into the drawing itself. The pins are the question;\n' +
+        '     labelling the picture gives the answer away.\n' +
         '\nDRAW IT YOURSELF - {"type":"drawing"} - THE PREFERRED ANSWER (see 5a).\n' +
         '   The templates cover 23 topics and the custom layouts are boxes and arrows. Neither\n' +
         '   was made for the lesson in front of you; this is. If the lesson is about a thing\n' +
