@@ -1134,6 +1134,36 @@ What changed:
 - **The key-terms card and the lesson's "Common traps" part became one
   deck of flashcards.** See below.
 
+### The lesson's picture comes back during practice — `sfRecallAttach`
+
+The lesson card's picture used to appear once, before any question, and never
+again. Now `recallFor(card)` compares a practice question's words with the
+picture's own labels (`lessonPicture()`: the entry illustration if it landed,
+else `diagramForDay`, the same precedence as the lesson card):
+
+- **Relevant or absent.** One shared term of 6+ letters, or two shorter ones,
+  or there is no control at all. A button that shows up on unrelated
+  questions teaches the learner to ignore it.
+- **Before answering, never the answer (invariant 7).** "See the diagram" is
+  withheld when the ANSWER's words are on the drawing - a cell diagram labelled
+  "mitochondrion" beside "the powerhouse of the cell is the ___" is the answer
+  next to its stem. For sequence, classify, match, errorspot, tracetable and
+  sentence cards the whole structure is the answer, so any overlap withholds
+  it; true/false never gets it (the picture confirms or refutes the claim);
+  pre-test cards never do.
+- **After a wrong answer, it opens by itself** under the explanation, headed
+  "Look at it again". `sfRecallOnMiss()` is called from `handleResult` AND
+  `recordMiss`, so the six self-grading cards get it too. Correct answers do
+  nothing.
+- The panel keeps a light ground in dark mode: every diagram is drawn in ink
+  for paper.
+
+Tested on a real page load with a seeded cell day: the ribosome question got
+the button, the three questions whose answers are labels did not, true/false
+did not, an unrelated question got nothing before or after a miss, a wrong
+answer opened the panel, a correct one did not, and a sequence miss through
+`recordMiss` opened it.
+
 ### The flashcard deck — `deckItems`, `sfDeckGo`, `sfDeckFlip`
 
 Vocabulary and the day's misconceptions on one card, turned one at a time.

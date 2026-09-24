@@ -579,6 +579,31 @@
   .btn-flag:hover { border-color:#f59e0b; color:#d97706; }
   .btn-flag.flagged { border-color:#f59e0b; background:#fff8e0; color:#d97706; }
 
+  /* The lesson's picture, brought back during practice (sfRecallAttach).
+     Hover is a blue border only - no lift, per the design system. The panel
+     keeps a LIGHT ground in dark mode on purpose: every diagram is drawn in
+     dark ink for paper, and on the dark --soft its labels vanish. */
+  .sf-recall-btn {
+    background:none; border:1.5px solid var(--border); border-radius:8px;
+    padding:.4rem .7rem; margin:.9rem 0 0; cursor:pointer; color:var(--muted);
+    display:inline-flex; align-items:center; gap:.4rem;
+    font-family:var(--sans); font-size:0.8rem; font-weight:600; transition:border-color .18s, color .18s;
+  }
+  .sf-recall-btn:hover { border-color:#4a7cf6; color:#4a7cf6; }
+  .sf-recall {
+    margin-top:.75rem; padding:.75rem .75rem .6rem; border-radius:14px;
+    background:#f7f9fe; border:1px solid #e3e9f7; text-align:center;
+    animation:fadeUp .35s cubic-bezier(.16,1,.3,1) both;
+  }
+  .sf-recall-head {
+    text-align:left; font-size:0.72rem; font-weight:700; letter-spacing:.06em;
+    text-transform:uppercase; color:#3563e9; margin:0 0 .5rem;
+  }
+  .sf-recall-cap {
+    font-size:0.68rem; color:#6b7280; margin-top:.4rem;
+    text-transform:uppercase; letter-spacing:.06em; font-weight:600;
+  }
+
   /* Keyboard hint chip */
   .kbd-hint {
     display:inline-flex; align-items:center; gap:.2rem;
@@ -2977,6 +3002,194 @@
     } catch (e) { /* storage full or unavailable - the art still shows now */ }
   }
 
+  /* ── THE LESSON'S PICTURE, BROUGHT BACK DURING PRACTICE ──────────────────
+
+     The picture used to appear exactly once: on the lesson card, before a
+     single question. Nothing ever showed it again, so a learner stuck on "which
+     layer is the ozone in?" three cards later had to hold a picture in their
+     head that they had seen for twenty seconds.
+
+     Now a practice question whose words overlap the picture's own labels gets
+     a "See the diagram" control, and a WRONG answer on such a question opens
+     the picture under the explanation - that is when looking again teaches.
+
+     Two rules make it safe, and both must stay:
+
+       1. RELEVANT OR ABSENT. The control only appears when the question's
+          words match the drawing's labels. A picture of a leaf offered on a
+          question about the Calvin cycle's inputs is fine; the same leaf on a
+          question about stomata spacing is noise, and noise teaches the
+          learner to ignore the button.
+
+       2. NEVER THE ANSWER BEFORE THE ANSWER (invariant 7). A cell diagram is
+          labelled "mitochondrion"; shown beside "The powerhouse of the cell
+          is the ___" it is the answer printed next to its own stem. So before
+          answering, the control is withheld whenever the ANSWER's words appear
+          on the drawing. For sequence, classify, match, errorspot and trace
+          cards the whole structure is the answer - a water-cycle drawing
+          shows the order a sequence card asks for - so any overlap withholds
+          it. True/false never gets it before answering: the picture confirms
+          or refutes the claim. After a wrong answer the learner has committed,
+          and all of this is lifted. */
+  var recallCache = { key: null, pic: null };
+  var RECALL_STOP = {
+    that: 1, this: 1, with: 1, from: 1, what: 1, which: 1, when: 1, where: 1,
+    there: 1, their: 1, they: 1, them: 1, into: 1, onto: 1, have: 1, does: 1,
+    will: 1, would: 1, about: 1, these: 1, those: 1, most: 1, more: 1, than: 1,
+    then: 1, each: 1, only: 1, also: 1, used: 1, uses: 1, true: 1, false: 1,
+    because: 1, called: 1, following: 1, answer: 1, question: 1, drawn: 1, part: 1,
+    parts: 1, same: 1, other: 1, both: 1, shown: 1, down: 1, back: 1, over: 1
+  };
+  var RECALL_WHOLE = { sequence: 1, classify: 1, matchpairs: 1, match: 1,
+                       errorspot: 1, tracetable: 1, sentence: 1 };
+  var RECALL_NEVER = { write: 1, labeldiagram: 1, graph: 1, readingset: 1, match: 1 };
+
+  function recallWords(s) {
+    var out = [], seen = {}, w = String(s == null ? '' : s).toLowerCase()
+      .replace(/&[a-z]+;/g, ' ').replace(/[^a-zà-ɏ]+/g, ' ').split(' ');
+    for (var i = 0; i < w.length; i++) {
+      var t = w[i];
+      if (t.length < 4 || RECALL_STOP[t]) continue;
+      /* Plurals: "cells" is the label "cell". */
+      if (t.length >= 5 && t.charAt(t.length - 1) === 's' && t.charAt(t.length - 2) !== 's') t = t.slice(0, -1);
+      /* A long word matches on its first six letters, so "mitochondria"
+         finds "mitochondrion" and "evaporates" finds "evaporation". */
+      var k = t.length >= 6 ? t.slice(0, 6) : t;
+      if (!seen[k]) { seen[k] = 1; out.push(k); }
+    }
+    return out;
+  }
+
+  /* The picture the lesson card showed: the illustration drawn at entry if
+     it has landed, else the day's own diagram. Cached per day and per art. */
+  function lessonPicture() {
+    var key = dayIndex + '|' + (lessonArt.spec ? 'art' : 'dgm');
+    if (recallCache.key === key) return recallCache.pic;
+    var svg = null, caption = '';
+    if (lessonArt.spec) {
+      try { svg = SFSceneKit.fromSpec(lessonArt.spec); } catch (e) { svg = null; }
+      if (svg) caption = fmStr(lessonArt.spec.title) || fmStr(day.title);
+    }
+    if (!svg) {
+      var dg = null;
+      try { dg = diagramForDay(day); } catch (e2) { dg = null; }
+      if (dg && dg.svg) { svg = dg.svg; caption = dg.caption || fmStr(day.title); }
+    }
+    var pic = null;
+    if (svg) {
+      var labels = [], m, re = /<text\b[^>]*>([\s\S]*?)<\/text>/gi;
+      while ((m = re.exec(svg)) !== null) labels.push(m[1].replace(/<[^>]*>/g, ' '));
+      pic = { svg: svg, caption: caption, words: recallWords(labels.join(' ')) };
+    }
+    recallCache = { key: key, pic: pic };
+    return pic;
+  }
+
+  function recallAnswerText(q, t) {
+    var bits = [], i;
+    function add(v) { if (v != null && v !== '') bits.push(typeof v === 'object' ? JSON.stringify(v) : String(v)); }
+    var opts = q.options || q.sentences;
+    if (opts && q.correctIndex != null && opts[q.correctIndex] != null) add(opts[q.correctIndex]);
+    add(q.answer); add(q.correctAnswer); add(q.modelAnswer);
+    if (RECALL_WHOLE[t]) {
+      add(q.items); add(q.itemsA); add(q.itemsB); add(q.categoryA); add(q.categoryB);
+      add(q.pairs); add(q.rows); add(q.words); add(q.translation);
+      if (q.steps) for (i = 0; i < q.steps.length; i++) add(q.steps[i] && (q.steps[i].text || q.steps[i].answer));
+    }
+    return bits.join(' ');
+  }
+
+  /* What this card may do with the picture. */
+  function recallFor(card) {
+    if (!card || !card.q || card.isPretest) return null;
+    var t = fmStr(card.type || cardTypeFor(card.q)).toLowerCase();
+    var qt = fmStr(card.q.type).toLowerCase();
+    if (RECALL_NEVER[t] || RECALL_NEVER[qt]) return null;
+    var pic = lessonPicture();
+    if (!pic || !pic.words.length) return null;
+    var q = card.q;
+    var stem = recallWords([q.question, q.scenario, q.setup].join(' '));
+    var ans = recallWords(recallAnswerText(q, RECALL_WHOLE[qt] ? qt : t));
+    var have = {}, i, hitsStem = 0, strong = 0, hitsAns = 0;
+    for (i = 0; i < pic.words.length; i++) have[pic.words[i]] = 1;
+    for (i = 0; i < stem.length; i++) if (have[stem[i]]) { hitsStem++; if (stem[i].length >= 6) strong++; }
+    for (i = 0; i < ans.length; i++) if (have[ans[i]]) hitsAns++;
+    return {
+      pic: pic,
+      /* One strong shared term, or two short ones, before answering. After a
+         miss, a shared answer term counts too - it is the reason to look. */
+      before: (strong >= 1 || hitsStem >= 2) && hitsAns === 0 && qt !== 'truefalse',
+      afterMiss: strong >= 1 || hitsStem >= 2 || hitsAns >= 1
+    };
+  }
+
+  function recallPanel(pic, heading) {
+    var p = document.createElement('div');
+    p.className = 'sf-recall';
+    p.innerHTML = '<div class="sf-recall-head">' + esc(heading) + '</div>' +
+      (typeof SFDiagramKit !== 'undefined' && SFDiagramKit.uniqIds ? SFDiagramKit.uniqIds(pic.svg) : pic.svg) +
+      (pic.caption ? '<div class="sf-recall-cap">' + esc(pic.caption) + '</div>' : '');
+    return p;
+  }
+
+  function sfRecallAttach(card) {
+    var r = recallFor(card);
+    var sc = document.getElementById('session-card');
+    if (!sc) return;
+    sc.setAttribute('data-recall', r && r.afterMiss ? '1' : '');
+    if (!r || !r.before) return;
+    var fb = sc.querySelector('#feedback-box');
+    var host = fb ? fb.parentNode : sc.querySelector('.card-body');
+    if (!host) return;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'sf-recall-btn';
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/>' +
+      '<circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg><span>See the diagram</span>';
+    btn.onclick = function () { sfRecallToggle(); };
+    if (fb) host.insertBefore(btn, fb); else host.appendChild(btn);
+  }
+
+  function sfRecallToggle() {
+    var sc = document.getElementById('session-card');
+    if (!sc) return;
+    var open = sc.querySelector('.sf-recall');
+    var btn = sc.querySelector('.sf-recall-btn');
+    if (open) {
+      open.parentNode.removeChild(open);
+      if (btn) btn.querySelector('span').textContent = 'See the diagram';
+      return;
+    }
+    var pic = lessonPicture();
+    if (!pic || !btn) return;
+    btn.parentNode.insertBefore(recallPanel(pic, 'From today’s lesson'), btn.nextSibling);
+    btn.querySelector('span').textContent = 'Hide the diagram';
+  }
+
+  /* Called on every wrong answer - from handleResult and from recordMiss, so
+     the self-grading cards get it too. Idempotent. */
+  function sfRecallOnMiss() {
+    var sc = document.getElementById('session-card');
+    if (!sc || sc.getAttribute('data-recall') !== '1') return;
+    var pic = lessonPicture();
+    if (!pic) return;
+    var old = sc.querySelector('.sf-recall');
+    if (old) old.parentNode.removeChild(old);
+    var btn = sc.querySelector('.sf-recall-btn');
+    if (btn) btn.parentNode.removeChild(btn);
+    var fb = sc.querySelector('#feedback-box');
+    var panel = recallPanel(pic, 'Look at it again');
+    if (fb && fb.parentNode) fb.parentNode.insertBefore(panel, fb.nextSibling);
+    else {
+      var body = sc.querySelector('.card-body');
+      if (!body) return;
+      body.appendChild(panel);
+    }
+    sc.setAttribute('data-recall', 'shown');
+    try { panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { /* old browsers */ }
+  }
+
   /* Swap the drawing in wherever the lesson card is showing its picture.
      The pane HTML is updated as well as the DOM, so turning to another part
      and back does not bring the old diagram with it. */
@@ -3700,6 +3913,11 @@
         else footer.appendChild(flagBtn);
       }
     }
+
+    /* The lesson's picture, offered again where it answers the question in
+       front of the learner - see sfRecallAttach. Never allowed to cost the
+       card: a picture that fails to build just means no button. */
+    try { sfRecallAttach(card); } catch (e) { /* no picture, no button */ }
   }
 
   function buildCard(badge, title, struggling, bodyHtml, footerLeft, nextLabel, disabled) {
@@ -6903,6 +7121,8 @@
       explanation: explanation || (q && q.explanation) || ''
     });
     if (q) updateSM2(q, false);
+    /* The self-grading cards miss through here, not handleResult. */
+    try { sfRecallOnMiss(); } catch (e) { /* never cost the grade */ }
   }
 
   function handleResult(isCorrect, explanation, wrongEl) {
@@ -6954,6 +7174,7 @@
       }
 
       showFeedback(false, explanation);
+      try { sfRecallOnMiss(); } catch (e) { /* never cost the feedback */ }
       flashCard(false);
       updateStreak();
       checkStruggling();
