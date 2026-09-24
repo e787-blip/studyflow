@@ -599,6 +599,8 @@
     text-align:left; font-size:0.72rem; font-weight:700; letter-spacing:.06em;
     text-transform:uppercase; color:#3563e9; margin:0 0 .5rem;
   }
+  .sf-recall-board { max-width:640px; margin:.9rem auto 0; padding:0 .25rem; }
+  .sf-recall-board .sf-recall-btn { margin-top:0; }
   .sf-recall-cap {
     font-size:0.68rem; color:#6b7280; margin-top:.4rem;
     text-transform:uppercase; letter-spacing:.06em; font-weight:600;
@@ -2038,6 +2040,16 @@
       sessionCards.splice(insertAtL, 0, { type: 'labeldiagram', q: q });
     });
 
+    /* ...and one built from the LESSON'S OWN picture, when the plan brought no
+       labelling card of its own. A placeholder only: lessonLabelQuestion runs
+       when the card is reached and the card skips itself when the picture
+       cannot be labelled honestly. Not maths - its mix is the point
+       (invariant 1) - and late in the run, after the learner has met the
+       ideas the picture names. */
+    if (qType !== 'math' && !labelQs.length) {
+      sessionCards.splice(injectSpread(0, 1, 3), 0, { type: 'labeldiagram', lessonLabel: true });
+    }
+
     // Feynman write — AI-generated write questions from science/history/english/general schemas
     // (separate from the inline MCQ-reuse mechanism above, which only fires every 5th question)
     var aiWriteQs = (day.questions || []).filter(function(q){ return q.type === 'write'; });
@@ -3190,6 +3202,124 @@
     try { panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { /* old browsers */ }
   }
 
+  /* ── LABEL THE PICTURE YOU STUDIED ────────────────────────────────────────
+
+     A labelling card built from the lesson's own picture: the part NAMES are
+     lifted off the drawing and a numbered pin is put exactly where each name
+     was, so every leader line now runs from a pin to its part. Drawing-to-
+     learn's gain comes from scaffolded work against a given structure, and
+     there is no better-scaffolded structure than the one the learner has just
+     looked at.
+
+     Built LAZILY, when the card is reached, not when the queue is built: the
+     illustration requested at lesson entry can land after buildQueue, and
+     the card must label the picture the learner actually saw.
+
+     Refused - the card skips itself - when:
+       - the picture is a kit LAYOUT (flow, concept web, cycle...). Where a
+         label sits on those is not knowledge: which spoke holds "Bread
+         prices" is arbitrary, so a pin there cannot be graded honestly. Only
+         drawings and hand-drawn templates, where position IS anatomy.
+       - fewer than 3 names survive the filters, or pins would collide.
+     Sub-lines ("hearing, memory" under "Temporal lobe") are left in place:
+     they turn recall into reasoning, which is the point. */
+  function rcAttr(attrs, name) {
+    var m = new RegExp('\\b' + name + '\\s*=\\s*"([^"]*)"').exec(attrs);
+    if (m) return m[1];
+    var st = /\bstyle\s*=\s*"([^"]*)"/.exec(attrs);
+    if (st) {
+      var m2 = new RegExp('(?:^|;)\\s*' + name + '\\s*:\\s*([^;]+)').exec(st[1]);
+      if (m2) return m2[1].replace(/px\s*$/, '').trim();
+    }
+    return '';
+  }
+
+  function lessonLabelQuestion() {
+    var pic = lessonPicture();
+    if (!pic || !pic.svg) return null;
+    if (/id="sfdkArrow/.test(pic.svg)) return null;          // a kit layout
+    var skip = {}, cap = fmStr(pic.caption).toLowerCase();
+    if (cap) skip[cap] = 1;
+    if (lessonArt.spec && lessonArt.spec.title) skip[fmStr(lessonArt.spec.title).toLowerCase()] = 1;
+    var re = /<text\b([^>]*)>([\s\S]*?)<\/text>/gi, m, picks = [], seen = {};
+    while ((m = re.exec(pic.svg)) !== null && picks.length < 5) {
+      var attrs = m[1];
+      var txt = m[2].replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+                    .replace(/\s+/g, ' ').trim();
+      var key = txt.toLowerCase();
+      if (!txt || seen[key] || skip[key]) continue;
+      if (/transform\s*=|serif/i.test(attrs)) continue;        // rotated axis titles, serif titles
+      var wgt = rcAttr(attrs, 'font-weight');
+      if (!(parseFloat(wgt) >= 600 || /bold/i.test(wgt))) continue;
+      if (txt.length < 3 || txt.length > 28 || !/[a-z]/i.test(txt)) continue;
+      if (/[=→+×]|^\d/.test(txt)) continue;          // equations, dates, numbers
+      var x = parseFloat(rcAttr(attrs, 'x')), y = parseFloat(rcAttr(attrs, 'y'));
+      if (!isFinite(x) || !isFinite(y)) continue;
+      var size = parseFloat(rcAttr(attrs, 'font-size')) || 11;
+      var anchor = rcAttr(attrs, 'text-anchor') || 'start';
+      var px = anchor === 'middle' ? x : (anchor === 'end' ? x - 11 : x + 11);
+      var py = y - size * 0.35, clash = false, k;
+      /* Two pins closer than their own diameter read as one. */
+      for (k = 0; k < picks.length; k++) {
+        if (Math.abs(picks[k].x - px) < 24 && Math.abs(picks[k].y - py) < 22) { clash = true; break; }
+      }
+      if (clash) continue;
+      seen[key] = 1;
+      picks.push({ full: m[0], x: Math.round(px * 10) / 10, y: Math.round(py * 10) / 10, answer: txt });
+    }
+    if (picks.length < 3) return null;
+    var svg = pic.svg, i;
+    for (i = 0; i < picks.length; i++) svg = svg.split(picks[i].full).join('');
+    /* Distractors from the day's own vocabulary, so a wrong option is at
+       least a real word from this lesson rather than filler. */
+    /* Compared on recallWords keys, so "Ribosome" is recognised as the
+       answer "ribosomes" and never offered as a separate wrong option. */
+    var extra = [], terms = ldArr(day.keyTerms), taken = {};
+    function tkey(v) { return recallWords(v).join(' ') || String(v).toLowerCase(); }
+    for (i = 0; i < picks.length; i++) taken[tkey(picks[i].answer)] = 1;
+    for (i = 0; i < terms.length && extra.length < 2; i++) {
+      var t = fmStr(terms[i] && (terms[i].term || terms[i]));
+      if (t && t.length <= 28 && !taken[tkey(t)]) { extra.push(t); taken[tkey(t)] = 1; }
+    }
+    return {
+      type: 'labeldiagram', fromLesson: true, svg: svg,
+      question: 'Label the picture from today’s lesson.',
+      pins: picks.map(function (p) { return { x: p.x, y: p.y, answer: p.answer }; }),
+      options: extra, difficulty: 'medium',
+      hint: 'The leader lines still point at each part. Start with the one you remember best.',
+      explanation: 'Every part of the picture you studied, in place.'
+    };
+  }
+
+  /* The picture on the whiteboard cards, which render through block 2 and
+     so never reach sfRecallAttach. On the worked-example board it is a
+     toggle - the same picture the lesson card has just shown, so nothing new
+     is revealed. On a walkthrough after a wrong answer it opens by itself,
+     but only when it is relevant to the question that was missed. */
+  function sfRecallBoard(mount, missedQ) {
+    if (!mount) return;
+    var pic = lessonPicture();
+    if (!pic) return;
+    var wrap = document.createElement('div');
+    wrap.className = 'sf-recall-board';
+    if (missedQ) {
+      var r = recallFor({ type: cardTypeFor(missedQ), q: missedQ });
+      if (!r || !r.afterMiss) return;
+      wrap.appendChild(recallPanel(pic, 'The picture from the lesson'));
+    } else {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'sf-recall-btn';
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/>' +
+        '<circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg><span>See the diagram</span>';
+      btn.onclick = function () { sfRecallToggle(); };
+      wrap.appendChild(btn);
+    }
+    mount.appendChild(wrap);
+  }
+
   /* Swap the drawing in wherever the lesson card is showing its picture.
      The pane HTML is updated as well as the DOM, so turning to another part
      and back does not bring the old diagram with it. */
@@ -3796,7 +3926,16 @@
     else if (card.type === 'highlight')   { html = renderHighlight(card.q); }
     else if (card.type === 'tracetable')  { html = renderTraceTable(card.q); }
     else if (card.type === 'matchpairs')  { html = renderMatchPairs(card.q); }
-    else if (card.type === 'labeldiagram'){ html = renderLabelDiagram(card.q); }
+    else if (card.type === 'labeldiagram'){
+      /* The lesson-picture labelling card is built HERE, not at queue time,
+         so it labels the picture the learner actually saw. No picture fit to
+         label - it skips itself. */
+      if (card.lessonLabel && !card.q) {
+        try { card.q = lessonLabelQuestion(); } catch (e) { card.q = null; }
+        if (!card.q) { showNextCard(); return; }
+      }
+      html = renderLabelDiagram(card.q);
+    }
     else if (card.type === 'estimate')    { html = renderEstimate(card.q); }
     else if (card.type === 'done') {
       html = buildCard('Session Complete', 'Great work today!', false,
@@ -6580,7 +6719,9 @@
   function labelDiagramOk(q) {
     /* Queue-time check: a labelling card with no drawable picture is an
        unanswerable card, so it is never queued rather than rendered empty. */
-    if (!q || typeof SFSceneKit === 'undefined') return false;
+    if (!q) return false;
+    if (q.svg) return ldArr(q.pins).length >= 2;
+    if (typeof SFSceneKit === 'undefined') return false;
     var pins = ldArr(q.pins).filter(function (p) {
       return p && fmStr(p.answer) && isFinite(p.x) && isFinite(p.y);
     });
@@ -6596,7 +6737,10 @@
     }).slice(0, 6);
 
     var svg = null;
-    try { svg = SFSceneKit.fromSpec(q.drawing || q.diagram); } catch (e) { svg = null; }
+    /* q.svg: a labelling card built from the lesson's own picture
+       (lessonLabelQuestion) arrives pre-rendered, names already lifted off. */
+    if (q.svg) svg = q.svg;
+    else { try { svg = SFSceneKit.fromSpec(q.drawing || q.diagram); } catch (e) { svg = null; } }
     if (!svg || pins.length < 2) return renderMatchPairs(q);   // never a blank card
 
     /* Every pin's answer is an option, plus any extra the model supplied,
@@ -17274,6 +17418,8 @@ var SFBoard = (function () {
         if (!drewB) { w.showNextCard(); return; }
         mount.innerHTML = '';
         while (holder.firstChild) mount.appendChild(holder.firstChild);
+        /* The lesson's picture, one tap away under the worked example. */
+        try { if (typeof w.sfRecallBoard === 'function') w.sfRecallBoard(mount, null); } catch (eR) { /* board stands alone */ }
         scrollTop();
         return;
       } catch (e) {
@@ -17294,6 +17440,9 @@ var SFBoard = (function () {
         if (!drew) { w.showNextCard(); return; }
         mount.innerHTML = '';
         while (holderE.firstChild) mount.appendChild(holderE.firstChild);
+        /* After a wrong answer: the lesson's picture under the walkthrough,
+           when it covers what was missed. */
+        try { if (typeof w.sfRecallBoard === 'function') w.sfRecallBoard(mount, card.missedQ || null); } catch (eR) { /* board stands alone */ }
         scrollTop();
         return;
       } catch (e) {
@@ -17435,8 +17584,11 @@ var SFBoard = (function () {
     }
 
     /* Insert as the next card, mirroring the existing spaced-repeat pattern. */
-    if (idx < cards.length) cards.splice(idx, 0, { type: 'sfwb-explain', lesson: lesson });
-    else cards.push({ type: 'sfwb-explain', lesson: lesson });
+    /* missedQ, not q: a card with .q is counted as a question elsewhere. It
+       rides along so the board can bring back the lesson's picture when the
+       picture covers what was missed. */
+    if (idx < cards.length) cards.splice(idx, 0, { type: 'sfwb-explain', lesson: lesson, missedQ: q });
+    else cards.push({ type: 'sfwb-explain', lesson: lesson, missedQ: q });
 
     var btn = w.document.querySelector('.sfwb-explain');
     if (btn) btn.disabled = true;

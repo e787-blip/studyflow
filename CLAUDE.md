@@ -1164,6 +1164,42 @@ did not, an unrelated question got nothing before or after a miss, a wrong
 answer opened the panel, a correct one did not, and a sequence miss through
 `recordMiss` opened it.
 
+**It is on the whiteboard cards too** (`sfRecallBoard`, called from block 2's
+`renderCard` after the board mounts - those cards never reach
+`renderCardInner`). Under the worked-example board (`sfwb-brief`) it is a
+"See the diagram" toggle: the same picture the lesson card just showed, so
+nothing new is revealed. Under a wrong-answer walkthrough (`sfwb-explain`) it
+opens by itself when it covers the missed question, which the explain card now
+carries as `missedQ` - NOT `q`, because a card with `.q` is counted as a
+question elsewhere.
+
+### A labelling card built from the lesson's own picture — `lessonLabelQuestion`
+
+`buildQueue` queues one placeholder `{type:'labeldiagram', lessonLabel:true}`
+late in the practice run, unless the day is maths (invariant 1) or already
+brought its own labelling question. The question is built **when the card is
+reached**, not at queue time: the entry illustration can land after
+`buildQueue`, and the card must label the picture the learner actually saw.
+
+- Part NAMES are lifted off the SVG and a numbered pin goes exactly where each
+  name was, so every leader line now runs from a pin to its part. Sub-lines
+  ("hearing, memory") stay - recall with a reason to reason from.
+- Names are bold text, 3-28 chars, not the title/caption, not rotated, not
+  serif, no numbers or equations; up to 5; pins closer than 24x22 units drop
+  the later one; fewer than 3 names and the card skips itself.
+- **Kit layouts are refused** (`id="sfdkArrow` in the SVG): on a concept web or
+  a flow, where a label sits is not knowledge, so a pin there cannot be graded
+  honestly. Drawings and hand-drawn templates only - position IS anatomy.
+- Distractors come from `day.keyTerms`, compared on `recallWords` keys so
+  "Ribosome" is never offered beside the answer "ribosomes".
+- `renderLabelDiagram` takes `q.svg` (pre-built) as well as `q.drawing`.
+
+Tested on a real page load (cell day): five organelle pins over the lesson's
+own cell, graded 4/5 with the wrong pin corrected in place; the atmosphere
+exemplar labels its four layers + ozone; a concept web is refused; across all
+10 subjects 0 dropped, 0 duplicated, opening unchanged, maths gets no card and
+still 10 bigequation / 2 wordproblem.
+
 ### The flashcard deck — `deckItems`, `sfDeckGo`, `sfDeckFlip`
 
 Vocabulary and the day's misconceptions on one card, turned one at a time.
@@ -1654,6 +1690,47 @@ objects, strings-with-matching-concepts, strings-without, concepts-only, and
 genuinely nothing.
 
 ## Open items
+
+- **NEXT SESSION: VISUALS MADE UP ON THE SPOT.** The goal: when a learner is
+  stuck, asks "show me", or reaches a card whose idea has no picture, the app
+  draws one for THAT moment - not only the one picture per lesson it draws
+  today. Everything it needs exists and is tested; what is missing is the
+  trigger and a prompt that takes a moment instead of a day.
+
+  What already works, and what to reuse rather than rebuild:
+  - **Generation**: `requestLessonArt(d)` - `api/generate` with `artPromptFor(d)`
+    (~2.3k chars, the leaf exemplar, the phone-size rules), JSON pulled out of
+    the reply, **`SFSceneKit.fromSpec` as the judge** (the security boundary:
+    fixed shape kinds, colours by name, clamped numbers, path grammar, a 9px
+    type floor), cached on the day. It is written for ONE picture per day
+    (`lessonArt` is a single slot); on-the-spot needs a keyed cache
+    (`day.visuals[key]`) and a prompt built from a *question* or *concept*,
+    e.g. `artPromptFor({title: concept, content: questionStem + explanation})`.
+  - **Display**: `recallPanel(pic, heading)` renders any `{svg, caption}` in
+    the card-safe light panel; `sfRecallOnMiss` / `sfRecallBoard` show where it
+    already slots into a question card and a whiteboard card.
+  - **Guards**: `SFDiagramKit.legible` (phone floor), `uniqIds` (marker ids),
+    `polish` (uncrop, separate labels). Run a generated SVG through all three.
+  - **Labelling**: `lessonLabelQuestion` turns any drawing into a labelling
+    card; it reads `lessonPicture()`, so point it at a generated picture.
+  - **Checking**: `.claude/skills/diagram/` - the standard, `craft.md`, the
+    audit (`scripts/audit.js`, paste into the console on a live card).
+
+  Rules the new path must keep:
+  - **Invariant 7.** Never draw a picture for a question BEFORE it is answered
+    if the picture could contain the answer - use `recallFor`'s leak test on
+    the generated SVG's labels, or only generate after a miss.
+  - **It must never block.** Same as lesson art: the card is whole without it;
+    the picture arrives when it arrives; failure shows nothing.
+  - **Cost and latency.** One call per request, ~5-15s. Cache by key, cache
+    null too, and never fire one per card automatically - trigger on a miss or
+    an explicit tap.
+  - **The model copies the example**, so a focused prompt with the audited
+    exemplar gets a picture; a buried one gets boxes (see "What generated art
+    still is not"). Keep it separate from the 29k day prompt.
+  - Render the result and look at it. The audit catches layout, not science -
+    three curated templates were plausible and wrong.
+
 
 - **THE ONE TO PICK UP FIRST: verify serial plan generation with the tab in
   front.** Measured twice against the live endpoint: three parallel
