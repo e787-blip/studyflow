@@ -2049,7 +2049,7 @@
     /* One passage, several questions against it - the shape reading
        comprehension is actually practised in. buildQueue expands this into a
        passage card followed by its questions. */
-    if (type === 'labeldiagram') return '{"type":"labeldiagram","question":"Label each numbered part.","drawing":{"title":"","w":440,"h":250,"shapes":[]},"pins":[{"x":0,"y":0,"answer":""},{"x":0,"y":0,"answer":""},{"x":0,"y":0,"answer":""}],"options":["",""],' + tail;
+    if (type === 'labeldiagram') return '{"type":"labeldiagram","question":"Label each numbered part.","drawing":{"title":"","w":400,"h":260,"shapes":[]},"pins":[{"x":0,"y":0,"answer":""},{"x":0,"y":0,"answer":""},{"x":0,"y":0,"answer":""}],"options":["",""],' + tail;
     if (type === 'readingset')  return '{"type":"readingset","title":"","passage":"","questions":[{"question":"What is the main idea of the passage?","options":["","","",""],"correctIndex":' + idx + ',"questionType":"main-idea"},{"question":"","options":["","","",""],"correctIndex":' + ((i + 1) % 4) + ',"questionType":"inference"},{"question":"","options":["","","",""],"correctIndex":' + ((i + 2) % 4) + ',"questionType":"vocab-in-context"}],' + tail;
     return '';
   }
@@ -3216,7 +3216,7 @@
         '   You draw it with the SAME shape vocabulary as "drawing" below, then put numbered\n' +
         '   pins on it and say what each pin is. The learner picks a label for each pin.\n' +
         '   {"type":"labeldiagram","question":"Label each numbered part.",\n' +
-        '    "drawing":{"title":"","w":440,"h":250,"shapes":[ ...same shapes as below... ]},\n' +
+        '    "drawing":{"title":"","w":400,"h":260,"shapes":[ ...same shapes as below... ]},\n' +
         '    "pins":[{"x":118,"y":92,"answer":"Palisade layer"},{"x":150,"y":140,"answer":"Spongy mesophyll"}],\n' +
         '    "options":["Xylem","Cuticle"],"explanation":""}\n' +
         '   - 2 to 6 pins. Each x,y must sit ON the part it names, inside the canvas.\n' +
@@ -3230,7 +3230,7 @@
         '   with a shape - a trebuchet, the layers of the atmosphere, an eye, a volcano, a\n' +
         '   bridge truss, a sarcomere, a castle keep, an orbit, a call stack - draw it, and\n' +
         '   draw the part THIS day is about rather than the whole subject.\n' +
-        '   Shape: {"type":"drawing","title":"short title","w":440,"h":250,"shapes":[ ... ]}\n' +
+        '   Shape: {"type":"drawing","title":"short title","w":400,"h":260,"shapes":[ ... ]}\n' +
         '   Canvas: x goes right from 0, y goes DOWN from 0. Keep everything inside w and h.\n' +
         '   Each entry in "shapes" is one of:\n' +
         '     {"s":"rect","x":,"y":,"w":,"h":,"r":8,"fill":"blueFill","stroke":"blue"}\n' +
@@ -3239,7 +3239,7 @@
         '     {"s":"line","x1":,"y1":,"x2":,"y2":,"stroke":"ink","sw":2,"arrow":true,"dash":true}\n' +
         '     {"s":"path","d":"M10 10 Q60 0 110 10","stroke":"ink","fill":"none","arrow":true}\n' +
         '     {"s":"poly","points":"10,90 60,20 110,90","fill":"faint","stroke":"ink"}\n' +
-        '     {"s":"text","x":,"y":,"t":"label","size":10,"anchor":"middle|start|end","fill":"ink"}\n' +
+        '     {"s":"text","x":,"y":,"t":"label","size":11,"anchor":"middle|start|end","fill":"ink"}\n' +
         '   COLOURS ARE NAMES, never hex. Pick from: ink muted rule paper faint,\n' +
         '   blue blueFill blueInk, green greenFill greenInk, red redFill redInk,\n' +
         '   violet violetFill violetInk, teal tealFill tealInk, amber amberFill amberInk,\n' +
@@ -3252,19 +3252,52 @@
         '     - Put labels in empty space, not on top of the thing they name. Leave 12 units.\n' +
         '     - Draw the thing, then label it. Do not draw a box and write a noun in it -\n' +
         '       that is what the custom layouts are for and they do it better.\n' +
-        '   Worked example - the layers of the atmosphere:\n' +
-        '   {"type":"drawing","title":"Layers of the atmosphere","w":400,"h":250,"shapes":[\n' +
-        '     {"s":"rect","x":40,"y":30,"w":230,"h":40,"fill":"violetFill","stroke":"violet"},\n' +
-        '     {"s":"rect","x":40,"y":76,"w":230,"h":40,"fill":"blueFill","stroke":"blue"},\n' +
-        '     {"s":"rect","x":40,"y":122,"w":230,"h":40,"fill":"tealFill","stroke":"teal"},\n' +
-        '     {"s":"rect","x":40,"y":168,"w":230,"h":40,"fill":"greenFill","stroke":"green"},\n' +
-        '     {"s":"line","x1":40,"y1":214,"x2":270,"y2":214,"stroke":"ink","sw":2.5},\n' +
-        '     {"s":"text","x":155,"y":55,"t":"Thermosphere","size":11,"fill":"violetInk"},\n' +
-        '     {"s":"text","x":155,"y":101,"t":"Mesosphere","size":11,"fill":"blueInk"},\n' +
-        '     {"s":"text","x":155,"y":147,"t":"Stratosphere","size":11,"fill":"tealInk"},\n' +
-        '     {"s":"text","x":155,"y":193,"t":"Troposphere","size":11,"fill":"greenInk"},\n' +
-        '     {"s":"text","x":282,"y":147,"t":"ozone layer","size":9,"anchor":"start","fill":"muted"},\n' +
-        '     {"s":"text","x":282,"y":193,"t":"weather, clouds","size":9,"anchor":"start","fill":"muted"}]}\n' +
+        /* THE EXAMPLE IS THE PART THE MODEL OBEYS. This one used to be the
+           atmosphere as four rectangles in four hues with a noun in each -
+           directly under a rule saying "do not draw a box and write a noun in
+           it". Plan-time drawings came back as boxes, and this was why. It is
+           now the same topic drawn properly: the Earth's curve, sky bands
+           tinted one blue by altitude, a real object at each height, labels in
+           a right-hand column at size 11 on a 400-wide canvas. Generated from
+           .claude/skills/diagram/references/exemplar-atmosphere.json, where it
+           was rendered and audited clean; change it there and regenerate. */
+        '   RULES THAT MAKE IT READABLE ON A PHONE: w at most 400, every text size 11 or more.\n' +
+        '   At w 440 a size-9 label is 7px on a phone. At least 6 shapes must be path or poly;\n' +
+        '   never an acronym inside a circle; ONE colour family unless a second means something\n' +
+        '   (water blue, heat red). Decide where labels go FIRST - e.g. drawing left, labels in a\n' +
+        '   right-hand column - so no label can land on the drawing.\n' +
+        '   Worked example - the layers of the atmosphere, DRAWN, not boxed:\n' +
+        '   {"type":"drawing","title":"The atmosphere in cross-section","w":400,"h":300,"shapes":[\n' +
+        '     {"s":"path","d":"M0 112 Q200 86 400 112 L400 48 Q200 22 0 48 Z","fill":"blueFill","stroke":"none","opacity":0.28},\n' +
+        '     {"s":"path","d":"M0 168 Q200 142 400 168 L400 112 Q200 86 0 112 Z","fill":"blueFill","stroke":"none","opacity":0.45},\n' +
+        '     {"s":"path","d":"M0 224 Q200 198 400 224 L400 168 Q200 142 0 168 Z","fill":"blueFill","stroke":"none","opacity":0.64},\n' +
+        '     {"s":"path","d":"M0 300 L400 300 L400 224 Q200 198 0 224 Z","fill":"blueFill","stroke":"none","opacity":0.85},\n' +
+        '     {"s":"path","d":"M0 224 Q200 198 400 224","fill":"none","stroke":"blue","sw":1,"opacity":0.55},\n' +
+        '     {"s":"path","d":"M0 168 Q200 142 400 168","fill":"none","stroke":"blue","sw":1,"opacity":0.55},\n' +
+        '     {"s":"path","d":"M0 112 Q200 86 400 112","fill":"none","stroke":"blue","sw":1,"opacity":0.55},\n' +
+        '     {"s":"path","d":"M0 278 Q38 272 74 274 L116 232 L158 272 Q286 266 400 274 L400 300 L0 300 Z","fill":"greenFill","stroke":"green","sw":2},\n' +
+        '     {"s":"path","d":"M116 232 L132 248 L124 250 L136 262 L116 260 L96 262 L108 250 L100 248 Z","fill":"paper","stroke":"green","sw":1.2,"opacity":0.92},\n' +
+        '     {"s":"poly","points":"22 237 32 231 78 229 92 233 78 238 32 240","fill":"paper","stroke":"ink","sw":1.3},\n' +
+        '     {"s":"poly","points":"24 236 28 221 40 232","fill":"paper","stroke":"ink","sw":1.3},\n' +
+        '     {"s":"poly","points":"50 234 58 247 70 247 64 234","fill":"paper","stroke":"ink","sw":1.3},\n' +
+        '     {"s":"circle","x":196,"y":250,"r":11,"fill":"paper","stroke":"rule","sw":1.2},\n' +
+        '     {"s":"circle","x":213,"y":244,"r":15,"fill":"paper","stroke":"rule","sw":1.2},\n' +
+        '     {"s":"circle","x":232,"y":250,"r":11,"fill":"paper","stroke":"rule","sw":1.2},\n' +
+        '     {"s":"path","d":"M24 202 Q92 186 160 196","fill":"none","stroke":"blue","sw":2.2,"dash":true},\n' +
+        '     {"s":"circle","x":214,"y":174,"r":13,"fill":"paper","stroke":"ink","sw":1.4},\n' +
+        '     {"s":"line","x1":214,"y1":187,"x2":214,"y2":197,"stroke":"rule","sw":1},\n' +
+        '     {"s":"rect","x":208,"y":197,"w":12,"h":8,"r":2,"fill":"paper","stroke":"ink","sw":1.2},\n' +
+        '     {"s":"path","d":"M150 110 L206 150","fill":"none","stroke":"red","sw":2.6},\n' +
+        '     {"s":"circle","x":206,"y":150,"r":5,"fill":"red","stroke":"red","sw":1},\n' +
+        '     {"s":"rect","x":132,"y":60,"w":24,"h":14,"r":2,"fill":"paper","stroke":"ink","sw":1.3},\n' +
+        '     {"s":"rect","x":106,"y":63,"w":22,"h":8,"fill":"blueFill","stroke":"blue","sw":1.1},\n' +
+        '     {"s":"rect","x":160,"y":63,"w":22,"h":8,"fill":"blueFill","stroke":"blue","sw":1.1},\n' +
+        '     {"s":"text","x":392,"y":80,"t":"Thermosphere · 85 km up","size":11,"anchor":"end","fill":"ink"},\n' +
+        '     {"s":"text","x":392,"y":140,"t":"Mesosphere · 50–85 km","size":11,"anchor":"end","fill":"ink"},\n' +
+        '     {"s":"text","x":392,"y":196,"t":"Stratosphere · 12–50 km","size":11,"anchor":"end","fill":"ink"},\n' +
+        '     {"s":"text","x":392,"y":252,"t":"Troposphere · 0–12 km","size":11,"anchor":"end","fill":"ink"},\n' +
+        '     {"s":"text","x":24,"y":182,"t":"Ozone layer","size":11,"anchor":"start","fill":"ink"},\n' +
+        '     {"s":"text","x":144,"y":120,"t":"Meteors burn up","size":11,"anchor":"end","fill":"ink"}]}\n' +
         '   Use {"type":"none"} only when the topic genuinely cannot be drawn.\n' +
         '6. concepts: 3-5 items each {name,definition,why,misconception,visual}.\n' +
         '   These are the MAIN IDEAS. They open the session on their own card, one numbered\n' +

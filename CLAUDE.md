@@ -43,6 +43,16 @@ while the module itself tested fine from the console.
 
 ## Design system
 
+**This section overrides the design skills in `.claude/skills/`**
+(`design-taste-frontend`, `redesign-existing-projects`). They are third-party
+and written for greenfield React + Next.js + Tailwind sites, so several of
+their defaults contradict decisions already made here: they ban Instrument
+Serif, discourage a blue accent, forbid linking Google Fonts, add hover motion
+to buttons and ban em dashes in copy. Where they disagree with this section or
+the stack table, this file wins. Use them in **Redesign – Preserve** mode, for
+ideas about layout, spacing and copy, never as a reason to change the brand,
+the fonts or the no-build-step stack.
+
 - Brand blue `#4a7cf6`, ink `#1a1d2e`
 - Fonts: Instrument Serif (headings), DM Sans (body)
 - Card hover: blue border only. **No pop/scale transform** — this was a deliberate
@@ -718,7 +728,7 @@ The cause was not the instructions. **`artPromptFor` had no example at all**,
 and the only example in `app.html` was "layers of the atmosphere" drawn as
 four rectangles. The model was being shown boxes and told not to draw boxes.
 
-Both prompts now carry **a leaf in cross-section** — a curved outline,
+The lesson-entry art prompt carries **a leaf in cross-section** — a curved outline,
 palisade columns, spongy cells, a vascular bundle, guard cells, every label
 outside on a leader line. It was rendered and looked at before being pasted
 in. Three checkable rules sit beside it:
@@ -732,6 +742,58 @@ in. Three checkable rules sit beside it:
 
 If drawings go back to being boxes, check the example first. It is the part
 the model actually obeys.
+
+**The DAY prompt in `app.html` still showed boxes until Sept 2026.** This file
+said both prompts carried the leaf; only `artPromptFor` did. `app.html`'s
+worked example was the atmosphere as four rectangles in four hues with a noun
+in each, directly under "do not draw a box and write a noun in it" - which is
+the whole explanation for "the plan-time drawing was boxes with nouns in them"
+in Open items. It now carries the audited atmosphere drawing, generated from
+`.claude/skills/diagram/references/exemplar-atmosphere.json`, and both prompts
+now say it in numbers: **w at most 400, text size 11 or more.**
+
+### The diagram kit's visual language, and the guards behind it
+
+The kit (`SFDiagramKit`) used to hand out six hues in rotation (`PAL`), draw at
+up to 620 units wide with 9-11pt type, and every curated template set its
+annotations at 8px. Rendered on a phone, the smallest labels were 4.5-7px and
+every flow chart was a rainbow. What replaced it:
+
+- **One hue.** `pal(i, n)` is a tint ramp used only where items have an order;
+  `pal()` one flat tint; `FOCAL` (solid `#3563e9`, white type) the one node a
+  diagram is about; `OTHER` (slate) the second set of a compare or venn. No
+  amber anywhere in the kit, so nothing it draws can put amber on a board.
+- **`MAX_W = 400`**, node type 12, secondary 10.5, titles in Instrument Serif.
+- **`legible(svg)` - the phone floor.** Raises any font-size that would land
+  under 9px on a 375px phone, per SVG, from its own viewBox and max-width. Runs
+  in `generateDiagramSVG` and on `diagramForDay`'s direct template path (which
+  used to skip `polish()` too). `SFSceneKit` applies the same floor to model
+  drawings. It only raises.
+- **`uniqIds(svg)`.** Every marker id was fixed (`sfdkArrow`, `wvA`...), and
+  `url(#id)` resolves to the first in the DOCUMENT - so a hidden first diagram
+  took every later arrowhead with it. Ids are renamed per SVG at the exit.
+- **`wrap()` no longer drops words silently** past `maxLines`; the rest is cut
+  with a visible ellipsis. Hubs get three lines ("Causes of the French
+  Revolution" was reaching the hub as "Causes of the / French").
+- **Rotated labels carry their own `transform`** (`T(..., {rotate:-90})`).
+  Inside a rotated `<g>`, `polish()` read them as text at (0,0) and grew the
+  viewBox 35 units left.
+- Layout changes: `hierarchy` is a real pyramid; `parts` labels on leader
+  lines instead of pills; `concept` a focal hub; `timeline` runs down the card
+  with rows spaced by elapsed time (three or fewer short events still run
+  across); `graph` places each label by testing positions against the sampled
+  curve.
+
+**Three curated templates were factually wrong**, and correct-looking: the atom
+(2 protons, 8 electrons, shell 2 half-full beneath shell 3 - now carbon), the
+brain (cerebellum under the FRONT of the brain - now a lateral view with it at
+the back), and every plant-cell request (an animal cell captioned "no wall":
+the type match passed only "cell" to the matcher, so the plant test never
+fired - `curatedDiagramSVG(name, hint)` now takes variant words separately, and
+`cellType` is honoured). Also redrawn: neuron, memory model (vertical),
+photosynthesis labels, rock cycle (textured rocks), mitosis, water cycle (a
+landscape), plate tectonics (subduction, or the Earth's layers when the lesson
+is about the core), fractions, and the energy pyramid in one green.
 
 ### Labels get a halo, because placement is what the model gets wrong
 
@@ -1273,8 +1335,18 @@ equations appear nowhere in `day.questions`.
 
 ## Testing
 
-There's no test runner. Node is not installed on the dev machine. **The approach
-that works is a real browser**, which is also more faithful than a mock DOM —
+There's no test runner. Node is not installed on the dev machine - but macOS
+ships JavaScriptCore, which is enough to **parse-check every script block**:
+
+```bash
+/System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Helpers/jsc -e "new Function(readFile('block.js'))"
+```
+
+Run it on `app.html` as well as `lesson.html`. `app.html` went to production
+with a stray quote in `qtpl()`'s `readingset` line (commit `898c181`) and its
+one script block failed to parse - the plan-generation page was dead on the
+live site, `SyntaxError: Unexpected token ':'` in the console, and nothing here
+checked it. **The approach that works for behaviour is a real browser**, which is also more faithful than a mock DOM —
 `getBBox` and `getComputedTextLength` are real, so whiteboard scenes that look
 broken under a mock render correctly.
 
@@ -1377,9 +1449,10 @@ loaded rather than the functions called directly.
 ## Making diagrams
 
 There is a project skill for this: `.claude/skills/diagram/`. It covers picking
-a shape from the material rather than the subject, the kit's API, the specific
-traps (Bézier peaks, text anchoring, silent fallbacks, load order), and a
-preview script:
+a shape from the material rather than the subject, **the quality standard and
+how to draw a real thing** (`references/craft.md`, plus a worked exemplar that
+audits clean), the kit's API, the specific traps (Bézier peaks, text anchoring,
+silent fallbacks, load order), and a preview script:
 
 ```bash
 python3 .claude/skills/diagram/scripts/preview_diagrams.py --demo -o /tmp/p.html
@@ -1388,6 +1461,23 @@ python3 .claude/skills/diagram/scripts/preview_diagrams.py --demo -o /tmp/p.html
 That pulls the real kit out of `lesson.html` and renders any set of specs onto
 one page, so a diagram can be *looked at* rather than read. Use it — every
 diagram bug in this codebase read as correct code.
+
+**Every preview now audits itself.** `scripts/audit.js` runs against each
+rendered SVG and prints what is wrong underneath it: hue rotated through a
+series, nothing actually drawn, type size at phone width, labels colliding or
+sitting on a line, invisible text, clipping, dead space, and words that went
+into the spec and never came out. It runs in the browser because
+`getBoundingClientRect` and `getPointAtLength` are real there. Paste it into
+the console to audit a live lesson card: `SFAudit(document.querySelector('#lesson-art'))`.
+
+Before the Sept 2026 overhaul, 38 of 40 representative diagrams (every layout
+plus all 23 templates) had audit findings: rotating hues, sub-labels at
+4.5-7.3px on a phone, labels on curves, dropped words. After it, **zero
+failures** across the same 40 - the remaining warnings are hues that mean
+something (water blue, DNA's four bases). Keep it there: render the suite in
+`references/` after any drawing change. The audit is necessary and not
+sufficient - an ugly or WRONG diagram can pass every mechanical check (the atom
+did), so look at it, and check the science.
 
 ## The prompt budget
 

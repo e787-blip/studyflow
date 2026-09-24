@@ -2842,7 +2842,7 @@
       'call stack, a trebuchet, a river meander, the layers of the atmosphere, an orbit.\n' +
       'Draw the part THIS lesson covers, not the whole subject. Do NOT draw boxes with\n' +
       'nouns in them; that is a different feature and it does it better.\n' +
-      'Canvas: w 440, h 250. x goes right from 0, y goes DOWN from 0. Stay inside.\n' +
+      'Canvas: w 400, h 250. x goes right from 0, y goes DOWN from 0. Stay inside.\n' +
       'Shapes, each an entry in "shapes":\n' +
       '  {"s":"rect","x":,"y":,"w":,"h":,"r":8,"fill":"blueFill","stroke":"blue"}\n' +
       '  {"s":"circle","x":,"y":,"r":,"fill":"","stroke":""}\n' +
@@ -2850,7 +2850,7 @@
       '  {"s":"line","x1":,"y1":,"x2":,"y2":,"stroke":"ink","sw":2,"arrow":true,"dash":true}\n' +
       '  {"s":"path","d":"M10 10 Q60 0 110 10","stroke":"ink","fill":"none","arrow":true}\n' +
       '  {"s":"poly","points":"10,90 60,20 110,90","fill":"faint","stroke":"ink"}\n' +
-      '  {"s":"text","x":,"y":,"t":"label","size":10,"anchor":"middle|start|end","fill":"ink"}\n' +
+      '  {"s":"text","x":,"y":,"t":"label","size":11,"anchor":"middle|start|end","fill":"ink"}\n' +
       'COLOURS ARE NAMES, never hex: ink muted rule paper faint, blue blueFill blueInk,\n' +
       'green greenFill greenInk, red redFill redInk, violet violetFill violetInk,\n' +
       'teal tealFill tealInk, amber amberFill amberInk, pink pinkFill pinkInk, none.\n' +
@@ -2895,12 +2895,14 @@
       '    the label to the part: {"s":"line","stroke":"rule","sw":1}.\n' +
       '  - A label must touch or point at the thing it names. A word floating\n' +
       '    in space near nothing is worse than no label.\n' +
+      '  - This is read on a PHONE: keep w at most 400 and every text size 11\n' +
+      '    or more. A size-9 label on a 440-wide canvas is 7px - unreadable.\n' +
       'If this lesson is purely abstract and there is genuinely nothing to draw,\n' +
       'return {"type":"none"} rather than inventing a picture.\n\n' +
       'This is the LEVEL of drawing expected - a leaf in cross-section. Note the\n' +
       'curved outline, the real internal structures, and every label sitting\n' +
       'outside on a leader line. Match this for YOUR topic, whatever it is:\n' +
-      '{"type":"drawing","title":"A leaf in cross-section","w":440,"h":250,"shapes":[\n' +
+      '{"type":"drawing","title":"A leaf in cross-section","w":400,"h":250,"shapes":[\n' +
       ' {"s":"path","d":"M60 70 Q220 52 380 70 L380 168 Q220 186 60 168 Z","fill":"greenFill","stroke":"green","sw":2},\n' +
       ' {"s":"path","d":"M60 70 Q220 52 380 70","stroke":"ink","sw":2.5,"fill":"none"},\n' +
       ' {"s":"path","d":"M92 78 Q96 74 100 78 L100 112 Q96 116 92 112 Z","fill":"paper","stroke":"green"},\n' +
@@ -2914,13 +2916,13 @@
       ' {"s":"path","d":"M300 168 Q308 156 316 168","stroke":"green","sw":2.5,"fill":"none"},\n' +
       ' {"s":"path","d":"M324 168 Q332 156 340 168","stroke":"green","sw":2.5,"fill":"none"},\n' +
       ' {"s":"line","x1":118,"y1":74,"x2":118,"y2":48,"stroke":"rule","sw":1},\n' +
-      ' {"s":"text","x":118,"y":42,"t":"Palisade cells","size":9,"fill":"ink"},\n' +
+      ' {"s":"text","x":118,"y":42,"t":"Palisade cells","size":12,"fill":"ink"},\n' +
       ' {"s":"line","x1":150,"y1":150,"x2":150,"y2":196,"stroke":"rule","sw":1},\n' +
-      ' {"s":"text","x":150,"y":208,"t":"Spongy mesophyll","size":9,"fill":"ink"},\n' +
+      ' {"s":"text","x":150,"y":208,"t":"Spongy mesophyll","size":12,"fill":"ink"},\n' +
       ' {"s":"line","x1":320,"y1":172,"x2":320,"y2":200,"stroke":"rule","sw":1},\n' +
-      ' {"s":"text","x":322,"y":212,"t":"Stoma and guard cells","size":9,"fill":"ink"}]}\n\n' +
+      ' {"s":"text","x":322,"y":212,"t":"Stoma and guard cells","size":12,"fill":"ink"}]}\n\n' +
       'Now draw YOUR lesson to that standard. Return exactly:\n' +
-      '{"type":"drawing","title":"short caption","w":440,"h":250,"shapes":[...]}';
+      '{"type":"drawing","title":"short caption","w":400,"h":250,"shapes":[...]}';
   }
 
   function requestLessonArt(d) {
@@ -8710,18 +8712,29 @@
       s = String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
       maxLines = maxLines || 3;
       if (!s) return [''];
-      var words = s.split(' '), lines = [], cur = '', i, trial;
+      var words = s.split(' '), lines = [], cur = '', i, trial, spill = false;
       for (i = 0; i < words.length; i++) {
         trial = cur ? cur + ' ' + words[i] : words[i];
         if (cur && measure(trial, size, weight) > maxW) {
           lines.push(cur);
           cur = words[i];
-          if (lines.length === maxLines) break;
+          if (lines.length === maxLines) { spill = true; break; }
         } else {
           cur = trial;
         }
       }
-      if (cur && lines.length < maxLines) lines.push(cur);
+      /* Out of lines with words still to place. This used to just stop, and
+         the words were gone without a mark: "Causes of the French Revolution"
+         reached the hub as "Causes of the / French", a complete-looking label
+         naming the wrong thing. Glue the rest onto the last line instead, so
+         the width check below cuts it WITH an ellipsis - still a loss, but a
+         visible one. Callers that must show the whole phrase ask for more
+         lines. */
+      if (spill) {
+        lines[lines.length - 1] += ' ' + words.slice(i).join(' ');
+      } else if (cur && lines.length < maxLines) {
+        lines.push(cur);
+      }
       if (!lines.length) lines = [s];
       /* Anything still too wide gets cut, but visibly — a silently clipped label
          reads as a complete (and wrong) one. */
@@ -8937,6 +8950,64 @@
       return svg.replace(open, next);
     }
 
+    /* THE PHONE FLOOR: no label renders under 9px on a 375px phone.
+
+       The curated templates were drawn at 380-500 units wide with their
+       annotations at 8px (used 145 times) and 9px - so on a phone, where the
+       board is width:100% of ~343px, "from the air" on the leaf landed at
+       5.8px and "nucleus" on the cell at 5.6px. They were drawn on a desktop
+       and looked at on a desktop.
+
+       A fixed bump cannot fix it: the same 8px is 9.2px in a 260-wide
+       template and 5.5px in a 500-wide one. So the floor is computed per SVG
+       from its own viewBox and its own max-width, and applied to every
+       font-size, attribute or style. It only ever raises. polish() runs
+       after it, so labels the bump pushes into each other are separated. */
+    /* UNIQUE IDS, per SVG. Every template shipped fixed marker ids ("wvA",
+       "nArr", "sfdkArrow") and url(#id) resolves to the FIRST element with
+       that id in the whole document. Two diagrams on one page share one
+       marker; if the first sits inside anything display:none, the marker
+       draws nothing and every arrow on the page after it loses its head.
+       Seen in the preview by hiding one card and watching a different card's
+       arrowheads vanish. Renaming at the exit covers every template, the
+       scene kit and anything added later. */
+    var USEQ = 0;
+    function uniqIds(svg) {
+      if (!svg || typeof svg !== 'string' || svg.indexOf('id="') === -1) return svg;
+      USEQ++;
+      var ids = {}, m, re = /\bid="([^"]+)"/g;
+      while ((m = re.exec(svg)) !== null) ids[m[1]] = 1;
+      var k;
+      for (k in ids) {
+        if (!ids.hasOwnProperty(k)) continue;
+        var nk = k + '_u' + USEQ;
+        var ek = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        svg = svg.replace(new RegExp('\\bid="' + ek + '"', 'g'), 'id="' + nk + '"')
+                 .replace(new RegExp('url\\(#' + ek + '\\)', 'g'), 'url(#' + nk + ')')
+                 .replace(new RegExp('href="#' + ek + '"', 'g'), 'href="#' + nk + '"');
+      }
+      return svg;
+    }
+
+    var PHONE_PX = 343, FLOOR_PX = 9;
+    function legible(svg) {
+      if (!svg || typeof svg !== 'string') return svg;
+      var head = /^\s*<svg\b[^>]*>/i.exec(svg);
+      if (!head) return svg;
+      var vb = /viewBox\s*=\s*"\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)/i.exec(head[0]);
+      if (!vb) return svg;
+      var W = parseFloat(vb[1]);
+      if (!(W > 0)) return svg;
+      var mw = /max-width\s*:\s*([\d.]+)px/i.exec(head[0]);
+      var shown = Math.min(PHONE_PX, mw ? parseFloat(mw[1]) : PHONE_PX);
+      var min = Math.ceil((FLOOR_PX * W / shown) * 10) / 10;
+      return svg.replace(/font-size(\s*=\s*"|\s*:\s*)([\d.]+)(px)?/g, function (all, sep, n, px) {
+        var v = parseFloat(n);
+        if (!(v < min)) return all;
+        return 'font-size' + sep + min + (px || '');
+      });
+    }
+
     /**
      * Run a finished SVG through the guardrails: one font, nothing clipped,
      * no label sitting on another label. Safe to call on any SVG string.
@@ -8963,32 +9034,68 @@
 
     /* ── §3 drawing primitives ─────────────────────────────────────────────── */
 
-    /* Rotation only - pal(i) cycles these so consecutive nodes stay apart.
-       Amber (#f59e0b) was the fourth entry and is deliberately gone: any
-       diagram with four or more items handed a node to it, and those diagrams
-       are what both whiteboards draw into, so the boards kept coming out
-       yellow however the boards' own palettes were set. Amber is still used
-       elsewhere in lesson.html where it MEANS something - hints, flagged
-       questions, the unsure button, the struggling header - and none of that
-       is touched. Six hues is still more rotation than any diagram needs. */
-    var PAL = [
-      { s: '#4a7cf6', f: '#eaf1ff', t: '#1e40af' },
-      { s: '#38bfa1', f: '#e6faf5', t: '#065f46' },
-      { s: '#7c3aed', f: '#f3ebff', t: '#5b21b6' },
-      { s: '#ec4899', f: '#fdeaf4', t: '#9d174d' },
-      { s: '#0891b2', f: '#e5f7fb', t: '#155e75' },
-      { s: '#ef4444', f: '#fdecec', t: '#991b1b' }
-    ];
-    function pal(i) { return PAL[((i % PAL.length) + PAL.length) % PAL.length]; }
+    /* ONE HUE. Colour is a signal here, not a decoration.
 
-    var INK = '#1a1d2e', MUTED = '#6b7280', RULE = '#cbd5e1';
-    var TITLE_SIZE = 13, NODE_SIZE = 11, SUB_SIZE = 9;
+       This used to be PAL: six hues - blue, teal, violet, pink, cyan, red -
+       handed out in rotation "so consecutive nodes stay apart". Rendered,
+       every flow chart was a rainbow of rounded boxes in which the colour
+       said nothing at all: node 3 was violet because it was third. On an app
+       whose whole palette is one blue, that rotation was the single loudest
+       thing marking these diagrams as generated. (It was also where amber
+       kept coming back onto the whiteboards, from its fourth slot.)
+
+       Now there is one hue, used three ways, and each way MEANS something:
+         - a TINT RAMP, pale to deep, only where the items have an order
+           (a flow's steps, a hierarchy's levels) - the colour then says
+           "this comes later / this is bigger";
+         - one uniform tint where they do not (a cycle, a hub's spokes);
+         - FOCAL, solid blue with white type, for the one thing the diagram
+           is about (a converge's outcome, a hub's centre). One per diagram.
+       A second, neutral slate exists solely for "the other side" of a
+       compare or venn, where two sets are the meaning.
+
+       Consecutive nodes still stay apart - by their borders and the gap
+       between them, which is what actually separated them all along. */
+    var TINTS = ['#f4f7ff', '#e9f0ff', '#dde7ff', '#d1defe', '#c3d4fd'];
+    var TONE = { s: '#9db6f7', t: '#1d3a8a' };
+    function pal(i, n) {
+      var k = 1;
+      if (n && n > 1) k = Math.round((Math.max(0, Math.min(i, n - 1)) / (n - 1)) * (TINTS.length - 1));
+      return { s: TONE.s, f: TINTS[k], t: TONE.t };
+    }
+    var FOCAL = { s: '#3563e9', f: '#3563e9', t: '#ffffff' };
+    var OTHER = { s: '#9aa6b8', f: '#f1f4f8', t: '#334155' };
+    var BRAND = '#4a7cf6';
+
+    var INK = '#1a1d2e', MUTED = '#5b6478', RULE = '#cbd5e1', LINK = '#9aabcc';
+    /* Sizes are set for a PHONE. The board is width:100% and the kit's
+       canvases run 300-400 units, so a phone draws them at 0.85-1.15x; at the
+       old 11 / 9 the secondary labels landed at 5.5-7px on a 375px screen and
+       nobody could read them. 10.5 is the floor for anything a learner is
+       meant to read. */
+    var TITLE_SIZE = 17, NODE_SIZE = 12, SUB_SIZE = 10.5;
+    var SERIF = "'Instrument Serif', Georgia, 'Times New Roman', serif";
+    /* No layout may be wider than this. W sets the scale on a phone, and
+       every unit past ~400 shrinks every label on the card. */
+    var MAX_W = 400;
 
     function T(x, y, s, o) {
       o = o || {};
+      /* A halo - a stroke in the paper colour drawn BEHIND the glyphs - so a
+         label stays readable where it has to sit near a line. Same device
+         SFSceneKit uses on model drawings, and maps use over terrain. */
+      var halo = o.halo ? ' stroke="#ffffff" stroke-width="3.2" stroke-linejoin="round" paint-order="stroke"' : '';
+      var fam = o.family ? ' font-family="' + o.family.replace(/"/g, "'") + '"' : '';
+      /* Rotation goes ON the text, never on a wrapping <g>. polish() reads
+         each label's x/y to uncrop the viewBox and skips any <text> carrying
+         a transform - but a label inside a rotated <g> has plain x="0" y="0",
+         so polish took the axis title for a word at the canvas origin and
+         grew the viewBox 35 units left to reach it, shrinking the whole graph
+         on a phone. */
+      var rot = o.rotate ? ' transform="rotate(' + o.rotate + ' ' + r1(x) + ' ' + r1(y) + ')"' : '';
       return '<text x="' + r1(x) + '" y="' + r1(y) + '" text-anchor="' + (o.anchor || 'middle') +
         '" font-size="' + (o.size || NODE_SIZE) + '" font-weight="' + (o.weight || 600) +
-        '" fill="' + (o.fill || INK) + '">' + esc(s) + '</text>';
+        '"' + fam + rot + ' fill="' + (o.fill || INK) + '"' + halo + '>' + esc(s) + '</text>';
     }
 
     function multiT(cx, cy, lines, o) {
@@ -9004,34 +9111,54 @@
 
     function roundRect(x, y, w, h, r, c, sw) {
       return '<rect x="' + r1(x) + '" y="' + r1(y) + '" width="' + r1(w) + '" height="' + r1(h) +
-        '" rx="' + (r === undefined ? 9 : r) + '" fill="' + c.f + '" stroke="' + c.s +
-        '" stroke-width="' + (sw || 1.8) + '"/>';
+        '" rx="' + (r === undefined ? 10 : r) + '" fill="' + c.f + '" stroke="' + c.s +
+        '" stroke-width="' + (sw || 1.3) + '"/>';
     }
 
+    /* Marker ids are unique PER SVG. They were all "sfdkArrow", and url(#id)
+       resolves to the first element with that id in the whole document - so
+       when the first diagram on a page sat inside anything display:none, the
+       marker it owned drew nothing and every arrow on every later diagram
+       lost its head. Found by hiding one preview card and watching a
+       different card's arrowheads vanish. */
+    var MSEQ = 0, AID = 'sfdkArrow0';
     function arrowDefs() {
+      /* A filled, slightly swept head. The old one was a grey equilateral
+         wedge at 6px - the default marker every diagram tool ships with. */
       return '<defs>' +
-        '<marker id="sfdkArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">' +
-        '<path d="M0 0 L10 5 L0 10 z" fill="' + MUTED + '"/></marker>' +
+        '<marker id="' + AID + '" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto">' +
+        '<path d="M1 1.5 L11 6 L1 10.5 L3.6 6 z" fill="' + LINK + '"/></marker>' +
         '</defs>';
     }
 
     function arrow(x1, y1, x2, y2) {
       return '<line x1="' + r1(x1) + '" y1="' + r1(y1) + '" x2="' + r1(x2) + '" y2="' + r1(y2) +
-        '" stroke="' + MUTED + '" stroke-width="1.8" stroke-linecap="round" marker-end="url(#sfdkArrow)"/>';
+        '" stroke="' + LINK + '" stroke-width="1.7" stroke-linecap="round" marker-end="url(#' + AID + ')"/>';
     }
 
     function open(w, h) {
+      MSEQ++;
+      AID = 'sfdkArrow' + MSEQ;
       return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + Math.round(w) + ' ' + Math.round(h) +
         '" width="100%" style="font-family:' + FONT + ';max-width:' + Math.round(Math.min(w * 1.15, 560)) +
         'px;display:block;margin:0 auto;">' + arrowDefs();
     }
 
+    /* The title is set in the app's heading face, so a diagram reads as part
+       of the lesson card it sits on rather than as an image pasted into it.
+       Measured as if it were DM Sans at 0.8 of the size, which is close to
+       Instrument Serif's real width and errs wide. */
     function titleBlock(title, w) {
       if (!title) return { svg: '', h: 6 };
-      var lines = wrap(title, w - 24, TITLE_SIZE, 700, 2);
-      var h = 10 + lines.length * TITLE_SIZE * 1.3;
-      return { svg: multiT(w / 2, 10 + (lines.length - 1) * TITLE_SIZE * 0.66, lines,
-        { size: TITLE_SIZE, weight: 700, fill: INK }), h: h };
+      var lines = wrap(title, w - 24, TITLE_SIZE * 0.8, 600, 2);
+      var lh = TITLE_SIZE * 1.12;
+      var h = 12 + lines.length * lh;
+      var out = '', i;
+      for (i = 0; i < lines.length; i++) {
+        out += T(w / 2, 4 + TITLE_SIZE * 0.82 + i * lh, lines[i],
+          { size: TITLE_SIZE, weight: 400, fill: INK, family: SERIF });
+      }
+      return { svg: out, h: h };
     }
 
     /* ── §4 archetype builders ─────────────────────────────────────────────── */
@@ -9085,7 +9212,9 @@
       var oCx = x1 + OW / 2, oCy = oY + oH / 2;
 
       for (i = 0; i < n; i++) {
-        var c = pal(i);
+        /* Causes share one tint: their order does not matter, so the colour
+           must not suggest one. */
+        var c = pal();
         svg += roundRect(x0, y, CW, causes[i].h, 9, c);
         svg += multiT(x0 + CW / 2, y + causes[i].h / 2, causes[i].lines,
                       { size: NODE_SIZE, weight: 700, fill: c.t });
@@ -9097,8 +9226,9 @@
         y += causes[i].h + VGAP;
       }
 
-      var oc = pal(5);
-      svg += roundRect(x1, oY, OW, oH, 11, oc, 2.2);
+      /* The outcome is what the diagram is ABOUT - the one focal node. */
+      var oc = FOCAL;
+      svg += roundRect(x1, oY, OW, oH, 12, oc, 0);
       svg += multiT(oCx, oCy, oLines, { size: NODE_SIZE + 0.5, weight: 700, fill: oc.t });
       return svg + '</svg>';
     }
@@ -9118,7 +9248,10 @@
       for (i = 0; i < n; i++) total += boxes[i].w;
       total += gap * (n - 1);
 
-      var horizontal = (n <= 4) && (total + MARGIN * 2 <= 620);
+      /* Horizontal only when it fits the phone-safe width. At the old 620
+         cap a four-step row drew at 0.55 scale on a phone and its 11pt
+         labels landed at 6px. */
+      var horizontal = (n <= 4) && (total + MARGIN * 2 <= MAX_W);
 
       if (horizontal) {
         var maxLines = 1;
@@ -9131,7 +9264,8 @@
         var svg = open(w, h) + tb.svg;
         var x = MARGIN;
         for (i = 0; i < n; i++) {
-          var c = pal(i);
+          /* Tint deepens along the chain: the colour says "later". */
+          var c = pal(i, n);
           svg += roundRect(x, top, boxes[i].w, bh, 9, c);
           svg += multiT(x + boxes[i].w / 2, top + bh / 2, boxes[i].lines,
             { size: NODE_SIZE, weight: 700, fill: c.t });
@@ -9161,7 +9295,7 @@
       hv += MARGIN;
       var out = open(wv, hv) + tbv.svg;
       for (i = 0; i < n; i++) {
-        var cc = pal(i);
+        var cc = pal(i, n);
         out += roundRect(MARGIN, y, bwv, hs[i], 9, cc);
         out += multiT(MARGIN + bwv / 2, y + hs[i] / 2, boxes[i].lines,
           { size: NODE_SIZE, weight: 700, fill: cc.t });
@@ -9261,13 +9395,14 @@
           var sx = cx + Rarc * Math.cos(a0), sy = cy + Rarc * Math.sin(a0);
           var ex = cx + Rarc * Math.cos(a1), ey = cy + Rarc * Math.sin(a1);
           svg += '<path d="M' + r1(sx) + ' ' + r1(sy) + ' A' + r1(Rarc) + ' ' + r1(Rarc) +
-            ' 0 0 1 ' + r1(ex) + ' ' + r1(ey) + '" fill="none" stroke="' + MUTED +
-            '" stroke-width="1.6" marker-end="url(#sfdkArrow)"/>';
+            ' 0 0 1 ' + r1(ex) + ' ' + r1(ey) + '" fill="none" stroke="' + LINK +
+            '" stroke-width="1.8" stroke-linecap="round" marker-end="url(#' + AID + ')"/>';
         }
       }
       for (i = 0; i < n; i++) {
-        var c = pal(i), b = boxes[i];
-        svg += roundRect(pts[i].x - b.w / 2, pts[i].y - b.h / 2, b.w, b.h, 8, c);
+        /* One tint: a cycle has no first step, so nothing may look first. */
+        var c = pal(), b = boxes[i];
+        svg += roundRect(pts[i].x - b.w / 2, pts[i].y - b.h / 2, b.w, b.h, 9, c);
         svg += multiT(pts[i].x, pts[i].y, b.lines, { size: NODE_SIZE, weight: 700, fill: c.t });
       }
       return svg + '</svg>';
@@ -9275,183 +9410,332 @@
 
     /* Ranked levels, widest at the base. */
     function buildHierarchy(title, items) {
+      /* An actual pyramid. It used to be rounded boxes of increasing width in
+         four unrelated hues - the pyramid implied, never drawn. A trapezoid
+         stack IS the claim: each level is wider than the one above because it
+         holds more, and the tint deepens toward the base for the same reason.
+         Widths come from one straight silhouette, so the sides are continuous
+         lines rather than a staircase. */
       var n = items.length, i;
-      var w = 380, inner = w - MARGIN * 2;
+      var w = 360, inner = w - MARGIN * 2;
       var tb = titleBlock(title, w);
-      var rows = [], gap = 10, y = tb.h + 6;
+      var gap = 4, top = tb.h + 8;
+      var topW = n === 1 ? inner : inner * 0.4;
+      var guessH = 40, guessTot = n * guessH + (n - 1) * gap;
+      function widthAt(t) { return topW + (inner - topW) * Math.max(0, Math.min(1, t)); }
+      var rows = [];
       for (i = 0; i < n; i++) {
-        var frac = n === 1 ? 1 : 0.48 + 0.52 * (i / (n - 1));   // narrow at top
-        var bw = inner * frac;
-        var ln = wrap(items[i], bw - 20, NODE_SIZE, 700, 2);
-        var bh = Math.max(34, 14 + ln.length * NODE_SIZE * 1.32);
-        rows.push({ lines: ln, w: bw, h: bh });
+        /* Wrap to the level's NARROWEST edge - its top - so no line of text
+           pokes through a slanted side. */
+        var tTop = guessTot ? (i * (guessH + gap)) / guessTot : 0;
+        var ln = wrap(items[i], Math.max(64, widthAt(tTop) - 34), NODE_SIZE, 700, 2);
+        rows.push({ lines: ln, h: Math.max(36, 16 + ln.length * NODE_SIZE * 1.3) });
       }
-      var h = y;
-      for (i = 0; i < n; i++) h += rows[i].h + (i < n - 1 ? gap : 0);
-      h += MARGIN;
+      var stackH = 0;
+      for (i = 0; i < n; i++) stackH += rows[i].h + (i < n - 1 ? gap : 0);
+      var h = top + stackH + MARGIN;
       var svg = open(w, h) + tb.svg;
+      var y = top, cx = w / 2;
       for (i = 0; i < n; i++) {
-        var c = pal(i), b = rows[i], x = (w - b.w) / 2;
-        svg += roundRect(x, y, b.w, b.h, 8, c);
-        svg += multiT(w / 2, y + b.h / 2, b.lines, { size: NODE_SIZE, weight: 700, fill: c.t });
-        y += b.h + gap;
+        var w0 = widthAt((y - top) / stackH), w1 = widthAt((y + rows[i].h - top) / stackH);
+        var c = pal(i, n);
+        svg += '<polygon points="' +
+          r1(cx - w0 / 2) + ',' + r1(y) + ' ' + r1(cx + w0 / 2) + ',' + r1(y) + ' ' +
+          r1(cx + w1 / 2) + ',' + r1(y + rows[i].h) + ' ' + r1(cx - w1 / 2) + ',' + r1(y + rows[i].h) +
+          '" fill="' + c.f + '" stroke="' + c.s + '" stroke-width="1.3" stroke-linejoin="round"/>';
+        svg += multiT(cx, y + rows[i].h / 2, rows[i].lines, { size: NODE_SIZE, weight: 700, fill: c.t });
+        y += rows[i].h + gap;
       }
       return svg + '</svg>';
     }
 
     /* Two things contrasted, side by side. */
     function buildCompare(title, left, right) {
-      var colW = 178, gap = 22, w = colW * 2 + gap + MARGIN * 2;
+      var colW = 172, gap = 16, w = colW * 2 + gap + MARGIN * 2;
       var tb = titleBlock(title, w);
       var top = tb.h + 6;
       var cols = [left, right], i, j;
-      var HSZ = NODE_SIZE + 1, rowH = 24, maxRows = 0, headLines = [], headMax = 1;
+      var HSZ = NODE_SIZE + 1, ISZ = SUB_SIZE + 0.5, lh = ISZ * 1.3;
+      var headLines = [], headMax = 1, bodies = [], bodyMax = 0;
       for (i = 0; i < 2; i++) {
-        maxRows = Math.max(maxRows, cols[i].items.length);
-        headLines.push(wrap(cols[i].title, colW - 20, HSZ, 700, 2));
+        headLines.push(wrap(cols[i].title, colW - 24, HSZ, 700, 2));
         headMax = Math.max(headMax, headLines[i].length);
+        /* Items may take two lines. They were forced onto one at 10pt, so a
+           long trait was cut with an ellipsis mid-word. */
+        var body = [], hI = 12;
+        for (j = 0; j < cols[i].items.length; j++) {
+          var il = wrap(cols[i].items[j], colW - 34, ISZ, 500, 2);
+          body.push(il);
+          hI += il.length * lh + 9;
+        }
+        bodies.push(body);
+        bodyMax = Math.max(bodyMax, hI);
       }
-      /* Header band sized to the taller of the two headings, so both columns
-         keep the same divider line and a long subject name still fits. */
-      var headH = 14 + headMax * HSZ * 1.32;
-      var bodyH = Math.max(1, maxRows) * rowH + 12;
+      var headH = 16 + headMax * HSZ * 1.25;
+      var bodyH = Math.max(26, bodyMax);
       var h = top + headH + bodyH + MARGIN;
       var svg = open(w, h) + tb.svg;
       for (i = 0; i < 2; i++) {
-        var c = pal(i === 0 ? 0 : 3);
+        /* Two sets ARE the meaning, so two colours are earned here: the brand
+           tint for the first, a neutral slate for the second. */
+        var c = i === 0 ? { s: TONE.s, f: TINTS[2], t: TONE.t } : OTHER;
         var x = MARGIN + i * (colW + gap);
-        svg += '<rect x="' + r1(x) + '" y="' + top + '" width="' + colW + '" height="' + r1(headH + bodyH) +
-          '" rx="10" fill="' + c.f + '" stroke="' + c.s + '" stroke-width="1.8"/>';
+        svg += '<rect x="' + r1(x) + '" y="' + r1(top) + '" width="' + colW + '" height="' +
+          r1(headH + bodyH) + '" rx="12" fill="#ffffff" stroke="' + c.s + '" stroke-width="1.3"/>';
+        /* Header band: a rounded rect for the top corners, squared off below. */
+        svg += '<rect x="' + r1(x + 0.65) + '" y="' + r1(top + 0.65) + '" width="' + r1(colW - 1.3) +
+          '" height="' + r1(headH) + '" rx="11.5" fill="' + c.f + '"/>';
+        svg += '<rect x="' + r1(x + 0.65) + '" y="' + r1(top + headH - 12) + '" width="' + r1(colW - 1.3) +
+          '" height="12" fill="' + c.f + '"/>';
         svg += '<line x1="' + r1(x) + '" y1="' + r1(top + headH) + '" x2="' + r1(x + colW) +
-          '" y2="' + r1(top + headH) + '" stroke="' + c.s + '" stroke-width="1.2" stroke-opacity=".5"/>';
+          '" y2="' + r1(top + headH) + '" stroke="' + c.s + '" stroke-width="1.1"/>';
         svg += multiT(x + colW / 2, top + headH / 2, headLines[i], { size: HSZ, weight: 700, fill: c.t });
-        for (j = 0; j < cols[i].items.length; j++) {
-          var il = wrap(cols[i].items[j], colW - 26, SUB_SIZE + 1, 500, 1);
-          svg += '<circle cx="' + r1(x + 14) + '" cy="' + r1(top + headH + 14 + j * rowH - 3) +
-            '" r="2.6" fill="' + c.s + '"/>';
-          svg += T(x + 24, top + headH + 14 + j * rowH, il[0],
-            { size: SUB_SIZE + 1, weight: 500, fill: INK, anchor: 'start' });
+        var yy = top + headH + 12 + ISZ * 0.8;
+        for (j = 0; j < bodies[i].length; j++) {
+          svg += '<circle cx="' + r1(x + 15) + '" cy="' + r1(yy - ISZ * 0.33) + '" r="2.8" fill="' +
+            (i === 0 ? BRAND : c.s) + '"/>';
+          var k;
+          for (k = 0; k < bodies[i][j].length; k++) {
+            svg += T(x + 25, yy + k * lh, bodies[i][j][k], { size: ISZ, weight: 500, fill: INK, anchor: 'start' });
+          }
+          yy += bodies[i][j].length * lh + 9;
         }
       }
       return svg + '</svg>';
     }
 
-    /* Ordered events on an axis, alternating sides so labels never collide. */
+    /* Ordered events, dated where the dates are known. */
     function buildTimeline(title, items) {
-      var n = items.length, i;
-      var slot = 122, w = Math.max(340, MARGIN * 2 + slot * n);
-      var tb = titleBlock(title, w);
-      var SZ = SUB_SIZE + 1, STEM = 22;
+      /* DOWN the card, with the date set as the heading of each row.
 
-      /* Measure every marker first so the canvas is exactly as tall as needed. */
-      var marks = [], aboveMax = 0, belowMax = 0;
+         It ran across: one 122-unit slot per event, labels alternating above
+         and below the axis. Four events drew 516 wide - on a phone that is a
+         0.66 scale and 10pt labels at 6.6px; six events came out at 4.5px.
+         And the date, which is the entire point of a timeline, was just the
+         first word of a label in a box.
+
+         Three or fewer short events still run across when that fits the
+         phone-safe width, because a short row reads faster than a column. */
+      var n = items.length, i;
+      var DATE = /^\s*((?:c\.\s*)?\d{1,4}s?(?:\s*(?:BCE|BC|CE|AD))?)(?=[\s:,.–—-])[\s:,.–—-]*(.+)$/i;
+      var rows = [], dated = 0;
       for (i = 0; i < n; i++) {
-        var ln = wrap(items[i], slot - 26, SZ, 700, 3);
-        var bh = 12 + ln.length * SZ * 1.32;
-        var bw = Math.max(56, widestLine(ln, SZ, 700) + 22);
-        var above = i % 2 === 0;
-        marks.push({ lines: ln, w: bw, h: bh, above: above });
-        if (above) aboveMax = Math.max(aboveMax, bh);
-        else belowMax = Math.max(belowMax, bh);
+        var m = DATE.exec(items[i]);
+        if (m) { rows.push({ date: clean(m[1]), text: clean(m[2]) }); dated++; }
+        else rows.push({ date: '', text: clean(items[i]) });
+      }
+      /* A date column only when most rows have one; otherwise the dates stay
+         in the text, where they were written. */
+      if (dated * 2 < n) {
+        for (i = 0; i < n; i++) if (rows[i].date) { rows[i].text = rows[i].date + ' ' + rows[i].text; rows[i].date = ''; }
+      }
+      var useDates = dated * 2 >= n;
+
+      var SZ = SUB_SIZE + 1, DSZ = NODE_SIZE + 0.5, i2;
+
+      /* Across, when it fits. */
+      if (n <= 3) {
+        var slot = 118, wA = MARGIN * 2 + slot * n;
+        if (wA <= MAX_W) {
+          var tbA = titleBlock(title, wA);
+          var mk = [], hMax = 0;
+          for (i = 0; i < n; i++) {
+            var lnA = wrap(rows[i].text, slot - 16, SZ, 600, 3);
+            mk.push(lnA);
+            hMax = Math.max(hMax, lnA.length);
+          }
+          var axisY = tbA.h + 14 + (useDates ? DSZ + 12 : 6);
+          var hA = axisY + 16 + hMax * SZ * 1.3 + MARGIN;
+          var svgA = open(wA, hA) + tbA.svg;
+          svgA += '<line x1="' + MARGIN + '" y1="' + r1(axisY) + '" x2="' + r1(wA - MARGIN) + '" y2="' + r1(axisY) +
+            '" stroke="' + TINTS[4] + '" stroke-width="3" stroke-linecap="round"/>';
+          for (i = 0; i < n; i++) {
+            var xA = MARGIN + slot * (i + 0.5);
+            if (useDates && rows[i].date) {
+              svgA += T(xA, axisY - 13, rows[i].date, { size: DSZ, weight: 700, fill: FOCAL.s });
+            }
+            svgA += '<circle cx="' + r1(xA) + '" cy="' + r1(axisY) + '" r="5.5" fill="#ffffff" stroke="' +
+              BRAND + '" stroke-width="2.6"/>';
+            for (i2 = 0; i2 < mk[i].length; i2++) {
+              svgA += T(xA, axisY + 22 + i2 * SZ * 1.3, mk[i][i2], { size: SZ, weight: 600, fill: INK });
+            }
+          }
+          return svgA + '</svg>';
+        }
       }
 
-      var axisY = tb.h + 8 + aboveMax + STEM;
-      var h = axisY + STEM + belowMax + MARGIN;
-      var svg = open(w, h) + tb.svg;
-      svg += '<line x1="' + MARGIN + '" y1="' + r1(axisY) + '" x2="' + r1(w - MARGIN) +
-        '" y2="' + r1(axisY) + '" stroke="' + RULE + '" stroke-width="2.5" stroke-linecap="round"/>';
-
+      /* Down. */
+      var railX = MARGIN + 7, dateX = railX + 16, dateW = 0;
+      if (useDates) {
+        for (i = 0; i < n; i++) dateW = Math.max(dateW, measure(rows[i].date, DSZ, 700));
+        dateW += 12;
+      }
+      var textX = dateX + dateW;
+      var textW = Math.max(150, MAX_W - 40 - textX - MARGIN);
+      var lh = SZ * 1.3, widest = 0, laid = [];
       for (i = 0; i < n; i++) {
-        var c = pal(i), m = marks[i];
-        var x = MARGIN + slot * (i + 0.5);
-        var by = m.above ? axisY - STEM - m.h : axisY + STEM;
-        svg += '<line x1="' + r1(x) + '" y1="' + r1(m.above ? by + m.h : axisY + 5) +
-          '" x2="' + r1(x) + '" y2="' + r1(m.above ? axisY - 5 : by) +
-          '" stroke="' + c.s + '" stroke-width="1.3" stroke-dasharray="3 2"/>';
-        svg += roundRect(x - m.w / 2, by, m.w, m.h, 7, c, 1.5);
-        svg += multiT(x, by + m.h / 2, m.lines, { size: SZ, weight: 700, fill: c.t });
-        svg += '<circle cx="' + r1(x) + '" cy="' + r1(axisY) + '" r="4.5" fill="#fff" stroke="' +
-          c.s + '" stroke-width="2.5"/>';
+        var ln = wrap(rows[i].text, textW, SZ, 500, 3);
+        laid.push(ln);
+        widest = Math.max(widest, widestLine(ln, SZ, 500));
+      }
+      var w = Math.max(200, Math.min(MAX_W, textX + widest + MARGIN));
+      var tb = titleBlock(title, w);
+
+      /* SPACED BY TIME, when every row has a year and they run forwards. Even
+         spacing said 1774 -> 1789 took as long as the Estates General -> the
+         Bastille, which were weeks apart; the whole lesson of that timeline
+         is that 1789 is a cluster. The square root keeps one long gap from
+         pushing everything else together. */
+      function yearOf(dt) {
+        var mm = /(\d{1,4})(s)?\s*(BCE|BC)?/i.exec(dt || '');
+        if (!mm) return null;
+        var v = parseInt(mm[1], 10);
+        return mm[3] ? -v : v;
+      }
+      var years = [], timed = useDates && n > 2, maxDiff = 0;
+      for (i = 0; i < n && timed; i++) {
+        var yv = yearOf(rows[i].date);
+        if (yv === null || (i && yv < years[i - 1])) timed = false;
+        else { years.push(yv); if (i) maxDiff = Math.max(maxDiff, yv - years[i - 1]); }
+      }
+      if (!maxDiff) timed = false;
+
+      var y = tb.h + 12, ys = [];
+      for (i = 0; i < n; i++) {
+        ys.push(y);
+        var need = Math.max(30, laid[i].length * lh + 14);
+        var extra = 6;
+        if (timed && i < n - 1) extra = 36 * Math.sqrt((years[i + 1] - years[i]) / maxDiff);
+        y += need + extra;
+      }
+      var h = y + MARGIN - 8;
+      var svg = open(w, h) + tb.svg;
+      var dot0 = ys[0] + SZ * 0.45, dotN = ys[n - 1] + SZ * 0.45;
+      svg += '<line x1="' + r1(railX) + '" y1="' + r1(dot0) + '" x2="' + r1(railX) + '" y2="' + r1(dotN) +
+        '" stroke="' + TINTS[4] + '" stroke-width="3" stroke-linecap="round"/>';
+      for (i = 0; i < n; i++) {
+        var base = ys[i] + SZ * 0.8;
+        svg += '<circle cx="' + r1(railX) + '" cy="' + r1(ys[i] + SZ * 0.45) + '" r="5.5" fill="#ffffff" stroke="' +
+          BRAND + '" stroke-width="2.6"/>';
+        if (useDates && rows[i].date) {
+          svg += T(dateX, base, rows[i].date, { size: DSZ, weight: 700, fill: FOCAL.s, anchor: 'start' });
+        }
+        for (i2 = 0; i2 < laid[i].length; i2++) {
+          svg += T(textX, base + i2 * lh, laid[i][i2], { size: SZ, weight: 500, fill: INK, anchor: 'start' });
+        }
       }
       return svg + '</svg>';
     }
 
     /* A whole and its named components. */
     function buildParts(title, center, items) {
+      /* Labels on LEADER LINES, the way a textbook labels a drawing.
+
+         Each part used to sit in its own coloured pill, joined to a grey
+         ellipse by a dashed line in the pill's colour - four hues and four
+         boxes around a blob. It read as a mind map, not as a thing with parts.
+         Now the whole is the one tinted shape on the card and each part is a
+         name with a thin line running INTO it, ending on a dot. */
       var n = items.length, i;
-      var colW = 132, w = 430;
-      var tb = titleBlock(title, w);
-      var top = tb.h + 8;
+      var LSZ = SUB_SIZE + 1, lh = LSZ * 1.25, colW = 100, gapX = 20;
       var perSide = Math.ceil(n / 2);
+      var labs = [];
+      for (i = 0; i < n; i++) labs.push(wrap(items[i], colW, LSZ, 700, 2));
+      var cl = wrap(center, 124, NODE_SIZE + 1, 700, 3);
+      var rx = Math.max(62, widestLine(cl, NODE_SIZE + 1, 700) / 2 + 22);
       var rowH = 40;
-      var bodyH = Math.max(120, perSide * rowH + 16);
-      var h = top + bodyH + MARGIN;
+      var bodyH = Math.max(112, perSide * rowH + 16);
+      var ry = Math.max(46, bodyH / 2 - 6);
+      var w = MARGIN * 2 + colW * 2 + gapX * 2 + rx * 2;
+      var tb = titleBlock(title, w);
+      var top = tb.h + 4;
+      var h = top + bodyH + 6;
       var cx = w / 2, cy = top + bodyH / 2;
       var svg = open(w, h) + tb.svg;
 
-      var cl = wrap(center, 104, NODE_SIZE + 1, 700, 2);
-      var rx = Math.max(56, widestLine(cl, NODE_SIZE + 1, 700) / 2 + 18);
-      var ry = Math.max(40, bodyH / 2 - 14);
       svg += '<ellipse cx="' + r1(cx) + '" cy="' + r1(cy) + '" rx="' + r1(rx) + '" ry="' + r1(ry) +
-        '" fill="#eef2f9" stroke="' + INK + '" stroke-width="2" stroke-opacity=".55"/>';
-      svg += multiT(cx, cy, cl, { size: NODE_SIZE + 1, weight: 700, fill: INK });
+        '" fill="' + TINTS[2] + '" stroke="' + BRAND + '" stroke-width="1.6"/>';
+      svg += multiT(cx, cy, cl, { size: NODE_SIZE + 1, weight: 700, fill: TONE.t });
 
       for (i = 0; i < n; i++) {
-        var c = pal(i);
         var isLeft = i % 2 === 0;
         var idx = Math.floor(i / 2);
         var count = isLeft ? perSide : n - perSide;
-        var ln = wrap(items[i], colW - 22, SUB_SIZE + 1, 700, 2);
-        var bh = Math.max(28, 12 + ln.length * (SUB_SIZE + 1) * 1.32);
-        var by = cy - (count * rowH - rowH) / 2 + idx * rowH - bh / 2;
-        var bw = Math.max(70, widestLine(ln, SUB_SIZE + 1, 700) + 22);
-        var bx = isLeft ? MARGIN : w - MARGIN - bw;
+        var ty = cy - (count - 1) * rowH / 2 + idx * rowH;
+        var lines = labs[i];
+        var lx = isLeft ? MARGIN + colW : w - MARGIN - colW;
+        svg += multiT(lx, ty, lines, { size: LSZ, weight: 700, fill: INK, anchor: isLeft ? 'end' : 'start' });
 
-        /* Aim the leader at the point on the ellipse level with this label, so
-           the lines fan out instead of all stacking on one spot. */
-        var ty = by + bh / 2;
-        var dyN = Math.max(-1, Math.min(1, (ty - cy) / ry));
-        var ex = cx + (isLeft ? -1 : 1) * rx * Math.sqrt(Math.max(0, 1 - dyN * dyN));
-        var ey = cy + dyN * ry;
-        svg += '<line x1="' + r1(isLeft ? bx + bw : bx) + '" y1="' + r1(ty) +
-          '" x2="' + r1(ex) + '" y2="' + r1(ey) +
-          '" stroke="' + c.s + '" stroke-width="1.2" stroke-dasharray="3 2"/>';
-        svg += roundRect(bx, by, bw, bh, 7, c, 1.5);
-        svg += multiT(bx + bw / 2, by + bh / 2, ln, { size: SUB_SIZE + 1, weight: 700, fill: c.t });
+        /* The line ends INSIDE the whole, on a dot, pointing at the part -
+           not on the outline, which would name the edge. Aimed at the point
+           of the ellipse level with the label so the leaders fan out. */
+        var dyN = Math.max(-0.85, Math.min(0.85, (ty - cy) / ry));
+        var ex = cx + (isLeft ? -1 : 1) * rx * Math.sqrt(1 - dyN * dyN) * 0.8;
+        var ey = cy + dyN * ry * 0.8;
+        var sx = isLeft ? lx + 7 : lx - 7;
+        svg += '<line x1="' + r1(sx) + '" y1="' + r1(ty) + '" x2="' + r1(ex) + '" y2="' + r1(ey) +
+          '" stroke="' + INK + '" stroke-opacity=".55" stroke-width="1.1"/>';
+        svg += '<circle cx="' + r1(ex) + '" cy="' + r1(ey) + '" r="2.8" fill="' + INK + '"/>';
       }
       return svg + '</svg>';
     }
 
-    /* Fallback: a central idea with related terms radiating out. */
+    /* A central idea with related ideas at the ends of its spokes. */
     function buildConcept(title, center, items) {
+      /* The hub is the one focal mark - solid blue, white type - and the
+         related ideas sit at the ends of the spokes as plain labels beside a
+         dot. They were coloured pills in rotating hues, which made the five
+         things around a topic look like five different kinds of thing.
+
+         The hub may take three lines: at two, "Causes of the French
+         Revolution" was cut to "Causes of the / French", and nothing said so. */
       var n = items.length, i;
-      var size = 340, cx = size / 2;
-      var tb = titleBlock(title, size);
-      var cy = tb.h + size / 2;
-      var h = tb.h + size;
-      var svg = open(size, h) + tb.svg;
-      var R = 118;
-      var cl = wrap(center, 96, NODE_SIZE + 1, 700, 2);
-      for (i = 0; i < n; i++) {
-        var a = -Math.PI / 2 + i * 2 * Math.PI / n;
-        var x = cx + R * Math.cos(a), y = cy + R * Math.sin(a);
-        svg += '<line x1="' + r1(cx) + '" y1="' + r1(cy) + '" x2="' + r1(x) + '" y2="' + r1(y) +
-          '" stroke="' + RULE + '" stroke-width="1.4"/>';
+      var LSZ = SUB_SIZE + 1, lh = LSZ * 1.25;
+      var cl = wrap(center, 122, NODE_SIZE + 1, 700, 3);
+      var crx = Math.max(54, widestLine(cl, NODE_SIZE + 1, 700) / 2 + 18);
+      var cry = Math.max(30, cl.length * (NODE_SIZE + 1) * 1.3 / 2 + 13);
+
+      function layout(R, LW) {
+        var L = [], mnX = -crx, mxX = crx, mnY = -cry, mxY = cry, k;
+        for (k = 0; k < n; k++) {
+          var a = -Math.PI / 2 + k * 2 * Math.PI / n;
+          var dx = Math.cos(a), dy = Math.sin(a);
+          var px = R * dx, py = R * 0.8 * dy;
+          var ln = wrap(items[k], LW, LSZ, 700, 2);
+          var tw = widestLine(ln, LSZ, 700), th = ln.length * lh;
+          var anchor, tx, ty;
+          if (dx > 0.3) { anchor = 'start'; tx = px + 9; ty = py; }
+          else if (dx < -0.3) { anchor = 'end'; tx = px - 9; ty = py; }
+          else { anchor = 'middle'; tx = px; ty = dy < 0 ? py - 10 - th / 2 : py + 10 + th / 2; }
+          var x0 = anchor === 'start' ? tx : (anchor === 'end' ? tx - tw : tx - tw / 2);
+          mnX = Math.min(mnX, x0, px - 5); mxX = Math.max(mxX, x0 + tw, px + 5);
+          mnY = Math.min(mnY, ty - th / 2 - 2, py - 5); mxY = Math.max(mxY, ty + th / 2 + 2, py + 5);
+          L.push({ a: a, px: px, py: py, lines: ln, anchor: anchor, tx: tx, ty: ty });
+        }
+        return { L: L, minX: mnX, maxX: mxX, minY: mnY, maxY: mxY };
       }
-      for (i = 0; i < n; i++) {
-        var c = pal(i);
-        var aa = -Math.PI / 2 + i * 2 * Math.PI / n;
-        var xx = cx + R * Math.cos(aa), yy = cy + R * Math.sin(aa);
-        var ln = wrap(items[i], 104, SUB_SIZE + 1, 700, 2);
-        var bw = Math.max(56, widestLine(ln, SUB_SIZE + 1, 700) + 16);
-        var bh = Math.max(26, 11 + ln.length * (SUB_SIZE + 1) * 1.32);
-        svg += roundRect(xx - bw / 2, yy - bh / 2, bw, bh, 7, c, 1.5);
-        svg += multiT(xx, yy, ln, { size: SUB_SIZE + 1, weight: 700, fill: c.t });
+      /* Narrower label columns until the whole web fits the phone-safe width. */
+      var tries = [[100, 104], [92, 94], [86, 84], [80, 76]], lay = null, t;
+      for (t = 0; t < tries.length; t++) {
+        lay = layout(Math.max(tries[t][0], crx + 34), tries[t][1]);
+        if (lay.maxX - lay.minX + MARGIN * 2 <= MAX_W) break;
       }
-      var crx = Math.max(46, widestLine(cl, NODE_SIZE + 1, 700) / 2 + 16);
-      svg += '<ellipse cx="' + r1(cx) + '" cy="' + r1(cy) + '" rx="' + r1(crx) +
-        '" ry="30" fill="#fff" stroke="' + INK + '" stroke-width="2"/>';
-      svg += multiT(cx, cy, cl, { size: NODE_SIZE + 1, weight: 700, fill: INK });
+      var w = lay.maxX - lay.minX + MARGIN * 2;
+      var tb = titleBlock(title, w);
+      var ox = MARGIN - lay.minX, oy = tb.h + 8 - lay.minY;
+      var h = oy + lay.maxY + MARGIN;
+      var svg = open(w, h) + tb.svg;
+      for (i = 0; i < n; i++) {
+        var q = lay.L[i];
+        var hx = ox + crx * Math.cos(q.a), hy = oy + cry * Math.sin(q.a);
+        svg += '<line x1="' + r1(hx) + '" y1="' + r1(hy) + '" x2="' + r1(ox + q.px) + '" y2="' + r1(oy + q.py) +
+          '" stroke="' + LINK + '" stroke-width="1.5"/>';
+        svg += '<circle cx="' + r1(ox + q.px) + '" cy="' + r1(oy + q.py) + '" r="4" fill="' + BRAND + '"/>';
+        svg += multiT(ox + q.tx, oy + q.ty, q.lines, { size: LSZ, weight: 700, fill: INK, anchor: q.anchor });
+      }
+      svg += '<ellipse cx="' + r1(ox) + '" cy="' + r1(oy) + '" rx="' + r1(crx) + '" ry="' + r1(cry) +
+        '" fill="' + FOCAL.f + '"/>';
+      svg += multiT(ox, oy, cl, { size: NODE_SIZE + 1, weight: 700, fill: FOCAL.t });
       return svg + '</svg>';
     }
 
@@ -9485,18 +9769,23 @@
          than inventing values. */
       if (vals.length < 2) return null;
 
+      var LSZ = SUB_SIZE + 1;
       var labW = 0;
       for (i = 0; i < vals.length; i++) {
-        labW = Math.max(labW, measure(vals[i].label, SUB_SIZE + 1, 700));
+        labW = Math.max(labW, measure(vals[i].label, LSZ, 700));
       }
-      labW = Math.min(140, Math.max(52, labW + 8));
+      labW = Math.min(130, Math.max(52, labW + 8));
 
-      var barH = 22, gap = 12, valW = 40;
-      var plotW = 210;
+      /* One colour, solid, on a pale track the full length of the scale. The
+         bars were outlined pastel boxes in rotating hues - which made a chart
+         of one quantity look like a legend of several - and with no track the
+         eye had nothing to read a short bar against. */
+      var barH = 20, gap = 13, valW = 46;
+      var plotW = 180;
       var w = MARGIN + labW + 10 + plotW + valW + MARGIN;
       var tb = titleBlock(title, w);
       var top = tb.h + 8;
-      var h = top + vals.length * (barH + gap) + MARGIN;
+      var h = top + vals.length * (barH + gap) - gap + MARGIN;
       var svg = open(w, h) + tb.svg;
 
       var max = 0;
@@ -9504,20 +9793,17 @@
       if (!max) return null;
 
       var x0 = MARGIN + labW + 10;
-      /* Baseline, so the bars are read against something. */
-      svg += '<line x1="' + r1(x0) + '" y1="' + r1(top - 4) + '" x2="' + r1(x0) +
-        '" y2="' + r1(top + vals.length * (barH + gap) - gap + 4) +
-        '" stroke="' + RULE + '" stroke-width="1.4"/>';
-
       for (i = 0; i < vals.length; i++) {
-        var c = pal(i), y = top + i * (barH + gap);
+        var y = top + i * (barH + gap);
         var bw = Math.max(3, plotW * (Math.abs(vals[i].v) / max));
-        svg += '<rect x="' + r1(x0) + '" y="' + r1(y) + '" width="' + r1(bw) +
-          '" height="' + barH + '" rx="4" fill="' + c.f + '" stroke="' + c.s + '" stroke-width="1.6"/>';
-        svg += T(x0 - 8, y + barH / 2 + 3.5, vals[i].label,
-          { anchor: 'end', size: SUB_SIZE + 1, weight: 700, fill: INK });
-        svg += T(x0 + bw + 7, y + barH / 2 + 3.5, vals[i].shown,
-          { anchor: 'start', size: SUB_SIZE + 1, weight: 700, fill: c.t });
+        svg += '<rect x="' + r1(x0) + '" y="' + r1(y) + '" width="' + plotW + '" height="' + barH +
+          '" rx="5" fill="' + TINTS[0] + '"/>';
+        svg += '<rect x="' + r1(x0) + '" y="' + r1(y) + '" width="' + r1(bw) + '" height="' + barH +
+          '" rx="5" fill="' + BRAND + '"/>';
+        svg += T(x0 - 8, y + barH / 2 + LSZ * 0.35, vals[i].label,
+          { anchor: 'end', size: LSZ, weight: 700, fill: INK });
+        svg += T(x0 + bw + 7, y + barH / 2 + LSZ * 0.35, vals[i].shown,
+          { anchor: 'start', size: LSZ, weight: 700, fill: TONE.t });
       }
       return svg + '</svg>';
     }
@@ -9544,12 +9830,15 @@
         shape = curveShape(title + ' ' + items.join(' ') + ' ' + (spec.note || ''));
       }
 
-      var w = 380, plotL = 58, plotR = 22, plotT = 0, plotB = 46;
+      var w = 380, plotL = 50, plotR = 20, plotT = 0, plotB = 42;
       var tb = titleBlock(title, w);
-      plotT = tb.h + 14;
-      var h = 236;
+      plotT = tb.h + 16;
+      var h = plotT + 184 + plotB;
       var x0 = plotL, x1 = w - plotR, y0 = h - plotB, y1 = plotT;
       var svg = open(w, h) + tb.svg;
+      svg = svg.replace('</defs>',
+        '<marker id="' + AID + 'x" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">' +
+        '<path d="M1 1 L9 5 L1 9" fill="none" stroke="' + INK + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>');
 
       /* Grid, faint, so values can be compared without counting pixels. */
       var g;
@@ -9558,69 +9847,90 @@
         svg += '<line x1="' + r1(x0) + '" y1="' + r1(gy) + '" x2="' + r1(x1) + '" y2="' + r1(gy) +
           '" stroke="#eef2f7" stroke-width="1"/>';
       }
-      /* Axes */
-      svg += '<line x1="' + r1(x0) + '" y1="' + r1(y1) + '" x2="' + r1(x0) + '" y2="' + r1(y0) +
-        '" stroke="' + INK + '" stroke-width="1.8"/>';
-      svg += '<line x1="' + r1(x0) + '" y1="' + r1(y0) + '" x2="' + r1(x1) + '" y2="' + r1(y0) +
-        '" stroke="' + INK + '" stroke-width="1.8"/>';
+      /* Axes, each ending in an open arrowhead - the direction the quantity
+         grows. There used to be a stray grey "→" glyph under the x-axis for
+         this, at 1.5:1 contrast. */
+      svg += '<line x1="' + r1(x0) + '" y1="' + r1(y0) + '" x2="' + r1(x0) + '" y2="' + r1(y1 - 6) +
+        '" stroke="' + INK + '" stroke-width="1.6" marker-end="url(#' + AID + 'x)"/>';
+      svg += '<line x1="' + r1(x0) + '" y1="' + r1(y0) + '" x2="' + r1(x1 + 6) + '" y2="' + r1(y0) +
+        '" stroke="' + INK + '" stroke-width="1.6" marker-end="url(#' + AID + 'x)"/>';
 
       var W2 = x1 - x0, H2 = y0 - y1;
       function px(t) { return x0 + W2 * t; }
       function py(v) { return y0 - H2 * v; }
 
-      var d, mark;
-      if (shape === 'fall') {
-        d = 'M' + r1(px(0)) + ' ' + r1(py(0.88)) + ' C' + r1(px(0.35)) + ' ' + r1(py(0.80)) +
-            ' ' + r1(px(0.6)) + ' ' + r1(py(0.30)) + ' ' + r1(px(1)) + ' ' + r1(py(0.10));
-        mark = [[0.06, 0.87], [0.55, 0.42], [0.95, 0.12]];
-      } else if (shape === 'peak') {
-        d = 'M' + r1(px(0)) + ' ' + r1(py(0.12)) + ' C' + r1(px(0.28)) + ' ' + r1(py(0.95)) +
-            ' ' + r1(px(0.72)) + ' ' + r1(py(0.95)) + ' ' + r1(px(1)) + ' ' + r1(py(0.12));
-        mark = [[0.06, 0.20], [0.5, 0.83], [0.94, 0.20]];
-      } else if (shape === 'scurve') {
-        d = 'M' + r1(px(0)) + ' ' + r1(py(0.08)) + ' C' + r1(px(0.45)) + ' ' + r1(py(0.10)) +
-            ' ' + r1(px(0.5)) + ' ' + r1(py(0.90)) + ' ' + r1(px(1)) + ' ' + r1(py(0.90));
-        mark = [[0.08, 0.10], [0.5, 0.50], [0.93, 0.88]];
-      } else if (shape === 'exp') {
-        d = 'M' + r1(px(0)) + ' ' + r1(py(0.06)) + ' C' + r1(px(0.55)) + ' ' + r1(py(0.08)) +
-            ' ' + r1(px(0.78)) + ' ' + r1(py(0.30)) + ' ' + r1(px(1)) + ' ' + r1(py(0.94));
-        mark = [[0.08, 0.07], [0.6, 0.22], [0.95, 0.90]];
-      } else if (shape === 'linear') {
-        d = 'M' + r1(px(0)) + ' ' + r1(py(0.10)) + ' L' + r1(px(1)) + ' ' + r1(py(0.90));
-        mark = [[0.08, 0.16], [0.5, 0.50], [0.93, 0.85]];
-      } else {
-        d = 'M' + r1(px(0)) + ' ' + r1(py(0.10)) + ' C' + r1(px(0.3)) + ' ' + r1(py(0.30)) +
-            ' ' + r1(px(0.55)) + ' ' + r1(py(0.72)) + ' ' + r1(px(1)) + ' ' + r1(py(0.90));
-        mark = [[0.08, 0.14], [0.5, 0.50], [0.93, 0.88]];
+      /* Each curve is ONE cubic in unit space, so the markers can sit exactly
+         on it (they were hand-placed points that floated near it) and so the
+         labels can be tested against it. */
+      var C = {
+        fall:   [[0, 0.88], [0.35, 0.80], [0.6, 0.30], [1, 0.10]],
+        peak:   [[0, 0.12], [0.28, 0.95], [0.72, 0.95], [1, 0.12]],
+        scurve: [[0, 0.08], [0.45, 0.10], [0.5, 0.90], [1, 0.90]],
+        exp:    [[0, 0.06], [0.55, 0.08], [0.78, 0.30], [1, 0.94]],
+        linear: [[0, 0.10], [0.33, 0.37], [0.67, 0.63], [1, 0.90]],
+        rise:   [[0, 0.10], [0.3, 0.30], [0.55, 0.72], [1, 0.90]]
+      }[shape] || null;
+      if (!C) C = [[0, 0.10], [0.3, 0.30], [0.55, 0.72], [1, 0.90]];
+      function bez(u) {
+        var a = (1 - u) * (1 - u) * (1 - u), b = 3 * (1 - u) * (1 - u) * u, c = 3 * (1 - u) * u * u, e = u * u * u;
+        return { x: px(a * C[0][0] + b * C[1][0] + c * C[2][0] + e * C[3][0]),
+                 y: py(a * C[0][1] + b * C[1][1] + c * C[2][1] + e * C[3][1]) };
       }
-      svg += '<path d="' + d + '" fill="none" stroke="' + pal(0).s + '" stroke-width="2.6" stroke-linecap="round"/>';
+      var d = 'M' + r1(px(C[0][0])) + ' ' + r1(py(C[0][1])) + ' C' +
+        r1(px(C[1][0])) + ' ' + r1(py(C[1][1])) + ' ' + r1(px(C[2][0])) + ' ' + r1(py(C[2][1])) + ' ' +
+        r1(px(C[3][0])) + ' ' + r1(py(C[3][1]));
+      svg += '<path d="' + d + '" fill="none" stroke="' + BRAND + '" stroke-width="3" stroke-linecap="round"/>';
 
-      /* Up to three labelled points on the line. Each label is placed on the
-         side with room: left of centre goes above, right of centre below, so
-         the text never sits on the curve it is annotating. */
-      var k;
-      for (k = 0; k < mark.length && k < items.length; k++) {
-        var mx = px(mark[k][0]), my = py(mark[k][1]);
-        var c2 = pal(k + 1);
-        svg += '<circle cx="' + r1(mx) + '" cy="' + r1(my) + '" r="4.5" fill="#fff" stroke="' +
-          c2.s + '" stroke-width="2.4"/>';
-        var lines = wrap(items[k], 118, SUB_SIZE, 700, 2);
-        var above = mark[k][1] < 0.55;
-        var ty = above ? my - 12 - (lines.length - 1) * SUB_SIZE * 1.32 : my + 18;
-        var anch = 'middle', tx = mx;
-        if (mark[k][0] < 0.18) { anch = 'start'; tx = mx - 2; }
-        else if (mark[k][0] > 0.82) { anch = 'end'; tx = mx + 2; }
-        svg += multiT(tx, ty + (lines.length - 1) * SUB_SIZE * 0.66, lines,
-          { size: SUB_SIZE, weight: 700, fill: c2.t, anchor: anch });
+      var samp = [], u;
+      for (u = 0; u <= 1.0001; u += 0.02) samp.push(bez(u));
+
+      /* Up to three labelled points on the line. Each label tries six places
+         around its marker and takes the first that is clear of the curve, the
+         plot edges and the labels already placed. The old rule - left of
+         centre above, right of centre below - put "Levels off" and "Optimum"
+         straight across the line they annotated. */
+      var LS = SUB_SIZE + 0.5, placed = [], k;
+      var at = [0.07, 0.5, 0.93];
+      for (k = 0; k < at.length && k < items.length; k++) {
+        var mp = bez(at[k]);
+        var lines = wrap(items[k], 112, LS, 700, 2);
+        var tw = widestLine(lines, LS, 700), th = lines.length * LS * 1.25;
+        var cand = [
+          ['middle', 0, -14 - th], ['middle', 0, 14],
+          ['end', -10, -10 - th], ['start', 10, -10 - th],
+          ['start', 10, 10], ['end', -10, 10]
+        ];
+        var pick = null, ci;
+        for (ci = 0; ci < cand.length && !pick; ci++) {
+          var an = cand[ci][0];
+          var bx0 = an === 'start' ? mp.x + cand[ci][1] : (an === 'end' ? mp.x + cand[ci][1] - tw : mp.x - tw / 2);
+          var box = { x0: bx0 - 3, y0: mp.y + cand[ci][2] - 3, x1: bx0 + tw + 3, y1: mp.y + cand[ci][2] + th + 3 };
+          if (box.x0 < x0 + 4 || box.x1 > w - 4 || box.y0 < y1 - 10 || box.y1 > y0 - 2) continue;
+          var hit = false, si;
+          for (si = 0; si < samp.length && !hit; si++) {
+            if (samp[si].x > box.x0 && samp[si].x < box.x1 && samp[si].y > box.y0 && samp[si].y < box.y1) hit = true;
+          }
+          for (si = 0; si < placed.length && !hit; si++) {
+            var o = placed[si];
+            if (!(box.x1 < o.x0 || o.x1 < box.x0 || box.y1 < o.y0 || o.y1 < box.y0)) hit = true;
+          }
+          if (!hit) pick = { anchor: an, x: an === 'middle' ? mp.x : mp.x + cand[ci][1], top: mp.y + cand[ci][2], box: box };
+        }
+        if (!pick) pick = { anchor: 'middle', x: mp.x, top: mp.y - 14 - th, box: null };
+        if (pick.box) placed.push(pick.box);
+        svg += '<circle cx="' + r1(mp.x) + '" cy="' + r1(mp.y) + '" r="4.8" fill="#ffffff" stroke="' +
+          FOCAL.s + '" stroke-width="2.4"/>';
+        var li;
+        for (li = 0; li < lines.length; li++) {
+          svg += T(pick.x, pick.top + LS * 0.95 + li * LS * 1.25, lines[li],
+            { size: LS, weight: 700, fill: INK, anchor: pick.anchor, halo: true });
+        }
       }
 
-      /* Axis labels. y is rotated, which is the only way it fits beside a
-         240px-tall plot without stealing width from the chart. */
-      svg += T((x0 + x1) / 2, h - 14, xLab, { size: SUB_SIZE + 1, weight: 700, fill: MUTED });
-      svg += '<g transform="translate(' + r1(x0 - 30) + ',' + r1((y0 + y1) / 2) + ') rotate(-90)">' +
-        T(0, 0, yLab, { size: SUB_SIZE + 1, weight: 700, fill: MUTED }) + '</g>';
-      /* Direction hints on the axes. */
-      svg += T(x1, y0 + 14, '→', { size: SUB_SIZE, weight: 700, fill: RULE });
+      /* Axis labels. y is rotated, which is the only way it fits beside the
+         plot without stealing width from the chart. */
+      svg += T((x0 + x1) / 2, h - 13, xLab, { size: SUB_SIZE + 1, weight: 700, fill: MUTED });
+      svg += T(x0 - 16, (y0 + y1) / 2, yLab, { size: SUB_SIZE + 1, weight: 700, fill: MUTED, rotate: -90 });
       return svg + '</svg>';
     }
 
@@ -9630,32 +9940,44 @@
       /* The overlap has to be wide enough to hold the shared labels: at 52 the
          lens was narrower than the text in it, so "Cell division" crossed both
          circle edges. */
-      var w = 380, rr = 88, ov = 64;
+      var w = 380, rr = 90, ov = 84;
       var tb = titleBlock(title, w);
       var cy = tb.h + 8 + rr;
       var h = cy + rr + 34;
       var cxL = w / 2 - rr + ov / 2, cxR = w / 2 + rr - ov / 2;
       var svg = open(w, h) + tb.svg;
-      var cL = pal(0), cR = pal(1);
+      /* Two sets are the meaning here, so two colours are earned: the brand
+         tint and a neutral slate. They were blue and teal from the rotation. */
+      var cL = { s: BRAND, f: TINTS[2], t: TONE.t }, cR = OTHER;
 
       svg += '<circle cx="' + r1(cxL) + '" cy="' + r1(cy) + '" r="' + rr + '" fill="' + cL.f +
         '" fill-opacity="0.75" stroke="' + cL.s + '" stroke-width="1.9"/>';
       svg += '<circle cx="' + r1(cxR) + '" cy="' + r1(cy) + '" r="' + rr + '" fill="' + cR.f +
         '" fill-opacity="0.75" stroke="' + cR.s + '" stroke-width="1.9"/>';
 
+      /* Each item may take two lines. They were cut to one, so the lens -
+         the narrowest region, and the one holding what the sets SHARE -
+         printed "Cell divisi\u2026": the most important label on the card, trimmed. */
       function stack(cx, list, colour, maxW) {
-        var out = '', j, yy, lh = SUB_SIZE * 1.5;
-        var n = Math.min(list.length, 3);
+        var out = '', j, k, lh = SUB_SIZE * 1.25, gapI = 6;
+        var n = Math.min(list.length, 3), blocks = [], tot = 0;
         for (j = 0; j < n; j++) {
-          yy = cy - (n - 1) * lh / 2 + j * lh + SUB_SIZE * 0.35;
-          var one = wrap(list[j], maxW, SUB_SIZE, 600, 1);
-          out += T(cx, yy, one[0], { size: SUB_SIZE, weight: 600, fill: colour });
+          var ln = wrap(list[j], maxW, SUB_SIZE, 600, 2);
+          blocks.push(ln);
+          tot += ln.length * lh + (j < n - 1 ? gapI : 0);
+        }
+        var yy = cy - tot / 2 + SUB_SIZE * 0.8;
+        for (j = 0; j < n; j++) {
+          for (k = 0; k < blocks[j].length; k++) {
+            out += T(cx, yy + k * lh, blocks[j][k], { size: SUB_SIZE, weight: 600, fill: colour });
+          }
+          yy += blocks[j].length * lh + gapI;
         }
         return out;
       }
-      svg += stack(cxL - ov / 2 - 8, left.items || [], cL.t, 84);
-      svg += stack(cxR + ov / 2 + 8, right.items || [], cR.t, 84);
-      if (shared && shared.length) svg += stack(w / 2, shared, '#334155', ov - 4);
+      svg += stack(cxL - ov / 2 - 6, left.items || [], cL.t, 2 * rr - ov - 16);
+      svg += stack(cxR + ov / 2 + 6, right.items || [], cR.t, 2 * rr - ov - 16);
+      if (shared && shared.length) svg += stack(w / 2, shared, INK, ov - 8);
 
       /* Set names sit above their own circle, never over the overlap. */
       svg += T(cxL - ov / 2 - 8, tb.h + 4, clean(left.title || 'A'),
@@ -9670,38 +9992,39 @@
        independent traits at once. */
     function buildMatrix(title, spec, items) {
       if (items.length < 4) return null;
-      var w = 380, cell = 128, gap = 6;
-      var tb = titleBlock(title, w);
-      var left = 74, top = tb.h + 24;
-      var h = top + cell * 2 + gap + 44;
-      var svg = open(w, h) + tb.svg;
-
+      var cell = 128, gap = 6;
       var xLab = clean(spec.xLabel || spec.x || ''), yLab = clean(spec.yLabel || spec.y || '');
       var xs = [clean(spec.xLow || 'low'), clean(spec.xHigh || 'high')];
       var ys = [clean(spec.yHigh || 'high'), clean(spec.yLow || 'low')];
+      var TS = SUB_SIZE, LS = SUB_SIZE + 1;
+      /* Row headings read horizontally, beside their row. They were rotated
+         90 degrees and squeezed between the axis title and the grid, at 9pt,
+         touching the cell border. The left margin is sized to them. */
+      var tickW = Math.max(measure(ys[0], TS, 700), measure(ys[1], TS, 700));
+      var left = MARGIN + (yLab ? 22 : 0) + tickW + 10;
+      var w = left + cell * 2 + gap + MARGIN;
+      var tb = titleBlock(title, w);
+      var top = tb.h + 24;
+      var h = top + cell * 2 + gap + (xLab ? 36 : 14);
+      var svg = open(w, h) + tb.svg;
 
       var r, c2, idx = 0;
       for (r = 0; r < 2; r++) {
         for (c2 = 0; c2 < 2; c2++) {
           var x = left + c2 * (cell + gap), y = top + r * (cell + gap);
-          var col = pal(idx);
-          svg += roundRect(x, y, cell, cell, 10, col, 1.6);
-          var ln = wrap(items[idx], cell - 20, SUB_SIZE + 1, 700, 4);
-          svg += multiT(x + cell / 2, y + cell / 2, ln,
-            { size: SUB_SIZE + 1, weight: 700, fill: col.t });
+          var col = pal();
+          svg += roundRect(x, y, cell, cell, 12, col, 1.3);
+          var ln = wrap(items[idx], cell - 22, LS, 700, 4);
+          svg += multiT(x + cell / 2, y + cell / 2, ln, { size: LS, weight: 700, fill: col.t });
           idx++;
         }
       }
-      /* Column and row headings, outside the grid. */
-      svg += T(left + cell / 2, top - 8, xs[0], { size: SUB_SIZE, weight: 700, fill: MUTED });
-      svg += T(left + cell + gap + cell / 2, top - 8, xs[1], { size: SUB_SIZE, weight: 700, fill: MUTED });
-      svg += '<g transform="translate(' + r1(left - 10) + ',' + r1(top + cell / 2) + ') rotate(-90)">' +
-        T(0, 0, ys[0], { size: SUB_SIZE, weight: 700, fill: MUTED }) + '</g>';
-      svg += '<g transform="translate(' + r1(left - 10) + ',' + r1(top + cell + gap + cell / 2) + ') rotate(-90)">' +
-        T(0, 0, ys[1], { size: SUB_SIZE, weight: 700, fill: MUTED }) + '</g>';
-      if (xLab) svg += T(left + cell + gap / 2, h - 12, xLab, { size: SUB_SIZE + 1, weight: 700, fill: INK });
-      if (yLab) svg += '<g transform="translate(' + r1(left - 42) + ',' + r1(top + cell) + ') rotate(-90)">' +
-        T(0, 0, yLab, { size: SUB_SIZE + 1, weight: 700, fill: INK }) + '</g>';
+      svg += T(left + cell / 2, top - 9, xs[0], { size: TS, weight: 700, fill: MUTED });
+      svg += T(left + cell + gap + cell / 2, top - 9, xs[1], { size: TS, weight: 700, fill: MUTED });
+      svg += T(left - 10, top + cell / 2 + TS * 0.35, ys[0], { size: TS, weight: 700, fill: MUTED, anchor: 'end' });
+      svg += T(left - 10, top + cell + gap + cell / 2 + TS * 0.35, ys[1], { size: TS, weight: 700, fill: MUTED, anchor: 'end' });
+      if (xLab) svg += T(left + cell + gap / 2, h - 12, xLab, { size: LS, weight: 700, fill: INK });
+      if (yLab) svg += T(MARGIN + 12, top + cell + gap / 2, yLab, { size: LS, weight: 700, fill: INK, rotate: -90 });
       return svg + '</svg>';
     }
 
@@ -9793,7 +10116,8 @@
           var it = [], j, arr = side.items || [];
           for (j = 0; j < arr.length && j < 5; j++) {
             var t = clean(arr[j]);
-            if (t) it.push(t.length > 30 ? t.slice(0, 28) + '\u2026' : t);
+            /* Items may wrap to two lines now, so the cut is at 44, not 28. */
+            if (t) it.push(t.length > 46 ? t.slice(0, 44).replace(/\s\S*$/, '') + '\u2026' : t);
           }
           return { title: clean(side.title || side.label || '\u2014'), items: it };
         };
@@ -9903,6 +10227,8 @@
       measure: measure,
       wrap: wrap,
       polish: polish,
+      legible: legible,
+      uniqIds: uniqIds,
       fromSpec: fromSpec,
       forTopic: forTopic,
       buildBars: buildBars,
@@ -10097,6 +10423,13 @@
              any colour. It is what maps do with place names over terrain.
              Cheap, total, and it cannot make a well-placed label worse. */
           var tsz = r1(num(sh.size, 7, 26, 11));
+          /* Never under 9px on a phone. The board is width:100% of ~343px, so
+             a size-9 label on the 440-wide canvas the prompt used to show came
+             out at 7px. The floor scales with W, so a wider canvas simply gets
+             bigger type; the halo below keeps the larger label readable over
+             whatever it lands on. */
+          var tFloor = Math.ceil(9 * W / 343 * 10) / 10;
+          if (tsz < tFloor) tsz = tFloor;
           /* White text is invisible here, whatever the model intended.
 
              It asked for fill "paper" on a label it had placed inside a
@@ -10170,7 +10503,7 @@
      existing implementation keeps ONE diagram system in the app, per the
      "reuse what exists" rule. Assigned after definition, at the end of the
      diagram section below. */
-  function curatedDiagramSVG(desc) {
+  function curatedDiagramSVG(desc, hint) {
     /* Hyphens and underscores are flattened to spaces before matching.
 
        The prompt tells the model to ask for a template BY NAME, and those
@@ -10182,11 +10515,15 @@
        a label containing the words spaced out, which is why it looked fine.
        water-cycle and plate-tectonics had been failing this way all along. */
     var d = String(desc == null ? '' : desc).toLowerCase().replace(/[-_]+/g, ' ');
+    /* Extra words for choosing a template's VARIANT, never for choosing the
+       template. See generateDiagramSVG. */
+    var vd = d + ' ' + String(hint == null ? '' : hint).toLowerCase().replace(/[-_]+/g, ' ');
     // Shared style constants — consistent across all diagrams
     var LF = "font-family:'DM Sans',sans-serif;";
     var LS = 'font-size:9px;';      // secondary label (callouts, sub-labels)
     var LP = 'font-size:10px;font-weight:600;'; // primary node label
     var LT = 'font-size:8px;';      // tertiary / micro annotation
+    var SERIF_T = "'Instrument Serif', Georgia, serif";
 
     // ── BRAIN LOBES ──────────────────────────────────────────────────────────
     // ── CELL (animal / plant) ────────────────────────────────────────────────
@@ -10202,7 +10539,12 @@
        OUTSIDE the cell with leaders into it, so nothing sits on top of an
        organelle. */
     if (/\bcells?\b|organelle|nucleus|cytoplasm|mitochondri|ribosome|vacuole|cell wall|cell membrane|eukaryot|prokaryot/.test(d)) {
-      var plant = /plant|chloroplast|vacuole|cell wall|photosynth/.test(d);
+      /* An explicit cellType leads the hint and decides outright; a caption
+         that merely mentions animals ("unlike an animal cell...") must not
+         turn a plant lesson back into the animal drawing. */
+      var hintLead = String(hint == null ? '' : hint).toLowerCase().replace(/^\s+/, '');
+      var plant = /^animal\b/.test(hintLead) ? false :
+                  (/^plant\b/.test(hintLead) || /plant|chloroplast|vacuole|cell wall|photosynth/.test(vd));
       var oL = function (x, y, t) {           // label to the LEFT of the cell
         return '<text x="' + x + '" y="' + y + '" style="' + LP + '" fill="#334155" text-anchor="end">' + t + '</text>';
       };
@@ -10246,7 +10588,9 @@
              'fill="#fef2f8" stroke="#db2777" stroke-width="2.6"/>';
         o += '<ellipse cx="206" cy="132" rx="50" ry="42" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>';
         o += '<circle cx="206" cy="132" r="14" fill="#7c3aed" opacity=".5"/>';
-        o += '<text x="206" y="136" style="' + LT + 'font-weight:700;" fill="#4c1d95" text-anchor="middle">nucleus</text>';
+        /* "nucleus" is labelled from OUTSIDE like everything else. It was
+           printed inside, over the nucleolus - purple on purple at 1.9:1, and
+           the one organelle every cell lesson names first. */
         /* Two mitochondria, each with its folded inner membrane. */
         o += '<g>';
         o += '<ellipse cx="292" cy="192" rx="30" ry="15" fill="#ffe4e6" stroke="#e11d48" stroke-width="1.8" transform="rotate(-18 292 192)"/>';
@@ -10265,6 +10609,7 @@
         o += lead(316, 186, 372, 178) + oR(376, 181, 'mitochondrion');
         o += lead(276, 92, 372, 66) + oR(376, 69, 'rough ER');
         o += lead(158, 140, 84, 112) + oL(80, 115, 'ribosomes');
+        o += lead(172, 152, 84, 164) + oL(80, 167, 'nucleus');
         o += lead(140, 202, 84, 218) + oL(80, 221, 'cytoplasm');
         o += '<text x="221" y="272" style="' + LT + '" fill="#475569" text-anchor="middle">' +
              'An animal cell: no wall, so it holds a soft, rounded shape</text>';
@@ -10273,96 +10618,133 @@
     }
 
     if (/brain|lobe|cortex|cerebr|hippocamp|amygdala|frontal|temporal|parietal|occipital/.test(d)) {
-      return '<svg viewBox="0 0 420 268" width="100%" style="max-width:480px;display:block;margin:0 auto;' + LF + '">' +
-        '<path d="M80 200 Q40 160 45 110 Q48 65 90 45 Q120 28 160 30 Q200 28 230 42 Q270 30 300 50 Q340 75 345 115 Q350 155 320 185 Q295 205 260 210 Q220 225 180 220 Q140 225 105 215 Z" fill="#fff5f7" stroke="#f472b6" stroke-width="2"/>' +
-        '<path d="M160 30 Q165 120 160 220" fill="none" stroke="#f9a8d4" stroke-width="1" stroke-dasharray="5 3"/>' +
-        '<path d="M90 45 Q95 35 160 30 Q160 80 135 110 Q110 125 80 115 Q55 100 55 80 Q58 58 90 45" fill="rgba(99,102,241,.13)" stroke="#6366f1" stroke-width="1.5" stroke-linejoin="round"/>' +
-        '<path d="M160 30 Q230 42 265 65 Q275 90 260 115 Q240 130 210 130 Q185 128 165 115 Q160 80 160 30" fill="rgba(16,185,129,.13)" stroke="#10b981" stroke-width="1.5" stroke-linejoin="round"/>' +
-        '<path d="M80 115 Q110 125 135 110 Q150 125 145 165 Q135 195 105 215 Q75 210 60 190 Q45 170 55 140 Z" fill="rgba(245,158,11,.13)" stroke="#f59e0b" stroke-width="1.5" stroke-linejoin="round"/>' +
-        '<path d="M260 115 Q295 130 320 185 Q295 205 260 210 Q220 225 180 220 Q155 215 145 185 Q140 165 145 145 Q165 128 210 130 Z" fill="rgba(239,68,68,.13)" stroke="#ef4444" stroke-width="1.5" stroke-linejoin="round"/>' +
-        '<path d="M145 185 Q160 210 180 220 Q165 232 145 237 Q122 239 108 228 Q97 217 105 215 Q122 207 145 185" fill="rgba(124,58,237,.16)" stroke="#7c3aed" stroke-width="1.5"/>' +
-        // Callout: Frontal — leader exits lobe, label offset left with 12px clear gap
-        '<line x1="93" y1="78" x2="30" y2="62" stroke="#6366f1" stroke-width="1" stroke-dasharray="3 2"/>' +
-        '<rect x="0" y="48" width="60" height="26" rx="5" fill="white" stroke="#6366f1" stroke-width="1"/>' +
-        '<text x="30" y="59" style="' + LP + '" fill="#4338ca" text-anchor="middle">Frontal</text>' +
-        '<text x="30" y="70" style="' + LT + '" fill="#6366f1" text-anchor="middle">planning</text>' +
-        // Callout: Parietal — offset right, clear of brain edge
-        '<line x1="213" y1="80" x2="314" y2="46" stroke="#10b981" stroke-width="1" stroke-dasharray="3 2"/>' +
-        '<rect x="314" y="32" width="66" height="26" rx="5" fill="white" stroke="#10b981" stroke-width="1"/>' +
-        '<text x="347" y="43" style="' + LP + '" fill="#065f46" text-anchor="middle">Parietal</text>' +
-        '<text x="347" y="54" style="' + LT + '" fill="#10b981" text-anchor="middle">sensation</text>' +
-        // Callout: Temporal — offset downward-left, label clear of lobe stroke
-        '<line x1="105" y1="162" x2="32" y2="176" stroke="#f59e0b" stroke-width="1" stroke-dasharray="3 2"/>' +
-        '<rect x="0" y="163" width="60" height="26" rx="5" fill="white" stroke="#f59e0b" stroke-width="1"/>' +
-        '<text x="30" y="174" style="' + LP + '" fill="#92400e" text-anchor="middle">Temporal</text>' +
-        '<text x="30" y="185" style="' + LT + '" fill="#f59e0b" text-anchor="middle">memory</text>' +
-        // Callout: Occipital — offset right-lower
-        '<line x1="228" y1="178" x2="338" y2="202" stroke="#ef4444" stroke-width="1" stroke-dasharray="3 2"/>' +
-        '<rect x="338" y="190" width="68" height="26" rx="5" fill="white" stroke="#ef4444" stroke-width="1"/>' +
-        '<text x="372" y="201" style="' + LP + '" fill="#991b1b" text-anchor="middle">Occipital</text>' +
-        '<text x="372" y="212" style="' + LT + '" fill="#ef4444" text-anchor="middle">vision</text>' +
-        // Callout: Cerebellum — offset down, label 14px below the lobe boundary
-        '<line x1="133" y1="220" x2="108" y2="252" stroke="#7c3aed" stroke-width="1" stroke-dasharray="3 2"/>' +
-        /* 102 wide, not 80: "Cerebellum (balance)" is 20 characters, which
-           at 8px DM Sans is ~92 units. The text is centred on the box, so
-           an 80-wide box let it spill over both borders and the closing
-           bracket read as cut off. */
-        '<rect x="55" y="242" width="102" height="18" rx="5" fill="white" stroke="#7c3aed" stroke-width="1"/>' +
-        '<text x="106" y="254" style="' + LT + 'font-weight:600;" fill="#5b21b6" text-anchor="middle">Cerebellum (balance)</text>' +
+      /* A lateral view, facing left, redrawn.
+
+         The old one was a pink oval with five coloured blobs in it and every
+         label in a boxed callout, and it was WRONG: the cerebellum sat under
+         the FRONT of the brain, beneath the temporal lobe. It belongs at the
+         back, tucked under the occipital lobe - a learner copying that
+         picture into their notes would have copied the error. It also did
+         not read as a brain: no folds, so nothing said "cortex".
+
+         Now: one silhouette, the four lobes as fills clipped to it (so their
+         edges cannot gap or overlap), the three sulci that actually divide
+         them drawn on top, a few gyri for texture, the cerebellum and
+         brainstem underneath at the back, and every label outside on a
+         leader line. The lobes are tints of one blue - the leader lines and
+         sulci say which region is which; colour only has to separate
+         neighbours. */
+      curatedDiagramSVG.seq = (curatedDiagramSVG.seq || 0) + 1;
+      var bClip = 'sfBrainClip' + curatedDiagramSVG.seq;
+      var SIL = 'M62 118 C58 78 110 44 182 41 C215 40 240 44 258 52 C285 66 298 88 296 112 ' +
+                'C295 138 275 152 252 156 C225 160 205 178 170 180 C135 182 105 170 100 146 C88 144 66 136 62 118 Z';
+      var bP = 'font-size:11.5px;font-weight:700;', bS = 'font-size:10.5px;';
+      var bLab = function (x, y, a, b, anchor) {
+        return '<text x="' + x + '" y="' + y + '" style="' + bP + '" fill="#1a1d2e"' + (anchor ? ' text-anchor="' + anchor + '"' : '') + '>' + a + '</text>' +
+               '<text x="' + x + '" y="' + (y + 15) + '" style="' + bS + '" fill="#5b6478"' + (anchor ? ' text-anchor="' + anchor + '"' : '') + '>' + b + '</text>';
+      };
+      var bLead = function (x1, y1, x2, y2) {
+        return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#1a1d2e" stroke-opacity=".5" stroke-width="1"/>' +
+               '<circle cx="' + x2 + '" cy="' + y2 + '" r="2.6" fill="#1a1d2e"/>';
+      };
+      var gy = function (dd) { return '<path d="' + dd + '" fill="none" stroke="#6d8fe0" stroke-opacity=".45" stroke-width="1.2" stroke-linecap="round"/>'; };
+      return '<svg viewBox="0 0 400 268" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs><clipPath id="' + bClip + '"><path d="' + SIL + '"/></clipPath></defs>' +
+        /* Brainstem and cerebellum first: the cerebrum overlaps them. */
+        '<path d="M194 170 C198 190 200 208 196 232 L214 232 C213 212 214 192 224 174 Z" fill="#eef1f6" stroke="#9aa6b8" stroke-width="1.4" stroke-linejoin="round"/>' +
+        '<path d="M216 168 C222 152 252 146 282 152 C304 158 310 178 298 192 C284 206 246 208 228 198 C216 191 212 180 216 168 Z" fill="#e6eaf2" stroke="#8a96ad" stroke-width="1.5"/>' +
+        '<path d="M226 172 Q262 162 300 172" fill="none" stroke="#9aa6b8" stroke-width="1"/>' +
+        '<path d="M224 182 Q262 174 302 182" fill="none" stroke="#9aa6b8" stroke-width="1"/>' +
+        '<path d="M232 193 Q262 186 292 193" fill="none" stroke="#9aa6b8" stroke-width="1"/>' +
+        /* The four lobes, each a rough region clipped to the silhouette. */
+        '<g clip-path="url(#' + bClip + ')">' +
+          '<path d="M0 0 L182 0 L182 41 C175 70 170 98 160.5 126 Q130 134 100 146 L0 146 Z" fill="#e2eaff"/>' +
+          '<path d="M182 0 L182 41 C175 70 170 98 160.5 126 Q191 118 222 114 L250 122 C258 100 262 80 258 50 L258 0 Z" fill="#cfdcfd"/>' +
+          '<path d="M258 0 L400 0 L400 260 L248 260 L248 168 L250 122 C258 100 262 80 258 50 Z" fill="#bccefb"/>' +
+          '<path d="M0 146 L100 146 Q160 122 222 114 L250 122 L248 168 L248 260 L0 260 Z" fill="#d8e3fe"/>' +
+          gy('M80 98 Q92 86 104 94 Q116 102 128 90') + gy('M96 120 Q110 110 124 118 Q136 126 148 112') +
+          gy('M112 66 Q126 58 140 66 Q150 72 162 62') + gy('M194 64 Q208 56 220 64 Q232 72 244 66') +
+          gy('M190 96 Q204 88 216 96 Q228 104 240 94') + gy('M268 76 Q278 86 272 100 Q268 110 280 120') +
+          gy('M124 160 Q146 150 166 156 Q186 162 206 150') + gy('M148 172 Q170 165 196 168') +
+        '</g>' +
+        /* Sulci on top: central, lateral, parieto-occipital, preoccipital. */
+        '<path d="M182 41 C175 70 170 98 160.5 126" fill="none" stroke="#5e7fd6" stroke-width="1.8" stroke-linecap="round"/>' +
+        '<path d="M100 146 Q160 122 222 114 L250 122" fill="none" stroke="#5e7fd6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<path d="M258 50 C262 80 258 100 250 122 L248 164" fill="none" stroke="#5e7fd6" stroke-width="1.5" stroke-linecap="round"/>' +
+        '<path d="' + SIL + '" fill="none" stroke="#4a7cf6" stroke-width="2"/>' +
+        /* Labels outside, each leader ending on a dot inside its region. */
+        bLead(70, 48, 104, 80) + bLab(14, 26, 'Frontal lobe', 'planning, movement') +
+        bLead(298, 24, 224, 76) + bLab(302, 26, 'Parietal lobe', 'touch, space') +
+        bLead(306, 97, 278, 102) + bLab(310, 100, 'Occipital', 'vision') +
+        bLead(72, 200, 138, 162) + bLab(14, 214, 'Temporal lobe', 'hearing, memory') +
+        bLead(306, 192, 286, 184) + bLab(310, 196, 'Cerebellum', 'balance') +
+        bLead(222, 234, 206, 220) + bLab(226, 240, 'Brainstem', 'breathing, heartbeat') +
         '</svg>';
     }
 
     // ── NEURON ───────────────────────────────────────────────────────────────
     if (/neuron|synapse|axon|dendrite|myelin/.test(d)) {
-      return '<svg viewBox="0 0 500 190" width="100%" style="max-width:560px;display:block;margin:0 auto;' + LF + '">' +
-        '<defs><marker id="nArr" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#6366f1"/></marker></defs>' +
-        // Dendrites
-        '<path d="M112 95 Q88 56 52 42" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round"/>' +
-        '<path d="M112 95 Q82 76 44 72" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round"/>' +
-        '<path d="M112 95 Q84 95 44 95" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round"/>' +
-        '<path d="M112 95 Q82 114 44 118" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round"/>' +
-        '<path d="M112 95 Q87 134 54 148" fill="none" stroke="#f472b6" stroke-width="2.5" stroke-linecap="round"/>' +
-        // Dendrite label — placed in top-left clear zone, offset from branch tips
-        '<text x="14" y="26" style="' + LP + '" fill="#be185d">Dendrites</text>' +
-        '<text x="14" y="37" style="' + LT + '" fill="#be185d">(receive signals)</text>' +
-        // Soma
-        '<circle cx="142" cy="95" r="36" fill="#fdf2f8" stroke="#ec4899" stroke-width="2"/>' +
-        '<circle cx="142" cy="95" r="13" fill="#fce7f3" stroke="#ec4899" stroke-width="1.2" stroke-dasharray="3 2"/>' +
-        // Nucleus label — INSIDE soma, centered, not on the circle border
-        '<text x="142" y="98" style="' + LT + 'font-weight:600;" fill="#9d174d" text-anchor="middle">nucleus</text>' +
-        // Soma label — 14px BELOW the soma circle bottom (95+36+14=145)
-        '<text x="142" y="148" style="' + LS + 'font-weight:600;" fill="#9d174d" text-anchor="middle">Soma</text>' +
-        // Axon
-        '<path d="M178 95 L212 95" fill="none" stroke="#374151" stroke-width="3" stroke-linecap="round"/>' +
-        '<line x1="212" y1="95" x2="378" y2="95" stroke="#6366f1" stroke-width="3.5" stroke-linecap="round"/>' +
-        // Axon label — 13px ABOVE the axon line, not touching it
-        '<text x="288" y="78" style="' + LS + 'font-weight:600;" fill="#4338ca" text-anchor="middle">Axon</text>' +
-        // Myelin sheaths
-        '<ellipse cx="232" cy="95" rx="15" ry="9" fill="rgba(99,102,241,.22)" stroke="#6366f1" stroke-width="1.2"/>' +
-        '<ellipse cx="267" cy="95" rx="15" ry="9" fill="rgba(99,102,241,.22)" stroke="#6366f1" stroke-width="1.2"/>' +
-        '<ellipse cx="302" cy="95" rx="15" ry="9" fill="rgba(99,102,241,.22)" stroke="#6366f1" stroke-width="1.2"/>' +
-        '<ellipse cx="337" cy="95" rx="15" ry="9" fill="rgba(99,102,241,.22)" stroke="#6366f1" stroke-width="1.2"/>' +
-        // Myelin label — 16px below sheath centers (95+9+7=111)
-        '<text x="285" y="115" style="' + LT + '" fill="#6366f1" text-anchor="middle">myelin sheath</text>' +
-        // Nodes of Ranvier
-        '<circle cx="249" cy="95" r="2.5" fill="white" stroke="#6366f1" stroke-width="1.5"/>' +
-        '<circle cx="284" cy="95" r="2.5" fill="white" stroke="#6366f1" stroke-width="1.5"/>' +
-        '<circle cx="319" cy="95" r="2.5" fill="white" stroke="#6366f1" stroke-width="1.5"/>' +
-        // Axon terminals
-        '<path d="M378 95 Q394 76 414 68" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>' +
-        '<path d="M378 95 Q394 95 418 95" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>' +
-        '<path d="M378 95 Q394 114 414 122" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>' +
-        '<circle cx="417" cy="68" r="6" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>' +
-        '<circle cx="421" cy="95" r="6" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>' +
-        '<circle cx="417" cy="122" r="6" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>' +
-        // Terminal label — right of the terminal buttons, vertically centered
-        '<text x="434" y="91" style="' + LT + 'font-weight:600;" fill="#065f46">Axon</text>' +
-        '<text x="434" y="103" style="' + LT + 'font-weight:600;" fill="#065f46">terminals</text>' +
-        // Signal arrow — raised clear of the "Axon" label at y=78, which sits
-        // 13px above the axon line. Arrow at 64 leaves 7px above that label's
-        // cap height; its own caption clears the arrow by a further 8px.
-        '<path d="M218 64 L372 64" fill="none" stroke="#6366f1" stroke-width="1" stroke-dasharray="5 3" marker-end="url(#nArr)"/>' +
-        '<text x="295" y="54" style="' + LT + '" fill="#6366f1" text-anchor="middle">electrical signal</text>' +
+      /* One cell, one colour, redrawn.
+
+         It was four hues - pink dendrites and soma, blue axon, green
+         terminals - which made one cell read as three things bolted
+         together; a perfect-circle soma with "nucleus" printed across the
+         nucleus's own dashed outline; and a label pair ("Dendrites" over
+         "(receive signals)") whose lines collided once the type was set at
+         a size a phone can read. Now: branching dendrites, an irregular
+         soma, a tapering axon hillock, myelin segments with the nodes
+         between them, terminal buttons, and every label outside on a
+         leader. The signal's direction is the one thing drawn in the
+         deeper focal blue, because it is the one thing that MOVES. */
+      curatedDiagramSVG.seq = (curatedDiagramSVG.seq || 0) + 1;
+      var nArr = 'sfNeuronArr' + curatedDiagramSVG.seq;
+      var nB = '#4a7cf6', nP = 'font-size:11.5px;font-weight:700;', nS = 'font-size:10.5px;';
+      var nd = function (dd, w) { return '<path d="' + dd + '" fill="none" stroke="' + nB + '" stroke-width="' + (w || 2.2) + '" stroke-linecap="round"/>'; };
+      var nLead = function (x1, y1, x2, y2) {
+        return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#1a1d2e" stroke-opacity=".5" stroke-width="1"/>' +
+               '<circle cx="' + x2 + '" cy="' + y2 + '" r="2.4" fill="#1a1d2e"/>';
+      };
+      var nT = function (x, y, t, st, anchor, fill) {
+        return '<text x="' + x + '" y="' + y + '" style="' + st + '" fill="' + (fill || '#1a1d2e') + '" text-anchor="' + (anchor || 'middle') + '">' + t + '</text>';
+      };
+      var sheath = '', ns = '', k;
+      for (k = 0; k < 4; k++) {
+        sheath += '<rect x="' + (168 + k * 36) + '" y="92" width="28" height="16" rx="8" fill="#c3d4fd" stroke="' + nB + '" stroke-width="1.2"/>';
+      }
+      return '<svg viewBox="0 0 400 204" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs><marker id="' + nArr + '" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto">' +
+        '<path d="M1 1.5 L11 6 L1 10.5 L3.6 6 z" fill="#3563e9"/></marker></defs>' +
+        /* Dendrites: main branches with sub-branches, tapering outward. */
+        nd('M86 84 C70 72 58 64 42 58') + nd('M60 67 C54 60 50 54 46 48', 1.6) +
+        nd('M98 72 C96 62 92 54 84 48', 1.8) +
+        nd('M84 98 C66 96 50 92 30 94') + nd('M50 93 C42 86 36 82 28 80', 1.6) +
+        nd('M88 116 C72 128 58 138 42 148') + nd('M60 136 C54 144 52 152 50 160', 1.6) +
+        nd('M100 128 C98 140 94 150 88 160', 1.8) +
+        /* Axon hillock: a soft taper in the soma's own tint, drawn first so
+           the cell body overlaps its base. Solid, it read as a play icon. */
+        '<path d="M128 88 C146 93 152 97 162 98.5 L162 101.5 C152 103 146 107 128 112 Z" fill="#dbe6ff" stroke="' + nB + '" stroke-width="1.6" stroke-linejoin="round"/>' +
+        /* Soma, irregular, with nucleus and nucleolus. */
+        '<path d="M84 86 C88 68 112 62 128 72 C142 80 146 96 140 110 C134 126 112 134 96 126 C80 118 78 100 84 86 Z" fill="#dbe6ff" stroke="' + nB + '" stroke-width="1.8"/>' +
+        '<circle cx="112" cy="98" r="11" fill="#b9cbfb" stroke="' + nB + '" stroke-width="1.2"/>' +
+        '<circle cx="114" cy="96" r="3" fill="#3563e9"/>' +
+        '<line x1="160" y1="100" x2="320" y2="100" stroke="' + nB + '" stroke-width="3" stroke-linecap="round"/>' +
+        sheath +
+        /* Terminals. */
+        nd('M318 100 C330 90 338 80 350 74', 2) + nd('M318 100 C332 100 342 100 352 100', 2) + nd('M318 100 C330 110 338 120 350 126', 2) +
+        '<circle cx="354" cy="72" r="5.5" fill="#dbe6ff" stroke="' + nB + '" stroke-width="1.6"/>' +
+        '<circle cx="357" cy="100" r="5.5" fill="#dbe6ff" stroke="' + nB + '" stroke-width="1.6"/>' +
+        '<circle cx="354" cy="128" r="5.5" fill="#dbe6ff" stroke="' + nB + '" stroke-width="1.6"/>' +
+        /* The signal: dendrites -> soma -> axon -> terminals. */
+        '<line x1="182" y1="78" x2="300" y2="78" stroke="#3563e9" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#' + nArr + ')"/>' +
+        nT(176, 82, 'signal', nS + 'font-weight:600;', 'end', '#3563e9') +
+        /* Labels. Top row: dendrites, nucleus, terminals. Bottom row: cell
+           body, axon, myelin. Each leader starts clear of its own text. */
+        nLead(44, 42, 52, 62) + nT(14, 22, 'Dendrites', nP, 'start') + nT(14, 37, 'receive signals', nS, 'start', '#5b6478') +
+        nLead(138, 32, 113, 93) + nT(142, 30, 'Nucleus', nP, 'start') +
+        nLead(360, 44, 355, 65) + nT(396, 22, 'Axon terminals', nP, 'end') + nT(396, 37, 'pass it on', nS, 'end', '#5b6478') +
+        nLead(98, 168, 108, 124) + nT(98, 182, 'Cell body', nP) +
+        nLead(200, 166, 200, 102) + nT(200, 180, 'Axon', nP) + nT(200, 195, 'carries it away', nS, 'middle', '#5b6478') +
+        nLead(296, 166, 290, 109) + nT(296, 180, 'Myelin sheath', nP) + nT(296, 195, 'speeds it up', nS, 'middle', '#5b6478') +
         '</svg>';
     }
 
@@ -10414,47 +10796,66 @@
 
     // ── WATER CYCLE ──────────────────────────────────────────────────────────
     if (/water cycle|hydrologic|evaporation|condensation|precipitation/.test(d)) {
-      return '<svg viewBox="0 0 380 230" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
-        // Sky zone
-        '<rect x="0" y="0" width="380" height="160" rx="10" fill="#e0f2fe"/>' +
-        // Ground zone
-        '<rect x="0" y="160" width="380" height="70" rx="10" fill="#d1fae5"/>' +
-        // Water body
-        '<ellipse cx="66" cy="161" rx="60" ry="18" fill="#bae6fd" stroke="#0284c7" stroke-width="1.5"/>' +
-        '<text x="66" y="165" style="' + LT + 'font-weight:600;" fill="#075985" text-anchor="middle">Ocean / Lake</text>' +
-        // Sun — clear of all labels, top-right corner with 8px inset
-        '<circle cx="344" cy="30" r="24" fill="#fef08a" stroke="#f59e0b" stroke-width="2"/>' +
-        // Sun drawn as geometry; DM Sans has no U+2600 glyph.
-        '<circle cx="344" cy="30" r="6" fill="#d97706"/>' +
-        '<line x1="352.0" y1="30.0" x2="356.5" y2="30.0" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/><line x1="349.7" y1="35.7" x2="352.8" y2="38.8" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/><line x1="344.0" y1="38.0" x2="344.0" y2="42.5" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/><line x1="338.3" y1="35.7" x2="335.2" y2="38.8" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/><line x1="336.0" y1="30.0" x2="331.5" y2="30.0" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/><line x1="338.3" y1="24.3" x2="335.2" y2="21.2" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/><line x1="344.0" y1="22.0" x2="344.0" y2="17.5" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/><line x1="349.7" y1="24.3" x2="352.8" y2="21.2" stroke="#d97706" stroke-width="1.5" stroke-linecap="round"/>' +
-        '<text x="344" y="60" style="' + LT + '" fill="#92400e" text-anchor="middle">Solar energy</text>' +
-        // Cloud
-        '<ellipse cx="188" cy="52" rx="46" ry="24" fill="white" stroke="#cbd5e1" stroke-width="1.5"/>' +
-        '<ellipse cx="165" cy="62" rx="32" ry="18" fill="white" stroke="#cbd5e1" stroke-width="1"/>' +
-        '<ellipse cx="212" cy="62" rx="32" ry="18" fill="white" stroke="#cbd5e1" stroke-width="1"/>' +
-        // Cloud label — 10px above cloud top, clear of cloud outline (52-24-10=18)
-        '<text x="188" y="18" style="' + LS + 'font-weight:600;" fill="#475569" text-anchor="middle">Condensation</text>' +
-        // Evaporation arrow — label placed 10px to the left of the path midpoint
-        '<path d="M90 145 Q78 110 90 76 Q102 52 148 68" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round"/>' +
-        '<path d="M148 68 L140 62 L152 60 Z" fill="#f97316"/>' +
-        // Evaporation label — in clear left margin, no overlap with path
-        '<text x="46" y="112" style="' + LS + 'font-weight:600;" fill="#c2410c" text-anchor="middle">Evaporation</text>' +
-        // Rain drops — below cloud base (62+18=80), dropping to ground
-        '<line x1="168" y1="82" x2="155" y2="130" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"/>' +
-        '<line x1="184" y1="82" x2="175" y2="140" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"/>' +
-        '<line x1="200" y1="82" x2="194" y2="138" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"/>' +
-        '<line x1="216" y1="82" x2="213" y2="136" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round"/>' +
-        '<circle cx="152" cy="133" r="2.5" fill="#3b82f6"/>' +
-        '<circle cx="174" cy="143" r="2.5" fill="#3b82f6"/>' +
-        '<circle cx="193" cy="141" r="2.5" fill="#3b82f6"/>' +
-        '<circle cx="212" cy="139" r="2.5" fill="#3b82f6"/>' +
-        // Precipitation label — right of rain, clear of drops
-        '<rect x="230" y="97" width="68" height="16" rx="4" fill="white" stroke="#3b82f6" stroke-width="0.8"/>' +
-        '<text x="264" y="108" style="' + LT + 'font-weight:600;" fill="#1d4ed8" text-anchor="middle">Precipitation</text>' +
-        // Runoff arrow — dashed, 4px above ground line
-        '<path d="M240 157 Q210 154 170 154 Q130 154 80 157" fill="none" stroke="#0ea5e9" stroke-width="1.5" stroke-dasharray="5 3" stroke-linecap="round"/>' +
-        '<path d="M80 157 L90 152 L90 162 Z" fill="#0ea5e9"/>' +
-        '<text x="175" y="175" style="' + LT + '" fill="#0284c7" text-anchor="middle">Runoff / Collection</text>' +
+      /* A landscape, because the water cycle is a PLACE: the sea, the land
+         rising to mountains, the sky over both. It was a pale-blue rectangle
+         stacked on a pale-green one, an ellipse for "Ocean / Lake" straddling
+         the seam, and a dashed "runoff" arrow ending in the middle of the
+         grass - a diagram of boxes that happened to be sky-coloured.
+
+         Now the water can be followed round: up off the sea as vapour, into
+         the cloud, down as rain on the mountains, and back to the sea along
+         a river. Colour is what the things are - water blue, land green, the
+         sun warm - which is meaning, not rotation. */
+      curatedDiagramSVG.seq = (curatedDiagramSVG.seq || 0) + 1;
+      var wq = curatedDiagramSVG.seq;
+      var wm = function (id, fill) {
+        return '<marker id="' + id + wq + '" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="6.5" markerHeight="6.5" orient="auto">' +
+               '<path d="M1 1.5 L11 6 L1 10.5 L3.6 6 z" fill="' + fill + '"/></marker>';
+      };
+      var wu = function (id) { return 'url(#' + id + wq + ')'; };
+      var wP = 'font-size:11.5px;font-weight:700;', wS = 'font-size:10.5px;';
+      var wT = function (x, y, t, st, fill, anchor) {
+        return '<text x="' + x + '" y="' + y + '" style="' + st + '" fill="' + fill + '" text-anchor="' + (anchor || 'start') + '" ' +
+               'stroke="#ffffff" stroke-width="3" stroke-linejoin="round" paint-order="stroke">' + t + '</text>';
+      };
+      var vap = function (x) {
+        return '<path d="M' + x + ' 196 q-6 -10 0 -20 q6 -10 0 -20 q-6 -10 0 -20" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-dasharray="3 3" marker-end="' + wu('wvV') + '"/>';
+      };
+      var drop = function (x) {
+        return '<line x1="' + x + '" y1="84" x2="' + (x - 6) + '" y2="110" stroke="#3b82f6" stroke-width="1.8" stroke-linecap="round"/>';
+      };
+      return '<svg viewBox="0 0 400 254" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs>' + wm('wvV', '#60a5fa') + wm('wvB', '#3b82f6') + '</defs>' +
+        /* Sun */
+        '<circle cx="44" cy="40" r="19" fill="#fde68a" stroke="#f59e0b" stroke-width="2"/>' +
+        '<g stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round">' +
+        '<line x1="44" y1="13" x2="44" y2="7"/><line x1="44" y1="67" x2="44" y2="73"/>' +
+        '<line x1="17" y1="40" x2="11" y2="40"/><line x1="71" y1="40" x2="77" y2="40"/>' +
+        '<line x1="25" y1="21" x2="21" y2="17"/><line x1="63" y1="21" x2="67" y2="17"/>' +
+        '<line x1="25" y1="59" x2="21" y2="63"/><line x1="63" y1="59" x2="67" y2="63"/></g>' +
+        /* Sea first, running on under the land, so the shore is the land's
+           own curved beach rather than a straight edge where two shapes meet. */
+        '<path d="M0 206 Q20 201 40 206 T80 206 T120 206 T160 206 T200 206 L200 254 L0 254 Z" fill="#bfdbfe" stroke="#3b82f6" stroke-width="1.8" stroke-linejoin="round"/>' +
+        /* Land rising to mountains, with snow on the peaks */
+        '<path d="M128 254 C136 232 148 214 170 206 C194 202 206 198 222 190 L252 150 L274 176 L302 118 L334 170 L352 152 L400 188 L400 254 Z" fill="#dcfce7" stroke="#16a34a" stroke-width="1.8" stroke-linejoin="round"/>' +
+        '<path d="M290 142 L302 118 L314 142 L306 138 L302 144 L296 138 Z" fill="#ffffff" stroke="#16a34a" stroke-width="1.2" stroke-linejoin="round"/>' +
+        '<path d="M244 162 L252 150 L260 162 L254 159 L250 163 Z" fill="#ffffff" stroke="#16a34a" stroke-width="1.2" stroke-linejoin="round"/>' +
+        /* River: runoff from the mountains back to the sea */
+        '<path d="M320 168 C302 190 272 196 242 204 C212 210 176 210 150 214" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" marker-end="' + wu('wvB') + '"/>' +
+        /* Evaporation off the sea */
+        vap(52) + vap(84) + vap(116) +
+        /* Cloud over the mountains */
+        '<path d="M192 72 C180 72 176 58 188 54 C190 40 210 36 218 46 C226 32 252 34 256 50 C272 48 280 64 268 72 Z" fill="#ffffff" stroke="#94a3b8" stroke-width="1.6" stroke-linejoin="round"/>' +
+        /* Condensation: the vapour gathering into the cloud */
+        '<path d="M122 112 C140 86 160 72 184 66" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-dasharray="3 3" marker-end="' + wu('wvV') + '"/>' +
+        /* Precipitation onto the mountains */
+        drop(214) + drop(230) + drop(246) + drop(262) +
+        /* Labels, haloed, each beside the process it names */
+        wT(14, 100, 'Evaporation', wP, '#1d4ed8') + wT(14, 114, 'heat lifts water', wS, '#475569') +
+        wT(228, 24, 'Condensation', wP, '#1d4ed8', 'middle') +
+        wT(278, 96, 'Precipitation', wP, '#1d4ed8') +
+        wT(252, 228, 'Runoff', wP, '#15803d', 'middle') + wT(252, 242, 'rivers carry it back', wS, '#475569', 'middle') +
+        wT(66, 232, 'Collection', wP, '#1e3a8a', 'middle') + wT(66, 246, 'in oceans and lakes', wS, '#1e3a8a', 'middle') +
         '</svg>';
     }
 
@@ -10510,94 +10911,109 @@
 
     // ── MITOSIS ───────────────────────────────────────────────────────────────
     if (/mitosis|meiosis|cell division|chromosome|anaphase|metaphase|prophase/.test(d)) {
-      return '<svg viewBox="0 0 440 190" width="100%" style="max-width:500px;display:block;margin:0 auto;' + LF + '">' +
-        '<defs><marker id="mA" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#94a3b8"/></marker></defs>' +
-        // Phase labels — 12px above each cell shape top (y=48), at y=36
-        '<text x="50" y="35" style="' + LT + 'font-weight:700;" fill="#be185d" text-anchor="middle">Prophase</text>' +
-        '<text x="148" y="35" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">Metaphase</text>' +
-        '<text x="246" y="35" style="' + LT + 'font-weight:700;" fill="#5b21b6" text-anchor="middle">Anaphase</text>' +
-        '<text x="374" y="35" style="' + LT + 'font-weight:700;" fill="#065f46" text-anchor="middle">Telophase</text>' +
-        // Phase 1: Prophase
-        '<rect x="8" y="48" width="84" height="96" rx="42" fill="#fce7f3" stroke="#ec4899" stroke-width="1.8"/>' +
-        '<path d="M30 86 Q42 74 42 96 Q42 114 30 108" fill="#f472b6" stroke="#db2777" stroke-width="1.8" stroke-linecap="round"/>' +
-        '<path d="M72 86 Q60 74 60 96 Q60 114 72 108" fill="#f472b6" stroke="#db2777" stroke-width="1.8" stroke-linecap="round"/>' +
-        // Phase 2: Metaphase
-        '<rect x="106" y="48" width="84" height="96" rx="42" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.8"/>' +
-        '<line x1="148" y1="54" x2="148" y2="138" stroke="#bfdbfe" stroke-width="1.2" stroke-dasharray="4 3"/>' +
-        '<rect x="132" y="82" width="32" height="11" rx="4" fill="#3b82f6" opacity=".7"/>' +
-        '<rect x="132" y="99" width="32" height="11" rx="4" fill="#3b82f6" opacity=".7"/>' +
-        // Phase 3: Anaphase
-        '<rect x="206" y="48" width="84" height="96" rx="42" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.8"/>' +
-        '<path d="M224 76 Q236 68 236 84 Q236 96 224 91" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.5"/>' +
-        '<path d="M270 76 Q258 68 258 84 Q258 96 270 91" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.5"/>' +
-        '<path d="M224 120 Q236 114 236 126 Q236 136 224 132" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.5"/>' +
-        '<path d="M270 120 Q258 114 258 126 Q258 136 270 132" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.5"/>' +
-        // Phase 4: Telophase — two daughter cells
-        '<ellipse cx="350" cy="78" rx="28" ry="28" fill="#d1fae5" stroke="#10b981" stroke-width="1.8"/>' +
-        '<ellipse cx="398" cy="78" rx="28" ry="28" fill="#d1fae5" stroke="#10b981" stroke-width="1.8"/>' +
-        '<ellipse cx="350" cy="136" rx="28" ry="28" fill="none" stroke="#10b981" stroke-width="1.2" stroke-dasharray="4 3"/>' +
-        '<ellipse cx="398" cy="136" rx="28" ry="28" fill="none" stroke="#10b981" stroke-width="1.2" stroke-dasharray="4 3"/>' +
-        '<circle cx="350" cy="78" r="9" fill="#a7f3d0" stroke="#10b981" stroke-width="1.2"/>' +
-        '<circle cx="398" cy="78" r="9" fill="#a7f3d0" stroke="#10b981" stroke-width="1.2"/>' +
-        // Daughter cells label — 10px below lowest element (136+28=164, +10=174)
-        '<text x="374" y="176" style="' + LT + '" fill="#374151" text-anchor="middle">2 daughter cells</text>' +
-        // Phase arrows
-        '<path d="M94 96 L104 96" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#mA)"/>' +
-        '<path d="M192 96 L204 96" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#mA)"/>' +
-        '<path d="M292 90 L304 78" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#mA)"/>' +
+      /* Four stages, one hue, the chromosomes in the focal blue because they
+         are the thing to WATCH move. Each stage used to be its own colour -
+         pink, blue, violet, green - which said "four different things" about
+         one cell; and telophase was four circles, two solid and two dashed,
+         for what is one cell pinching into two. */
+      curatedDiagramSVG.seq = (curatedDiagramSVG.seq || 0) + 1;
+      var mtA = 'sfMitA' + curatedDiagramSVG.seq;
+      var CH = '#3563e9', FIB = '#c3d4fd', CEL = '#9db6f7';
+      var X = function (x, y) {
+        return '<path d="M' + (x - 5) + ' ' + (y - 8) + ' L' + (x + 5) + ' ' + (y + 8) + ' M' + (x + 5) + ' ' + (y - 8) + ' L' + (x - 5) + ' ' + (y + 8) + '" stroke="' + CH + '" stroke-width="3.6" stroke-linecap="round"/>';
+      };
+      var V = function (x, y, dir) {   // dir -1 = heading left, +1 = heading right
+        return '<path d="M' + (x - 6 * dir) + ' ' + (y - 7) + ' L' + x + ' ' + y + ' L' + (x - 6 * dir) + ' ' + (y + 7) + '" fill="none" stroke="' + CH + '" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>';
+      };
+      var fib = function (x1, y1, x2, y2) { return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + FIB + '" stroke-width="1.2"/>'; };
+      var cell = function (cx) { return '<circle cx="' + cx + '" cy="95" r="38" fill="#f4f7ff" stroke="' + CEL + '" stroke-width="1.6"/>'; };
+      var step = function (x, name, l1, l2) {
+        return '<text x="' + x + '" y="36" style="font-size:11.5px;font-weight:700;" fill="#1a1d2e" text-anchor="middle">' + name + '</text>' +
+               '<text x="' + x + '" y="152" style="font-size:10.5px;" fill="#5b6478" text-anchor="middle">' + l1 + '</text>' +
+               '<text x="' + x + '" y="165" style="font-size:10.5px;" fill="#5b6478" text-anchor="middle">' + l2 + '</text>';
+      };
+      var go = function (x) { return '<line x1="' + x + '" y1="95" x2="' + (x + 10) + '" y2="95" stroke="#9aabcc" stroke-width="1.6" marker-end="url(#' + mtA + ')"/>'; };
+      return '<svg viewBox="0 0 400 196" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs><marker id="' + mtA + '" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto">' +
+        '<path d="M1 1.5 L11 6 L1 10.5 L3.6 6 z" fill="#9aabcc"/></marker></defs>' +
+        /* Prophase: chromosomes condense inside the nuclear envelope. */
+        cell(52) + '<circle cx="52" cy="95" r="23" fill="none" stroke="' + CEL + '" stroke-width="1.2" stroke-dasharray="3 3"/>' +
+        X(44, 88) + X(60, 102) +
+        /* Metaphase: lined up on the equator, spindle fibres from the poles. */
+        cell(151) + '<line x1="151" y1="60" x2="151" y2="130" stroke="' + FIB + '" stroke-width="1" stroke-dasharray="3 3"/>' +
+        fib(117, 95, 146, 83) + fib(117, 95, 146, 107) + fib(185, 95, 156, 83) + fib(185, 95, 156, 107) +
+        X(151, 83) + X(151, 107) +
+        /* Anaphase: the copies pulled to opposite poles. */
+        cell(250) + fib(216, 95, 232, 85) + fib(216, 95, 232, 105) + fib(284, 95, 268, 85) + fib(284, 95, 268, 105) +
+        V(232, 85, -1) + V(232, 105, -1) + V(268, 85, 1) + V(268, 105, 1) +
+        /* Telophase: one cell pinching into two, a nucleus forming in each. */
+        '<path d="M350 68 C340 56 310 62 310 95 C310 128 340 134 350 122 C360 134 390 128 390 95 C390 62 360 56 350 68 Z" fill="#f4f7ff" stroke="' + CEL + '" stroke-width="1.6"/>' +
+        '<circle cx="331" cy="95" r="14" fill="none" stroke="' + CEL + '" stroke-width="1.2" stroke-dasharray="3 3"/>' +
+        '<circle cx="369" cy="95" r="14" fill="none" stroke="' + CEL + '" stroke-width="1.2" stroke-dasharray="3 3"/>' +
+        '<path d="M325 90 q4 -5 8 0 q4 5 8 0 M325 100 q4 -5 8 0 q4 5 8 0" fill="none" stroke="' + CH + '" stroke-width="2" stroke-linecap="round"/>' +
+        '<path d="M363 90 q4 -5 8 0 q4 5 8 0 M363 100 q4 -5 8 0 q4 5 8 0" fill="none" stroke="' + CH + '" stroke-width="2" stroke-linecap="round"/>' +
+        go(92) + go(191) + go(290) +
+        step(52, 'Prophase', 'chromosomes', 'condense') +
+        step(151, 'Metaphase', 'they line up', 'in the middle') +
+        step(250, 'Anaphase', 'copies pulled', 'apart') +
+        step(350, 'Telophase', 'two nuclei,', 'cell splits') +
+        '<text x="200" y="188" style="font-size:10.5px;font-weight:600;" fill="#1d3a8a" text-anchor="middle">1 cell → 2 identical cells</text>' +
         '</svg>';
     }
 
     // ── MEMORY MODEL ─────────────────────────────────────────────────────────
     if (/memory|encoding|storage|retrieval|short.term|long.term|working memory|forgetting/.test(d)) {
-      return '<svg viewBox="0 0 498 185" width="100%" style="max-width:560px;display:block;margin:0 auto;' + LF + '">' +
-        '<defs>' +
-        '<marker id="mF" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#6366f1"/></marker>' +
-        '<marker id="mG" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#94a3b8"/></marker>' +
-        '</defs>' +
-        // Stimulus box
-        '<rect x="8" y="70" width="68" height="50" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>' +
-        '<text x="42" y="92" style="' + LT + 'font-weight:700;" fill="#374151" text-anchor="middle">Stimulus</text>' +
-        '<text x="42" y="106" style="' + LT + '" fill="#64748b" text-anchor="middle">(sight/sound)</text>' +
-        // Arrow + "attention" label. The gaps between boxes are 46px, set from
-        // the widest transition word ("attention" is ~36px at 8px type) plus
-        // clearance, so a label can never sit on top of a neighbouring box.
-        '<path d="M76 95 L120 95" fill="none" stroke="#6366f1" stroke-width="1.8" marker-end="url(#mF)"/>' +
-        '<text x="99" y="88" style="' + LT + '" fill="#4338ca" text-anchor="middle">attention</text>' +
-        // Sensory memory
-        '<rect x="122" y="58" width="76" height="74" rx="10" fill="#fce7f3" stroke="#ec4899" stroke-width="1.8"/>' +
-        '<text x="160" y="82" style="' + LT + 'font-weight:700;" fill="#9d174d" text-anchor="middle">Sensory</text>' +
-        '<text x="160" y="96" style="' + LT + 'font-weight:700;" fill="#be185d" text-anchor="middle">Memory</text>' +
-        '<text x="160" y="110" style="' + LT + '" fill="#be185d" text-anchor="middle">0.5–3 sec</text>' +
-        '<text x="160" y="122" style="' + LT + '" fill="#be185d" text-anchor="middle">unlimited</text>' +
-        // "forgotten" from sensory — arrow exits bottom with 6px gap, label 4px below arrow
-        '<path d="M160 132 L160 158" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#mG)"/>' +
-        '<text x="160" y="170" style="' + LT + '" fill="#94a3b8" text-anchor="middle">forgotten</text>' +
-        // STM arrow + label
-        '<path d="M198 95 L242 95" fill="none" stroke="#6366f1" stroke-width="1.8" marker-end="url(#mF)"/>' +
-        '<text x="221" y="88" style="' + LT + '" fill="#4338ca" text-anchor="middle">encoding</text>' +
-        // Short-term memory
-        '<rect x="244" y="48" width="92" height="94" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.8"/>' +
-        '<text x="290" y="76" style="' + LT + 'font-weight:700;" fill="#1e40af" text-anchor="middle">Short-term</text>' +
-        '<text x="290" y="90" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">Memory</text>' +
-        '<text x="290" y="106" style="' + LT + '" fill="#3b82f6" text-anchor="middle">~7 items</text>' +
-        '<text x="290" y="120" style="' + LT + '" fill="#3b82f6" text-anchor="middle">15–30 sec</text>' +
-        // Decay from STM
-        '<path d="M290 142 L290 158" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#mG)"/>' +
-        '<text x="290" y="170" style="' + LT + '" fill="#94a3b8" text-anchor="middle">decay</text>' +
-        // LTM encoding arrow
-        '<path d="M336 95 L380 95" fill="none" stroke="#6366f1" stroke-width="1.8" marker-end="url(#mF)"/>' +
-        '<text x="359" y="88" style="' + LT + '" fill="#4338ca" text-anchor="middle">encoding</text>' +
-        // Long-term memory
-        '<rect x="382" y="36" width="108" height="118" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.8"/>' +
-        '<text x="436" y="62" style="' + LT + 'font-weight:700;" fill="#14532d" text-anchor="middle">Long-term</text>' +
-        '<text x="436" y="76" style="' + LT + 'font-weight:700;" fill="#16a34a" text-anchor="middle">Memory</text>' +
-        '<text x="436" y="94" style="' + LT + '" fill="#15803d" text-anchor="middle">Unlimited size</text>' +
-        '<text x="436" y="108" style="' + LT + '" fill="#15803d" text-anchor="middle">Days–Lifetime</text>' +
-        '<text x="436" y="122" style="' + LT + '" fill="#15803d" text-anchor="middle">Explicit | Implicit</text>' +
-        // Retrieval arrow — runs BELOW boxes to avoid crossing through them
-        '<path d="M382 148 L290 148" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 2" marker-end="url(#mG)"/>' +
-        '<text x="336" y="162" style="' + LT + '" fill="#d97706" text-anchor="middle">retrieval</text>' +
+      /* The multi-store model, DOWN the card.
+
+         It ran across at 498 wide: on a phone that is a 0.69 scale, and its
+         8px text came out at 5.5px. Raising the type to a readable size in
+         the same row burst every box - "(sight/sound)" spilled out of the
+         stimulus box and "encoding" sat on top of its neighbours. The row
+         cannot hold readable type at phone width, so it is a column.
+
+         The three stores are one hue, deepening as memory becomes more
+         permanent - the tint says "lasts longer". Forgetting leaves to the
+         right, dashed and grey; retrieval comes back up the left in the
+         focal blue, because it is the arrow the lesson is usually about. */
+      curatedDiagramSVG.seq = (curatedDiagramSVG.seq || 0) + 1;
+      var mq = curatedDiagramSVG.seq;
+      var mA = 'sfMemA' + mq, mG = 'sfMemG' + mq, mR = 'sfMemR' + mq;
+      var mk = function (id, fill) {
+        return '<marker id="' + id + '" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto">' +
+               '<path d="M1 1.5 L11 6 L1 10.5 L3.6 6 z" fill="' + fill + '"/></marker>';
+      };
+      var mT = function (x, y, t, st, fill, anchor) {
+        return '<text x="' + x + '" y="' + y + '" style="' + st + '" fill="' + fill + '" text-anchor="' + (anchor || 'middle') + '">' + t + '</text>';
+      };
+      var mP = 'font-size:12.5px;font-weight:700;', mS = 'font-size:10.5px;', mE = 'font-size:10.5px;font-weight:600;';
+      var store = function (y, h, fill, title, sub) {
+        return '<rect x="120" y="' + y + '" width="180" height="' + h + '" rx="12" fill="' + fill + '" stroke="#9db6f7" stroke-width="1.3"/>' +
+               mT(210, y + h / 2 - 3, title, mP, '#1d3a8a') + mT(210, y + h / 2 + 13, sub, mS, '#3b5bb5');
+      };
+      var down = function (y1, y2, lab) {
+        return '<line x1="210" y1="' + y1 + '" x2="210" y2="' + y2 + '" stroke="#9aabcc" stroke-width="1.8" marker-end="url(#' + mA + ')"/>' +
+               mT(220, (y1 + y2) / 2 + 4, lab, mE, '#5b6478', 'start');
+      };
+      var lose = function (y, lab) {
+        return '<line x1="302" y1="' + y + '" x2="330" y2="' + y + '" stroke="#9aa6b8" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#' + mG + ')"/>' +
+               mT(338, y + 4, lab, mS, '#5b6478', 'start');
+      };
+      return '<svg viewBox="0 0 400 322" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs>' + mk(mA, '#9aabcc') + mk(mG, '#9aa6b8') + mk(mR, '#3563e9') + '</defs>' +
+        /* Stimulus */
+        '<rect x="150" y="6" width="120" height="30" rx="15" fill="#ffffff" stroke="#9aa6b8" stroke-width="1.3"/>' +
+        mT(210, 25, 'Stimulus', mE + 'font-weight:700;', '#1a1d2e') +
+        down(38, 68, 'attention') +
+        store(72, 50, '#eef3ff', 'Sensory memory', 'under 3 seconds · huge') +
+        lose(97, 'forgotten') +
+        down(124, 156, 'encoding') +
+        store(160, 50, '#d9e5ff', 'Short-term memory', '15–30 seconds · about 7 items') +
+        lose(185, 'decays') +
+        down(212, 244, 'rehearsal') +
+        store(248, 58, '#bfd1fd', 'Long-term memory', 'days to a lifetime · no known limit') +
+        /* Retrieval: from long-term back up into short-term, round the left. */
+        '<path d="M118 277 C78 277 78 185 116 185" fill="none" stroke="#3563e9" stroke-width="1.8" marker-end="url(#' + mR + ')"/>' +
+        mT(72, 235, 'retrieval', mE + 'font-weight:700;', '#3563e9', 'end') +
         '</svg>';
     }
 
@@ -10609,39 +11025,55 @@
        has the picture and not the cycle. Labels sit outside the triangle on
        the side the arrow runs, so none of them cross a path. */
     if (/rock cycle|igneous|sedimentary|metamorphic|magma/.test(d)) {
-      return '<svg viewBox="0 0 460 300" width="100%" style="max-width:460px;display:block;margin:0 auto;' + LF + '">' +
-        '<defs><marker id="rcA" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">' +
-        '<path d="M0,0 L7,3.5 L0,7 Z" fill="#57534e"/></marker></defs>' +
-        // Igneous — top
-        '<rect x="176" y="26" width="108" height="36" rx="9" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5"/>' +
-        '<text x="230" y="44" style="' + LP + '" fill="#991b1b" text-anchor="middle">Igneous</text>' +
-        '<text x="230" y="56" style="' + LT + '" fill="#ef4444" text-anchor="middle">granite, basalt</text>' +
-        // Sedimentary — bottom right
-        '<rect x="314" y="226" width="108" height="36" rx="9" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>' +
-        '<text x="368" y="244" style="' + LP + '" fill="#92400e" text-anchor="middle">Sedimentary</text>' +
-        '<text x="368" y="256" style="' + LT + '" fill="#b45309" text-anchor="middle">sandstone, shale</text>' +
-        // Metamorphic — bottom left
-        '<rect x="38" y="226" width="108" height="36" rx="9" fill="#ede9fe" stroke="#7c3aed" stroke-width="1.5"/>' +
-        '<text x="92" y="244" style="' + LP + '" fill="#5b21b6" text-anchor="middle">Metamorphic</text>' +
-        '<text x="92" y="256" style="' + LT + '" fill="#7c3aed" text-anchor="middle">marble, slate</text>' +
-        // Magma — centre
-        '<ellipse cx="230" cy="162" rx="46" ry="24" fill="#fed7aa" stroke="#ea580c" stroke-width="1.5"/>' +
-        '<text x="230" y="166" style="' + LP + '" fill="#9a3412" text-anchor="middle">Magma</text>' +
-        // Igneous -> Sedimentary, down the right side
-        '<path d="M284 58 Q372 120 362 226" fill="none" stroke="#57534e" stroke-width="1.8" marker-end="url(#rcA)"/>' +
-        '<text x="418" y="128" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="middle">weathering</text>' +
-        '<text x="418" y="140" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="middle">&amp; erosion</text>' +
-        // Sedimentary -> Metamorphic, along the bottom
-        '<path d="M310 244 L154 244" fill="none" stroke="#57534e" stroke-width="1.8" marker-end="url(#rcA)"/>' +
-        '<text x="232" y="284" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="middle">heat &amp; pressure</text>' +
-        // Metamorphic -> Magma, inward
-        '<path d="M146 232 L188 178" fill="none" stroke="#57534e" stroke-width="1.8" marker-end="url(#rcA)"/>' +
-        '<text x="118" y="198" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="middle">melting</text>' +
-        // Magma -> Igneous, up the middle
-        '<path d="M230 136 L230 72" fill="none" stroke="#57534e" stroke-width="1.8" marker-end="url(#rcA)"/>' +
-        '<text x="244" y="106" style="' + LS + 'font-weight:600;" fill="#57534e" text-anchor="start">cooling</text>' +
+      /* The rocks are DRAWN now, each with the texture that identifies it:
+         igneous speckled with crystals, sedimentary in layers, metamorphic
+         in squeezed wavy bands, magma molten. It was three pastel boxes
+         (red, amber, violet) with the names inside - a flowchart of rock
+         words - and at a readable type size "granite, basalt" collided
+         with "Igneous" inside its own box. The texture IS the lesson: it is
+         how a geologist tells the three apart. Colour is earth and fire,
+         because that is what these things are. */
+      curatedDiagramSVG.seq = (curatedDiagramSVG.seq || 0) + 1;
+      var rcA = 'sfRockA' + curatedDiagramSVG.seq;
+      var rP = 'font-size:12px;font-weight:700;', rS = 'font-size:10.5px;', rE = 'font-size:10.5px;font-weight:600;';
+      var rT = function (x, y, t, st, fill, anchor) {
+        return '<text x="' + x + '" y="' + y + '" style="' + st + '" fill="' + fill + '" text-anchor="' + (anchor || 'middle') + '">' + t + '</text>';
+      };
+      var dot = function (x, y, r, f) { return '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="' + f + '"/>'; };
+      var band = function (y, x1, x2, c) { return '<line x1="' + x1 + '" y1="' + y + '" x2="' + x2 + '" y2="' + y + '" stroke="' + c + '" stroke-width="2.4"/>'; };
+      var wav = function (dd) { return '<path d="' + dd + '" fill="none" stroke="#64748b" stroke-width="1.6" stroke-linecap="round"/>'; };
+      var arr = function (dd) { return '<path d="' + dd + '" fill="none" stroke="#57534e" stroke-width="1.8" marker-end="url(#' + rcA + ')"/>'; };
+      return '<svg viewBox="0 0 400 290" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs><marker id="' + rcA + '" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto">' +
+        '<path d="M1 1.5 L11 6 L1 10.5 L3.6 6 z" fill="#57534e"/></marker></defs>' +
+        /* Igneous, top: a chunk of granite, crystals showing. */
+        '<polygon points="168,60 176,38 198,30 222,34 234,50 230,70 208,78 180,76" fill="#dcd6cf" stroke="#78716c" stroke-width="1.5" stroke-linejoin="round"/>' +
+        dot(186, 50, 2.2, '#44403c') + dot(200, 43, 1.8, '#fafaf9') + dot(213, 58, 2.4, '#57534e') +
+        dot(194, 65, 1.6, '#a8a29e') + dot(221, 47, 2, '#fafaf9') + dot(206, 69, 1.5, '#44403c') +
+        dot(182, 61, 1.7, '#fafaf9') + dot(224, 64, 1.6, '#78716c') + dot(193, 38, 1.4, '#57534e') +
+        rT(244, 52, 'Igneous', rP, '#1a1d2e', 'start') + rT(244, 66, 'granite, basalt', rS, '#5b6478', 'start') +
+        /* Magma, centre: molten, with a hotter core. */
+        '<path d="M160 150 C160 128 184 120 202 124 C224 120 244 134 240 152 C238 170 216 178 198 176 C176 178 160 168 160 150 Z" fill="#fdba74" stroke="#ea580c" stroke-width="1.6"/>' +
+        '<ellipse cx="200" cy="150" rx="24" ry="13" fill="#fed7aa"/>' +
+        rT(200, 155, 'Magma', rP, '#7c2d12') +
+        /* Sedimentary, bottom right: layers. */
+        '<path d="M282 216 L292 205 L340 203 L356 214 L354 246 L284 248 Z" fill="#f3dfb6" stroke="#a16207" stroke-width="1.5" stroke-linejoin="round"/>' +
+        band(217, 288, 350, '#d9b26a') + band(225, 286, 352, '#ecd3a0') + band(233, 286, 352, '#c99a4b') + band(241, 286, 352, '#e3c48c') +
+        rT(320, 266, 'Sedimentary', rP, '#1a1d2e') + rT(320, 280, 'sandstone, shale', rS, '#5b6478') +
+        /* Metamorphic, bottom left: squeezed into wavy bands. */
+        '<path d="M46 212 L58 201 L104 199 L118 212 L114 246 L50 248 Z" fill="#cfd6e0" stroke="#475569" stroke-width="1.5" stroke-linejoin="round"/>' +
+        wav('M54 214 Q64 208 74 214 Q84 220 94 214 Q104 208 112 213') +
+        wav('M52 224 Q62 218 72 224 Q82 230 92 224 Q102 218 113 223') +
+        wav('M52 234 Q62 228 72 234 Q82 240 92 234 Q102 228 112 233') +
+        rT(82, 266, 'Metamorphic', rP, '#1a1d2e') + rT(82, 280, 'marble, slate', rS, '#5b6478') +
+        /* The four processes, each riding its arrow. */
+        arr('M226 78 Q320 100 320 198') + rT(330, 128, 'weathering', rE, '#57534e', 'start') + rT(330, 142, '&amp; erosion', rE, '#57534e', 'start') +
+        arr('M280 230 L122 230') + rT(200, 222, 'heat &amp; pressure', rE, '#57534e') +
+        arr('M104 198 L164 166') + rT(126, 176, 'melting', rE, '#57534e', 'end') +
+        arr('M200 122 L200 84') + rT(208, 108, 'cooling', rE, '#57534e', 'start') +
         '</svg>';
     }
+
 
     if (/food chain|food web|ecosystem|producer|consumer|decomposer|trophic|energy pyramid/.test(d)) {
       /* A real pyramid with the creatures in it, not four stacked boxes. The
@@ -10663,30 +11095,33 @@
       };
       return '<svg viewBox="0 0 470 292" width="100%" style="max-width:480px;display:block;margin:0 auto;' + LF + '">' +
         '<defs><marker id="ecA" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto">' +
-        '<path d="M0,0 L7,3.5 L0,7 Z" fill="#f59e0b"/></marker></defs>' +
+        '<path d="M0,0 L7,3.5 L0,7 Z" fill="#5b6478"/></marker></defs>' +
 
-        ePy(0, 30, 52, '#fee2e2', '#ef4444') +
-        ePy(1, 88, 52, '#ede9fe', '#7c3aed') +
-        ePy(2, 146, 52, '#dbeafe', '#3b82f6') +
-        ePy(3, 204, 54, '#dcfce7', '#16a34a') +
+        /* One green, deepest at the base, where the energy is. The levels
+           were red, violet, blue and green - four hues for one quantity -
+           and the tint now says the same thing the width says. */
+        ePy(0, 30, 52, '#f0fdf4', '#16a34a') +
+        ePy(1, 88, 52, '#dcfce7', '#16a34a') +
+        ePy(2, 146, 52, '#bbf7d0', '#16a34a') +
+        ePy(3, 204, 54, '#86efac', '#15803d') +
 
         /* hawk */
-        '<path d="M196 50 q8 -7 14 0 q6 -7 14 0 q-7 6 -14 3 q-7 3 -14 -3 Z" fill="#991b1b"/>' +
-        '<text x="210" y="70" style="' + LP + '" fill="#991b1b" text-anchor="middle">Hawk</text>' +
+        '<path d="M196 50 q8 -7 14 0 q6 -7 14 0 q-7 6 -14 3 q-7 3 -14 -3 Z" fill="#14532d"/>' +
+        '<text x="210" y="70" style="' + LP + '" fill="#14532d" text-anchor="middle">Hawk</text>' +
         /* fox */
-        '<g fill="#5b21b6">' +
+        '<g fill="#14532d">' +
         '<ellipse cx="208" cy="112" rx="15" ry="7"/>' +
         '<path d="M220 108 l9 -6 l-1 7 l6 3 l-14 3 Z"/>' +
         '<path d="M193 110 q-11 -2 -14 -9 q9 1 14 5 Z"/>' +
         '</g>' +
-        '<text x="210" y="130" style="' + LP + '" fill="#5b21b6" text-anchor="middle">Fox</text>' +
+        '<text x="210" y="130" style="' + LP + '" fill="#14532d" text-anchor="middle">Fox</text>' +
         /* rabbit */
-        '<g fill="#1e40af">' +
+        '<g fill="#14532d">' +
         '<ellipse cx="206" cy="172" rx="13" ry="8"/>' +
         '<circle cx="219" cy="167" r="6"/>' +
         '<path d="M217 162 q-1 -9 2 -11 q3 3 2 11 Z"/><path d="M222 162 q1 -9 4 -10 q2 4 -1 11 Z"/>' +
         '</g>' +
-        '<text x="210" y="190" style="' + LP + '" fill="#1e40af" text-anchor="middle">Rabbit</text>' +
+        '<text x="210" y="190" style="' + LP + '" fill="#14532d" text-anchor="middle">Rabbit</text>' +
         /* grass */
         '<g fill="none" stroke="#15803d" stroke-width="2.2" stroke-linecap="round">' +
         '<path d="M182 238 q2 -12 -2 -20 M188 238 q0 -14 5 -20 M194 238 q3 -11 1 -18"/>' +
@@ -10695,19 +11130,19 @@
         '<text x="210" y="252" style="' + LP + '" fill="#14532d" text-anchor="middle">Grass</text>' +
 
         /* Roles: each starts 8 units right of ITS OWN level's widest edge. */
-        '<text x="' + (CX + half[0][1] + 8) + '" y="62" style="' + LS + '" fill="#991b1b">apex predator</text>' +
-        '<text x="' + (CX + half[1][1] + 8) + '" y="120" style="' + LS + '" fill="#5b21b6">secondary consumer</text>' +
-        '<text x="' + (CX + half[2][1] + 8) + '" y="178" style="' + LS + '" fill="#1e40af">primary consumer</text>' +
+        '<text x="' + (CX + half[0][1] + 8) + '" y="62" style="' + LS + '" fill="#14532d">apex predator</text>' +
+        '<text x="' + (CX + half[1][1] + 8) + '" y="120" style="' + LS + '" fill="#14532d">secondary consumer</text>' +
+        '<text x="' + (CX + half[2][1] + 8) + '" y="178" style="' + LS + '" fill="#14532d">primary consumer</text>' +
         '<text x="' + (CX + half[3][1] + 8) + '" y="236" style="' + LS + '" fill="#15803d">producer</text>' +
 
         /* The energy that does not make it up, on the left, each label ending
            8 units short of the pyramid edge at that height. */
-        '<path d="M22 246 L22 40" fill="none" stroke="#f59e0b" stroke-width="2" marker-end="url(#ecA)"/>' +
-        '<text x="14" y="150" style="' + LS + 'font-weight:700;" fill="#b45309" text-anchor="middle" ' +
+        '<path d="M22 246 L22 40" fill="none" stroke="#5b6478" stroke-width="2" marker-end="url(#ecA)"/>' +
+        '<text x="14" y="150" style="' + LS + 'font-weight:700;" fill="#166534" text-anchor="middle" ' +
         'transform="rotate(-90 14 150)">energy</text>' +
-        '<text x="' + (CX - half[0][1] - 8) + '" y="92" style="' + LT + '" fill="#b45309" text-anchor="end">~10% up</text>' +
-        '<text x="' + (CX - half[1][1] - 8) + '" y="150" style="' + LT + '" fill="#b45309" text-anchor="end">~10% up</text>' +
-        '<text x="' + (CX - half[2][1] - 8) + '" y="208" style="' + LT + '" fill="#b45309" text-anchor="end">~10% up</text>' +
+        '<text x="' + (CX - half[0][1] - 8) + '" y="92" style="' + LT + '" fill="#166534" text-anchor="end">~10% up</text>' +
+        '<text x="' + (CX - half[1][1] - 8) + '" y="150" style="' + LT + '" fill="#166534" text-anchor="end">~10% up</text>' +
+        '<text x="' + (CX - half[2][1] - 8) + '" y="208" style="' + LT + '" fill="#166534" text-anchor="end">~10% up</text>' +
 
         '<text x="235" y="278" style="' + LT + '" fill="#475569" text-anchor="middle">' +
         'Each level is narrower because only about a tenth of the energy is passed on</text>' +
@@ -10716,51 +11151,62 @@
 
     // ── ATOM ─────────────────────────────────────────────────────────────────
     if (/atom|electron|proton|neutron|orbital|periodic|element|bohr/.test(d)) {
-      return '<svg viewBox="0 0 290 290" width="100%" style="max-width:330px;display:block;margin:0 auto;' + LF + '">' +
-        // Orbital paths — subtle rings
-        '<circle cx="145" cy="145" r="48" fill="none" stroke="#e2e8f0" stroke-width="1.2"/>' +
-        '<circle cx="145" cy="145" r="82" fill="none" stroke="#e2e8f0" stroke-width="1.2"/>' +
-        '<circle cx="145" cy="145" r="116" fill="none" stroke="#e2e8f0" stroke-width="1.2"/>' +
-        // Nucleus
-        '<circle cx="145" cy="145" r="25" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>' +
-        // Proton circles inside nucleus — not touching nucleus border
-        '<circle cx="138" cy="140" r="7" fill="#fecaca" stroke="#ef4444" stroke-width="1"/>' +
-        '<circle cx="152" cy="140" r="7" fill="#fecaca" stroke="#ef4444" stroke-width="1"/>' +
-        '<circle cx="138" cy="152" r="7" fill="#d1d5db" stroke="#6b7280" stroke-width="1"/>' +
-        '<circle cx="152" cy="152" r="7" fill="#d1d5db" stroke="#6b7280" stroke-width="1"/>' +
-        // Nucleus label — 12px below nucleus bottom (145+25+12=182)
-        '<text x="145" y="184" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">Nucleus (p+ + n0)</text>' +
-        // Shell 1 electrons
-        '<circle cx="193" cy="145" r="8" fill="#bfdbfe" stroke="#3b82f6" stroke-width="1.5"/>' +
-        '<text x="193" y="149" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">e−</text>' +
-        '<circle cx="97" cy="145" r="8" fill="#bfdbfe" stroke="#3b82f6" stroke-width="1.5"/>' +
-        '<text x="97" y="149" style="' + LT + 'font-weight:700;" fill="#1d4ed8" text-anchor="middle">e−</text>' +
-        // Shell 1 label. All three shell labels are placed on the same 45°
-        // diagonal, each in the gap just outside its own ring. Because the
-        // rings are 34px apart, the labels inherit that separation instead of
-        // bunching into one wedge and overlapping each other.
-        '<line x1="176" y1="114" x2="183" y2="107" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="2 2"/>' +
-        '<text x="186" y="108" style="' + LT + '" fill="#374151">Shell 1</text>' +
-        // Shell 2 electrons
-        '<circle cx="227" cy="145" r="8" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>' +
-        '<text x="227" y="149" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e−</text>' +
-        '<circle cx="63" cy="145" r="8" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>' +
-        '<text x="63" y="149" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e−</text>' +
-        '<circle cx="145" cy="63" r="8" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>' +
-        '<text x="145" y="67" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e−</text>' +
-        '<circle cx="145" cy="227" r="8" fill="#bbf7d0" stroke="#16a34a" stroke-width="1.5"/>' +
-        '<text x="145" y="231" style="' + LT + 'font-weight:700;" fill="#15803d" text-anchor="middle">e−</text>' +
-        // Shell 2 label
-        '<line x1="200" y1="90" x2="207" y2="83" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="2 2"/>' +
-        '<text x="210" y="84" style="' + LT + '" fill="#374151">Shell 2</text>' +
-        // Shell 3 electrons (outer)
-        '<circle cx="261" cy="145" r="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>' +
-        '<text x="261" y="149" style="' + LT + 'font-weight:700;" fill="#713f12" text-anchor="middle">e−</text>' +
-        '<circle cx="29" cy="145" r="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>' +
-        '<text x="29" y="149" style="' + LT + 'font-weight:700;" fill="#713f12" text-anchor="middle">e−</text>' +
-        // Shell 3 label
-        '<line x1="224" y1="66" x2="231" y2="59" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="2 2"/>' +
-        '<text x="234" y="60" style="' + LT + '" fill="#374151">Shell 3</text>' +
+      /* A REAL atom: carbon, 6 protons, 6 neutrons, electrons 2 and 4.
+
+         The old drawing was not any atom. Its nucleus held 2 protons and 2
+         neutrons (helium) while 8 electrons orbited it - not neutral - and it
+         put 4 electrons in shell 2 with more in shell 3, when shell 2 fills
+         to 8 first. It looked like a plausible Bohr diagram, which is what
+         made it wrong: a learner copying it copies a false model. Electrons
+         were also four different colours by shell, which says the electrons
+         differ from each other; they do not.
+
+         Colour now follows the physics convention and nothing else: protons
+         red (+), neutrons grey, electrons blue (-). The signs are drawn as
+         marks, not text - a "+" in 8px type inside a 7-unit circle is a
+         smudge. */
+      var aC = 150, aY = 162;
+      var aP = 'font-size:11.5px;font-weight:700;', aS = 'font-size:10.5px;';
+      var aT = function (x, y, t, st, fill, anchor) {
+        return '<text x="' + x + '" y="' + y + '" style="' + st + '" fill="' + fill + '" text-anchor="' + (anchor || 'start') + '">' + t + '</text>';
+      };
+      var aLead = function (x1, y1, x2, y2) {
+        return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#1a1d2e" stroke-opacity=".45" stroke-width="1"/>';
+      };
+      var nuc = '', k, NUC = [
+        [-10, -15, 1], [0, -15, 0], [10, -15, 1],
+        [-15, -5, 0], [-5, -5, 1], [5, -5, 0], [15, -5, 1],
+        [-10, 5, 0], [0, 5, 1], [10, 5, 0],
+        [-5, 15, 1], [5, 15, 0]];
+      for (k = 0; k < NUC.length; k++) {
+        var nx = aC + NUC[k][0], ny = aY + NUC[k][1];
+        if (NUC[k][2]) {
+          nuc += '<circle cx="' + nx + '" cy="' + ny + '" r="6.2" fill="#fca5a5" stroke="#dc2626" stroke-width="1.1"/>' +
+                 '<path d="M' + (nx - 2.6) + ' ' + ny + ' H' + (nx + 2.6) + ' M' + nx + ' ' + (ny - 2.6) + ' V' + (ny + 2.6) + '" stroke="#991b1b" stroke-width="1.3" stroke-linecap="round"/>';
+        } else {
+          nuc += '<circle cx="' + nx + '" cy="' + ny + '" r="6.2" fill="#d6d9df" stroke="#6b7280" stroke-width="1.1"/>';
+        }
+      }
+      var el = function (ang, R) {
+        var rad = ang * Math.PI / 180, ex = aC + R * Math.cos(rad), ey = aY - R * Math.sin(rad);
+        ex = Math.round(ex * 10) / 10; ey = Math.round(ey * 10) / 10;
+        return '<circle cx="' + ex + '" cy="' + ey + '" r="7.5" fill="#dbe6ff" stroke="#3563e9" stroke-width="1.7"/>' +
+               '<path d="M' + (ex - 3) + ' ' + ey + ' H' + (ex + 3) + '" stroke="#1d3a8a" stroke-width="1.6" stroke-linecap="round"/>';
+      };
+      return '<svg viewBox="0 0 300 314" width="100%" style="max-width:330px;display:block;margin:0 auto;' + LF + '">' +
+        '<circle cx="' + aC + '" cy="' + aY + '" r="58" fill="none" stroke="#c3d4fd" stroke-width="1.6"/>' +
+        '<circle cx="' + aC + '" cy="' + aY + '" r="100" fill="none" stroke="#c3d4fd" stroke-width="1.6"/>' +
+        '<circle cx="' + aC + '" cy="' + aY + '" r="26" fill="#fff7ed" stroke="#fdba74" stroke-width="1" stroke-dasharray="3 3"/>' +
+        nuc +
+        /* Electrons at 0/180 and on the diagonals, which leaves the four
+           corners of the canvas free for the four labels. */
+        el(0, 58) + el(180, 58) +
+        el(45, 100) + el(135, 100) + el(225, 100) + el(315, 100) +
+        '<text x="150" y="24" style="font-size:17px;" font-family="' + SERIF_T + '" fill="#1a1d2e" text-anchor="middle">A carbon atom</text>' +
+        aLead(62, 60, 121, 112) + aT(14, 44, 'Shell 1', aP, '#1a1d2e') + aT(14, 58, 'holds 2', aS, '#5b6478') +
+        aLead(214, 58, 184, 68) + aT(292, 44, 'Shell 2', aP, '#1a1d2e', 'end') + aT(292, 58, '4 of 8 filled', aS, '#5b6478', 'end') +
+        aLead(44, 276, 74, 239) + aT(14, 290, 'Electron', aP, '#1d3a8a') + aT(14, 304, 'negative (−)', aS, '#5b6478') +
+        aLead(232, 272, 164, 176) + aT(292, 290, 'Nucleus', aP, '#1a1d2e', 'end') + aT(292, 304, '6 protons (+), 6 neutrons', aS, '#5b6478', 'end') +
         '</svg>';
     }
 
@@ -10780,10 +11226,30 @@
          to its control. The veins are anchored on the midrib at t = .26/.44/
          .62/.79 and stop at 78% of the blade's half-width there, which is why
          none of them punches through the edge. */
-      return '<svg viewBox="0 0 470 296" width="100%" style="max-width:480px;display:block;margin:0 auto;' + LF + '">' +
-        '<defs>' +
-        '<marker id="psA" markerWidth="7" markerHeight="7" refX="5.5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="context-stroke"/></marker>' +
-        '</defs>' +
+      /* LABELS OUT OF THE ARTWORK. At 470 wide the phone floor lifts every
+         label to 12.3 units, and the label spots were fitted to 8: "from the
+         air" sat on the CO2 arrow's own tail, "CO2" on "from the air", the
+         root line ran through "up from the roots". The artwork is unchanged
+         - drawn in its original units, scaled into a 400-wide canvas - and
+         the labels are placed OUTSIDE that group, in canvas units, where
+         their real size is known. Each in/out arrow now starts where its
+         label ENDS, never inside it. */
+      curatedDiagramSVG.seq = (curatedDiagramSVG.seq || 0) + 1;
+      var pq = curatedDiagramSVG.seq;
+      var pm = function (id, fill) {
+        return '<marker id="' + id + pq + '" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="6" markerHeight="6" orient="auto">' +
+               '<path d="M1 1.5 L11 6 L1 10.5 L3.6 6 z" fill="' + fill + '"/></marker>';
+      };
+      var pa = function (id) { return 'url(#' + id + pq + ')'; };
+      var pP = 'font-size:11.5px;font-weight:700;', pS = 'font-size:10.5px;';
+      var pT = function (x, y, t, st, fill, anchor) {
+        return '<text x="' + x + '" y="' + y + '" style="' + st + '" fill="' + fill + '" text-anchor="' + (anchor || 'start') + '">' + t + '</text>';
+      };
+      var sub2 = '₂';
+      return '<svg viewBox="0 0 400 266" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs>' + pm('psSun', '#f59e0b') + pm('psAir', '#475569') + pm('psWat', '#2563eb') +
+        pm('psOx', '#0891b2') + pm('psLeaf', '#15803d') + '</defs>' +
+        '<g transform="translate(24 0) scale(0.851)">' +
 
         /* ── sun, upper left ── */
         '<circle cx="46" cy="42" r="19" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>' +
@@ -10792,10 +11258,9 @@
         '<line x1="73" y1="42" x2="80" y2="42"/><line x1="65" y1="61" x2="70" y2="66"/>' +
         '<line x1="27" y1="23" x2="22" y2="18"/><line x1="19" y1="42" x2="12" y2="42"/>' +
         '</g>' +
-        '<text x="46" y="80" style="' + LS + 'font-weight:700;" fill="#92400e" text-anchor="middle">Sunlight</text>' +
 
         /* Three rays, fanning onto the blade and stopping clear of it. */
-        '<g stroke="#f59e0b" stroke-width="1.6" fill="none" marker-end="url(#psA)">' +
+        '<g stroke="#f59e0b" stroke-width="1.8" fill="none" marker-end="' + pa('psSun') + '">' +
         '<path d="M68 58 L164 138"/><path d="M76 46 L185 111"/><path d="M84 34 L216 90"/>' +
         '</g>' +
 
@@ -10809,7 +11274,7 @@
         '<path d="M284 110 Q280 98 274 90"/><path d="M284 110 Q292 123 295 131"/>' +
         '</g>' +
 
-        /* Stem down to the soil, and water climbing it. */
+        /* Stem down to the soil, and roots. */
         '<path d="M150 180 Q128 198 116 232" fill="none" stroke="#15803d" stroke-width="3" stroke-linecap="round"/>' +
         '<path d="M66 230 H192" stroke="#d6d3d1" stroke-width="7" stroke-linecap="round"/>' +
         '<path d="M66 230 H192" stroke="#a8a29e" stroke-width="1.4" stroke-linecap="round"/>' +
@@ -10818,21 +11283,11 @@
         '<path d="M116 231 Q124 243 136 249"/>' +
         '</g>' +
 
-        /* ── what goes in ── */
-        '<text x="14" y="140" style="' + LP + '" fill="#475569">CO' + '₂' + '</text>' +
-        '<text x="14" y="151" style="' + LT + '" fill="#64748b">from the air</text>' +
-        '<path d="M52 150 Q120 182 186 192" fill="none" stroke="#475569" stroke-width="1.6" marker-end="url(#psA)"/>' +
-        '<text x="14" y="216" style="' + LP + '" fill="#2563eb">H' + '₂' + 'O</text>' +
-        '<text x="14" y="227" style="' + LT + '" fill="#3b82f6">up from the roots</text>' +
-        '<path d="M74 219 Q104 224 130 204" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#psA)"/>' +
-
-        /* ── what comes back out ── */
-        '<path d="M251 184 L266 220" fill="none" stroke="#0891b2" stroke-width="1.6" marker-end="url(#psA)"/>' +
-        '<text x="272" y="226" style="' + LP + '" fill="#0e7490">O' + '₂' + '</text>' +
-        '<text x="272" y="237" style="' + LT + '" fill="#0891b2">out through the leaf</text>' +
-        '<path d="M309 130 L348 170" fill="none" stroke="#15803d" stroke-width="1.8" marker-end="url(#psA)"/>' +
-        '<text x="352" y="182" style="' + LP + '" fill="#14532d">Glucose</text>' +
-        '<text x="352" y="193" style="' + LT + '" fill="#15803d">the food it built</text>' +
+        /* ── in and out ── */
+        '<path d="M62 154 Q124 182 186 192" fill="none" stroke="#475569" stroke-width="1.8" marker-end="' + pa('psAir') + '"/>' +
+        '<path d="M74 219 Q104 224 130 204" fill="none" stroke="#2563eb" stroke-width="1.8" marker-end="' + pa('psWat') + '"/>' +
+        '<path d="M251 184 L266 220" fill="none" stroke="#0891b2" stroke-width="1.8" marker-end="' + pa('psOx') + '"/>' +
+        '<path d="M309 130 L348 170" fill="none" stroke="#15803d" stroke-width="2" marker-end="' + pa('psLeaf') + '"/>' +
 
         /* ── zoom on one chloroplast ── */
         '<line x1="300" y1="110" x2="366" y2="100" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3 3"/>' +
@@ -10843,48 +11298,105 @@
         '<ellipse cx="401" cy="96" rx="6" ry="3"/><ellipse cx="401" cy="102" rx="6" ry="3"/>' +
         '<ellipse cx="414" cy="92" rx="5" ry="2.6"/><ellipse cx="414" cy="98" rx="5" ry="2.6"/>' +
         '</g>' +
-        '<text x="399" y="146" style="' + LT + 'font-weight:700;" fill="#14532d" text-anchor="middle">a chloroplast</text>' +
-        '<text x="399" y="156" style="' + LT + '" fill="#15803d" text-anchor="middle">where it happens</text>' +
+        '</g>' +
+
+        /* ── labels, in canvas units ── */
+        pT(63, 72, 'Sunlight', pP, '#92400e', 'middle') +
+        pT(8, 112, 'CO' + sub2, pP, '#334155') + pT(8, 126, 'from the air', pS, '#475569') +
+        pT(8, 178, 'H' + sub2 + 'O', pP, '#1d4ed8') + pT(8, 192, 'from roots', pS, '#2563eb') +
+        pT(256, 198, 'O' + sub2, pP, '#0e7490') + pT(256, 212, 'out of the leaf', pS, '#0e7490') +
+        pT(395, 158, 'Glucose', pP, '#14532d', 'end') + pT(395, 172, 'food it made', pS, '#15803d', 'end') +
+        pT(395, 30, 'a chloroplast', pP, '#14532d', 'end') + pT(395, 44, 'where it happens', pS, '#15803d', 'end') +
 
         /* ── the sentence, in symbols ── */
-        '<rect x="66" y="272" width="338" height="18" rx="7" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>' +
-        '<text x="235" y="284" style="' + LT + '" fill="#334155" text-anchor="middle">' +
-        '6CO' + '₂' + ' + 6H' + '₂' + 'O + light → C' + '₆' + 'H' + '₁' + '₂' + 'O' + '₆' + ' + 6O' + '₂' + '</text>' +
+        '<rect x="74" y="236" width="252" height="24" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>' +
+        pT(200, 252, '6CO' + sub2 + ' + 6H' + sub2 + 'O + light → C₆H₁₂O₆ + 6O' + sub2, 'font-size:11px;font-weight:600;', '#334155', 'middle') +
         '</svg>';
     }
 
     // ── PLATE TECTONICS ───────────────────────────────────────────────────────
     if (/plate tectonic|fault|earthquake|volcano|continental|crust|mantle|convergent|divergent/.test(d)) {
-      return '<svg viewBox="0 -16 380 236" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
-        '<defs><marker id="pT" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#3b82f6"/></marker></defs>' +
-        // Inner core
-        '<rect x="78" y="172" width="224" height="38" rx="6" fill="#fecaca" stroke="#ef4444" stroke-width="1.2"/>' +
-        '<text x="190" y="195" style="' + LT + 'font-weight:700;" fill="#991b1b" text-anchor="middle">Inner core (solid iron, ~5000°C)</text>' +
-        // Outer core
-        '<rect x="46" y="134" width="288" height="42" rx="6" fill="#fed7aa" stroke="#f97316" stroke-width="1.2"/>' +
-        '<text x="190" y="159" style="' + LT + 'font-weight:700;" fill="#9a3412" text-anchor="middle">Outer core (liquid iron)</text>' +
-        // Mantle
-        '<rect x="14" y="82" width="352" height="56" rx="6" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>' +
-        '<text x="190" y="106" style="' + LT + 'font-weight:700;" fill="#92400e" text-anchor="middle">Mantle (semi-solid, 2900 km thick)</text>' +
-        '<text x="190" y="120" style="' + LT + '" fill="#b45309" text-anchor="middle">convection currents drive plate movement</text>' +
-        // Left plate (crust)
-        '<path d="M0 80 L172 44 L172 82 L14 82 Z" fill="#d1fae5" stroke="#16a34a" stroke-width="1.5"/>' +
-        // Right plate (crust)
-        '<path d="M380 80 L208 44 L208 82 L366 82 Z" fill="#d1fae5" stroke="#16a34a" stroke-width="1.5"/>' +
-        // Fault gap at top
-        '<path d="M172 44 L190 8 L208 44" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>' +
-        // Fault label — sits in the headroom above the canvas origin, 6px clear
-        // of the triangle apex at y=8. The viewBox starts at -16 to hold it.
-        '<text x="190" y="0" style="' + LT + 'font-weight:700;" fill="#dc2626" text-anchor="middle">Fault zone</text>' +
-        // Crust labels inside each plate, clear of edges (min 8px from any border)
-        '<text x="80" y="68" style="' + LT + 'font-weight:600;" fill="#065f46" text-anchor="middle">Oceanic crust</text>' +
-        '<text x="300" y="68" style="' + LT + 'font-weight:600;" fill="#065f46" text-anchor="middle">Continental crust</text>' +
-        // Plate motion arrows — outside the crust shapes, 6px above top edge of crust
-        '<path d="M42 56 L150 46" fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#pT)"/>' +
-        '<path d="M338 56 L230 46" fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#pT)"/>' +
-        // Motion labels — 10px above arrows
-        '<text x="96" y="42" style="' + LT + '" fill="#1d4ed8" text-anchor="middle">plate</text>' +
-        '<text x="284" y="42" style="' + LT + '" fill="#1d4ed8" text-anchor="middle">plate</text>' +
+      /* Two real drawings, chosen by what the lesson is about.
+
+         This was a stack of coloured bars - inner core, outer core, mantle -
+         with two green wedges for "plates" and a red triangle marked "Fault
+         zone" between them: boxes pretending to be geology, and it answered
+         volcano, earthquake and layers-of-the-Earth lessons with the same
+         picture. Now:
+           - the Earth's LAYERS, as a true cross-section, when the lesson is
+             about the core or the layers;
+           - otherwise a SUBDUCTION ZONE, the picture every plate lesson is
+             really about: a thin heavy ocean plate sinking under a thick
+             light continent, the trench where they meet, earthquakes along
+             the contact, the sinking plate melting and feeding a volcano.
+         Colour means temperature and material - rock grey, the mantle and
+         magma warm because they are hot - not position. */
+      curatedDiagramSVG.seq = (curatedDiagramSVG.seq || 0) + 1;
+      var tq = curatedDiagramSVG.seq;
+      var tP = 'font-size:11.5px;font-weight:700;', tS = 'font-size:10.5px;';
+      var tT = function (x, y, t, st, fill, anchor) {
+        return '<text x="' + x + '" y="' + y + '" style="' + st + '" fill="' + fill + '" text-anchor="' + (anchor || 'start') + '" ' +
+               'stroke="#ffffff" stroke-width="3" stroke-linejoin="round" paint-order="stroke">' + t + '</text>';
+      };
+      var tL = function (x1, y1, x2, y2) {
+        return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#1a1d2e" stroke-opacity=".55" stroke-width="1"/>' +
+               '<circle cx="' + x2 + '" cy="' + y2 + '" r="2.4" fill="#1a1d2e"/>';
+      };
+
+      if (/\bcores?\b|layers? of (the )?earth|earth.?s (interior|layers|structure)|inner core|outer core|structure of the earth/.test(d)) {
+        var ec = 132, ey = 146;
+        return '<svg viewBox="0 0 400 292" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
+          '<circle cx="' + ec + '" cy="' + ey + '" r="128" fill="#a8a29e" stroke="#57534e" stroke-width="1.6"/>' +
+          '<circle cx="' + ec + '" cy="' + ey + '" r="121" fill="#fdba74"/>' +
+          '<circle cx="' + ec + '" cy="' + ey + '" r="70" fill="#fb923c"/>' +
+          '<circle cx="' + ec + '" cy="' + ey + '" r="26" fill="#fde68a" stroke="#f59e0b" stroke-width="1.2"/>' +
+          /* A little texture: the mantle flows. */
+          '<path d="M' + (ec - 96) + ' ' + (ey - 20) + ' C' + (ec - 90) + ' ' + (ey - 70) + ' ' + (ec - 40) + ' ' + (ey - 96) + ' ' + (ec + 4) + ' ' + (ey - 94) + '" fill="none" stroke="#ea580c" stroke-opacity=".45" stroke-width="1.4" stroke-dasharray="4 4"/>' +
+          '<path d="M' + (ec - 30) + ' ' + (ey + 96) + ' C' + (ec + 20) + ' ' + (ey + 100) + ' ' + (ec + 80) + ' ' + (ey + 70) + ' ' + (ec + 96) + ' ' + (ey + 24) + '" fill="none" stroke="#ea580c" stroke-opacity=".45" stroke-width="1.4" stroke-dasharray="4 4"/>' +
+          tL(286, 36, 214, 48) + tT(290, 34, 'Crust', tP, '#1a1d2e') + tT(290, 48, 'solid rock, 5–70 km', tS, '#5b6478') +
+          tL(286, 98, 224, 104) + tT(290, 96, 'Mantle', tP, '#1a1d2e') + tT(290, 110, 'hot rock that flows', tS, '#5b6478') +
+          tL(286, 160, 186, 160) + tT(290, 158, 'Outer core', tP, '#1a1d2e') + tT(290, 172, 'liquid iron, nickel', tS, '#5b6478') +
+          tL(286, 222, 144, 156) + tT(290, 220, 'Inner core', tP, '#1a1d2e') + tT(290, 234, 'solid, ~5,000 °C', tS, '#5b6478') +
+          tT(396, 286, 'crust drawn thicker than it is', tS, '#5b6478', 'end') +
+          '</svg>';
+      }
+
+      var tA = 'sfTecA' + tq, tW = 'sfTecW' + tq;
+      return '<svg viewBox="0 0 400 256" width="100%" style="max-width:440px;display:block;margin:0 auto;' + LF + '">' +
+        '<defs>' +
+        '<marker id="' + tA + '" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M1 1.5 L11 6 L1 10.5 L3.6 6 z" fill="#b45309"/></marker>' +
+        '<marker id="' + tW + '" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 1.5 L11 6 L1 10.5 L3.6 6 z" fill="#ffffff"/></marker>' +
+        '</defs>' +
+        /* Mantle behind everything. */
+        '<rect x="0" y="78" width="400" height="178" fill="#fde2c4"/>' +
+        /* Mantle flow, dragging the ocean plate toward the trench. */
+        '<path d="M44 222 C10 180 50 118 128 104" fill="none" stroke="#b45309" stroke-opacity=".7" stroke-width="1.8" stroke-dasharray="5 4" marker-end="url(#' + tA + ')"/>' +
+        /* Ocean water. */
+        '<path d="M0 56 L198 56 L190 64 L190 84 C180 82 172 79 168 78 L0 78 Z" fill="#bfdbfe"/>' +
+        '<line x1="0" y1="56" x2="198" y2="56" stroke="#3b82f6" stroke-width="1.6"/>' +
+        /* The ocean plate: thin, dense, bending down under the continent. */
+        '<path d="M0 78 L168 78 C198 80 228 118 260 196 L244 204 C214 130 190 96 164 94 L0 94 Z" fill="#8f98ab" stroke="#475569" stroke-width="1.6" stroke-linejoin="round"/>' +
+        '<line x1="20" y1="86" x2="96" y2="86" stroke="#ffffff" stroke-width="2" marker-end="url(#' + tW + ')"/>' +
+        /* Magma: the sinking plate melts and rises to the volcano. */
+        '<path d="M258 170 C264 140 270 104 276 22" fill="none" stroke="#ea580c" stroke-width="4.5" stroke-linecap="round"/>' +
+        /* The continental plate: thick, light, riding on top. */
+        '<path d="M190 64 L200 50 L400 46 L400 118 L230 122 C218 110 206 96 188 84 Z" fill="#e7e1d8" stroke="#78716c" stroke-width="1.6" stroke-linejoin="round"/>' +
+        '<ellipse cx="272" cy="96" rx="16" ry="8" fill="#fb923c" stroke="#ea580c" stroke-width="1.2"/>' +
+        '<path d="M274 88 L276 54" stroke="#ea580c" stroke-width="3.5" stroke-linecap="round"/>' +
+        /* The volcano, with its vent. */
+        '<path d="M238 49 L267 17 L285 17 L314 47 Z" fill="#d6d3d1" stroke="#78716c" stroke-width="1.6" stroke-linejoin="round"/>' +
+        '<line x1="276" y1="48" x2="276" y2="20" stroke="#ea580c" stroke-width="3" stroke-linecap="round"/>' +
+        '<circle cx="270" cy="10" r="5" fill="#e5e7eb"/><circle cx="280" cy="7" r="6" fill="#e5e7eb"/><circle cx="289" cy="11" r="4.5" fill="#e5e7eb"/>' +
+        /* Earthquakes along the contact between the plates. */
+        '<polygon points="200,92 203,98 210,98 205,102 207,109 200,105 193,109 195,102 190,98 197,98" fill="#fde047" stroke="#ca8a04" stroke-width="1.1" stroke-linejoin="round"/>' +
+        /* Labels. */
+        tL(52, 44, 52, 86) + tT(14, 24, 'Ocean plate', tP, '#1a1d2e') + tT(14, 38, 'thin, heavy — it sinks', tS, '#5b6478') +
+        tL(178, 42, 182, 78) + tT(152, 38, 'Trench', tP, '#1d4ed8') +
+        tT(394, 72, 'Continental plate', tP, '#1a1d2e', 'end') + tT(394, 86, 'thick, light — it floats', tS, '#5b6478', 'end') +
+        tT(322, 26, 'Volcano', tP, '#1a1d2e') +
+        tT(394, 156, 'Magma rises', tP, '#9a3412', 'end') + tT(394, 170, 'the sinking plate melts', tS, '#5b6478', 'end') +
+        tL(176, 134, 198, 106) + tT(176, 146, 'Earthquakes', tP, '#1a1d2e', 'end') +
+        tT(394, 232, 'Mantle', tP, '#9a3412', 'end') + tT(394, 247, 'hot rock that flows', tS, '#5b6478', 'end') +
         '</svg>';
     }
 
@@ -10934,30 +11446,33 @@
          crests sit at y=74 and the troughs at y=142, midway along each arc.
          Marking the segment ends instead put "crest" on a zero crossing. */
       return '<svg viewBox="0 0 380 206" width="100%" style="max-width:430px;display:block;margin:0 auto;' + LF + '">' +
-        '<defs><marker id="wvA" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#6366f1"/></marker>' +
-        '<marker id="wvS" markerWidth="7" markerHeight="7" refX="2" refY="3.5" orient="auto"><path d="M7,0 L0,3.5 L7,7 Z" fill="#6366f1"/></marker></defs>' +
+        '<defs><marker id="wvA" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#4a7cf6"/></marker>' +
+        '<marker id="wvS" markerWidth="7" markerHeight="7" refX="2" refY="3.5" orient="auto"><path d="M7,0 L0,3.5 L7,7 Z" fill="#4a7cf6"/></marker></defs>' +
         // Rest line
-        '<line x1="20" y1="108" x2="356" y2="108" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="5 4"/>' +
-        '<text x="360" y="112" style="' + LT + '" fill="#64748b">rest</text>' +
+        '<line x1="20" y1="108" x2="366" y2="108" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="5 4"/>' +
+        /* Below the line, right-aligned inside the frame: to the right of the
+           line it pushed the viewBox to 383 and shrank everything. */
+        '<text x="366" y="123" style="' + LT + '" fill="#5b6478" text-anchor="end">rest</text>' +
         // Two and a half cycles. Crests x = 56, 184, 312 (y=74); troughs x = 120, 248 (y=142).
-        '<path d="M24 108 Q56 40 88 108 Q120 176 152 108 Q184 40 216 108 Q248 176 280 108 Q312 40 344 108" fill="none" stroke="#4f46e5" stroke-width="2.5"/>' +
-        // Crest, marked on the actual peak
-        '<circle cx="56" cy="74" r="3.5" fill="#4f46e5"/>' +
-        '<text x="56" y="66" style="' + LP + '" fill="#3730a3" text-anchor="middle">crest</text>' +
+        '<path d="M24 108 Q56 40 88 108 Q120 176 152 108 Q184 40 216 108 Q248 176 280 108 Q312 40 344 108" fill="none" stroke="#4a7cf6" stroke-width="2.5"/>' +
+        // Crest, marked on the THIRD peak. On the first, the wavelength
+        // bracket's guide line runs down x=56 - straight through the word.
+        '<circle cx="312" cy="74" r="3.5" fill="#4a7cf6"/>' +
+        '<text x="312" y="64" style="' + LP + '" fill="#1d3a8a" text-anchor="middle">crest</text>' +
         // Trough, marked on the actual dip
-        '<circle cx="120" cy="142" r="3.5" fill="#4f46e5"/>' +
-        '<text x="120" y="158" style="' + LP + '" fill="#3730a3" text-anchor="middle">trough</text>' +
+        '<circle cx="120" cy="142" r="3.5" fill="#4a7cf6"/>' +
+        '<text x="120" y="158" style="' + LP + '" fill="#1d3a8a" text-anchor="middle">trough</text>' +
         // Wavelength: crest to crest, bracketed above both
-        '<line x1="56" y1="34" x2="184" y2="34" stroke="#6366f1" stroke-width="1.6" marker-start="url(#wvS)" marker-end="url(#wvA)"/>' +
-        '<line x1="56" y1="70" x2="56" y2="38" stroke="#c7d2fe" stroke-width="1"/>' +
-        '<line x1="184" y1="70" x2="184" y2="38" stroke="#c7d2fe" stroke-width="1"/>' +
-        '<text x="120" y="28" style="' + LP + '" fill="#4338ca" text-anchor="middle">wavelength (λ) — crest to crest</text>' +
+        '<line x1="56" y1="34" x2="184" y2="34" stroke="#4a7cf6" stroke-width="1.6" marker-start="url(#wvS)" marker-end="url(#wvA)"/>' +
+        '<line x1="56" y1="70" x2="56" y2="38" stroke="#c3d4fd" stroke-width="1"/>' +
+        '<line x1="184" y1="70" x2="184" y2="38" stroke="#c3d4fd" stroke-width="1"/>' +
+        '<text x="120" y="28" style="' + LP + '" fill="#1d3a8a" text-anchor="middle">wavelength (λ) — crest to crest</text>' +
         // Amplitude: rest line up to the second crest. The label sits BELOW the
         // rest line at x=184, the one band the curve never enters between the
         // two troughs, so it cannot collide with the wave.
-        '<line x1="184" y1="108" x2="184" y2="74" stroke="#6366f1" stroke-width="1.6" marker-start="url(#wvS)" marker-end="url(#wvA)"/>' +
-        '<text x="184" y="124" style="' + LP + '" fill="#4338ca" text-anchor="middle">amplitude</text>' +
-        '<text x="184" y="136" style="' + LT + '" fill="#6366f1" text-anchor="middle">height above rest</text>' +
+        '<line x1="184" y1="108" x2="184" y2="74" stroke="#4a7cf6" stroke-width="1.6" marker-start="url(#wvS)" marker-end="url(#wvA)"/>' +
+        '<text x="184" y="124" style="' + LP + '" fill="#1d3a8a" text-anchor="middle">amplitude</text>' +
+        '<text x="184" y="136" style="' + LT + '" fill="#4a7cf6" text-anchor="middle">height above rest</text>' +
         // The two things amplitude and wavelength each control
         '<rect x="20" y="182" width="336" height="18" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>' +
         '<text x="188" y="194" style="' + LT + '" fill="#334155" text-anchor="middle">taller wave = more energy  •  shorter wavelength = higher frequency (Hz)</text>' +
@@ -10967,7 +11482,7 @@
     // ── SIMPLE CIRCUIT ───────────────────────────────────────────────────────
     if (/circuit|voltage|\bcurrent\b|resistor|ohm|ampere|\bbattery\b|series.*parallel|parallel.*series/.test(d)) {
       return '<svg viewBox="0 0 360 200" width="100%" style="max-width:400px;display:block;margin:0 auto;' + LF + '">' +
-        '<defs><marker id="ciA" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#f59e0b"/></marker></defs>' +
+        '<defs><marker id="ciA' + (curatedDiagramSVG.seq = (curatedDiagramSVG.seq || 0) + 1) + '" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#3563e9"/></marker></defs>' +
         // Wire loop
         '<path d="M70 60 H290 V150 H70 Z" fill="none" stroke="#334155" stroke-width="2.5"/>' +
         // Battery on the left leg
@@ -10979,21 +11494,23 @@
            symbol, which starts at x=56. Left-anchored at x=30 it ran to x=68
            and sat on top of the plates. */
         '<text x="52" y="100" style="' + LP + '" fill="#0f172a" text-anchor="end">battery</text>' +
-        '<text x="52" y="112" style="' + LT + '" fill="#64748b" text-anchor="end">voltage V</text>' +
+        '<text x="52" y="115" style="' + LT + '" fill="#5b6478" text-anchor="end">voltage V</text>' +
         // Resistor on the top wire — zigzag
         '<rect x="150" y="50" width="60" height="20" fill="white" stroke="none"/>' +
         '<path d="M150 60 l8 -9 l10 18 l10 -18 l10 18 l10 -18 l8 9" fill="none" stroke="#dc2626" stroke-width="2.2"/>' +
-        '<text x="180" y="40" style="' + LP + '" fill="#b91c1c" text-anchor="middle">resistor R</text>' +
-        '<text x="180" y="29" style="' + LT + '" fill="#ef4444" text-anchor="middle">resists the flow</text>' +
+        /* 15 units between the pair: at 11 they overlapped once the type was
+           raised to a size a phone can read. */
+        '<text x="180" y="42" style="' + LP + '" fill="#b91c1c" text-anchor="middle">resistor R</text>' +
+        '<text x="180" y="27" style="' + LT + '" fill="#5b6478" text-anchor="middle">resists the flow</text>' +
         // Bulb on the right leg
         '<circle cx="290" cy="105" r="16" fill="#fef9c3" stroke="#ca8a04" stroke-width="2"/>' +
         '<path d="M283 105 l4 7 l6 -14 l4 7" fill="none" stroke="#ca8a04" stroke-width="1.6"/>' +
         '<text x="316" y="102" style="' + LP + '" fill="#854d0e">bulb</text>' +
-        '<text x="316" y="114" style="' + LT + '" fill="#ca8a04">the load</text>' +
+        '<text x="316" y="116" style="' + LT + '" fill="#5b6478">the load</text>' +
         // Current direction arrows
-        '<line x1="104" y1="60" x2="130" y2="60" stroke="#f59e0b" stroke-width="2.4" marker-end="url(#ciA)"/>' +
-        '<line x1="256" y1="150" x2="230" y2="150" stroke="#f59e0b" stroke-width="2.4" marker-end="url(#ciA)"/>' +
-        '<text x="180" y="164" style="' + LT + '" fill="#b45309" text-anchor="middle">conventional current: + → −</text>' +
+        '<line x1="104" y1="60" x2="130" y2="60" stroke="#3563e9" stroke-width="2.4" marker-end="url(#ciA' + curatedDiagramSVG.seq + ')"/>' +
+        '<line x1="256" y1="150" x2="230" y2="150" stroke="#3563e9" stroke-width="2.4" marker-end="url(#ciA' + curatedDiagramSVG.seq + ')"/>' +
+        '<text x="180" y="164" style="' + LT + '" fill="#1d3a8a" text-anchor="middle">conventional current: + → −</text>' +
         // Ohm's law
         '<rect x="96" y="176" width="168" height="18" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>' +
         '<text x="180" y="189" style="' + LP + '" fill="#334155" text-anchor="middle">V = I × R</text>' +
@@ -11038,24 +11555,36 @@
 
     // ── FRACTIONS (bar model) ────────────────────────────────────────────────
     if (/fraction|numerator|denominator|equivalent fraction|simplify.*fraction|mixed number|\bhalves\b|quarters|thirds/.test(d)) {
-      var frA = '', frB = '', frI;
+      /* The claim is "these are the SAME amount", so the picture has to let
+         a learner SEE the two ends line up: one dashed line runs through both
+         bars at 3/4 of the way. Both bars share one blue for the same reason
+         - they were blue and green, which says "two different things". The
+         fractions are written the way maths writes them, numerator over a bar
+         over denominator, not as "3/4" in a label: the whole topic is what
+         the top and bottom numbers MEAN. */
+      var frA = '', frB = '', frI, X0 = 52, BW = 272;
       for (frI = 0; frI < 4; frI++) {
-        frA += '<rect x="' + (30 + frI * 70) + '" y="52" width="70" height="42" fill="' + (frI < 3 ? '#bfdbfe' : '#f1f5f9') + '" stroke="#2563eb" stroke-width="1.6"/>';
+        frA += '<rect x="' + (X0 + frI * BW / 4) + '" y="50" width="' + (BW / 4) + '" height="40" fill="' + (frI < 3 ? '#9fbcfb' : '#f4f7ff') + '" stroke="#4a7cf6" stroke-width="1.5"/>';
       }
       for (frI = 0; frI < 8; frI++) {
-        frB += '<rect x="' + (30 + frI * 35) + '" y="126" width="35" height="42" fill="' + (frI < 6 ? '#bbf7d0' : '#f1f5f9') + '" stroke="#16a34a" stroke-width="1.4"/>';
+        frB += '<rect x="' + (X0 + frI * BW / 8) + '" y="120" width="' + (BW / 8) + '" height="40" fill="' + (frI < 6 ? '#9fbcfb' : '#f4f7ff') + '" stroke="#4a7cf6" stroke-width="1.3"/>';
       }
-      return '<svg viewBox="0 0 360 210" width="100%" style="max-width:420px;display:block;margin:0 auto;' + LF + '">' +
-        '<text x="180" y="26" style="' + LP + '" fill="#0f172a" text-anchor="middle">3/4 and 6/8 cover the same amount</text>' +
-        '<text x="180" y="40" style="' + LT + '" fill="#64748b" text-anchor="middle">same bar, cut into more pieces</text>' +
-        frA +
-        '<text x="16" y="78" style="' + LP + '" fill="#1d4ed8" text-anchor="end">3/4</text>' +
-        '<text x="320" y="108" style="' + LT + '" fill="#64748b" text-anchor="middle">4 equal parts, 3 shaded</text>' +
-        frB +
-        '<text x="16" y="152" style="' + LP + '" fill="#15803d" text-anchor="end">6/8</text>' +
-        '<text x="320" y="182" style="' + LT + '" fill="#64748b" text-anchor="middle">8 equal parts, 6 shaded</text>' +
-        '<rect x="30" y="190" width="280" height="16" rx="5" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>' +
-        '<text x="170" y="201" style="' + LT + '" fill="#334155" text-anchor="middle">bottom = how many pieces • top = how many you take</text>' +
+      var frac = function (cy, n, dd) {
+        return '<text x="26" y="' + (cy - 5) + '" style="font-size:14px;font-weight:700;" fill="#1d3a8a" text-anchor="middle">' + n + '</text>' +
+               '<line x1="15" y1="' + (cy) + '" x2="37" y2="' + (cy) + '" stroke="#1d3a8a" stroke-width="1.8" stroke-linecap="round"/>' +
+               '<text x="26" y="' + (cy + 15) + '" style="font-size:14px;font-weight:700;" fill="#1d3a8a" text-anchor="middle">' + dd + '</text>';
+      };
+      var cut = X0 + BW * 3 / 4;
+      return '<svg viewBox="0 0 360 214" width="100%" style="max-width:420px;display:block;margin:0 auto;' + LF + '">' +
+        '<text x="180" y="22" style="font-size:12.5px;font-weight:700;" fill="#1a1d2e" text-anchor="middle">3/4 and 6/8 are the same amount</text>' +
+        frA + frac(70, '3', '4') +
+        '<text x="' + X0 + '" y="106" style="font-size:10.5px;" fill="#5b6478">4 equal parts, 3 shaded</text>' +
+        frB + frac(140, '6', '8') +
+        '<text x="' + X0 + '" y="176" style="font-size:10.5px;" fill="#5b6478">8 equal parts, 6 shaded</text>' +
+        '<line x1="' + cut + '" y1="40" x2="' + cut + '" y2="166" stroke="#3563e9" stroke-width="1.8" stroke-dasharray="5 4"/>' +
+        '<text x="' + cut + '" y="36" style="font-size:10.5px;font-weight:700;" fill="#3563e9" text-anchor="middle">same length</text>' +
+        '<rect x="30" y="188" width="300" height="22" rx="7" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>' +
+        '<text x="180" y="203" style="font-size:10.5px;" fill="#334155" text-anchor="middle">bottom = pieces in the whole · top = pieces you take</text>' +
         '</svg>';
     }
 
@@ -11270,7 +11799,16 @@
                    String(spec.layout || '').toLowerCase() === 'drawing')) {
         svg = SFSceneKit.fromSpec(spec);
       }
-      if (!svg && !explicit && typeIsName) svg = curatedDiagramSVG(typeName);
+      /* The NAME picks the template; the rest of the spec rides along as a
+         hint the template may use to choose a VARIANT. Passing the name alone
+         was right for matching and wrong for variants: the cell branch picks
+         plant or animal from the text, and "cell" on its own says neither -
+         so every plant-cell lesson got an animal cell captioned "no wall".
+         The hint is never matched against, so a caption word cannot pull in
+         a different template. */
+      if (!svg && !explicit && typeIsName) {
+        svg = curatedDiagramSVG(typeName, String(spec.cellType || spec.variant || '') + ' ' + desc);
+      }
       if (!explicit && !svg && desc) svg = curatedDiagramSVG(desc);
       if (!svg && spec) svg = SFDiagramKit.fromSpec(spec);
       if (!svg && desc) svg = SFDiagramKit.forTopic(desc);
@@ -11283,7 +11821,7 @@
     if (!svg) return null;
 
     try {
-      return SFDiagramKit.polish(svg, { name: desc, warn: true });
+      return SFDiagramKit.uniqIds(SFDiagramKit.polish(SFDiagramKit.legible(svg), { name: desc, warn: true }));
     } catch (e) {
       return svg; // never let the guardrail itself lose a working diagram
     }
@@ -11594,7 +12132,13 @@
     var named = dgClean(dgClean(d.title) + ' ' + dgClean(d.microTopic));
     if (named) {
       try { svg = curatedDiagramSVG(named); } catch (e) { svg = null; }
-      if (svg) return { svg: svg, caption: title };
+      /* Same guardrails every other route gets. This one handed the raw
+         template to the card, so it skipped the phone floor and polish()
+         both - the one path that could still print 5.8px labels. */
+      if (svg) {
+        try { svg = SFDiagramKit.uniqIds(SFDiagramKit.polish(SFDiagramKit.legible(svg), { name: named })); } catch (e2) { /* keep raw */ }
+        return { svg: svg, caption: title };
+      }
     }
 
     return null;

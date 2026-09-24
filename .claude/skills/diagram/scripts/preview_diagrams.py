@@ -70,16 +70,52 @@ def first_script_block(lesson_path):
 
 def normalise(entry, index):
     if isinstance(entry, str):
-        return {"name": entry, "spec": entry}
+        return {"name": entry, "spec": entry, "sources": [entry]}
     if not isinstance(entry, dict):
         sys.exit("Entry %d is neither a string nor an object" % index)
     spec = entry.get("spec", entry.get("diagram"))
     if spec is None:
         sys.exit('Entry %d has no "spec"' % index)
-    return {"name": str(entry.get("name") or "spec %d" % index), "spec": spec}
+    return {"name": str(entry.get("name") or "spec %d" % index), "spec": spec,
+            "sources": source_strings(spec)}
 
 
-def build_page(script_src, specs):
+def source_strings(spec):
+    """Every string the spec put in, so the audit can notice one coming out
+    shorter than it went in. "Causes of the French Revolution" rendered as
+    "Causes of the French" is not a styling problem — the label now says
+    something the material did not.
+
+    "label" is skipped: on a curated spec it is the CARD's caption, not content
+    the drawing has to contain, and counting it reported every hand-drawn
+    template as having lost words it was never given."""
+    found = []
+
+    def walk(node):
+        if isinstance(node, str):
+            found.append(node)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+        elif isinstance(node, dict):
+            for key, value in node.items():
+                if key in ("type", "layout", "shape", "label", "caption"):
+                    continue
+                walk(value)
+
+    walk(spec)
+    return found
+
+
+def audit_src():
+    path = os.path.join(HERE, "audit.js")
+    if not os.path.exists(path):
+        return ""
+    with open(path, encoding="utf-8") as fh:
+        return fh.read()
+
+
+def build_page(script_src, specs, audit_js):
     """The kit runs against a live DOM, so the page executes block 1 and then
     draws each spec. Block 1 also defers init() to DOMContentLoaded, and init()
     opens with an auth guard that *navigates* - with no signed-in user it sent
@@ -90,6 +126,10 @@ def build_page(script_src, specs):
     return """<!doctype html>
 <meta charset="utf-8">
 <title>StudyFlow diagram preview</title>
+<!-- The app's own fonts. Without them every label renders in a system
+     fallback whose widths differ from what the kit measured, and what you look
+     at here is not what a learner sees. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
 <style>
   body { margin:0; padding:18px; background:#f6f8fb;
          font-family:'DM Sans',system-ui,-apple-system,sans-serif; color:#1a1d2e; }
@@ -100,6 +140,16 @@ def build_page(script_src, specs):
           letter-spacing:.07em; color:#64748b; margin-bottom:8px; }
   .fail { color:#b91c1c; font-size:12px; font-weight:600; }
   .meta { font-size:10px; color:#94a3b8; margin-top:8px; }
+  .aud { margin-top:10px; border-top:1px solid #eef2f7; padding-top:8px; }
+  .f { font-size:11px; line-height:1.45; margin:4px 0; padding-left:56px;
+       text-indent:-56px; }
+  .f b { display:inline-block; width:44px; margin-right:8px; text-indent:0;
+         font-size:9px; text-transform:uppercase; letter-spacing:.06em;
+         text-align:center; border-radius:4px; padding:1px 0; }
+  .f-fail b { background:#fdecec; color:#991b1b; }
+  .f-warn b { background:#fff4e5; color:#92400e; }
+  .f-info b { background:#eef2f7; color:#64748b; }
+  .ok { font-size:11px; color:#15803d; font-weight:600; }
 </style>
 <div id="out"></div>
 <script>
@@ -117,6 +167,7 @@ def build_page(script_src, specs):
 })();
 </script>
 <script>%s</script>
+<script>%s</script>
 <script>
 var SPECS = %s;
 var out = document.getElementById('out');
@@ -133,12 +184,16 @@ for (var i = 0; i < SPECS.length; i++) {
   else if (!svg) body = '<div class="fail">returned null &mdash; declined to draw</div>';
   else body = svg;
   parts.push('<div class="card"><div class="name">' + entry.name + '</div>' + body +
-             '<div class="meta" data-i="' + i + '"></div></div>');
+             '<div class="meta" data-i="' + i + '"></div><div class="aud"></div></div>');
 }
 out.innerHTML = parts.join('');
 /* Shape and label counts, so an empty-looking frame is obvious without
    counting by eye. */
 var cards = out.querySelectorAll('.card');
+var report = [];
+/* Measure only once the web fonts are in: the audit reads real glyph boxes,
+   and a label measured in the fallback font is a different width. */
+function runAudit() {
 for (var j = 0; j < cards.length; j++) {
   var s = cards[j].querySelector('svg');
   var meta = cards[j].querySelector('.meta');
@@ -146,9 +201,38 @@ for (var j = 0; j < cards.length; j++) {
   meta.textContent = s.querySelectorAll('*').length + ' shapes, ' +
                      s.querySelectorAll('text').length + ' labels, viewBox ' +
                      (s.getAttribute('viewBox') || '?');
+
+  /* The audit runs here rather than in a separate pass so that looking at the
+     picture and reading what is wrong with it happen on the same screen. It
+     measures what is measurable; it cannot tell you the diagram is about the
+     wrong thing. Look at it as well. */
+  var res = (typeof SFAudit === 'function') ? SFAudit(s, { sources: SPECS[j].sources || [] }) : [];
+  var box = cards[j].querySelector('.aud'), html = '', fs = res.length ? res[0].findings : [];
+  if (!fs.length) {
+    html = '<div class="ok">no mechanical faults — now look at it</div>';
+  } else {
+    for (var k = 0; k < fs.length; k++) {
+      html += '<div class="f f-' + fs[k].level + '"><b>' + fs[k].level + '</b>' +
+              fs[k].code + ' — ' + fs[k].message + '</div>';
+    }
+  }
+  box.innerHTML = html;
+  report.push({ name: SPECS[j].name, findings: fs, counts: res.length ? res[0].counts : null });
+}
+window.SF_REPORT = report;
+window.SF_READY = true;
+console.log('SFAudit: ' + report.length + ' diagrams, ' +
+            report.filter(function (r) {
+              return r.findings.some(function (f) { return f.level === 'fail'; });
+            }).length + ' with failures');
+}
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(runAudit, runAudit);
+} else {
+  runAudit();
 }
 </script>
-""" % (script_src, payload)
+""" % (audit_js, script_src, payload)
 
 
 def main():
@@ -179,7 +263,7 @@ def main():
     for s in specs:
         s["name"] = html.escape(s["name"])
 
-    page = build_page(first_script_block(args.lesson), specs)
+    page = build_page(first_script_block(args.lesson), specs, audit_src())
     with open(args.out, "w", encoding="utf-8") as fh:
         fh.write(page)
 
