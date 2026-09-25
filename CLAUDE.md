@@ -1422,6 +1422,37 @@ wide on purpose: at 640 the board was 1:1 on desktop and shrank every label to
 54% on a phone — the reason line came out at 6px. A narrower board scales *up*
 where there is room. Nothing is rasterised, so scaling up is free.
 
+**480 was still not enough, and one width cannot be.** The board is drawn at
+the session card's width - 293px on a 320 phone, 348 at 375, ~632 on a
+desktop - so at 480 a unit is 0.72px on the phone and 1.32px on the desktop.
+Measured at 375 before the fix: step names 6.9px, "Why does this work?"
+8.6px, and every word of the question walkthrough (`Scene.steps`, then a flat
+560) **6.8px**. Two different fixes, because the scenes are different:
+
+- `Scene.steps` is a vertical stack with nothing tied to its width, so it is
+  laid out **as wide as the card** - `boardPx()`, clamped 320-560 - and a
+  phone draws it near 1:1 (body 11px at 375, 10px at 320). Desktop is
+  unchanged at 560. Body text may take four lines, or the "Why" row of every
+  walkthrough was cut at the narrower width.
+- `Scene.worked` keeps its tuned 480 geometry - headline, panels, slide -
+  and holds its small type to **`floorU(W)`**: the size, in units of a
+  W-wide board, that lands at 9.5px on this screen. The reason, its prompt
+  and both kickers use it. On a desktop the floor is below all of them.
+- **A step picture the screen cannot read is dropped, not shrunk.** It is
+  nested twice (into its slot, then onto the screen), and the slot was a flat
+  124 units, so the balance was height-bound and its note printed at 4.6px.
+  The slot is now as tall as the picture needs to fill the panel's width (up
+  to 190), and `picReadable` drops any picture whose smallest label would
+  still land under 8.5px - checked at planning and again at draw time with
+  the slot the panel really got. On phones that keeps the maths balance (notes
+  now 14 units, 9.1px at 375) and drops the three-column `inOut` strip, which
+  stays on desktop.
+
+`boardPx()` reads `#session-card`'s width **at build time**, which works
+because the board is built while the card it replaces is still on screen. A
+harness that builds boards into a detached div gets the card's width, not
+the div's.
+
 ### The walkthrough button — what it must never do
 
 `fromWrongAnswer(q, day)` builds the board the **Walkthrough** button opens.
@@ -1598,8 +1629,13 @@ What to check after any `buildQueue` or renderer change:
     and the reason `collidesWithDay` exists)
 17. `Scene.worked`'s track actually slides — check `onPaint` ran, not just that
     the beat classes changed
-18. The board does not overflow at 375px, and its reason line is still legible
-    there (it is the smallest text on the card)
+18. The board does not overflow at 320 or 375px, and **no text on it is under
+    9px there** - walkthroughs for every question type and the opening board
+    for every subject. Measure after transitions settle, from each `<text>`'s
+    `getScreenCTM()` (panels animate in and inactive ones sit at 0.94 scale,
+    so sizes read at render time are wrong), and count nested step pictures
+    separately. Last measured: board text >= 9.5px at 320, 375 and 1280;
+    pictures >= 9.1px at 375 or dropped.
 18b. The lesson card pages: on all 10 subjects it builds **2+ parts**, the
     footer button names the next part and only says "Got it" on the last, a
     prose-only day builds **exactly one** part and no rail, and no part's

@@ -13241,7 +13241,10 @@
       o += T(W / 2, PAN_Y + PAN_H / 2 + 6, '=', { size: 18, weight: 700, fill: MUTED });
 
       if (note) {
-        var ns = fitSize(note, W - 24, 11.5, 600, 8.5);
+        /* 14, not 11.5: this picture is nested in a worked panel that is
+           itself scaled to a phone, and at 11.5 "- 3 on both sides" came out
+           at 4.6px. There is room: the stand's foot ends at y=144. */
+        var ns = fitSize(note, W - 24, 14, 600, 10);
         o += T(W / 2, H - 10, note, { size: ns, weight: 600, fill: BLUE_T });
       }
       return o + '</svg>';
@@ -13568,10 +13571,10 @@
 
       o += T(W / 2, PAN_Y + PAN_H / 2 + 5, '=', { size: 17, weight: 700, fill: MUTED });
       var cap = op.say + ', and it stays balanced';
-      var cs = fitSize(cap, W - 20, 11, 600, 8.5);
+      var cs = fitSize(cap, W - 20, 13, 600, 10);
       o += T(W / 2, 154, cap, { size: cs, weight: 600, fill: MUTED });
       if (cl(note)) {
-        var ns3 = fitSize(cl(note), W - 20, 11, 600, 8.5);
+        var ns3 = fitSize(cl(note), W - 20, 13, 600, 10);
         o += T(W / 2, H - 8, cl(note), { size: ns3, weight: 600, fill: MUTED });
       }
       return o + '</svg>';
@@ -14712,6 +14715,31 @@ var SFBoard = (function () {
   var Scene = {};
   var PAD = 22;
 
+  /* ── TYPE THAT SURVIVES A PHONE ─────────────────────────────────────────
+     A board is drawn at width:100% of the session card - 293px on a 320
+     phone, 348px at 375, ~630px on a desktop - so one viewBox unit is 0.6px
+     on the one and 1.1-1.3px on the other. Sizes were chosen on the desktop:
+     at 375 the walkthrough's every word came out at 6.8px, and the worked
+     example's step names at 6.9px, under the 9px floor the diagram kit holds
+     every other picture to.
+
+     boardPx() is the width the board WILL be drawn at: the card it is about
+     to replace, which is the same element. floorU(W) is the smallest size,
+     in units of a W-wide board, that lands at TYPE_FLOOR_PX there. Scenes
+     read both while laying out - raising a size after layout would push
+     text out of the boxes measured for it. */
+  var TYPE_FLOOR_PX = 9.5;
+  function boardPx() {
+    var wpx = 0;
+    try {
+      var sc = document.getElementById('session-card');
+      wpx = sc ? sc.clientWidth : 0;
+    } catch (e) { wpx = 0; }
+    if (!wpx) wpx = Math.min((window.innerWidth || 660) - 27, 632);
+    return Math.max(260, wpx);
+  }
+  function floorU(W) { return TYPE_FLOOR_PX * W / boardPx(); }
+
   /* STEPS — an ordered process. Vertical, so long labels never get squeezed. */
   Scene.steps = function (spec) {
     var items = pairs(spec.items || spec.steps, 6);
@@ -14733,13 +14761,18 @@ var SFBoard = (function () {
        component asserting itself over the content. The connector line
        between rows already carries the sequence. */
     var ordered = !!spec.ordered;
-    var w = 560, boxW = w - PAD * 2;
+    /* As wide as the card it is drawn on, 320-560 units, so a phone draws it
+       near 1:1. It was a flat 560: 62% on a 375 phone, every word at 6.8px.
+       Rows are a vertical stack and nothing else depends on the width, so
+       the narrower board simply wraps more - and the body may take four
+       lines to do it, or the "Why" row of every walkthrough was cut. */
+    var w = Math.round(Math.max(320, Math.min(560, boardPx()))), boxW = w - PAD * 2;
     var LEFT = ordered ? 56 : 22;
     var textW = boxW - LEFT - 18;
     var rows = [], i, y = PAD;
     for (i = 0; i < items.length; i++) {
       var aL = wrap(items[i].a, textW, LABEL, 700, 2);
-      var bL = items[i].b ? wrap(items[i].b, textW, BODY, 400, 2) : [];
+      var bL = items[i].b ? wrap(items[i].b, textW, BODY, 400, 4) : [];
       var grp = [{ lines: aL, size: LABEL, weight: 700, fill: INK },
                  { lines: bL, size: BODY, weight: 400, fill: MUTED }];
       var h = Math.max(54, stackHeight(grp) + 22);
@@ -15670,10 +15703,50 @@ var SFBoard = (function () {
 
        Height is now the tallest panel's actual need: text, plus a picture
        slot only when some step in this board has a picture to put in it. */
-    var HS = TITLE + 7, RS = BODY + 1.5;
+    /* The type floor for this screen (see floorU). The geometry stays tuned
+       at 480 - the headline, the panels and the slide - and only the sizes
+       that fell under 9px on a phone are held up: the reason, its prompt,
+       and the two kickers. On a desktop the floor is below all of them and
+       nothing changes. */
+    var FU = floorU(W);
+    var HS = TITLE + 7, RS = Math.max(BODY + 1.5, FU);
+    var ASK = Math.max(RS - 0.5, FU), KICK = Math.max(9.5, FU);
     var TITLE_H = 20;        // the step's own name, where it has one
     var PIC_WANT = 124;      // a slot big enough to be worth drawing into
+    var PIC_MAX = 190;       // and no taller than this
     var plan = [], needText = 0, anyPic = false;
+
+    /* A PICTURE THE SCREEN CANNOT READ IS DROPPED, NOT SHRUNK.
+
+       A step picture is nested twice - into its slot, then with the board
+       onto the screen - and the slot was a flat 124 units tall. The balance
+       (330 x 186) was therefore height-bound at 0.67, and on a 375 phone its
+       note printed at 4.6px and its pans at 8px. The slot is now as tall as
+       the picture needs to fill the panel's WIDTH (up to PIC_MAX), and a
+       picture whose smallest label would still land under 8.5px on this
+       screen is left out: the panel is then text-only, which is the outcome
+       this board already accepts for a step with nothing to draw. */
+    function picBox(svg) {
+      var m = /viewBox="\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)/.exec(svg);
+      return m && +m[1] > 0 && +m[2] > 0 ? { w: +m[1], h: +m[2] } : null;
+    }
+    function picMinFont(svg) {
+      var re = /font-size(?:="|:\s*)([\d.]+)/g, m, min = 0;
+      while ((m = re.exec(svg)) !== null) {
+        var f = parseFloat(m[1]);
+        if (f > 0 && (!min || f < min)) min = f;
+      }
+      return min || 12;
+    }
+    function picSlotH(svg) {
+      var b = picBox(svg);
+      return b ? Math.min(PIC_MAX, (PW - 32) * b.h / b.w) : PIC_WANT;
+    }
+    function picReadable(svg, slotH) {
+      var b = picBox(svg);
+      var k = b ? Math.min((PW - 32) / b.w, slotH / b.h) : 1;
+      return picMinFont(svg) * k * (boardPx() / W) >= 8.5;
+    }
     for (i = 0; i < n; i++) {
       var s0 = steps[i];
       /* Three lines, not two. A procedural step reads as a sentence - "Water
@@ -15684,7 +15757,7 @@ var SFBoard = (function () {
       /* One very long token cannot be wrapped, only shrunk. */
       var hs0 = HS;
       while (hs0 > 12 && widest(hl0, hs0, 700) > PW - 46) hs0 -= 0.5;
-      var rl0 = s0.why ? wrap(s0.why, PW - 40, RS, 400, 3) : [];
+      var rl0 = s0.why ? wrap(s0.why, PW - 40, RS, 400, RS > BODY + 1.5 ? 4 : 3) : [];
       var hasT0 = !!(s0.title && s0.title !== s0.line);
 
       /* Chosen once, here, and reused when the panel is drawn. */
@@ -15698,7 +15771,8 @@ var SFBoard = (function () {
       if (typeof SFStepVisual !== 'undefined') {
         try { v0 = SFStepVisual.forStep(s0, ctx); } catch (e) { v0 = null; }
       }
-      if (v0) anyPic = true;
+      if (v0 && !picReadable(v0, picSlotH(v0))) v0 = null;
+      if (v0) { anyPic = true; PIC_WANT = Math.max(PIC_WANT, picSlotH(v0)); }
 
       var hH0 = hl0.length * hs0 * 1.22;
       var rH0 = rl0.length ? rl0.length * RS * 1.45 : 0;
@@ -15707,7 +15781,7 @@ var SFBoard = (function () {
       plan.push({ lines: hl0, size: hs0, reason: rl0, vis: v0,
                   hasTitle: hasT0, headH: hH0, reasonH: rH0 });
     }
-    var PH = Math.max(168, Math.min(330, needText + (anyPic ? PIC_WANT : 0)));
+    var PH = Math.max(168, Math.min(anyPic ? 400 : 330, needText + (anyPic ? PIC_WANT : 0)));
     var H = PANEL_Y + PH + 14;
 
     /* ── header: what is being worked ──
@@ -15718,7 +15792,7 @@ var SFBoard = (function () {
        stayed: the count, and the dots, which are tap targets. */
     var o = '', head = '';
     head += text(PAD, 20, kicker.toUpperCase(),
-                 { anchor: 'start', size: 9.5, weight: 700, fill: MUTED });
+                 { anchor: 'start', size: KICK, weight: 700, fill: MUTED });
     if (problem) {
       var ps = TITLE + 4;
       while (ps > 12 && measure(problem, ps, 700) > W - PAD * 2) ps -= 0.5;
@@ -15767,7 +15841,7 @@ var SFBoard = (function () {
            THE ADDING" announcing itself two panels early. */
         inner += '<g class="sfb-wname">' +
           text(22, 27, st.title.slice(0, 30).toUpperCase(),
-               { anchor: 'start', size: SMALL - 0.5, weight: 700,
+               { anchor: 'start', size: Math.max(SMALL - 0.5, FU), weight: 700,
                  fill: last ? ACCENT : MUTED }) + '</g>';
       }
 
@@ -15778,6 +15852,12 @@ var SFBoard = (function () {
          hole, and it is what made the opening panel look unfinished. */
       var blockH = headH + (reasonH ? reasonH + 16 : 0);
       var headTop, vTop = 0, vH = 0;
+      /* The slot this panel actually has, checked again: a long reason on a
+         sibling panel can leave less room than planned. */
+      if (pl.vis) {
+        var slot0 = PH - 16 - (reasonH ? reasonH + 14 : 0) - (titleH + 22 + headH + 12);
+        if (slot0 < 76 || !picReadable(pl.vis, slot0)) pl.vis = null;
+      }
       if (pl.vis) {
         headTop = titleH + 22;
         vTop = headTop + headH + 12;
@@ -15823,7 +15903,7 @@ var SFBoard = (function () {
 
         var askLabel = (predictOn && last) ? 'Work it out \u2014 then tap to check'
                                            : 'Why does this work?';
-        var aw = measure(askLabel, RS - 0.5, 600) + 26, ah = 23;
+        var aw = measure(askLabel, ASK, 600) + 26, ah = Math.max(23, Math.round(ASK + 11));
         var ax = (PW - aw) / 2;
         /* The prompt stands where what it withholds will appear: over the
            reason on an ordinary panel, over the LINE on the one whose line
@@ -15837,8 +15917,8 @@ var SFBoard = (function () {
           '<rect x="' + r1(ax) + '" y="' + r1(ay) + '" width="' + r1(aw) + '" height="' + ah +
             '" rx="' + (ah / 2) + '" fill="' + ACCENT_SOFT + '" stroke="' + ACCENT +
             '" stroke-width="1.3" opacity=".9"/>' +
-          text(PW / 2, ay + ah / 2 + 3.4, askLabel,
-               { size: RS - 0.5, weight: 600, fill: ACCENT_INK }) +
+          text(PW / 2, ay + ah / 2 + ASK * 0.3, askLabel,
+               { size: ASK, weight: 600, fill: ACCENT_INK }) +
           '</g>';
         inner += ask;
       }
