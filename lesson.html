@@ -606,6 +606,59 @@
     text-transform:uppercase; letter-spacing:.06em; font-weight:600;
   }
 
+  /* A picture drawn for the question just answered (requestMomentArt). The
+     recall panel's family: a quiet chip that turns blue on hover - border and
+     text only, no lift - and a panel that keeps its LIGHT ground in dark
+     mode, because every drawing is ink on paper. */
+  .sf-moment { margin-top:.75rem; }
+  .sf-moment-btn {
+    background:none; border:1.5px solid var(--border); border-radius:8px;
+    padding:.4rem .7rem; margin:0; cursor:pointer; color:var(--muted);
+    display:inline-flex; align-items:center; gap:.4rem;
+    font-family:var(--sans); font-size:0.8rem; font-weight:600; transition:border-color .18s, color .18s;
+  }
+  .sf-moment-btn:hover { border-color:#4a7cf6; color:#4a7cf6; }
+  .sf-moment-btn:focus-visible, .sf-moment-fold summary:focus-visible { outline:2px solid #4a7cf6; outline-offset:2px; }
+  .sf-moment-note { font-size:0.78rem; color:var(--muted); line-height:1.5; margin:0 0 .45rem; }
+  .sf-moment-panel {
+    padding:.75rem .75rem .6rem; border-radius:14px;
+    background:#f7f9fe; border:1px solid #e3e9f7;
+    animation:fadeUp .35s cubic-bezier(.16,1,.3,1) both;
+  }
+  .sf-moment-head {
+    display:flex; align-items:center; gap:.4rem; font-size:0.72rem; font-weight:700;
+    letter-spacing:.06em; text-transform:uppercase; color:#3563e9; margin:0 0 .5rem;
+  }
+  .sf-moment-art svg { display:block; margin:0 auto; }
+  .sf-moment-foot { font-size:0.68rem; color:#6b7280; line-height:1.45; margin-top:.5rem; }
+  /* The wait: the drawing's own proportions on dotted paper, with a pencil
+     line being drawn and undrawn across it. */
+  .sf-moment-sketch {
+    position:relative; width:100%; max-width:420px; margin:0 auto; aspect-ratio:400/240;
+    border-radius:10px; background-color:#fff;
+    background-image:radial-gradient(#d9e2f5 1px, transparent 1.3px); background-size:16px 16px;
+  }
+  .sf-moment-sketch svg { position:absolute; inset:0; width:100%; height:100%; }
+  .sf-moment-sketch path {
+    fill:none; stroke:#4a7cf6; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round;
+    stroke-dasharray:1; stroke-dashoffset:1; animation:sfSketch 3.2s cubic-bezier(.45,.05,.4,1) infinite;
+  }
+  .sf-moment-sketch path:nth-child(2) { animation-delay:.45s; stroke:#9db7fa; }
+  .sf-moment-sketch path:nth-child(3) { animation-delay:.9s; stroke:#9db7fa; }
+  @keyframes sfSketch { 0% { stroke-dashoffset:1; } 55% { stroke-dashoffset:0; } 80% { stroke-dashoffset:0; } 100% { stroke-dashoffset:-1; } }
+  @media (prefers-reduced-motion:reduce) {
+    .sf-moment-sketch path { animation:none; stroke-dashoffset:0; opacity:.45; }
+  }
+  .sf-moment-board { max-width:640px; margin:.9rem auto 0; padding:0 .25rem; }
+  .sf-moment-fold summary {
+    display:inline-flex; align-items:center; gap:.4rem; cursor:pointer; list-style:none;
+    font-size:0.78rem; font-weight:600; color:#3563e9; padding:.15rem 0;
+  }
+  .sf-moment-fold summary::-webkit-details-marker { display:none; }
+  .sf-moment-fold[open] summary { margin-bottom:.5rem; }
+  .wrong-item .sf-moment { margin-top:.6rem; }
+  body.dark .sf-moment-fold summary { color:#8fb0ff; }
+
   /* Keyboard hint chip */
   .kbd-hint {
     display:inline-flex; align-items:center; gap:.2rem;
@@ -2846,6 +2899,20 @@
           not spend another call. Generated on first entry, not premade. */
   var lessonArt = { state: 'idle', spec: null };
 
+  /* SFSceneKit's shape vocabulary, as the model is shown it. One copy, read
+     by both the lesson-art prompt and the on-the-spot prompt (momentPromptFor):
+     two copies of a vocabulary drift, and a shape the kit does not know is a
+     shape the kit silently drops. */
+  var SCENE_SHAPES_DOC =
+    'Shapes, each an entry in "shapes":\n' +
+    '  {"s":"rect","x":,"y":,"w":,"h":,"r":8,"fill":"blueFill","stroke":"blue"}\n' +
+    '  {"s":"circle","x":,"y":,"r":,"fill":"","stroke":""}\n' +
+    '  {"s":"ellipse","x":,"y":,"rx":,"ry":,"fill":"","stroke":""}\n' +
+    '  {"s":"line","x1":,"y1":,"x2":,"y2":,"stroke":"ink","sw":2,"arrow":true,"dash":true}\n' +
+    '  {"s":"path","d":"M10 10 Q60 0 110 10","stroke":"ink","fill":"none","arrow":true}\n' +
+    '  {"s":"poly","points":"10,90 60,20 110,90","fill":"faint","stroke":"ink"}\n' +
+    '  {"s":"text","x":,"y":,"t":"label","size":11,"anchor":"middle|start|end","fill":"ink"}\n';
+
   function artPromptFor(d) {
     function pick(arr, keys, n) {
       var out = [], i, k, v;
@@ -2880,14 +2947,7 @@
       'Draw the part THIS lesson covers, not the whole subject. Do NOT draw boxes with\n' +
       'nouns in them; that is a different feature and it does it better.\n' +
       'Canvas: w 400, h 250. x goes right from 0, y goes DOWN from 0. Stay inside.\n' +
-      'Shapes, each an entry in "shapes":\n' +
-      '  {"s":"rect","x":,"y":,"w":,"h":,"r":8,"fill":"blueFill","stroke":"blue"}\n' +
-      '  {"s":"circle","x":,"y":,"r":,"fill":"","stroke":""}\n' +
-      '  {"s":"ellipse","x":,"y":,"rx":,"ry":,"fill":"","stroke":""}\n' +
-      '  {"s":"line","x1":,"y1":,"x2":,"y2":,"stroke":"ink","sw":2,"arrow":true,"dash":true}\n' +
-      '  {"s":"path","d":"M10 10 Q60 0 110 10","stroke":"ink","fill":"none","arrow":true}\n' +
-      '  {"s":"poly","points":"10,90 60,20 110,90","fill":"faint","stroke":"ink"}\n' +
-      '  {"s":"text","x":,"y":,"t":"label","size":11,"anchor":"middle|start|end","fill":"ink"}\n' +
+      SCENE_SHAPES_DOC +
       'COLOURS ARE NAMES, never hex: ink muted rule paper faint, blue blueFill blueInk,\n' +
       'green greenFill greenInk, red redFill redInk, violet violetFill violetInk,\n' +
       'teal tealFill tealInk, amber amberFill amberInk, pink pinkFill pinkInk, none.\n' +
@@ -3123,15 +3183,26 @@
     var stem = recallWords([q.question, q.scenario, q.setup].join(' '));
     var ans = recallWords(recallAnswerText(q, RECALL_WHOLE[qt] ? qt : t));
     var have = {}, i, hitsStem = 0, strong = 0, hitsAns = 0;
+    var both = {}, hitsU = 0, strongU = 0;          // stem and answer together, each word once
     for (i = 0; i < pic.words.length; i++) have[pic.words[i]] = 1;
     for (i = 0; i < stem.length; i++) if (have[stem[i]]) { hitsStem++; if (stem[i].length >= 6) strong++; }
     for (i = 0; i < ans.length; i++) if (have[ans[i]]) hitsAns++;
+    var all = stem.concat(ans);
+    for (i = 0; i < all.length; i++) {
+      if (!have[all[i]] || both[all[i]]) continue;
+      both[all[i]] = 1; hitsU++;
+      if (all[i].length >= 6) strongU++;
+    }
     return {
       pic: pic,
       /* One strong shared term, or two short ones, before answering. After a
-         miss, a shared answer term counts too - it is the reason to look. */
+         miss, the answer's terms count too - they are the reason to look -
+         under the SAME one-strong-or-two-short rule. It used to be any one
+         answer word: "blood" in "to stop blood flowing backwards" opened a
+         diagram of the heart's four chambers under a question about vein
+         valves, which is not the picture that answers it. */
       before: (strong >= 1 || hitsStem >= 2) && hitsAns === 0 && qt !== 'truefalse',
-      afterMiss: strong >= 1 || hitsStem >= 2 || hitsAns >= 1
+      afterMiss: strongU >= 1 || hitsU >= 2
     };
   }
 
@@ -3344,6 +3415,431 @@
       void host.offsetWidth;
       host.style.animation = 'fadeUp .45s cubic-bezier(.16,1,.3,1) both';
     }
+  }
+
+  /* ── A PICTURE FOR THIS MOMENT ────────────────────────────────────────────
+
+     The lesson draws one picture a day, when it is opened. A learner who has
+     just missed a question needs a different one: not the lesson, but the ONE
+     thing this answer is about, drawn big, with that thing picked out in
+     blue. "Draw it for me" asks for exactly that, on the card, on the
+     walkthrough board and on the results screen.
+
+     It is built from the parts the lesson art already proved, and keeps its
+     three rules:
+
+       1. It never blocks. The feedback, the walkthrough and the Next button
+          are all there without it; the picture arrives when it arrives, and a
+          failure costs one line of text and a Try again.
+       2. SFSceneKit is the judge - the same security boundary as every other
+          model-authored drawing. A refused spec draws nothing.
+       3. It is cached on the day by key (day.visuals), null included, so the
+          retry card four questions later, the walkthrough and the results
+          screen all show the same picture without a second call.
+
+     And two of its own:
+
+       - AFTER AN ANSWER, NEVER BEFORE (invariant 7). The prompt hands the
+         model the right answer, because a picture that shows why an answer
+         is right has to know it. So the picture IS the answer, and it is only
+         ever offered once the learner has committed to one.
+       - NEVER FIRED BY ITSELF. A call is 5-15s and real money, and a
+         struggling learner can miss eight in a row. The learner asks.
+
+     The prompt is its own, not the lesson-art prompt with a question pasted
+     in: a focused prompt gets a picture and a buried one gets boxes. Its
+     example is a lever with the long arm in blue, because the habit worth
+     copying is the ONE blue part - the part of the picture the answer is
+     about. */
+  var momentArt = { inflight: {}, failed: {}, facts: {} };
+  var MOMENT_TIMEOUT_MS = 40000;
+  var MOMENT_KEEP = 16;
+  /* Where a picture of the answer is already on the card (graph, labelling),
+     is the walkthrough's job (an equation - SFStepVisual draws its balance),
+     or would be a picture of words (a sentence, a translation, a trace table,
+     a teach-it-back, a list of pairs). */
+  var MOMENT_NEVER = { write: 1, labeldiagram: 1, graph: 1, bigequation: 1, sentence: 1,
+                       tracetable: 1, match: 1, matchpairs: 1, readingset: 1 };
+
+  function momentStr(v, n) {
+    return fmStr(v).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ').trim().slice(0, n || 300);
+  }
+
+  function momentStem(q) {
+    return momentStr([fmStr(q.scenario), fmStr(q.question)].join(' '), 420);
+  }
+
+  /* The right answer as a sentence the model can draw from - per format,
+     because "correctIndex: 1" means nothing without its options. */
+  function momentAnswer(q) {
+    var t = fmStr(q.type).toLowerCase(), i, bits;
+    if (t === 'truefalse') return q.correct != null && q.correct !== '' ? 'The statement is ' + fmStr(q.correct).toLowerCase() : '';
+    if (t === 'errorspot') {
+      var st = ldArr(q.steps);
+      for (i = 0; i < st.length; i++) if (st[i] && st[i].hasError) return 'The mistake is in this step: ' + momentStr(st[i].text, 160);
+      return '';
+    }
+    if (t === 'sequence') return ldArr(q.items).length ? 'In order: ' + ldArr(q.items).map(function (x) { return momentStr(x, 60); }).join(' -> ') : '';
+    if (t === 'classify') {
+      return momentStr(q.categoryA, 40) + ': ' + ldArr(q.itemsA).join(', ') + '. ' +
+             momentStr(q.categoryB, 40) + ': ' + ldArr(q.itemsB).join(', ');
+    }
+    var opts = q.options || q.sentences;
+    if (opts && q.correctIndex != null && opts[q.correctIndex] != null) {
+      bits = [momentStr(opts[q.correctIndex], 200)];
+      if (q.reasons && q.reasonIndex != null && q.reasons[q.reasonIndex] != null) bits.push('because ' + momentStr(q.reasons[q.reasonIndex], 160));
+      return bits.join(', ');
+    }
+    if (q.answer != null && q.answer !== '') return momentStr(q.answer, 160) + (q.unit ? ' ' + momentStr(q.unit, 30) : '');
+    return momentStr(q.correctAnswer || q.modelAnswer, 200);
+  }
+
+  function momentCanDraw(q, cardType) {
+    if (!q || typeof SFSceneKit === 'undefined') return false;
+    var t = fmStr(cardType || cardTypeFor(q)).toLowerCase(), qt = fmStr(q.type).toLowerCase();
+    if (MOMENT_NEVER[t] || MOMENT_NEVER[qt]) return false;
+    return !!(momentStem(q) && momentAnswer(q));
+  }
+
+  /* Keyed on the question AND its answer: the same stem can be asked of two
+     different things, and a picture of the wrong one is worse than none. */
+  function momentKey(q) {
+    var s = momentStem(q) + '|' + momentAnswer(q), h = 5381, i;
+    for (i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return 'q' + (h >>> 0).toString(36);
+  }
+
+  function momentFacts(q, userAns) {
+    var they = momentStr(userAns, 140);
+    /* Some graders record the button that was pressed - the estimate card's
+       "Check" - rather than the answer. A button label is not an answer. */
+    if (they === '—' || they === '-' || /^(check|submit|done|next)\b/i.test(they)) they = '';
+    var topic = fmStr(day && (day.microTopic || day.title)).split(/\s*[›>]\s*/).pop();
+    return {
+      lesson: momentStr(day && day.title, 120),
+      topic: momentStr(topic, 120),
+      subject: (function () { try { return resolveSubjectType(plan, day); } catch (e) { return ''; } })(),
+      question: momentStem(q),
+      answer: momentAnswer(q),
+      they: they,
+      why: momentStr(q.explanation, 420)
+    };
+  }
+
+  function momentPromptFor(f) {
+    return 'A student just got the question below wrong. Draw ONE small picture that\n' +
+      'makes the right answer make sense. Return ONLY JSON, no markdown.\n\n' +
+      'LESSON: ' + f.lesson + '\n' +
+      (f.topic && f.topic !== f.lesson ? 'SPECIFICALLY: ' + f.topic + '\n' : '') +
+      (f.subject ? 'SUBJECT: ' + f.subject + '\n' : '') +
+      'QUESTION: ' + f.question + '\n' +
+      'RIGHT ANSWER: ' + f.answer + '\n' +
+      (f.they ? 'THEY ANSWERED (wrong): ' + f.they + '\n' : '') +
+      (f.why ? 'WHY: ' + f.why + '\n' : '') +
+      '\nDraw the ONE thing the right answer is about - the structure, the motion, the\n' +
+      'force, the cause - as it really looks or works. Not the whole lesson: one idea,\n' +
+      'drawn big. Do NOT draw boxes with words in them, and do not write the question out.\n' +
+      'Canvas: w 400, h 240. x goes right from 0, y goes DOWN from 0. Stay inside.\n' +
+      SCENE_SHAPES_DOC +
+      'COLOURS ARE NAMES, never hex: ink muted rule paper faint, blue blueFill blueInk,\n' +
+      'green greenFill greenInk, red redFill redInk, teal tealFill tealInk,\n' +
+      'violet violetFill violetInk, none. There is NO yellow, orange, grey, black or\n' +
+      'white - use red for heat or the sun, muted for grey, ink for black.\n' +
+      'Path data may only use M L H V Q C A Z and numbers.\n' +
+      /* The one rule that makes this picture different from the lesson's.
+         A learner who missed the question needs to be shown WHERE the answer
+         is, and one colour doing that job is how a textbook does it. */
+      'THE BLUE PART IS THE ANSWER. This is what the picture is for:\n' +
+      '  - Draw the part the right answer is about in blue (fill "blue" or "blueFill",\n' +
+      '    stroke "blue"), and give it a label with fill "blueInk" and "weight":700.\n' +
+      '  - Nothing else is blue. Everything else is ink, muted, rule or faint - or its\n' +
+      '    natural colour where the colour means something: green for a plant, red\n' +
+      '    for blood or heat, teal for water.\n' +
+      '  - If their wrong answer names a real part of the picture, it may be in it,\n' +
+      '    labelled truthfully in ink - never blue, never as if it were the answer.\n' +
+      'RULES: 6 to 30 shapes, at least 4 of them "path" or "poly". 3 to 6 labels, each\n' +
+      'under 22 characters, text size 11 or more (12 for the blue label).\n' +
+      '  - Never an acronym or a name inside a circle or a box. A label sits OUTSIDE\n' +
+      '    the thing it names, in the margin, with a thin leader line to it if it is\n' +
+      '    not touching it: {"s":"line","stroke":"rule","sw":1}.\n' +
+      '  - Work out where your shapes are BEFORE placing a label. A label whose x,y\n' +
+      '    falls inside another shape is wrong.\n' +
+      '  - Arrows show movement, force or change - not that two things are related.\n' +
+      '  - Every label must be TRUE. No numbers the question and answer do not give.\n' +
+      'If the answer is about words, grammar, spelling, a date or a name, and there is\n' +
+      'no thing and no motion to draw, return {"type":"none"}. A wrong picture is\n' +
+      'worse than no picture.\n\n' +
+      /* Rendered and audited clean before it was pasted in (see the diagram
+         skill): 21 shapes, every one a path or a poly, 7 labels, one blue
+         part. The model copies the example, so the example has to be the
+         standard. */
+      'EXAMPLE. Question: "A crowbar lifts a heavy rock with a small push. What makes\n' +
+      'that possible?" Right answer: "The long arm between the pivot and your push."\n' +
+      'Note the real shapes, the arrows for the two forces, every label outside, and\n' +
+      'the ONE blue part - the long arm - which is the answer:\n' +
+      '{"type":"drawing","title":"Why a small push lifts a big rock","w":400,"h":232,"shapes":[\n' +
+      ' {"s":"path","d":"M0 186 L400 186 L400 232 L0 232 Z","fill":"faint","stroke":"none"},\n' +
+      ' {"s":"path","d":"M0 186 L400 186","stroke":"ink","sw":1.6,"fill":"none"},\n' +
+      ' {"s":"poly","points":"150,186 170,156 190,186","fill":"faint","stroke":"ink","sw":2},\n' +
+      ' {"s":"poly","points":"60,165 170,150 170,156 60,171","fill":"muted","stroke":"ink","sw":1.2},\n' +
+      ' {"s":"poly","points":"170,150 384,120 384,126 170,156","fill":"blue","stroke":"blueInk","sw":1.2},\n' +
+      ' {"s":"path","d":"M58 165 L48 134 L64 108 L96 98 L122 106 L134 132 L128 156 Z","fill":"faint","stroke":"ink","sw":2},\n' +
+      ' {"s":"path","d":"M64 108 L84 126 L96 98 M84 126 L110 140 L134 132","stroke":"muted","sw":1.2,"fill":"none"},\n' +
+      ' {"s":"path","d":"M92 90 L92 58","stroke":"ink","sw":3.4,"fill":"none","arrow":true},\n' +
+      ' {"s":"path","d":"M376 62 L376 114","stroke":"ink","sw":1.6,"fill":"none","arrow":true},\n' +
+      ' {"s":"path","d":"M92 204 L170 204 M92 198 L92 210 M170 198 L170 210","stroke":"muted","sw":1.6,"fill":"none"},\n' +
+      ' {"s":"path","d":"M170 204 L376 204 M376 198 L376 210","stroke":"blue","sw":2.6,"fill":"none"},\n' +
+      ' {"s":"text","x":8,"y":88,"t":"Heavy rock","size":11,"anchor":"start","fill":"ink"},\n' +
+      ' {"s":"text","x":104,"y":72,"t":"Big lift","size":11,"anchor":"start","fill":"ink"},\n' +
+      ' {"s":"text","x":366,"y":50,"t":"Small push","size":11,"anchor":"middle","fill":"ink"},\n' +
+      ' {"s":"text","x":198,"y":178,"t":"Pivot","size":11,"anchor":"start","fill":"ink"},\n' +
+      ' {"s":"text","x":131,"y":225,"t":"Short arm","size":11,"anchor":"middle","fill":"muted"},\n' +
+      ' {"s":"text","x":273,"y":225,"t":"The long arm","size":12,"anchor":"middle","fill":"blueInk","weight":700}]}\n\n' +
+      'Now draw THIS question to that standard. The title says what the picture\n' +
+      'shows, in under 45 characters. Return exactly:\n' +
+      '{"type":"drawing","title":"short caption","w":400,"h":240,"shapes":[...]}';
+  }
+
+  function momentCache() {
+    if (!day) return {};
+    if (!day.visuals || typeof day.visuals !== 'object' || ldArr(day.visuals) === day.visuals) day.visuals = {};
+    return day.visuals;
+  }
+
+  /* On the day, and into the saved plan, like the lesson art. Only the last
+     MOMENT_KEEP are kept: a drawing spec is a few kilobytes, and a fortnight
+     of them would otherwise grow the plan in localStorage without bound. */
+  function cacheMoment(key, spec) {
+    try {
+      var c = momentCache();
+      c[key] = spec;
+      var keys = Object.keys(c);
+      while (keys.length > MOMENT_KEEP) delete c[keys.shift()];
+      if (plan && plan.days && plan.days[dayIndex]) {
+        plan.days[dayIndex].visuals = c;
+        SFStore.setItem('studyflow_plan', JSON.stringify(plan));
+      }
+    } catch (e) { /* storage full - the picture still shows now */ }
+  }
+
+  function requestMomentArt(key) {
+    var f = momentArt.facts[key];
+    if (!f || momentArt.inflight[key]) return;
+    if (momentCache().hasOwnProperty(key)) { paintMoment(key); return; }
+    momentArt.inflight[key] = 1;
+    delete momentArt.failed[key];
+    paintMoment(key);
+
+    var settled = false, timer = null;
+    /* A failed CALL - no reply, an error payload, no JSON in it, too slow - is
+       not an answer, so it is not cached and can be asked again. */
+    function fail() {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      delete momentArt.inflight[key];
+      momentArt.failed[key] = 1;
+      paintMoment(key);
+    }
+    timer = setTimeout(fail, MOMENT_TIMEOUT_MS);
+    fetch('api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: momentPromptFor(f) })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (settled) return;
+      var raw = String((data && (data.result || data.plan)) || '');
+      var m = raw.match(/\{[\s\S]*\}/);
+      var spec = null;
+      if (m) { try { spec = JSON.parse(m[0]); } catch (e) { spec = null; } }
+      if (!spec || typeof spec !== 'object') { fail(); return; }
+      settled = true;
+      clearTimeout(timer);
+      delete momentArt.inflight[key];
+      /* Anything that parsed IS the model's answer. A "none", or a drawing
+         SFSceneKit refuses, is remembered as null - the same question is not
+         paid for twice to be told the same thing. */
+      var svg = null;
+      if (spec.shapes) { try { svg = SFSceneKit.fromSpec(spec); } catch (e2) { svg = null; } }
+      cacheMoment(key, svg ? spec : null);
+      paintMoment(key);
+    })
+    .catch(fail);
+  }
+
+  /* Every place showing this key repaints together: the card, the board and
+     the results screen can all be waiting on the same call. */
+  function paintMoment(key) {
+    var hosts = document.querySelectorAll('.sf-moment'), i;
+    for (i = 0; i < hosts.length; i++) {
+      if (hosts[i].getAttribute('data-mkey') === key) paintMomentHost(hosts[i]);
+    }
+  }
+
+  var MOMENT_PENCIL = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+
+  function momentEl(tag, cls, text) {
+    var el = document.createElement(tag);
+    if (cls) el.className = cls;
+    if (text != null) el.textContent = text;
+    return el;
+  }
+
+  function paintMomentHost(host) {
+    var key = host.getAttribute('data-mkey');
+    var c = momentCache(), next, svg = null;
+    if (c.hasOwnProperty(key)) {
+      if (c[key]) { try { svg = SFSceneKit.fromSpec(c[key]); } catch (e) { svg = null; } }
+      next = svg ? 'drawn' : 'none';
+    } else if (momentArt.inflight[key]) next = 'wait';
+    else if (momentArt.failed[key]) next = 'failed';
+    else next = 'idle';
+    if (host.getAttribute('data-state') === next) return;
+    var was = host.getAttribute('data-state');
+    host.setAttribute('data-state', next);
+    host.innerHTML = '';
+
+    if (next === 'idle' || next === 'failed') {
+      if (next === 'failed') host.appendChild(momentEl('div', 'sf-moment-note', 'Couldn’t draw it just now.'));
+      var btn = momentEl('button', 'sf-moment-btn');
+      btn.type = 'button';
+      btn.innerHTML = MOMENT_PENCIL + '<span></span>';
+      btn.lastChild.textContent = next === 'failed' ? 'Try again' : 'Draw it for me';
+      btn.onclick = function () { host.setAttribute('data-asked', '1'); requestMomentArt(key); };
+      host.appendChild(btn);
+      return;
+    }
+
+    if (next === 'none') {
+      host.appendChild(momentEl('div', 'sf-moment-note',
+        'No picture for this one — it’s an idea more than a thing to draw.'));
+      return;
+    }
+
+    var panel = momentEl('div', 'sf-moment-panel' + (next === 'wait' ? ' is-wait' : ''));
+    var head = momentEl('div', 'sf-moment-head');
+    head.innerHTML = MOMENT_PENCIL + '<span></span>';
+    head.lastChild.textContent = next === 'wait' ? 'Drawing this for you' : 'Drawn for this question';
+    panel.appendChild(head);
+
+    if (next === 'wait') {
+      /* The same shape the drawing will take, so nothing jumps when it lands.
+         Three loose strokes drawn and undrawn - a pencil at work, not a
+         spinner - and still under prefers-reduced-motion. */
+      var sk = momentEl('div', 'sf-moment-sketch');
+      sk.setAttribute('aria-hidden', 'true');
+      sk.innerHTML = '<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid meet">' +
+        '<path pathLength="1" d="M56 178 C92 96 150 70 204 104 S296 168 342 88"/>' +
+        '<path pathLength="1" d="M104 150 Q148 128 194 150 T284 148"/>' +
+        '<path pathLength="1" d="M262 54 L318 54 M304 42 L318 54 L304 66"/></svg>';
+      panel.appendChild(sk);
+      var foot = momentEl('div', 'sf-moment-foot', 'A sketch of just this question — usually about ten seconds.');
+      panel.appendChild(foot);
+      setTimeout(function () {
+        if (host.getAttribute('data-state') === 'wait' && foot.parentNode) {
+          foot.textContent = 'Still drawing — this one is taking longer.';
+        }
+      }, 15000);
+      host.appendChild(panel);
+      return;
+    }
+
+    /* drawn. Marker ids made unique per SVG: every SFSceneKit drawing names
+       its arrowhead skArrow, and url(#id) resolves to the FIRST one in the
+       document - a hidden lesson picture would take every arrowhead with it. */
+    var art = momentEl('div', 'sf-moment-art');
+    art.innerHTML = (typeof SFDiagramKit !== 'undefined' && SFDiagramKit.uniqIds) ? SFDiagramKit.uniqIds(svg) : svg;
+    panel.appendChild(art);
+    /* Said plainly, because it is true: three curated templates in this file
+       were plausible and wrong, and a drawing made in ten seconds can be too. */
+    panel.appendChild(momentEl('div', 'sf-moment-foot', 'Sketched by AI for this question — if it disagrees with your notes, trust your notes.'));
+    /* On the results screen a picture drawn earlier arrives folded, so the
+       list stays a list; one asked for right there opens. */
+    if (host.getAttribute('data-fold') === '1' && !host.getAttribute('data-asked')) {
+      var det = momentEl('details', 'sf-moment-fold');
+      var sum = momentEl('summary', '');
+      sum.innerHTML = MOMENT_PENCIL + '<span>See the picture you asked for</span>';
+      det.appendChild(sum);
+      det.appendChild(panel);
+      host.appendChild(det);
+      return;
+    }
+    host.appendChild(panel);
+    if (was === 'wait') {
+      try { panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e3) { /* old browsers */ }
+    }
+  }
+
+  function momentHost(q, cardType, userAns, fold) {
+    if (!momentCanDraw(q, cardType)) return null;
+    var key = momentKey(q);
+    momentArt.facts[key] = momentFacts(q, userAns);
+    var host = momentEl('div', 'sf-moment');
+    host.setAttribute('data-mkey', key);
+    host.setAttribute('aria-live', 'polite');
+    if (fold) host.setAttribute('data-fold', '1');
+    paintMomentHost(host);
+    return host;
+  }
+
+  /* What the learner answered, from the miss record - the walkthrough and the
+     results screen only have the question. */
+  function momentUserAns(q) {
+    for (var i = wrongItems.length - 1; i >= 0; i--) {
+      if (wrongItems[i] && wrongItems[i].q === q) return wrongItems[i].userAns;
+    }
+    return '';
+  }
+
+  /* On a question card, after a miss: called from handleResult and from
+     recordMiss (the self-grading cards), after sfRecallOnMiss so it sits
+     below the lesson's picture when that is shown. Idempotent. */
+  function sfMomentOnMiss(userAns) {
+    var sc = document.getElementById('session-card');
+    var card = window.currentCard;
+    if (!sc || !card || !card.q || sc.querySelector('.sf-moment')) return;
+    /* Not on the pre-test: three quick questions before any teaching, with
+       the lesson one card away. The same question comes back later as a
+       retest, and a miss THERE is when the picture is offered. */
+    if (card.isPretest) return;
+    var host = momentHost(card.q, card.type, userAns, false);
+    if (!host) return;
+    var after = sc.querySelector('.sf-recall') || sc.querySelector('#feedback-box');
+    if (after && after.parentNode) after.parentNode.insertBefore(host, after.nextSibling);
+    else {
+      var body = sc.querySelector('.card-body');
+      if (body) body.appendChild(host);
+    }
+  }
+
+  /* Under the walkthrough board (block 2's renderCard). The learner has
+     answered - right or wrong - and asked for help, so the offer stands. */
+  function sfMomentBoard(mount, q) {
+    if (!mount || !q) return;
+    var host = momentHost(q, cardTypeFor(q), momentUserAns(q), false);
+    if (!host) return;
+    var wrap = momentEl('div', 'sf-moment-board');
+    wrap.appendChild(host);
+    mount.appendChild(wrap);
+  }
+
+  /* The results screen's hosts are written into an HTML string, so they are
+     painted once the string is in the page. */
+  function momentSlotHtml(q) {
+    if (!momentCanDraw(q, cardTypeFor(q))) return '';
+    var key = momentKey(q);
+    momentArt.facts[key] = momentFacts(q, momentUserAns(q));
+    return '<div class="sf-moment" data-mkey="' + key + '" data-fold="1" aria-live="polite"></div>';
+  }
+
+  function sfMomentPaintAll(root) {
+    var hosts = (root || document).querySelectorAll('.sf-moment'), i;
+    for (i = 0; i < hosts.length; i++) paintMomentHost(hosts[i]);
   }
 
   /* ── THE WATCH-OUT DECK ────────────────────────────────────
@@ -7094,7 +7590,9 @@
 
     if (isCorrect) spawnConfetti();
 
-    handleResult(isCorrect, explanation, null);
+    /* The pressed button, so a miss records "False" rather than "—" under
+       "Your answer" on the results screen. */
+    handleResult(isCorrect, explanation, btn);
     showFeedback(isCorrect, explanation);
     enableNext();
   }
@@ -7267,6 +7765,17 @@
     if (q) updateSM2(q, false);
     /* The self-grading cards miss through here, not handleResult. */
     try { sfRecallOnMiss(); } catch (e) { /* never cost the grade */ }
+    try { sfMomentOnMiss(userAns); } catch (e2) { /* never cost the grade */ }
+  }
+
+  /* What the learner chose, as words. An option button's textContent starts
+     with its letter badge, so "Your answer" on the results screen read
+     "ATo speed blood up" - and so did the drawing prompt. */
+  function answerTextOf(el) {
+    if (!el || el.nodeType !== 1) return fmStr(el);
+    var c = el.cloneNode(true), lt = c.querySelector('.opt-letter');
+    if (lt) lt.parentNode.removeChild(lt);
+    return c.textContent.replace(/\s+/g, ' ').trim();
   }
 
   function handleResult(isCorrect, explanation, wrongEl) {
@@ -7285,7 +7794,7 @@
       currentStreak = 0;
       recentWrong++;
       var wrongQ = sessionCards[cardIndex - 1] ? sessionCards[cardIndex - 1].q : null;
-      var wrongItem = { q: wrongQ || { question: 'Question', explanation: explanation }, userAns: wrongEl ? wrongEl.textContent : '—', explanation: explanation };
+      var wrongItem = { q: wrongQ || { question: 'Question', explanation: explanation }, userAns: wrongEl ? answerTextOf(wrongEl) : '—', explanation: explanation };
       wrongItems.push(wrongItem);
 
       // SM-2: Update algorithm — wrong answer resets interval
@@ -7319,6 +7828,7 @@
 
       showFeedback(false, explanation);
       try { sfRecallOnMiss(); } catch (e) { /* never cost the feedback */ }
+      try { sfMomentOnMiss(wrongItem.userAns); } catch (e2) { /* never cost the feedback */ }
       flashCard(false);
       updateStreak();
       checkStruggling();
@@ -7720,8 +8230,14 @@
     // Categorize wrong answers by difficulty
     var wrongByDiff = { Easy:[], Medium:[], Hard:[] };
     wrongItems.forEach(function(item) {
-      var diff = (item.q && item.q.difficulty) || 'Medium';
-      if (wrongByDiff[diff]) wrongByDiff[diff].push(item);
+      /* Normalised, because the sources do not agree on case: the plan says
+         "Medium", the lesson's own labelling card says "medium", and a model
+         can say either. An item whose difficulty matched no bucket was left
+         off this list without a word - on the one screen whose job is to say
+         what to restudy. */
+      var raw = String((item.q && item.q.difficulty) || '');
+      var diff = /hard/i.test(raw) ? 'Hard' : (/easy/i.test(raw) ? 'Easy' : 'Medium');
+      wrongByDiff[diff].push(item);
     });
 
     var wrongHtml = '';
@@ -7792,6 +8308,7 @@
       '</button>';
 
     document.getElementById('results-wrap').classList.add('show');
+    try { sfMomentPaintAll(document.getElementById('results-wrap')); } catch (eM) { /* the list stands alone */ }
     plan.days[dayIndex].completed = true;
     plan.days[dayIndex].score = pct;
     SFStore.setItem('studyflow_plan', JSON.stringify(plan));
@@ -7856,6 +8373,9 @@
       (item.userAns ? '<div class="wi-yours">Your answer: ' + item.userAns + '</div>' : '') +
       '<div class="wi-correct">Correct: ' + correctAns + '</div>' +
       '<div class="wi-why">' + (q.explanation || 'Review this in your notes.') + '</div>' +
+      /* The picture drawn for this miss, if one was, folded; otherwise the
+         offer - "what to study more" is exactly when to ask for one. */
+      momentSlotHtml(q) +
       '</div>';
   }
 
@@ -17443,6 +17963,8 @@ var SFBoard = (function () {
         /* After a wrong answer: the lesson's picture under the walkthrough,
            when it covers what was missed. */
         try { if (typeof w.sfRecallBoard === 'function') w.sfRecallBoard(mount, card.missedQ || null); } catch (eR) { /* board stands alone */ }
+        /* And a picture of just this question, drawn when asked. */
+        try { if (typeof w.sfMomentBoard === 'function') w.sfMomentBoard(mount, card.missedQ || null); } catch (eM) { /* board stands alone */ }
         scrollTop();
         return;
       } catch (e) {

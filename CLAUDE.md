@@ -845,8 +845,8 @@ Three properties make a runtime call safe here, and all three must stay:
 `sfLesson.panes[0].html`. Only the DOM and the drawing vanishes the moment
 the learner turns to another part of the lesson and back.
 
-Cost is one extra call per lesson, first visit only; the prompt is ~2,300
-characters.
+Cost is one extra call per lesson, first visit only; the prompt is ~5,800
+characters, measured off the wire.
 
 ### `SFSceneKit` — drawing anything, from a spec written with the lesson
 
@@ -1154,7 +1154,10 @@ else `diagramForDay`, the same precedence as the lesson card):
 - **After a wrong answer, it opens by itself** under the explanation, headed
   "Look at it again". `sfRecallOnMiss()` is called from `handleResult` AND
   `recordMiss`, so the six self-grading cards get it too. Correct answers do
-  nothing.
+  nothing. The answer's words count here, under the **same** one-strong-or-
+  two-short rule, counted once across stem and answer. It used to be any ONE
+  answer word, so "blood" in *to stop blood flowing backwards* opened the
+  heart's four-chamber cycle under a question about vein valves.
 - The panel keeps a light ground in dark mode: every diagram is drawn in ink
   for paper.
 
@@ -1199,6 +1202,91 @@ own cell, graded 4/5 with the wrong pin corrected in place; the atmosphere
 exemplar labels its four layers + ozone; a concept web is refused; across all
 10 subjects 0 dropped, 0 duplicated, opening unchanged, maths gets no card and
 still 10 bigequation / 2 wordproblem.
+
+### Drawn on the spot, for the question just answered — `requestMomentArt`
+
+The lesson draws one picture a day. A learner who has just missed a question
+needs a different one: the ONE thing this answer is about, drawn big, with
+that thing in blue. After a miss the card offers **Draw it for me**; a tap
+asks the model for exactly that picture, and it lands in a panel headed
+"Drawn for this question".
+
+```
+miss -> [Draw it for me] -tap-> sketching placeholder -> drawing | "no picture" | "Couldn't draw it" + Try again
+```
+
+Where it is offered, and where it is not:
+
+- **Question cards, after a miss** — `sfMomentOnMiss`, called from
+  `handleResult` and `recordMiss` right after `sfRecallOnMiss`, so it sits
+  under "Look at it again" when that shows.
+- **The walkthrough board** (`sfwb-explain`) — `sfMomentBoard`, called from
+  block 2 next to `sfRecallBoard`. Offered after a correct answer too: the
+  learner asked for the walkthrough, and has already answered.
+- **The results screen** — each "What to study more" item carries a slot
+  (`momentSlotHtml`). A picture drawn during the session arrives **folded**
+  ("See the picture you asked for") so the list stays a list; one asked for
+  right there opens.
+- **Never before an answer** (invariant 7). The prompt carries the right
+  answer — a picture that shows why an answer is right has to know it — so
+  the picture IS the answer. The spaced-repeat retry of the same question
+  shows nothing until it is answered, then the cached picture at once.
+- **Never on the pre-test.** Three quick questions before any teaching, with
+  the lesson one card away; the retest later is where a miss offers it.
+- **Never on** `write`, `bigequation` (the walkthrough's balance does that),
+  `sentence`, `labeldiagram`, `graph`, `tracetable`, `match`, `matchpairs`,
+  `readingset` — `MOMENT_NEVER`. Everything else is offered, maths word
+  problems included.
+- **Never fired by itself.** A call is 5-15s and real money, and a struggling
+  learner can miss eight in a row. The learner taps.
+
+How it works — built from the lesson art's parts, not beside them:
+
+- **Its own prompt**, `momentPromptFor`: lesson, subject, the question, the
+  right answer, what they answered, the explanation. ~5.3k chars. It shares
+  the shape vocabulary with `artPromptFor` through **`SCENE_SHAPES_DOC`** —
+  one copy, because a shape the model is shown and the kit does not know is
+  silently dropped. The lesson prompt was checked byte-identical after that
+  refactor.
+- **The blue part is the answer.** The one rule this prompt adds: draw the
+  part the answer is about in blue with a bold `blueInk` label, everything
+  else neutral or its meaningful colour. The palette offered leaves amber
+  out, since the picture also appears under the whiteboard.
+- **Its example is a lever** — "why does a small push lift a big rock", the
+  long arm in blue. Rendered, audited clean (21 shapes, every one a path or a
+  poly) and looked at before it was pasted in. Not a leaf, deliberately: the
+  lesson prompt already shows a leaf, and the habit to copy here is the one
+  blue part, not the botany.
+- **`SFSceneKit` is the judge**, as for every model drawing; `uniqIds` runs
+  on the result, because every scene names its arrowhead `skArrow`.
+- **Cached on the day** in `day.visuals[key]`, keyed on the question AND its
+  answer (`momentKey`), persisted into the saved plan, last 16 kept. `null`
+  is cached for a "none" or a refused drawing. A **failed call is not** —
+  no reply, an error payload, prose with no JSON, or slower than
+  `MOMENT_TIMEOUT_MS` (40s) — and offers Try again. A late reply after the
+  timeout is ignored, not painted.
+- **Every host of a key repaints together** (`paintMoment`), so a picture
+  requested on the card and still drawing when the learner opens the
+  walkthrough lands in both.
+- The panel says **"Sketched by AI for this question — if it disagrees with
+  your notes, trust your notes."** Three curated templates in this file were
+  plausible and wrong; a drawing made in ten seconds can be too.
+- The wait is a **pencil line drawn and undrawn on dotted paper**, in the
+  drawing's own proportions so nothing jumps when it lands; static under
+  `prefers-reduced-motion`.
+
+Tested on real page loads with `api/generate` mocked (there is no API key in
+the cloud environment and the live site is not reachable from it): no offer
+before answering or on the pre-test; one call per tap even when tapped twice;
+the prompt carries the answer and what they answered; cached on the day and
+in the saved plan; the board and the results screen reuse it with no second
+call; network failure, a 502, prose, a timeout with a late reply, and a
+hostile spec (`script` shape, markup in the title and a label, an `onload`
+smuggled into path data, `url(#evil)` as a colour) all end safely; a sequence
+miss through `recordMiss` offers it; a full wrong-answer walk of science,
+maths, history and language sessions throws nothing and offers it on no
+excluded card. **What has NOT been seen is a real model's drawing** — see
+Open items.
 
 ### The flashcard deck — `deckItems`, `sfDeckGo`, `sfDeckFlip`
 
@@ -1492,6 +1580,13 @@ What to check after any `buildQueue` or renderer change:
     first line repeats the rail label. Assert the counts — a pager that
     silently collapses to one part looks identical to a short lesson.
 
+18c. **Draw it for me** appears only after an answer: never on an unanswered
+    card, a pre-test card, a retry card before it is answered, or any
+    `MOMENT_NEVER` format. One tap is one call; a cached key (null included)
+    is zero; a failed call is not cached. Mock `api/generate` with a hostile
+    spec and assert no `script`/`img`/`foreignObject` and no `on*` attribute
+    reaches the DOM.
+
 **And a second suite that belongs to `app.html`**, not the session — load
 `app.html`, inject `appsuite.js`, call `SFRunAppSuite()`:
 
@@ -1647,6 +1742,12 @@ different things.
   `wrongItems.length === 0`, and `wrongItems` is only as complete as the
   graders that remember to fill it. It now tests `correctCount >=
   totalAnswered`, which is the same number printed above it.
+- **"What to study more" normalises difficulty.** It grouped misses by
+  `q.difficulty` and matched only `Easy`/`Medium`/`Hard` exactly, so a miss
+  marked `medium` - which the lesson's own labelling card is - was dropped
+  from the list without a word. "Your answer" also read `ATo speed blood up`
+  (the option's letter badge) and `—` for every true/false miss;
+  `answerTextOf` and `answerTF` passing its button fix both.
 - **Six graders score themselves** — graph, scaffold, errorspot, sequence,
   match, write — and none of them recorded a miss, so missing one lowered
   the percentage and then failed to appear under "What to study more", the
@@ -1691,46 +1792,22 @@ genuinely nothing.
 
 ## Open items
 
-- **NEXT SESSION: VISUALS MADE UP ON THE SPOT.** The goal: when a learner is
-  stuck, asks "show me", or reaches a card whose idea has no picture, the app
-  draws one for THAT moment - not only the one picture per lesson it draws
-  today. Everything it needs exists and is tested; what is missing is the
-  trigger and a prompt that takes a moment instead of a day.
+- **On-the-spot drawings have not been seen from a real model.** "Draw it for
+  me" (see "Drawn on the spot") is wired, tested against mocked replies and
+  hostile ones, and its example audits clean - but no API key reaches the
+  cloud environment, so nobody has looked at what Haiku actually draws from
+  `momentPromptFor`. Before anything else on it: miss five questions across
+  three subjects on the live site, tap the button, and **look**. Check that
+  the blue part is the answer, that labels are outside and true, and how many
+  come back `none`. If they come back as boxes, the example is the lever, not
+  the wording (see "The model copies the EXAMPLE").
 
-  What already works, and what to reuse rather than rebuild:
-  - **Generation**: `requestLessonArt(d)` - `api/generate` with `artPromptFor(d)`
-    (~2.3k chars, the leaf exemplar, the phone-size rules), JSON pulled out of
-    the reply, **`SFSceneKit.fromSpec` as the judge** (the security boundary:
-    fixed shape kinds, colours by name, clamped numbers, path grammar, a 9px
-    type floor), cached on the day. It is written for ONE picture per day
-    (`lessonArt` is a single slot); on-the-spot needs a keyed cache
-    (`day.visuals[key]`) and a prompt built from a *question* or *concept*,
-    e.g. `artPromptFor({title: concept, content: questionStem + explanation})`.
-  - **Display**: `recallPanel(pic, heading)` renders any `{svg, caption}` in
-    the card-safe light panel; `sfRecallOnMiss` / `sfRecallBoard` show where it
-    already slots into a question card and a whiteboard card.
-  - **Guards**: `SFDiagramKit.legible` (phone floor), `uniqIds` (marker ids),
-    `polish` (uncrop, separate labels). Run a generated SVG through all three.
-  - **Labelling**: `lessonLabelQuestion` turns any drawing into a labelling
-    card; it reads `lessonPicture()`, so point it at a generated picture.
-  - **Checking**: `.claude/skills/diagram/` - the standard, `craft.md`, the
-    audit (`scripts/audit.js`, paste into the console on a live card).
-
-  Rules the new path must keep:
-  - **Invariant 7.** Never draw a picture for a question BEFORE it is answered
-    if the picture could contain the answer - use `recallFor`'s leak test on
-    the generated SVG's labels, or only generate after a miss.
-  - **It must never block.** Same as lesson art: the card is whole without it;
-    the picture arrives when it arrives; failure shows nothing.
-  - **Cost and latency.** One call per request, ~5-15s. Cache by key, cache
-    null too, and never fire one per card automatically - trigger on a miss or
-    an explicit tap.
-  - **The model copies the example**, so a focused prompt with the audited
-    exemplar gets a picture; a buried one gets boxes (see "What generated art
-    still is not"). Keep it separate from the 29k day prompt.
-  - Render the result and look at it. The audit catches layout, not science -
-    three curated templates were plausible and wrong.
-
+  Not built yet, and each is small now that the core exists: a **"Picture
+  it"** on the flashcard deck's back face (a concept, not a question, so no
+  invariant-7 question); a **"show me"** in the VIP chat; and pointing
+  `lessonLabelQuestion` at a drawn picture to turn it into a labelling card.
+  Whether free accounts should get unlimited taps is a **product decision** -
+  today every tier does, like the lesson art.
 
 - **THE ONE TO PICK UP FIRST: verify serial plan generation with the tab in
   front.** Measured twice against the live endpoint: three parallel
