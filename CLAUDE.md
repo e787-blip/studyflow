@@ -775,6 +775,28 @@ every flow chart was a rainbow. What replaced it:
 - **`wrap()` no longer drops words silently** past `maxLines`; the rest is cut
   with a visible ellipsis. Hubs get three lines ("Causes of the French
   Revolution" was reaching the hub as "Causes of the / French").
+- **A step is made shorter at the source, not cut at the edge.** Steps arrive
+  as sentences, and three layers each cut them - `dgLabels` at 38 chars,
+  `fromSpec` at 44, then the node's own `wrap` - so a heart lesson's cycle
+  read "The right ventricle pump…", "Oxygen-rich blood enters th…". Now
+  `dgLabels` drops a leading article and a trailing ROUTE phrase ("through
+  the veins", "via …") when a label runs past 34 chars - never the agent,
+  the cause or a condition - and both caps are 80. Cycle nodes wrap to three
+  lines like flow nodes, and a vertical flow **widens** (170 → up to 320)
+  until every step fits whole. Five representative days went from 11 cut
+  labels to 0. The audit still reports `dropped-words` when the route phrase
+  goes; that one is deliberate.
+- **A wrapped kit title gets 1.26em leading** (one line stays 1.12). At
+  1.12 the two lines' boxes overlapped and failed `label-overlap`.
+- **A caption is not printed twice.** Every titled kit layout, every hub and
+  every drawing already prints its name inside the SVG, and the lesson card,
+  `applyLessonArt`, `recallPanel` and block 2's lesson path all captioned it
+  again underneath ("How blood moves" / "HOW BLOOD MOVES"). They all go
+  through `diagramCaption(svg, caption)` now, which returns '' when the
+  caption's words are already in the SVG's text. **And it is escaped with
+  `escHtml`**: those captions went into `innerHTML` through `esc()`, which
+  leaves `<` and `>` alone, so a model-written drawing title was live
+  markup on the lesson card.
 - **Rotated labels carry their own `transform`** (`T(..., {rotate:-90})`).
   Inside a rotated `<g>`, `polish()` read them as text at (0,0) and grew the
   viewBox 35 units left.
@@ -794,6 +816,10 @@ fired - `curatedDiagramSVG(name, hint)` now takes variant words separately, and
 photosynthesis labels, rock cycle (textured rocks), mitosis, water cycle (a
 landscape), plate tectonics (subduction, or the Earth's layers when the lesson
 is about the core), fractions, and the energy pyramid in one green.
+The wave's amplitude sub-line is "rest to crest" (it mirrors "crest to
+crest"), 16 units under its label: once `legible()` raised it to phone size,
+"height above rest" touched the label and reached both trough curves, and its
+one-line footnote ran past both ends of its pill - now two lines.
 
 ### Labels get a halo, because placement is what the model gets wrong
 
@@ -1580,7 +1606,11 @@ What to check after any `buildQueue` or renderer change:
     first line repeats the rail label. Assert the counts — a pager that
     silently collapses to one part looks identical to a short lesson.
 
-18c. **Draw it for me** appears only after an answer: never on an unanswered
+18c. **No step label is cut.** `diagramForDay` on days whose steps are
+    sentences up to 80 characters: no `<text>` in the output ends in `…` for
+    flow; cycle labels up to ~48 characters fit whole. And no diagram's
+    caption repeats words its SVG already prints.
+18d. **Draw it for me** appears only after an answer: never on an unanswered
     card, a pre-test card, a retry card before it is answered, or any
     `MOMENT_NEVER` format. One tap is one call; a cached key (null included)
     is zero; a failed call is not cached. Mock `api/generate` with a hostile

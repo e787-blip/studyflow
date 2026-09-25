@@ -3211,7 +3211,7 @@
     p.className = 'sf-recall';
     p.innerHTML = '<div class="sf-recall-head">' + esc(heading) + '</div>' +
       (typeof SFDiagramKit !== 'undefined' && SFDiagramKit.uniqIds ? SFDiagramKit.uniqIds(pic.svg) : pic.svg) +
-      (pic.caption ? '<div class="sf-recall-cap">' + esc(pic.caption) + '</div>' : '');
+      (diagramCaption(pic.svg, pic.caption) ? '<div class="sf-recall-cap">' + escHtml(diagramCaption(pic.svg, pic.caption)) + '</div>' : '');
     return p;
   }
 
@@ -3391,6 +3391,42 @@
     mount.appendChild(wrap);
   }
 
+  /* The caption under a diagram, as HTML - or '' when the diagram already
+     says it.
+
+     Every kit layout with a title draws it inside the SVG, a hub prints the
+     topic in its centre, and a drawing prints its own title; the card then
+     captioned it again underneath, so a heart lesson read "How blood moves"
+     and "HOW BLOOD MOVES" a centimetre apart. The words are compared across
+     all of the SVG's text, so a title wrapped onto two lines still counts.
+
+     Escaped with escHtml, not esc(): esc() is written for attributes and JS
+     strings and leaves < and > alone, and a caption is model text - a
+     drawing's title went into innerHTML through it unescaped. */
+  function captionNorm(v) {
+    /* Entities decoded BEFORE tags are stripped, so the SVG's escaped text
+       and the caption's raw text come out the same. */
+    return String(v == null ? '' : v)
+      .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+      .replace(/<[^>]*>/g, ' ').toLowerCase()
+      .replace(/[\u2026.,:;!?]+/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  function diagramCaption(svg, caption) {
+    var c = captionNorm(caption);
+    if (!c) return '';
+    var said = [], m, re = /<text\b[^>]*>([\s\S]*?)<\/text>/gi;
+    while ((m = re.exec(String(svg == null ? '' : svg))) !== null) said.push(m[1]);
+    if ((' ' + captionNorm(said.join(' ')) + ' ').indexOf(' ' + c + ' ') !== -1) return '';
+    return fmStr(caption).replace(/\s+/g, ' ').trim();
+  }
+  function diagramCaptionHtml(svg, caption, style) {
+    var c = diagramCaption(svg, caption);
+    return c ? '<div' + (style ? ' style="' + style + '"' : '') + '>' + escHtml(c) + '</div>' : '';
+  }
+  var CAPTION_STYLE = 'font-size:0.68rem;color:var(--muted);margin-top:.4rem;' +
+    'text-transform:uppercase;letter-spacing:.06em;font-weight:600;';
+
   /* Swap the drawing in wherever the lesson card is showing its picture.
      The pane HTML is updated as well as the DOM, so turning to another part
      and back does not bring the old diagram with it. */
@@ -3400,8 +3436,7 @@
     try { svg = SFSceneKit.fromSpec(lessonArt.spec); } catch (e) { svg = null; }
     if (!svg) return;
     var caption = fmStr(lessonArt.spec.title) || fmStr(day.title);
-    var inner = svg + '<div style="font-size:0.68rem;color:var(--muted);margin-top:.4rem;' +
-      'text-transform:uppercase;letter-spacing:.06em;font-weight:600;">' + esc(caption) + '</div>';
+    var inner = svg + diagramCaptionHtml(svg, caption, CAPTION_STYLE);
 
     if (sfLesson && sfLesson.panes && sfLesson.panes.length) {
       sfLesson.panes[0].html = sfLesson.panes[0].html.replace(
@@ -4246,8 +4281,9 @@
       if (artSvg || (dgm && dgm.svg)) {
         dgmHtml = '<div id="lesson-art" style="text-align:center;padding:.75rem;background:var(--soft);border-radius:14px;">' +
           (artSvg || dgm.svg) +
-          '<div style="font-size:0.68rem;color:var(--muted);margin-top:.4rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">' +
-          esc(artSvg ? (fmStr(lessonArt.spec.title) || fmStr(day.title)) : dgm.caption) + '</div></div>';
+          diagramCaptionHtml(artSvg || dgm.svg,
+            artSvg ? (fmStr(lessonArt.spec.title) || fmStr(day.title)) : dgm.caption, CAPTION_STYLE) +
+          '</div>';
       }
 
       /* Part one: look at it, then read it. */
@@ -10036,7 +10072,10 @@
     function titleBlock(title, w) {
       if (!title) return { svg: '', h: 6 };
       var lines = wrap(title, w - 24, TITLE_SIZE * 0.8, 600, 2);
-      var lh = TITLE_SIZE * 1.12;
+      /* A title that wraps gets real leading. At 1.12em the two lines' glyph
+         boxes overlapped - "Writing a persuasive / essay" failed the audit's
+         label-overlap check on every narrow flow. One line is unchanged. */
+      var lh = TITLE_SIZE * (lines.length > 1 ? 1.26 : 1.12);
       var h = 12 + lines.length * lh;
       var out = '', i;
       for (i = 0; i < lines.length; i++) {
@@ -10166,6 +10205,20 @@
       bwv = Math.max(bwv, 170);
       /* Let a long heading widen the card rather than spill past its edge. */
       if (title) bwv = Math.max(bwv, Math.min(320, measure(title, TITLE_SIZE, 700) / 2 + 40));
+      /* And let a long STEP widen it too. The stack sat at 170 units while
+         the card had 343px to give, so a step written as a sentence - "Choose
+         a clear position you can defend with evidence" - was cut to "defend
+         with..." with most of the width empty either side. Grow in steps
+         until every step fits its three lines whole, up to 320: past that the
+         board scales down on a phone and the type shrinks with it. */
+      var fitsAt = function (wid) {
+        for (var k = 0; k < n; k++) {
+          var full = String(items[k] == null ? '' : items[k]).replace(/\s+/g, ' ').trim();
+          if (wrap(full, wid - 28, NODE_SIZE, 700, 3).join(' ') !== full) return false;
+        }
+        return true;
+      };
+      while (bwv < 320 && !fitsAt(bwv)) bwv = Math.min(320, bwv + 20);
       var wv = bwv + MARGIN * 2;
       var tbv = titleBlock(title, wv);
       var vgap = 26, y = tbv.h + 6;
@@ -10197,7 +10250,10 @@
       var padX = 11, maxNodeW = 128;
       var boxes = [], sum = 0;
       for (i = 0; i < n; i++) {
-        var ln = wrap(items[i], maxNodeW - padX * 2, NODE_SIZE, 700, 2);
+        /* Three lines, as a flow node has. At two, a step written as a
+           sentence could not fit a ring node however it was worded, and the
+           wrap cut it mid-word. */
+        var ln = wrap(items[i], maxNodeW - padX * 2, NODE_SIZE, 700, 3);
         var bw = Math.max(58, Math.min(maxNodeW, widestLine(ln, NODE_SIZE, 700) + padX * 2));
         var bh = Math.max(30, 12 + ln.length * NODE_SIZE * 1.32);
         boxes.push({ lines: ln, w: bw, h: bh });
@@ -10992,7 +11048,11 @@
       var raw = spec.items || spec.steps || spec.parts || [];
       for (i = 0; i < raw.length; i++) {
         var v = clean(typeof raw[i] === 'string' ? raw[i] : (raw[i] && (raw[i].label || raw[i].name)) || '');
-        if (v) items.push(v.length > 46 ? v.slice(0, 44).replace(/\s\S*$/, '') + '\u2026' : v);
+        /* 80, the same ceiling dgLabels uses. At 46 this cut every step
+           written as a sentence before any layout saw it, so a flow that can
+           widen to fit its steps was handed fragments and never did. Layouts
+           with less room still wrap, and cut visibly, on their own. */
+        if (v) items.push(v.length > 80 ? v.slice(0, 78).replace(/\s\S*$/, '') + '\u2026' : v);
         if (items.length === 7) break;
       }
 
@@ -12356,11 +12416,17 @@
         // rest line at x=184, the one band the curve never enters between the
         // two troughs, so it cannot collide with the wave.
         '<line x1="184" y1="108" x2="184" y2="74" stroke="#4a7cf6" stroke-width="1.6" marker-start="url(#wvS)" marker-end="url(#wvA)"/>' +
+        /* Sub-line "rest to crest", mirroring "crest to crest" above, and 16
+           below the label rather than 12. legible() raises this 8px line to
+           ~10 on a phone; at 12 apart the two lines touched, and the longer
+           "height above rest" reached the trough curves either side. */
         '<text x="184" y="124" style="' + LP + '" fill="#1d3a8a" text-anchor="middle">amplitude</text>' +
-        '<text x="184" y="136" style="' + LT + '" fill="#4a7cf6" text-anchor="middle">height above rest</text>' +
-        // The two things amplitude and wavelength each control
-        '<rect x="20" y="182" width="336" height="18" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>' +
-        '<text x="188" y="194" style="' + LT + '" fill="#334155" text-anchor="middle">taller wave = more energy  •  shorter wavelength = higher frequency (Hz)</text>' +
+        '<text x="184" y="140" style="' + LT + '" fill="#4a7cf6" text-anchor="middle">rest to crest</text>' +
+        /* The two things amplitude and wavelength each control - on two lines.
+           On one, raised to phone size, it ran past both ends of its pill. */
+        '<rect x="20" y="170" width="340" height="32" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>' +
+        '<text x="190" y="183" style="' + LT + '" fill="#334155" text-anchor="middle">taller wave = more energy</text>' +
+        '<text x="190" y="196" style="' + LT + '" fill="#334155" text-anchor="middle">shorter wavelength = higher frequency (Hz)</text>' +
         '</svg>';
     }
 
@@ -12766,7 +12832,26 @@
       v = v.replace(/([.;:]|\s[—–-])\s(.*)$/, function (full, sep, rest) {
         return /[A-Za-z]/.test(rest) ? '' : full;
       });
-      if (v.length > 40) v = v.slice(0, 38).replace(/\s\S*$/, '') + '…';
+      /* SHORTER AT THE SOURCE, NOT CUT AT THE EDGE.
+
+         Steps arrive as sentences - "Blood returns to the right atrium
+         through the veins" - and this used to chop them at 38 characters,
+         after which the node's own wrap chopped them again. A heart lesson's
+         cycle came out as four fragments: "The right ventricle pump...",
+         "Oxygen-rich blood enters th...". A fragment says something the
+         material did not.
+
+         So a long label is first made shorter the way a textbook labels a
+         diagram, in two steps that cannot change what it says: the leading
+         article goes, then a trailing ROUTE phrase ("through the veins",
+         "via the ...") - where it went, never what did it or when. Only if it
+         is still too long is it cut, at a word, with the ellipsis showing. */
+      if (v.length > 34) v = v.replace(/^(?:the|a|an)\s+(\S)/i, function (m, c) { return c.toUpperCase(); });
+      if (v.length > 34) {
+        var route = v.replace(/\s+(?:through|via|along|across)\s+(?:the\s+|a\s+|an\s+)?[^\s,]+(?:\s+[^\s,]+){0,2}$/i, '');
+        if (route !== v && route.length >= 16) v = route;
+      }
+      if (v.length > 80) v = v.slice(0, 78).replace(/\s\S*$/, '') + '…';
       if (v.length < 2) continue;
       out.push(v);
     }
@@ -18014,7 +18099,8 @@ var SFBoard = (function () {
                   '<div style="font-size:0.68rem;color:var(--muted);margin-top:.4rem;' +
                   'text-transform:uppercase;letter-spacing:.06em;font-weight:600;"></div>';
                 var cap = wrap.lastChild;
-                if (cap) cap.textContent = dOwn.caption || '';
+                if (cap) cap.textContent = (typeof w.diagramCaption === 'function')
+                  ? w.diagramCaption(dOwn.svg, dOwn.caption) : (dOwn.caption || '');
                 mount.appendChild(wrap);
               }
             } catch (e2) { /* a missing picture must not cost the board */ }
