@@ -2900,6 +2900,24 @@
           not spend another call. Generated on first entry, not premade. */
   var lessonArt = { state: 'idle', spec: null };
 
+  /* A model drawing, as it is SHOWN: SFSceneKit judges and renders it, then
+     SFDiagramKit.polish pulls apart labels that landed on each other and
+     widens the viewBox for any word still hanging off an edge. Placing text
+     is the thing a model does worst - live drawings had "Magma rises"
+     printed over "Conduit" - and the renderer can measure where the model
+     cannot. Only for display: validation calls fromSpec alone, and the
+     model's own labelling cards keep their raw geometry, because their pins
+     are the model's coordinates. */
+  function drawSpec(spec) {
+    var svg = null;
+    try { svg = SFSceneKit.fromSpec(spec); } catch (e) { svg = null; }
+    if (!svg) return null;
+    try {
+      if (typeof SFDiagramKit !== 'undefined' && SFDiagramKit.polish) svg = SFDiagramKit.polish(svg) || svg;
+    } catch (e2) { /* the unpolished drawing is still a valid drawing */ }
+    return svg;
+  }
+
 
   /* The prompts live in sf-draw.js now - the drawing skill both pages load -
      so the plan page can ask for the same picture without a second copy.
@@ -2936,11 +2954,13 @@
       lessonArt.spec = svg ? res.spec : null;
       cacheLessonArt(svg ? res.spec : null);
       if (svg) applyLessonArt();
+      try { sfLabelWaitCheck(false); } catch (e3) { /* never cost the lesson */ }
       predrawNextDay();
     }, function () {
       /* A failed call is not an answer: nothing is cached, and the next
          visit asks again. */
       lessonArt.state = 'done';
+      try { sfLabelWaitCheck(false); } catch (e3) { /* never cost the lesson */ }
       predrawNextDay();
     });
   }
@@ -3059,7 +3079,7 @@
     if (recallCache.key === key) return recallCache.pic;
     var svg = null, caption = '';
     if (lessonArt.spec) {
-      try { svg = SFSceneKit.fromSpec(lessonArt.spec); } catch (e) { svg = null; }
+      svg = drawSpec(lessonArt.spec);
       if (svg) caption = fmStr(lessonArt.spec.title) || fmStr(day.title);
     }
     if (!svg) {
@@ -3283,6 +3303,68 @@
     };
   }
 
+  /* ── THE LABELLING CARD DRAWS ITS PICTURE ON THE SPOT ───────────────────
+
+     Labelling is the one visual QUESTION in a session - drawing-to-learn's
+     gain comes from scaffolded work against a given structure - and it is
+     built from the lesson's own drawing. When the learner reaches it before
+     that drawing exists, the card waits here rather than skipping:
+
+       - the drawing is still being made      -> wait for it
+       - it was never asked for, or the call  -> ask now, and wait
+         failed (nothing cached)
+       - the model said there is nothing to   -> skip; nothing to label is
+         draw (null cached), or sf-draw.js       the honest outcome
+         did not load
+
+     The learner can skip at any time. If nothing arrives in LABEL_WAIT_MS
+     the card moves on by itself. Usually none of this shows: the picture was
+     drawn while the plan was made, or during yesterday's lesson. */
+  var LABEL_WAIT_MS = 30000;
+  var labelWait = null;
+
+  function labelCanWait(card) {
+    if (!window.SFDraw || typeof SFSceneKit === 'undefined') return false;
+    if (day && day.generatedArt === null) return false;             // nothing to draw
+    if (lessonArt.spec) return false;                                // drawn, but not labellable
+    if (lessonArt.state !== 'loading') {
+      lessonArt.state = 'idle';
+      requestLessonArt(day);
+      if (lessonArt.state !== 'loading') return false;              // could not even ask
+    }
+    if (labelWait) clearTimeout(labelWait.timer);
+    labelWait = { card: card, timer: setTimeout(function () { sfLabelWaitCheck(true); }, LABEL_WAIT_MS) };
+    return true;
+  }
+
+  function labelWaitHtml() {
+    var body =
+      '<div class="sf-moment-panel is-wait" style="margin-top:0">' +
+        '<div class="sf-moment-head">' + MOMENT_PENCIL + '<span>Drawing today\u2019s picture</span></div>' +
+        '<div class="sf-moment-sketch" aria-hidden="true"><svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid meet">' +
+          '<path pathLength="1" d="M56 178 C92 96 150 70 204 104 S296 168 342 88"/>' +
+          '<path pathLength="1" d="M104 150 Q148 128 194 150 T284 148"/>' +
+          '<path pathLength="1" d="M262 54 L318 54 M304 42 L318 54 L304 66"/></svg></div>' +
+        '<div class="sf-moment-foot">You\u2019ll label its parts in a moment \u2014 usually about ten seconds.</div>' +
+      '</div>';
+    return buildCard('Label the picture', 'Name the parts', false, body, '', 'Skip \u2192', false);
+  }
+
+  /* Called when today's drawing settles, and on the timeout. Rebuilds the
+     waiting card in place if the learner is still on it. */
+  function sfLabelWaitCheck(timedOut) {
+    if (!labelWait) return;
+    var card = labelWait.card;
+    if (window.currentCard !== card) { clearTimeout(labelWait.timer); labelWait = null; return; }
+    if (!timedOut && lessonArt.state === 'loading') return;
+    clearTimeout(labelWait.timer);
+    labelWait = null;
+    if (timedOut && !lessonArt.spec) { showNextCard(); return; }
+    try { card.q = lessonLabelQuestion(); } catch (e) { card.q = null; }
+    if (!card.q) { showNextCard(); return; }
+    renderCard(card);
+  }
+
   /* The picture on the whiteboard cards, which render through block 2 and
      so never reach sfRecallAttach. On the worked-example board it is a
      toggle - the same picture the lesson card has just shown, so nothing new
@@ -3353,7 +3435,7 @@
   function applyLessonArt() {
     if (!lessonArt.spec) return;
     var svg = null;
-    try { svg = SFSceneKit.fromSpec(lessonArt.spec); } catch (e) { svg = null; }
+    svg = drawSpec(lessonArt.spec);
     if (!svg) return;
     var caption = fmStr(lessonArt.spec.title) || fmStr(day.title);
     var inner = svg + diagramCaptionHtml(svg, caption, CAPTION_STYLE);
@@ -3398,16 +3480,24 @@
          model the right answer, because a picture that shows why an answer
          is right has to know it. So the picture IS the answer, and it is only
          ever offered once the learner has committed to one.
-       - NEVER FIRED BY ITSELF. A call is 5-15s and real money, and a
-         struggling learner can miss eight in a row. The learner asks.
+       - AUTOMATIC, BUT CAPPED. The first MOMENT_AUTO_MAX misses of a
+         session are drawn without a tap, starting the instant the answer is
+         marked wrong. After that the learner taps: a call is 5-15s and real
+         money, and a struggling learner can miss eight in a row.
 
      The prompt is its own, not the lesson-art prompt with a question pasted
      in: a focused prompt gets a picture and a buried one gets boxes. Its
      example is a lever with the long arm in blue, because the habit worth
      copying is the ONE blue part - the part of the picture the answer is
      about. */
-  var momentArt = { inflight: {}, failed: {}, facts: {} };
+  var momentArt = { inflight: {}, failed: {}, facts: {}, auto: 0 };
   var MOMENT_TIMEOUT_MS = 40000;
+  /* How many misses per session are drawn WITHOUT a tap. Drawing starts the
+     instant the answer is marked wrong, so it is usually there by the time
+     the explanation has been read. Capped because a struggling learner can
+     miss eight in a row and every drawing is a real call; after the cap the
+     button is still there. */
+  var MOMENT_AUTO_MAX = 4;
   var MOMENT_KEEP = 16;
   /* Where a picture of the answer is already on the card (graph, labelling),
      is the walkthrough's job (an equation - SFStepVisual draws its balance),
@@ -3564,7 +3654,7 @@
     var key = host.getAttribute('data-mkey');
     var c = momentCache(), next, svg = null;
     if (c.hasOwnProperty(key)) {
-      if (c[key]) { try { svg = SFSceneKit.fromSpec(c[key]); } catch (e) { svg = null; } }
+      if (c[key]) svg = drawSpec(c[key]);
       next = svg ? 'drawn' : 'none';
     } else if (momentArt.inflight[key]) next = 'wait';
     else if (momentArt.failed[key]) next = 'failed';
@@ -3574,12 +3664,14 @@
     host.setAttribute('data-state', next);
     host.innerHTML = '';
 
+    var auto = host.getAttribute('data-auto') === '1';
+    if (next === 'none' && auto) return;                    // nothing to draw: say nothing
     if (next === 'idle' || next === 'failed') {
-      if (next === 'failed') host.appendChild(momentEl('div', 'sf-moment-note', 'Couldn’t draw it just now.'));
+      if (next === 'failed' && !auto) host.appendChild(momentEl('div', 'sf-moment-note', 'Couldn’t draw it just now.'));
       var btn = momentEl('button', 'sf-moment-btn');
       btn.type = 'button';
       btn.innerHTML = MOMENT_PENCIL + '<span></span>';
-      btn.lastChild.textContent = next === 'failed' ? 'Try again' : 'Draw it for me';
+      btn.lastChild.textContent = (next === 'failed' && !auto) ? 'Try again' : 'Draw it for me';
       btn.onclick = function () { host.setAttribute('data-asked', '1'); requestMomentArt(key); };
       host.appendChild(btn);
       return;
@@ -3684,6 +3776,18 @@
     else {
       var body = sc.querySelector('.card-body');
       if (body) body.appendChild(host);
+    }
+    /* Drawn on the spot, no tap, for the first MOMENT_AUTO_MAX misses. An
+       automatic drawing that comes back "nothing to draw" or fails leaves the
+       card as it was (data-auto): the learner did not ask, so there is
+       nothing to apologise for. */
+    var key = host.getAttribute('data-mkey');
+    if (!momentCache().hasOwnProperty(key) && !momentArt.inflight[key] &&
+        momentArt.auto < MOMENT_AUTO_MAX && window.SFDraw) {
+      momentArt.auto++;
+      host.setAttribute('data-auto', '1');
+      host.setAttribute('data-asked', '1');
+      requestMomentArt(key);
     }
   }
 
@@ -4111,7 +4215,7 @@
       var dgmHtml = '';
       var artSvg = null;
       if (lessonArt.spec) {
-        try { artSvg = SFSceneKit.fromSpec(lessonArt.spec); } catch (e) { artSvg = null; }
+        artSvg = drawSpec(lessonArt.spec);
       }
       if (artSvg || (dgm && dgm.svg)) {
         dgmHtml = '<div id="lesson-art" style="text-align:center;padding:.75rem;background:var(--soft);border-radius:14px;">' +
@@ -4299,9 +4403,16 @@
          label - it skips itself. */
       if (card.lessonLabel && !card.q) {
         try { card.q = lessonLabelQuestion(); } catch (e) { card.q = null; }
-        if (!card.q) { showNextCard(); return; }
+        /* No picture fit to label YET is not the same as none at all. The
+           drawing may still be on its way, or its call may have failed -
+           both used to skip the card, so the one research-backed visual
+           question in the session quietly never appeared. Now the card
+           draws its picture on the spot and builds itself when it lands. */
+        if (!card.q && labelCanWait(card)) {
+          html = labelWaitHtml();
+        } else if (!card.q) { showNextCard(); return; }
       }
-      html = renderLabelDiagram(card.q);
+      if (card.q) html = renderLabelDiagram(card.q);
     }
     else if (card.type === 'estimate')    { html = renderEstimate(card.q); }
     else if (card.type === 'done') {

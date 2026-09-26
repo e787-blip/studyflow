@@ -1299,8 +1299,13 @@ Where it is offered, and where it is not:
   `sentence`, `labeldiagram`, `graph`, `tracetable`, `match`, `matchpairs`,
   `readingset` — `MOMENT_NEVER`. Everything else is offered, maths word
   problems included.
-- **Never fired by itself.** A call is 5-15s and real money, and a struggling
-  learner can miss eight in a row. The learner taps.
+- **Drawn on the spot, without a tap, for the first `MOMENT_AUTO_MAX` (4)
+  misses of a session.** The call starts the instant the answer is marked
+  wrong, so the picture usually lands while the explanation is being read.
+  After the cap the button is still there: a call is real money and a
+  struggling learner can miss eight in a row. An automatic drawing that comes
+  back "nothing to draw" shows nothing (`data-auto`), and one that fails just
+  offers the button - the learner did not ask, so nothing apologises.
 
 How it works — built from the lesson art's parts, not beside them:
 
@@ -1349,6 +1354,31 @@ miss through `recordMiss` offers it; a full wrong-answer walk of science,
 maths, history and language sessions throws nothing and offers it on no
 excluded card. **What has NOT been seen is a real model's drawing** — see
 Open items.
+
+### The labelling card draws its picture on the spot — `labelCanWait`
+
+Labelling is the session's one visual QUESTION, and it is built from the
+lesson's own drawing. It used to skip itself whenever that drawing was not
+there yet - still on its way, or its call had failed - so the research-backed
+visual question often never appeared. Now, when the card is reached:
+
+| The drawing is… | The card |
+|---|---|
+| there, with 3+ labels | builds at once (the usual case: drawn at plan time or the day before) |
+| still being drawn | shows a sketching placeholder and builds itself when it lands (`sfLabelWaitCheck`, called when `requestLessonArt` settles) |
+| never asked for / call failed | asks again **right then**, and waits |
+| "nothing to draw" (`null` cached), or `sf-draw.js` missing | skips - nothing to label is the honest outcome |
+| not there after `LABEL_WAIT_MS` (30s) | moves on by itself; Skip works at any time |
+
+### Every model drawing is cleaned before it is shown — `drawSpec`
+
+`drawSpec(spec)` is `SFSceneKit.fromSpec` then `SFDiagramKit.polish`: labels
+that landed on each other are pulled apart and the viewBox is widened for any
+word still off an edge. Used wherever a model drawing is displayed (lesson
+card, `applyLessonArt`, `lessonPicture`, the moment panel). NOT on the
+model's own `labeldiagram` questions - their pins are the model's
+coordinates. Tested on a volcano with "Magma rises" printed over "Conduit":
+`label-overlap` fail before, gone after.
 
 ### The flashcard deck — `deckItems`, `sfDeckGo`, `sfDeckFlip`
 
@@ -1684,8 +1714,12 @@ What to check after any `buildQueue` or renderer change:
     caption repeats words its SVG already prints.
 18d. **Draw it for me** appears only after an answer: never on an unanswered
     card, a pre-test card, a retry card before it is answered, or any
-    `MOMENT_NEVER` format. One tap is one call; a cached key (null included)
-    is zero; a failed call is not cached. Mock `api/generate` with a hostile
+    `MOMENT_NEVER` format. The first `MOMENT_AUTO_MAX` distinct misses draw
+    without a tap and the next offers the button; set `MOMENT_AUTO_MAX = 0`
+    in a harness to test the tap path. One request per key; a cached key
+    (null included) is zero; a failed call is not cached. The labelling card
+    waits for a drawing in progress, re-asks after a failed call, skips on
+    `null`, and moves on after `LABEL_WAIT_MS`. Mock `api/generate` with a hostile
     spec and assert no `script`/`img`/`foreignObject` and no `on*` attribute
     reaches the DOM.
 
