@@ -26,7 +26,8 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | File | Size | Role |
 |---|---|---|
 | `index.html` | ~172 KB | Marketing / landing page. 3D hero, one `<script>` block |
-| `app.html` | ~172 KB | Plan generation. Subject detection, AI prompt, question schemas, validators |
+| `login.html` | ~57 KB | Sign in, sign up, password reset. Firebase Auth (module script), one form for all three |
+| `app.html` | ~292 KB | Plan builder: the lesson upload, one question per screen, then generation. Subject detection, AI prompt, question schemas, validators |
 | `lesson.html` | ~590 KB | The session runtime. Card queue, all question renderers, the whiteboard |
 | `dashboard.html` | ~101 KB | Plan list and progress |
 | `sf-draw.js` | ~19 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
@@ -1730,13 +1731,24 @@ What to check after any `buildQueue` or renderer change:
     cap with real headroom**, and still ends with an intact JSON schema. The
     cap truncates from the end, so going over deletes the schema, not the
     guidance.
-20. 200 000 chars of notes produce the same prompt length (the 3 500 cap holds)
+20. 200 000 chars of notes produce the same prompt length (the 8 000 cap,
+    `NOTES_PROMPT_CAP`, holds)
 21. The prompt still carries the drawing vocabulary, the worked example and the
     per-concept visual — adding guidance is how the budget gets spent
 22. **Every extension in the file picker's `accept` list has a handler.** A
     format advertised with no branch is how `.pptx` came back "not supported"
     for months
 23. `pptxTextFromXml` pulls every run and decodes entities
+
+**The cloud container cannot reach cdnjs, gstatic or the API.** For the plan
+builder and sign-in, a Playwright harness served the real libraries from npm
+(`pdfjs-dist@3.11.174`, `mammoth@1.6.0`, `jszip@3.10.1`) in place of the CDN
+URLs, answered `api/extract` and `api/generate` with fixtures while recording
+what was sent, and replaced the two Firebase modules with a stand-in whose
+every call can be made to fail with a chosen error code. Fixture files for
+every accepted type (including a 19.8 MB photo, a scanned PDF with no text
+layer, a pptx whose slide 10 must sort after slide 2) were generated with
+`pdf-lib`, `docx` and `jszip`. Kept out of the repo, like `appsuite.js`.
 
 Verify by executing the code, not by reading it. Several bugs here looked correct
 on inspection and only showed up when the queue was actually built — and two
@@ -1783,20 +1795,27 @@ end** — and the JSON schema sits at the end. Going over does not shorten the
 guidance, it removes the shape the model is told to return, which fails
 silently and completely.
 
-Measured, not estimated (`appsuite.js` captures the real prompt off the wire):
+Measured, not estimated — the real prompt captured off the wire for all ten
+subjects, with 30 000 chars of notes and the longest answer to every intake
+question (Sept 2026):
 
 | | chars |
 |---|---|
-| static prompt text | ~25 600 |
-| notes, capped by `notesForPrompt = notes.substring(0, 3500)` | ≤ 3 500 |
-| question schema, worst subject | ≤ ~2 600 |
-| **longest real prompt** | **30 467** |
-| headroom | ~29 500 |
+| static prompt text + question schema | ~33 500 – 34 100 by subject |
+| notes, capped by `NOTES_PROMPT_CAP` (`notes.substring(0, 8000)`) | ≤ 8 000 |
+| learner brief (`buildLearnerBrief`), all answers, 400-char focus | ≤ ~1 650 |
+| **longest real prompt** (maths, full brief) | **43 267** |
+| headroom | ~16 700 |
+
+The static part has grown since the first measurement (it was ~28k with the
+schema); that growth, not the notes, is what eats the headroom. The notes cap
+was **3 500** — about two pages — so most of an uploaded chapter never reached
+the model. It is 8 000 now and the UI says so honestly (see "The plan
+builder"). **Measure again before raising it**: the budget is shared with
+every future line of guidance.
 
 200 000 chars of notes produce a byte-identical prompt length, because of that
-cap — there is a test for it. The drawing vocabulary, `workedExample` and the
-per-concept visual together cost about 4 000 chars, which is why there is
-still half the budget spare.
+cap — there is a test for it.
 
 ## Reading what the learner uploads
 
@@ -1805,12 +1824,14 @@ text. What each route actually does:
 
 | Format | How | Notes |
 |---|---|---|
-| jpg png webp gif heic | `api/extract` → Claude Vision | handwriting, textbook photos, whiteboards |
+| jpg png webp gif heic | **shrunk to 1600px JPEG in the browser**, then `api/extract` → Claude Vision | handwriting, textbook photos, whiteboards, pasted screenshots |
 | **pdf, with a text layer** | pdf.js `getTextContent` | fast and exact |
 | **pdf, scanned** | pdf.js renders each page to canvas → `api/extract` | capped at `PDF_OCR_MAX_PAGES` (12) |
 | docx | mammoth | |
 | **pptx** | JSZip → `<a:t>` runs in `ppt/slides/slideN.xml` | **speaker notes too** |
 | vtt srt sbv | parsed locally, timings stripped | the reliable route for a lecture |
+| txt md | read as text | |
+| doc ppt | **refused, with the fix** ("save it as .docx / .pptx or PDF") | the old binary formats were read as text and put pages of symbols into the prompt |
 | mp4 mov mp3 wav … | **not transcribed** — see below | |
 
 Three things worth knowing:
@@ -1829,6 +1850,14 @@ Three things worth knowing:
   `slide2` as a string, and a deck read out of order teaches the sequence
   wrong. Speaker notes are pulled from `ppt/notesSlides/` and appended to their
   slide — that is usually where the actual explanation is.
+- **Photos are shrunk before they are sent** (`prepareImage`, `IMG_MAX_EDGE`
+  1600). A phone photo is 3–6 MB, 4–8 MB as base64, and **Vercel rejects a
+  request body over 4.5 MB** before `api/extract` runs — the most common
+  upload a student makes was failing with "Failed — paste notes manually".
+  Claude reads images at ~1568px on the long side anyway. The re-encode also
+  fixes HEIC, which used to be sent labelled `image/jpeg`: Safari decodes it,
+  and a browser that cannot gets an honest message instead of a vision error.
+  Measured: a 19.8 MB photo goes up as a 1.45 MB request.
 - **Audio and video cannot be transcribed here, and the code should not
   pretend otherwise.** A browser cannot transcribe a media file, and the only
   backend is the Anthropic API, which has no speech-to-text. An earlier version
@@ -1836,6 +1865,113 @@ Three things worth knowing:
   captures the *microphone* — so it opened the mic, heard the room, and
   reported "no speech detected". The honest routes are a caption file or live
   listening, and those are what the UI offers.
+
+## The plan builder (`app.html`) — one question per screen
+
+```
+lesson  ->  what it's for  ->  when  ->  what you know  ->  goal  ->  grade  ->  focus  ->  review  ->  build
+(files +     quiz / exam /     quick     4 levels          4 goals    asked      their own   every       day chips
+ typing)     standardized /    chips +                                once,       words,      answer +    fill in
+             essay / learn     a date                                 remembered  optional    Change
+```
+
+It used to be two long cards: the notes, then "Two quick questions". Of those
+two, **"how well do you know it" was never sent to the model** — the prompt
+only read the goal. The rule now: **a question earns a screen only if its
+answer changes the prompt.** `CHOICES` in `app.html` holds each option's
+button label AND its `p`, the sentence the model actually gets, and
+`buildLearnerBrief()` assembles them into an `ABOUT THIS LEARNER` block right
+after the `Day N of M` line. `known` and `goal` keep their old values
+("Easy", "Score 90%+ on the exam") because saved plans carry them.
+
+- **Grade is the one answer the notes cannot supply**, and it changes every
+  sentence: a 7th grader's photosynthesis and an AP student's are the same
+  notes read at different levels. It is asked once and stored on
+  `studyflow_user.grade` (`login.html`'s `saveUser` preserves it); a known
+  grade skips its screen and shows on the review.
+- **Focus is the learner's own words**, flattened to one line, quotes
+  neutralised, capped at 400, and framed as "a priority, never permission to
+  leave the notes". Sentence starters ("I keep mixing up…") scaffold kids who
+  would otherwise leave it blank.
+- The answers are saved on the plan (`purpose`, `known`, `grade`, `focus`), and
+  `lesson.html`'s `generateMoreQuestions` adds a `Learner:` line from them, so
+  the mid-session top-up is pitched like the plan. Old plans have none of the
+  fields and get the old prompt byte for byte.
+- **Single-choice answers advance by themselves** (260ms, long enough to see the
+  tick). Number keys pick, Enter continues. Every step is `pushState`d, so a
+  phone's back gesture goes to the previous question instead of leaving the
+  page. Drafts (`studyflow_intake_draft`, `studyflow_notes_draft`,
+  `studyflow_sources_draft`) survive a reload and are cleared by `saveAndGo`.
+- **The date screen states the day count the build will use** (`planDaysFor`,
+  the same arithmetic as `generatePlan`), including the free tier's 7-day cap,
+  before anyone reaches the upgrade modal. Its wording follows the purpose: an
+  essay is *due*, "just learn it" has a *know it by*.
+- **The upgrade modal has two reasons now.** For "more than 7 days away" its
+  second button builds the 7-day plan. For "you've used this month's plans" it
+  reads **Not now** and builds nothing — it used to build anyway, which made
+  the monthly limit one click from not existing.
+- The three-screen onboarding modal in front of the first question is gone.
+  Its "why this works" notes rotate on the **build screen**, where the learner
+  waits minutes with nothing else to do; each day has a chip that fills in as
+  it lands, and the wait is stated up front (~40s a day).
+- A failed build shows its own card (`#gen-error`). It used to overwrite the
+  questions card's `innerHTML`, destroying the questions.
+
+### Sources, not a text box
+
+Every file is a card — reading (with a bar, per page for a scanned PDF), then
+ready (`2 pages · 340 words · Check text`) or failed (with the fix, and Try
+again when the file is still in hand). `allNotes()` = typed notes + every ready
+source, and it is the **only** reader. What it replaced were bugs, not style:
+
+- Extracted text was appended to the textarea AND copied into `fileContent`,
+  and everything read `fileContent || textarea` — so anything typed or deleted
+  after an upload was ignored.
+- `fileReading` was checked by Continue and never set, so Continue went ahead
+  mid-read. `readingCount()` now disables it and says "Reading your files…".
+- One shared status line: the first file to finish hid it while others ran.
+- **A file dropped a few pixels outside the dashed box was opened by the
+  browser**, replacing the page. Drop now works anywhere (`#drop-veil`), and a
+  pasted screenshot becomes a source.
+- "Check text" opens the exact text that goes to the model, editable — OCR of
+  handwriting gets words wrong, and that fix used to happen in the box.
+- The lesson title is filled in from `detectSubject()` (local, no API call) as
+  a suggestion, and stops updating once the learner types in it.
+- `.sources` needs `grid-template-columns: minmax(0, 1fr)`: the implicit auto
+  track grew to the longest file name and pushed the page 77px sideways at 320.
+
+## Sign in (`login.html`)
+
+Same visual language as the landing page: a night panel with the notebook
+rules and a real plan card on it, paper for the form, pills for buttons.
+Firebase Auth is untouched; everything around it changed:
+
+- **One `<form>` for sign in, sign up and reset.** There was no form at all, so
+  Enter did nothing and password managers did not recognise the page. The
+  email typed on one tab is still there on the other.
+- **Errors sit under the field they are about**, checked on blur, never
+  mid-word (Baymard). Auth errors that belong elsewhere carry their fix:
+  "don't match" → *Reset your password*; "already have an account" → *Sign in
+  instead*; a closed Google popup shows nothing at all.
+- **Reset is its own screen**, not a link that refused to work until an email
+  had been typed above it. With email-enumeration protection Firebase answers
+  the same either way, so the copy says "if there's an account".
+- `gmial.com`-style typos get a "Did you mean" suggestion; Caps Lock is flagged.
+- **After sign-in, plans are looked up under the SFStore namespace**
+  (`sfu:<email>|studyflow_plans`). It read the bare key, so a returning learner
+  with plans was sent to make a new one instead of to their dashboard.
+- **Class codes are `SF-` plus four characters** — what `teacher.html` mints
+  and `app.html` checks. The placeholder said `MS-7401`. `normaliseCode`
+  forgives case and the hyphen but never invents a code (it once turned
+  `MS-7401` into a valid-looking `SF-MS74`).
+- Joining a class at sign-up waits (≤5s) for `api/class`: the redirect on the
+  next line used to cancel the request, so "class is full" was never seen.
+- The "I am a Teacher" toggle did nothing; it is a link to `teacher-login.html`.
+- `?mode=signup` (the landing page's "Build my study plan" buttons),
+  `?mode=reset`, and `?class=SF-AB12` (a teacher's share link now includes it)
+  choose the starting screen. A device that signed in before starts on sign-in
+  with the email filled. A student already signed in skips this page: the
+  landing's buttons point straight at `app.html`.
 
 ## The teach-it-back card
 
@@ -1927,6 +2063,18 @@ objects, strings-with-matching-concepts, strings-without, concepts-only, and
 genuinely nothing.
 
 ## Open items
+
+- **The intake answers have not been seen against a real model.** The
+  `ABOUT THIS LEARNER` block is captured off the wire and correct, and plans
+  build with it against a mocked endpoint, but nobody has compared what Haiku
+  writes for a 6th grader against an 11th grader on the same notes. Do that
+  first: one set of notes, two grades, and read the questions side by side.
+- **The Mobbin research was not done from Mobbin.** The connector is attached
+  but refuses every call ("requires a paid plan"), and mobbin.com, Page Flows
+  and ScreensDesign are blocked by the environment's network policy. The
+  decisions in `docs/intake-research.md` rest on public teardowns and
+  published usability research instead. With a paid plan, re-check the login
+  and the question flow against it.
 
 - **On-the-spot drawings have not been seen from a real model.** "Draw it for
   me" (see "Drawn on the spot") is wired, tested against mocked replies and

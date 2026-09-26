@@ -2,502 +2,435 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="description" content="Sign in to StudyFlow, or create a free account and turn your notes into a day-by-day study plan."/>
+<meta name="theme-color" content="#0e142a"/>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNWI4ZGY4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzI4NTFjOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0idXJsKCNnKSIvPgogIDxyZWN0IHg9IjciIHk9IjgiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNyIgcng9IjIuNSIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMjUiLz4KICA8cmVjdCB4PSIxMCIgeT0iOCIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3IiByeD0iMi41IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC45Ii8+CiAgPHJlY3QgeD0iMTMiIHk9IjEzIiB3aWR0aD0iNyIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSIjMzU2N2UwIi8+CiAgPHJlY3QgeD0iMTMiIHk9IjE2LjUiIHdpZHRoPSI1IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMzNTY3ZTAiIG9wYWNpdHk9IjAuNyIvPgogIDxyZWN0IHg9IjEzIiB5PSIyMCIgd2lkdGg9IjYiIGhlaWdodD0iMS41IiByeD0iMC43NSIgZmlsbD0iIzRhN2NmNiIgb3BhY2l0eT0iMC41Ii8+Cjwvc3ZnPg=="/>
-<title>StudyFlow — Sign In</title>
+<title>Sign in · StudyFlow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Inter:wght@700&display=swap" rel="stylesheet">
 <style>
+  /* The sign-in page speaks the landing page's language (index.html): night
+     navy and notebook paper, one blue, Instrument Serif over DM Sans, DM Mono
+     for small labels, pills for anything you can click, 12px for inputs.
+     It used to be an animated blue-gradient panel with a centred list of
+     feature bullets - the one page between the landing and the app that
+     looked like neither.
+
+     CLAUDE.md wins over the design skills: no hover lift or scale on
+     buttons (only a 1px press), no amber. */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --ink: #1a1d2e; --muted: #6b7280; --soft: #f0f4ff;
-    --blue: #4a7cf6; --blue-light: #dce8ff; --white: #fff; --border: #e8ecf4;
-    --sans: 'DM Sans', sans-serif; --serif: 'Instrument Serif', Georgia, serif;
-    --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+    --night: #0e142a; --night-2: #151c38;
+    --ink: #1a1d2e; --ink-2: #2a3150;
+    --paper: #f5f7fc; --card: #fdfdff;
+    --line: #e2e8f4; --line-strong: #c9d4ea;
+    --muted: #5b6378;
+    --blue: #4a7cf6; --blue-btn: #3567e0; --blue-deep: #2851c8;
+    --blue-soft: #e3ecff; --blue-mist: #eef3ff;
+    --ok: #117a5a; --ok-soft: #e0f4ec;
+    --bad: #c4312f; --bad-soft: #fdeeee;
+    --serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+    --sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --mono: 'DM Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+    --ease-out: cubic-bezier(.16, 1, .3, 1);
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    color-scheme: light;
   }
-  body { font-family: var(--sans); color: var(--ink); min-height: 100vh; display: flex; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--sans); color: var(--ink); background: var(--paper);
+    min-height: 100vh; min-height: 100dvh; display: flex;
+    -webkit-font-smoothing: antialiased; line-height: 1.5;
+  }
+  button, input { font: inherit; color: inherit; }
+  a { color: inherit; }
+  /* Every component here sets its own display, and an author display rule
+     beats the browser's [hidden] - so without this the sign-up password
+     rule showed on the sign-in form. */
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 2.5px solid var(--blue); outline-offset: 3px; border-radius: 8px; }
+  .sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
-  @keyframes fadeUp    { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:none} }
-  @keyframes gradShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
-  @keyframes viewIn    { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
-  @keyframes ripple    { from{transform:scale(0);opacity:.35} to{transform:scale(4);opacity:0} }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes floaty { 0%, 100% { transform: rotate(-2.2deg) translateY(0); } 50% { transform: rotate(-1.6deg) translateY(-7px); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ── LEFT PANEL — centered, never moves ── */
-  .left-panel {
-    width: 45%;
-    min-height: 100vh;
-    background: linear-gradient(145deg, #4a7cf6 0%, #3567e0 45%, #2851c8 100%);
-    background-size: 200% 200%;
-    animation: gradShift 8s ease infinite;
-    display: flex;
-    flex-direction: column;
-    align-items: center;        /* horizontal center */
-    justify-content: center;    /* vertical center */
-    text-align: center;         /* text centered */
-    padding: 3rem 3.5rem;
-    position: relative;
-    overflow: hidden;
-    flex-shrink: 0;
+  /* ── BRAND PANEL (night) ─────────────────────────────────────────────── */
+  .brand {
+    position: relative; overflow: hidden; flex: 0 0 44%;
+    min-height: 100vh; min-height: 100dvh;
+    background:
+      radial-gradient(ellipse 70% 55% at 70% 62%, rgba(74, 124, 246, .28), rgba(74, 124, 246, 0) 70%),
+      radial-gradient(ellipse 90% 80% at 40% 30%, #18214a 0%, var(--night) 72%);
+    color: #fff;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 5.5rem clamp(2rem, 5vw, 4.5rem) 3rem;
   }
-  /* Subtle dot grid */
-  .left-panel::before {
-    content: ''; position: absolute; inset: 0;
-    background-image: radial-gradient(circle, rgba(255,255,255,.08) 1px, transparent 1px);
-    background-size: 26px 26px; pointer-events: none;
+  /* The notebook: faint rules and the blue margin line, as on the landing. */
+  .brand::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(147, 180, 255, .07) 31px, rgba(147, 180, 255, .07) 32px);
   }
-  /* Glow blobs for depth */
-  .left-panel::after {
-    content: ''; position: absolute;
-    width: 340px; height: 340px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,255,255,.12), transparent 70%);
-    bottom: -80px; right: -80px; pointer-events: none;
-  }
-  .left-logo {
-    text-decoration: none;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 2.5rem;
-    position: relative; z-index: 1;
-    animation: fadeUp .5s var(--ease-spring) both;
-  }
-  .left-panel h1 {
-    font-family: var(--serif);
-    font-size: clamp(1.8rem, 2.8vw, 2.6rem);
-    color: #fff; letter-spacing: -0.03em; line-height: 1.18;
-    margin-bottom: 1rem;
-    position: relative; z-index: 1;
-    animation: fadeUp .5s .08s var(--ease-spring) both;
-    max-width: 320px;
-  }
-  .left-panel h1 em { font-style: italic; color: #c5d9ff; }
-  .left-panel > p {
-    color: rgba(255,255,255,.72);
-    font-size: 0.93rem; font-weight: 300; line-height: 1.72;
-    max-width: 300px;
-    position: relative; z-index: 1;
-    margin-bottom: 2.5rem;
-    animation: fadeUp .5s .16s var(--ease-spring) both;
-  }
-  .left-features {
-    display: flex; flex-direction: column; gap: .65rem;
-    position: relative; z-index: 1;
-    align-items: flex-start; text-align: left;
-    animation: fadeUp .5s .24s var(--ease-spring) both;
-    width: 100%; max-width: 280px;
-  }
-  .left-feature {
-    display: flex; align-items: center; gap: .65rem;
-    color: rgba(255,255,255,.82); font-size: 0.86rem; font-weight: 400;
-  }
-  .left-feature-dot {
-    width: 18px; height: 18px; border-radius: 50%;
-    background: rgba(255,255,255,.22);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.55rem; color: #fff; flex-shrink: 0;
-    border: 1px solid rgba(255,255,255,.3);
-  }
-
-  /* ── RIGHT PANEL ── */
-  .right-panel {
-    flex: 1; background: var(--white);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: flex-start;
-    padding: 3rem 2rem 3rem;
-    overflow-y: auto;
-  }
-  .auth-box {
-    width: 100%; max-width: 400px;
-    animation: fadeUp .55s var(--ease-spring) both;
-    margin: auto 0;
-    padding-bottom: 1.5rem;
-  }
-
-  /* ── TABS — pill segmented control ── */
-  .tabs {
-    display: flex;
-    background: var(--soft);
-    border-radius: 14px;
-    padding: .28rem;
-    margin-bottom: 2rem;
-    position: relative;
-  }
-  .tab {
-    flex: 1; padding: .68rem;
-    border-radius: 11px; border: none; background: none;
-    font-family: var(--sans); font-size: 0.9rem; font-weight: 600;
-    color: var(--muted); cursor: pointer;
-    transition: color .22s var(--ease-spring);
-    position: relative; z-index: 1;
-  }
-  .tab.active { color: var(--ink); }
-  /* Sliding pill indicator */
-  .tab-indicator {
-    position: absolute;
-    top: .28rem; bottom: .28rem;
-    width: calc(50% - .28rem);
-    background: #fff;
-    border-radius: 11px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.09), 0 1px 2px rgba(0,0,0,.06);
-    transition: transform .28s var(--ease-spring);
-    left: .28rem;
-  }
-  .tab-indicator.right { transform: translateX(calc(100% + .28rem)); }
-
-  /* ── AUTH HEADINGS ── */
-  .auth-box h2 {
-    font-family: var(--serif); font-size: 1.75rem;
-    color: var(--ink); margin-bottom: .28rem; letter-spacing: -0.02em;
-  }
-  .auth-box h2 em { font-style: italic; color: var(--blue); }
-  /* The subtitle sits inside #login-view / #signup-view, not directly inside
-     .auth-box, so the direct-child selector `.auth-box > p` never matched it
-     and the 1.75rem below it was never applied - the line sat almost flush
-     against the Google button. Matching the views themselves fixes both
-     tabs at once. */
-  .auth-box > p, .view-sub,
-  #login-view > p, #signup-view > p {
-    color: var(--muted); font-size: 0.86rem; font-weight: 300; line-height: 1.55;
-    margin-top: .35rem; margin-bottom: 1.9rem;
-  }
-  /* When a message box is showing it supplies its own separation, so the
-     subtitle does not need to reserve as much. */
-  #login-view > p:has(+ .msg-box.show),
-  #signup-view > p:has(+ .msg-box.show) { margin-bottom: 1rem; }
-
-  /* ── VIEWS — crossfade instead of snap ── */
-  #login-view, #signup-view {
-    animation: viewIn .3s var(--ease-spring) both;
-  }
-
-  /* ── GOOGLE BTN ── */
-  .btn-google {
-    width: 100%; padding: .88rem;
-    border-radius: 12px;
-    border: 1.5px solid var(--border); background: #fff;
-    font-family: var(--sans); font-size: 0.9rem; font-weight: 600; color: var(--ink);
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: .7rem;
-    transition: border-color .2s, background .2s, transform .18s var(--ease-spring), box-shadow .2s;
-    margin-bottom: 1.2rem;
-  }
-  .btn-google:hover { border-color: #c5d9ff; background: #fafcff; box-shadow: 0 2px 12px rgba(74,124,246,.1); }
-  .btn-google:active { transform: scale(.98); }
-
-  .btn-google .google-icon, .btn-google svg { width: 18px; height: 18px; flex-shrink: 0; }
-  .divider {
-    display: flex; align-items: center; gap: .9rem;
-    margin-bottom: 1.2rem; color: var(--muted); font-size: 0.76rem;
-  }
-  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-  /* ── FORM FIELDS ── */
-  .form-field { margin-bottom: .95rem; }
-  .form-label {
-    display: block; font-size: 0.75rem; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .06em;
-    color: var(--ink); margin-bottom: .4rem;
-  }
-  .form-input {
-    width: 100%; padding: .85rem 1.05rem;
-    border: 1.5px solid var(--border); border-radius: 12px;
-    font-family: var(--sans); font-size: 0.9rem; color: var(--ink);
-    background: var(--soft); outline: none;
-    transition: border-color .22s, box-shadow .22s, background .22s;
-  }
-  .form-input:hover { border-color: #c5d9ff; }
-  .form-input:focus {
-    border-color: var(--blue);
-    background: #fff;
-    box-shadow: 0 0 0 4px rgba(74,124,246,.1);
-  }
-  .form-input::placeholder { color: #b0b8cc; }
-
-  /* ── ROLE BUTTONS ── */
-  .role-btn {
-    flex: 1; padding: .68rem;
-    border-radius: 10px; border: 1.5px solid var(--border);
-    background: var(--soft); font-family: var(--sans);
-    font-size: 0.87rem; font-weight: 600; color: var(--muted);
-    cursor: pointer;
-    transition: border-color .2s, color .2s, background .2s, transform .18s var(--ease-spring);
-  }
-  .role-btn:hover { border-color: var(--blue); color: var(--blue); }
-  .role-btn:active { transform: scale(.97); }
-  .role-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
-
-  /* ── FORGOT ── */
-  .forgot {
-    font-size: 0.78rem; color: var(--muted); text-decoration: none;
-    float: right; margin-top: -1.8rem; margin-bottom: 1.2rem; display: block;
-    font-weight: 500; transition: color .18s;
-  }
-  .forgot:hover { color: var(--blue); text-decoration: none; }
-
-  /* ── SUBMIT BUTTON — smooth press with ripple ── */
-  .btn-submit {
-    width: 100%; padding: .93rem;
-    background: var(--blue); color: #fff; border: none; border-radius: 12px;
-    font-family: var(--sans); font-size: 0.93rem; font-weight: 700;
-    cursor: pointer; margin-top: .5rem;
-    position: relative; overflow: hidden;
-    transition: background .22s, transform .18s var(--ease-spring), box-shadow .22s;
-    box-shadow: 0 4px 14px rgba(74,124,246,.28);
-  }
-  .btn-submit:hover {
-    background: #3567e0;
-    transform: translateY(-1px);
-    box-shadow: 0 8px 24px rgba(74,124,246,.38);
-  }
-  .btn-submit:active {
-    transform: scale(.98) translateY(0);
-    box-shadow: 0 2px 8px rgba(74,124,246,.25);
-  }
-  /* Ripple effect on click */
-  .btn-submit .ripple {
-    position: absolute; border-radius: 50%;
-    width: 60px; height: 60px;
-    margin-top: -30px; margin-left: -30px;
-    background: rgba(255,255,255,.35);
-    animation: ripple .5s linear;
-    pointer-events: none;
-  }
-
-  /* ── TERMS ── */
-  .terms {
-    font-size: 0.73rem; color: var(--muted); text-align: center;
-    margin-top: 1rem; line-height: 1.6;
-  }
-  .terms a { color: var(--blue); text-decoration: none; }
-  .terms a:hover { text-decoration: underline; }
-
-  /* ── MSG BOX ── */
-  .msg-box {
-    padding: .7rem 1rem; border-radius: 10px;
-    font-size: 0.83rem; margin-bottom: .9rem;
-    display: none;
-    animation: fadeUp .3s var(--ease-spring) both;
-  }
-  .msg-box.error   { background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; }
-  .msg-box.success { background: #d1faf0; border: 1px solid #38bfa1; color: #1a9e80; }
-  .msg-box.show    { display: block; }
-
-  /* ── MOBILE ── */
-  @media (max-width: 768px) {
-    body { flex-direction: column; }
-    .left-panel {
-      width: 100%; min-height: auto; padding: 2.2rem 1.5rem 1.8rem;
-    }
-    .left-panel h1 { font-size: 1.45rem; margin-bottom: .5rem; }
-    .left-panel > p { font-size: .84rem; margin-bottom: 1.5rem; }
-    .left-features { display: none; }
-    .left-logo svg { width: 130px; height: 32px; }
-    .right-panel {
-      flex: 1; padding: 1.8rem 1.2rem 2.5rem;
-      border-radius: 22px 22px 0 0;
-      margin-top: -14px;
-      box-shadow: 0 -8px 32px rgba(0,0,0,.08);
-    }
-  }
-  @media (max-width: 390px) {
-    .left-panel { padding: 1.6rem 1.2rem 1.4rem; }
-    .left-panel h1 { font-size: 1.25rem; }
-    .right-panel { padding: 1.5rem 1rem 2rem; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
-  }
-
-  /* ── Password visibility, remember-me, and the back control ───────────
-     Ported from the reference sign-in design. The reference was React +
-     Tailwind with a console.log submit stub; this page is vanilla HTML on live
-     Firebase auth, so the DESIGN is adopted and the working authentication is
-     left untouched. Colours are StudyFlow's own tokens, not the reference's
-     slate/black palette. */
-  .pw-wrap { position: relative; }
-  .pw-wrap .form-input { padding-right: 3rem; }
-  .pw-toggle {
-    position: absolute; right: .55rem; top: 50%; transform: translateY(-50%);
-    width: 32px; height: 32px; display: flex; align-items: center;
-    justify-content: center; background: transparent; border: 0; border-radius: 8px;
-    cursor: pointer; color: #8894ad; padding: 0;
-    transition: background .18s ease, color .18s ease;
-  }
-  .pw-toggle:hover { background: #eef2fb; color: var(--blue, #4a7cf6); }
-  .pw-toggle:focus-visible { outline: 2px solid var(--blue, #4a7cf6); outline-offset: 2px; }
-  .pw-toggle svg { width: 18px; height: 18px; }
-
-  .row-between {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: .75rem; margin: -.15rem 0 1rem;
-  }
-  .remember {
-    display: inline-flex; align-items: center; gap: .45rem;
-    font-size: .82rem; color: #5b6478; cursor: pointer; user-select: none;
-  }
-  .remember input {
-    width: 16px; height: 16px; accent-color: var(--blue, #4a7cf6);
-    cursor: pointer; margin: 0;
-  }
+  .brand::after { content: ""; position: absolute; top: 0; bottom: 0; left: clamp(22px, 3.2vw, 44px); width: 1.5px; background: rgba(147, 180, 255, .14); pointer-events: none; }
+  .brand .grain { position: absolute; inset: 0; pointer-events: none; background-image: var(--grain); background-size: 180px; opacity: .07; }
+  .brand > * { position: relative; z-index: 1; }
 
   .back-home {
-    position: absolute; top: 1.4rem; left: 1.4rem; z-index: 3;
-    width: 38px; height: 38px; border-radius: 50%;
-    background: rgba(255,255,255,.16); backdrop-filter: blur(6px);
-    border: 1px solid rgba(255,255,255,.25);
-    display: flex; align-items: center; justify-content: center;
-    color: #fff; text-decoration: none;
-    transition: background .18s ease, transform .18s ease;
+    position: absolute; top: calc(1.25rem + env(safe-area-inset-top, 0px)); left: 1.25rem; z-index: 3;
+    display: inline-flex; align-items: center; gap: .4rem;
+    height: 38px; padding: 0 .9rem 0 .7rem; border-radius: 999px;
+    background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 255, 255, .18);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    color: rgba(255, 255, 255, .88); text-decoration: none; font-size: .84rem; font-weight: 600;
+    transition: background-color .2s, border-color .2s;
   }
-  .back-home:hover { background: rgba(255,255,255,.28); transform: translateY(-1px); }
-  .back-home svg { width: 18px; height: 18px; }
+  .back-home:hover { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .36); }
+  .back-home svg { width: 16px; height: 16px; }
 
+  .brand-logo { display: inline-flex; margin-bottom: 2.4rem; text-decoration: none; width: max-content; }
+  .eyebrow { font-family: var(--mono); font-size: .74rem; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: rgba(214, 226, 255, .78); margin-bottom: 1.1rem; }
+  .brand h1 {
+    font-family: var(--serif); font-weight: 400; font-size: clamp(2.5rem, 4.2vw, 3.7rem);
+    line-height: 1.02; letter-spacing: -.02em; margin-bottom: 1.2rem; max-width: 13ch;
+  }
+  .brand h1 em {
+    font-style: italic;
+    background: linear-gradient(90deg, #93b4ff, #d5e3ff 45%, #9fbcff);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  }
+  .brand-sub { color: rgba(226, 233, 255, .82); font-size: 1.02rem; line-height: 1.7; max-width: 38ch; margin-bottom: 2.4rem; }
+
+  /* A plan, not a list of claims about plans. It mirrors the landing page's
+     example card so the promise and the product look like the same thing. */
+  .preview { width: min(100%, 400px); animation: floaty 9s ease-in-out infinite; transform-origin: 30% 80%; }
+  .plan-card { background: var(--card); color: var(--ink); border-radius: 20px; overflow: hidden; box-shadow: 0 2px 4px rgba(5, 8, 20, .2), 0 40px 70px -28px rgba(5, 8, 20, .75); }
+  .plan-head { background: var(--blue-btn); color: #fff; padding: 1.05rem 1.3rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .plan-head b { display: block; font-size: .98rem; font-weight: 600; }
+  .plan-head > div > span { display: block; font-size: .8rem; color: rgba(255, 255, 255, .82); margin-top: .1rem; }
+  .plan-status { font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; padding: .3rem .6rem; border-radius: 999px; background: #fff; color: var(--blue-deep); white-space: nowrap; }
+  .plan-body { list-style: none; padding: .35rem 1.3rem .6rem; }
+  .plan-row { display: flex; align-items: center; gap: .85rem; padding: .7rem 0; border-bottom: 1px solid var(--line); font-size: .88rem; }
+  .plan-row:last-child { border-bottom: 0; }
+  .plan-day { min-width: 46px; text-align: center; font-family: var(--mono); font-size: .66rem; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; border-radius: 8px; padding: .3rem .4rem; background: var(--blue-btn); color: #fff; }
+  .plan-row:not(:first-child) .plan-day { background: var(--blue-soft); color: var(--blue-deep); }
+  .plan-row p { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .plan-row small { font-family: var(--mono); font-size: .72rem; color: var(--muted); }
+  .brand-foot { margin-top: 2.4rem; font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: rgba(214, 226, 255, .6); }
+
+  /* ── FORM SIDE (paper) ───────────────────────────────────────────────── */
+  .side {
+    position: relative; flex: 1; min-width: 0;
+    display: flex; flex-direction: column; align-items: center;
+    padding: clamp(2rem, 6vh, 4rem) clamp(1rem, 4vw, 2.5rem) 2.5rem;
+    overflow-y: auto;
+  }
+  .side::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(74, 124, 246, .055) 31px, rgba(74, 124, 246, .055) 32px);
+    -webkit-mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .35)); mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .35));
+  }
+  .auth { position: relative; z-index: 1; width: 100%; max-width: 408px; margin: auto 0; animation: rise .55s var(--ease-out) both; }
+
+  /* Segmented control with a sliding lens - the landing's nav does the same. */
+  .seg { position: relative; display: grid; grid-template-columns: 1fr 1fr; padding: 4px; border-radius: 999px; background: #e9eef9; border: 1px solid var(--line); margin-bottom: 2rem; }
+  .seg button {
+    position: relative; z-index: 1; border: 0; background: none; cursor: pointer;
+    padding: .62rem .5rem; border-radius: 999px; font-size: .9rem; font-weight: 600; color: var(--muted);
+    white-space: nowrap; transition: color .25s var(--ease-out);
+  }
+  @media (max-width: 360px) { .seg button { font-size: .84rem; padding: .6rem .25rem; } }
+  .seg button[aria-pressed="true"] { color: var(--ink); }
+  .seg-lens {
+    position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 999px;
+    background: #fff; box-shadow: 0 1px 2px rgba(26, 40, 90, .08), 0 4px 14px -6px rgba(26, 40, 90, .22);
+    transition: transform .45s var(--ease-out);
+  }
+  .seg[data-mode="signup"] .seg-lens { transform: translateX(100%); }
+  .seg[hidden] { display: none; }
+
+  .auth h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(2rem, 4vw, 2.4rem); line-height: 1.05; letter-spacing: -.02em; }
+  .auth h2 em { font-style: italic; color: var(--blue); }
+  .lede { color: var(--muted); font-size: .94rem; margin-top: .45rem; margin-bottom: 1.6rem; }
+
+  .alert { display: none; gap: .65rem; align-items: flex-start; border-radius: 12px; padding: .8rem .95rem; font-size: .88rem; line-height: 1.5; margin-bottom: 1.1rem; border: 1.5px solid; animation: rise .3s var(--ease-out) both; }
+  .alert.show { display: flex; }
+  .alert svg { flex: none; width: 18px; height: 18px; margin-top: .1rem; }
+  .alert.bad { background: var(--bad-soft); border-color: #f1b9b7; color: #8a1f1d; }
+  .alert.ok { background: var(--ok-soft); border-color: #9fd9c3; color: #0c5b43; }
+  .alert.info { background: var(--blue-mist); border-color: #c8d7fb; color: var(--blue-deep); }
+  .alert-act { display: inline; margin-left: .25rem; padding: 0; border: 0; background: none; cursor: pointer; font-weight: 700; color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+
+  .btn-google {
+    width: 100%; min-height: 50px; border-radius: 999px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: .7rem;
+    background: var(--card); border: 1.5px solid var(--line-strong);
+    font-size: .95rem; font-weight: 600; color: var(--ink);
+    transition: border-color .2s, background-color .2s;
+  }
+  .btn-google:hover { border-color: var(--blue); }
+  .btn-google:active { transform: translateY(1px); }
+  .btn-google svg { width: 18px; height: 18px; flex: none; }
+  .btn-google:disabled { opacity: .6; cursor: default; }
+  .or { display: flex; align-items: center; gap: .9rem; margin: 1.3rem 0; color: var(--muted); font-size: .8rem; }
+  .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line-strong); opacity: .7; }
+
+  .field { margin-bottom: 1.05rem; }
+  .field[hidden] { display: none; }
+  .label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: .42rem; }
+  .field label, .label { display: block; font-size: .86rem; font-weight: 600; color: var(--ink); }
+  .opt { font-weight: 400; color: var(--muted); }
+  .input {
+    width: 100%; min-height: 50px; padding: .8rem 1rem; border-radius: 12px;
+    border: 1.5px solid var(--line-strong); background: var(--card);
+    font-size: 1rem; color: var(--ink); outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .input::placeholder { color: #9aa4ba; }
+  .input:hover { border-color: #aebcdc; }
+  .input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(74, 124, 246, .14); }
+  .input[aria-invalid="true"] { border-color: var(--bad); }
+  .input[aria-invalid="true"]:focus { box-shadow: 0 0 0 4px rgba(196, 49, 47, .12); }
+  .err { display: none; align-items: center; gap: .35rem; margin-top: .4rem; font-size: .82rem; font-weight: 500; color: var(--bad); }
+  .err.show { display: flex; }
+  .err svg { width: 14px; height: 14px; flex: none; }
+  .hint { margin-top: .4rem; font-size: .82rem; color: var(--muted); }
+  .hint[hidden] { display: none; }
+  .suggest { border: 0; background: none; padding: 0; cursor: pointer; color: var(--blue-deep); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+
+  .pw-wrap { position: relative; }
+  .pw-wrap .input { padding-right: 3.2rem; }
+  .pw-toggle {
+    position: absolute; right: .45rem; top: 50%; transform: translateY(-50%);
+    width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 10px;
+    background: transparent; color: #7c87a0; cursor: pointer; transition: background-color .18s, color .18s;
+  }
+  .pw-toggle:hover { background: var(--blue-mist); color: var(--blue-deep); }
+  .pw-toggle svg { width: 19px; height: 19px; }
+  .rule { display: flex; align-items: center; gap: .4rem; margin-top: .45rem; font-size: .82rem; color: var(--muted); transition: color .2s; }
+  .rule i { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--line-strong); display: grid; place-items: center; transition: background-color .2s, border-color .2s; }
+  .rule i svg { width: 10px; height: 10px; opacity: 0; transition: opacity .2s; }
+  .rule.met { color: var(--ok); }
+  .rule.met i { background: var(--ok); border-color: var(--ok); }
+  .rule.met i svg { opacity: 1; }
+  .caps { display: none; margin-top: .4rem; font-size: .8rem; font-weight: 600; color: var(--blue-deep); }
+  .caps.show { display: block; }
+
+  .link { border: 0; background: none; padding: 0; cursor: pointer; font-size: .84rem; font-weight: 600; color: var(--blue-deep); text-decoration: none; }
+  .link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: -.1rem 0 1.2rem; }
+  .row[hidden] { display: none; }
+  .check { display: inline-flex; align-items: center; gap: .5rem; font-size: .88rem; color: var(--ink-2); cursor: pointer; user-select: none; }
+  .check input { width: 17px; height: 17px; accent-color: var(--blue-btn); cursor: pointer; margin: 0; }
+
+  .disclose { margin: -.2rem 0 1.1rem; }
+  .disclose[hidden] { display: none; }
+  .disclose > button { display: inline-flex; align-items: center; gap: .35rem; }
+  .disclose > button svg { width: 14px; height: 14px; transition: transform .25s var(--ease-out); }
+  .disclose > button[aria-expanded="true"] svg { transform: rotate(90deg); }
+  .code-box { margin-top: .7rem; }
+  .code-box[hidden] { display: none; }
+  #code { text-transform: uppercase; letter-spacing: .08em; font-family: var(--mono); font-weight: 500; }
+
+  .btn-primary {
+    position: relative; width: 100%; min-height: 52px; border: 0; border-radius: 999px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: .55rem;
+    background: var(--blue-btn); color: #fff; font-size: 1rem; font-weight: 700;
+    box-shadow: 0 10px 24px -10px rgba(53, 103, 224, .75);
+    transition: background-color .2s, box-shadow .2s;
+  }
+  .btn-primary:hover { background: var(--blue-deep); }
+  .btn-primary:active { transform: translateY(1px); }
+  .btn-primary:disabled { cursor: progress; background: #6f93ec; box-shadow: none; }
+  .spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255, 255, 255, .35); border-top-color: #fff; animation: spin .8s linear infinite; display: none; }
+  .btn-primary[aria-busy="true"] .spin { display: block; }
+
+  .switch { margin-top: 1.4rem; text-align: center; font-size: .9rem; color: var(--muted); }
+  .switch[hidden] { display: none; }
+  .teacher { margin-top: .7rem; text-align: center; font-size: .84rem; color: var(--muted); }
+  .teacher[hidden] { display: none; }
+  .teacher a { color: var(--blue-deep); font-weight: 600; text-decoration: none; }
+  .teacher a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .terms { margin-top: 1.5rem; text-align: center; font-size: .78rem; line-height: 1.6; color: var(--muted); }
+  .terms a { color: var(--blue-deep); text-decoration: none; }
+  .terms a:hover { text-decoration: underline; }
+
+  .sent { text-align: center; padding: .5rem 0 0; }
+  .sent[hidden] { display: none; }
+  .sent-icon { width: 56px; height: 56px; border-radius: 18px; background: var(--ok-soft); color: var(--ok); display: grid; place-items: center; margin: 0 auto 1rem; }
+  .sent-icon svg { width: 26px; height: 26px; }
+  .sent p { color: var(--muted); font-size: .94rem; line-height: 1.6; margin: .5rem auto 1.4rem; max-width: 34ch; }
+  .sent b { color: var(--ink); }
+
+  /* ── PHONES ──────────────────────────────────────────────────────────
+     The night panel becomes a short header and the form rises over it as a
+     sheet, so the first thing under the thumb is the Google button, not a
+     screenful of brand copy. */
   @media (max-width: 860px) {
-    .back-home { top: 1rem; left: 1rem; width: 34px; height: 34px; }
+    body { flex-direction: column; background: var(--night); }
+    .brand { flex: none; min-height: 0; padding: calc(4.6rem + env(safe-area-inset-top, 0px)) 1.4rem 3.2rem; justify-content: flex-start; }
+    .brand::after { display: none; }
+    .brand-logo { position: absolute; top: calc(1.25rem + env(safe-area-inset-top, 0px)); right: 1.25rem; margin: 0; }
+    .brand-logo svg { width: 124px; height: 31px; }
+    .eyebrow, .brand-sub, .preview, .brand-foot { display: none; }
+    .brand h1 { font-size: clamp(2.05rem, 9vw, 2.6rem); margin: 0; max-width: 16ch; }
+    .side { flex: 1; background: var(--paper); border-radius: 26px 26px 0 0; margin-top: -1.5rem; padding: 1.7rem 1.15rem calc(2rem + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -10px 30px rgba(5, 8, 20, .25); overflow: visible; }
+    .side::before { border-radius: 26px 26px 0 0; }
+    .auth { margin: 0; }
+    .seg { margin-bottom: 1.5rem; }
+  }
+  @media (min-width: 861px) and (max-height: 760px) {
+    .preview { display: none; }
+    .brand-foot { margin-top: 1rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   }
 </style>
 </head>
 <body>
 
-<!-- LEFT PANEL -->
-<div class="left-panel">
-  <a href="index.html" class="back-home" aria-label="Back to home">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+<aside class="brand" aria-label="About StudyFlow">
+  <div class="grain" aria-hidden="true"></div>
+  <a href="index.html" class="back-home" aria-label="Back to the StudyFlow home page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+    Home
   </a>
-  <a href="index.html" class="left-logo">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
-      <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:rgba(255,255,255,.9)"/><stop offset="100%" style="stop-color:rgba(255,255,255,.6)"/></linearGradient></defs>
-      <rect x="0" y="2" width="40" height="40" rx="10" fill="rgba(255,255,255,.2)"/>
-      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.3"/>
-      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.5"/>
+  <a href="index.html" class="brand-logo" aria-label="StudyFlow home">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="150" height="37" aria-hidden="true">
+      <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#5b8df8"/><stop offset="100%" stop-color="#2851c8"/></linearGradient></defs>
+      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#lg)"/>
+      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
+      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
       <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
-      <rect x="17" y="16" width="11" height="2" rx="1" fill="rgba(74,124,246,.6)"/>
-      <rect x="17" y="21" width="8" height="2" rx="1" fill="rgba(74,124,246,.4)"/>
-      <rect x="17" y="26" width="10" height="2" rx="1" fill="rgba(74,124,246,.3)"/>
+      <rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/>
+      <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
+      <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
       <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
-      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
-        <tspan fill="white">Study</tspan><tspan fill="rgba(255,255,255,.7)">Flow</tspan>
-      </text>
+      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3"><tspan fill="#fff">Study</tspan><tspan fill="#9fbcff">Flow</tspan></text>
     </svg>
   </a>
+  <p class="eyebrow">Notes in · plan out</p>
   <h1>Turn lessons into <em>study plans.</em></h1>
-  <p>Upload your notes, get a personalized AI-powered plan, and actually understand your material before exam day.</p>
-  <div class="left-features">
-    <div class="left-feature"><div class="left-feature-dot">✦</div>AI-generated study plans from your notes</div>
-    <div class="left-feature"><div class="left-feature-dot">✦</div>Day-by-day lessons that get harder</div>
-    <div class="left-feature"><div class="left-feature-dot">✦</div>Practice questions with instant feedback</div>
-    <div class="left-feature"><div class="left-feature-dot">✦</div>Wrong answer review so you actually learn</div>
+  <p class="brand-sub">Upload your notes, answer a few quick questions, and get a day-by-day plan that teaches you first, then tests you.</p>
+
+  <div class="preview" aria-hidden="true">
+    <div class="plan-card">
+      <div class="plan-head">
+        <div><b>Photosynthesis</b><span>4 days · unit test on Friday</span></div>
+        <span class="plan-status">Ready</span>
+      </div>
+      <ul class="plan-body">
+        <li class="plan-row"><span class="plan-day">Day 1</span><p>How light becomes sugar</p><small>25 min</small></li>
+        <li class="plan-row"><span class="plan-day">Day 2</span><p>Inside the chloroplast</p><small>30 min</small></li>
+        <li class="plan-row"><span class="plan-day">Day 3</span><p>What limits the rate</p><small>30 min</small></li>
+        <li class="plan-row"><span class="plan-day">Day 4</span><p>Putting it all together</p><small>35 min</small></li>
+      </ul>
+    </div>
   </div>
-</div>
+  <p class="brand-foot">Free plan · no card needed</p>
+</aside>
 
-<!-- RIGHT PANEL -->
-<div class="right-panel">
-  <div class="auth-box">
+<main class="side">
+  <div class="auth">
 
-    <div class="tabs" role="tablist">
-      <div class="tab-indicator" id="tab-indicator"></div>
-      <button class="tab active" id="tab-login" role="tab" aria-selected="true" onclick="switchTab('login')">Sign in</button>
-      <button class="tab" id="tab-signup" role="tab" aria-selected="false" onclick="switchTab('signup')">Create account</button>
+    <div class="seg" id="seg" data-mode="signin" role="group" aria-label="Sign in or create an account">
+      <span class="seg-lens" aria-hidden="true"></span>
+      <button type="button" id="seg-signin" aria-pressed="true">Sign in</button>
+      <button type="button" id="seg-signup" aria-pressed="false">Create account</button>
     </div>
 
-    <div id="login-view">
-      <h2>Welcome <em>back</em></h2>
-      <p>Sign in to continue your study plans.</p>
-      <div class="msg-box" id="login-msg"></div>
-      <button class="btn-google" onclick="googleAuth()">
-        <svg class="google-icon" viewBox="0 0 24 24">
+    <h2 id="auth-title">Welcome <em>back</em></h2>
+    <p class="lede" id="auth-lede">Pick up your plan where you left it.</p>
+
+    <div class="alert" id="alert" role="alert" aria-live="assertive"></div>
+
+    <div id="social">
+      <button type="button" class="btn-google" id="google-btn">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
           <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
           <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
         </svg>
-        Continue with Google
+        <span id="google-label">Continue with Google</span>
       </button>
-      <div class="divider">or sign in with email</div>
-      <div class="form-field">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-input" id="login-email" placeholder="your@email.com" />
-      </div>
-      <div class="form-field">
-        <label class="form-label">Password</label>
-        <div class="pw-wrap">
-          <input type="password" class="form-input" id="login-password" placeholder="••••••••" />
-          <button type="button" class="pw-toggle" id="login-pw-toggle"
-                  aria-label="Show password" aria-pressed="false"
-                  onclick="togglePassword('login-password', this)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round">
-              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-      <div class="row-between">
-        <label class="remember">
-          <input type="checkbox" id="login-remember" checked />
-          <span>Remember me</span>
-        </label>
-        <a href="#" class="forgot" style="margin:0" onclick="resetPassword();return false;">Forgot password?</a>
-      </div>
-      <button class="btn-submit" onclick="handleLogin()">Sign in →</button>
-      <p class="terms">By signing in you agree to our <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy Policy</a>.</p>
+      <div class="or">or use your email</div>
     </div>
 
-    <div id="signup-view" style="display:none;">
-      <h2>Get <em>started</em></h2>
-      <p>Create your free account — no credit card needed.</p>
-      <div class="msg-box" id="signup-msg"></div>
-      <button class="btn-google" onclick="googleAuth()">
-        <svg class="google-icon" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-        </svg>
-        Continue with Google
-      </button>
-      <div class="divider">or sign up with email</div>
-      <div class="form-field">
-        <label class="form-label">Full name</label>
-        <input type="text" class="form-input" id="signup-name" placeholder="Ethan Hwang" />
+    <!-- One form for all three modes, so the email typed on one tab is still
+         there on the other, Enter submits, and a password manager recognises
+         it. The old page had no <form> at all: Enter did nothing. -->
+    <form id="auth-form" novalidate>
+      <div class="field" id="f-name" hidden>
+        <label for="name">Your name</label>
+        <input class="input" id="name" name="name" type="text" autocomplete="name" autocapitalize="words" placeholder="First and last name" aria-describedby="name-err" maxlength="60"/>
+        <p class="err" id="name-err" aria-live="polite"></p>
       </div>
-      <div class="form-field">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-input" id="signup-email" placeholder="your@email.com" />
+
+      <div class="field" id="f-email">
+        <label for="email">Email</label>
+        <input class="input" id="email" name="email" type="email" inputmode="email" autocomplete="username email" autocapitalize="off" spellcheck="false" placeholder="you@example.com" aria-describedby="email-err email-hint"/>
+        <p class="err" id="email-err" aria-live="polite"></p>
+        <p class="hint" id="email-hint" hidden></p>
       </div>
-      <div class="form-field">
-        <label class="form-label">Password</label>
+
+      <div class="field" id="f-password">
+        <div class="label-row">
+          <label for="password">Password</label>
+          <button type="button" class="link" id="forgot-link">Forgot password?</button>
+        </div>
         <div class="pw-wrap">
-          <input type="password" class="form-input" id="signup-password" placeholder="Min. 8 characters" />
-          <button type="button" class="pw-toggle" id="signup-pw-toggle"
-                  aria-label="Show password" aria-pressed="false"
-                  onclick="togglePassword('signup-password', this)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round">
-              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
-            </svg>
+          <input class="input" id="password" name="password" type="password" autocomplete="current-password" placeholder="Your password" aria-describedby="password-err pw-rule caps-hint"/>
+          <button type="button" class="pw-toggle" id="pw-toggle" aria-label="Show password" aria-pressed="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
         </div>
+        <p class="err" id="password-err" aria-live="polite"></p>
+        <p class="rule" id="pw-rule" hidden><i><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></i><span>At least 8 characters</span></p>
+        <p class="caps" id="caps-hint">Caps Lock is on</p>
       </div>
-      <div class="form-field">
-        <label class="form-label">Class code <span style="font-weight:300;text-transform:none;letter-spacing:0;">(optional)</span></label>
-        <input type="text" class="form-input" id="signup-classcode" placeholder="e.g. MS-7401" style="text-transform:uppercase;" />
+
+      <div class="row" id="remember-row">
+        <label class="check"><input type="checkbox" id="remember" checked/> Keep me signed in</label>
       </div>
-      <div class="form-field">
-        <label class="form-label">I am a...</label>
-        <div style="display:flex;gap:.6rem;">
-          <button class="role-btn active" id="role-student" onclick="selectRole('student')">Student</button>
-          <button class="role-btn" id="role-teacher" onclick="selectRole('teacher')">Teacher</button>
+
+      <div class="disclose" id="code-wrap" hidden>
+        <button type="button" class="link" id="code-toggle" aria-expanded="false" aria-controls="code-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          Have a class code from your teacher?
+        </button>
+        <div class="code-box" id="code-box" hidden>
+          <label class="sr-only" for="code">Class code</label>
+          <input class="input" id="code" name="classcode" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="SF-AB12" maxlength="7" aria-describedby="code-err code-hint"/>
+          <p class="err" id="code-err" aria-live="polite"></p>
+          <p class="hint" id="code-hint">Your teacher sees your progress once you join. You can add it later too.</p>
         </div>
       </div>
-      <button class="btn-submit" onclick="handleSignup()">Create account →</button>
-      <p class="terms">By creating an account you agree to our <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy Policy</a>.</p>
+
+      <button type="submit" class="btn-primary" id="submit-btn" aria-busy="false">
+        <span class="spin" aria-hidden="true"></span>
+        <span id="submit-label">Sign in</span>
+      </button>
+    </form>
+
+    <div class="sent" id="sent" hidden>
+      <div class="sent-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+      <h2>Check your <em>inbox</em></h2>
+      <p id="sent-text">If there is an account for that email, a reset link is on its way.</p>
+      <button type="button" class="btn-primary" id="sent-back"><span id="sent-back-label">Back to sign in</span></button>
     </div>
 
+    <p class="switch" id="switch"><span id="switch-text">New to StudyFlow?</span> <button type="button" class="link" id="switch-btn">Create a free account</button></p>
+    <p class="teacher" id="teacher-line" hidden>Teacher? <a href="teacher-login.html">Set up a class instead</a></p>
+    <p class="terms" id="terms">By continuing you agree to our <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy Policy</a>.</p>
   </div>
-</div>
+</main>
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, updateProfile, sendPasswordResetEmail, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendPasswordResetEmail, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyCY4FI-6L9tsAokNFl6o5bsmCt-JD0H8HI",
@@ -511,263 +444,485 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  function smartRedirect() {
-    var plans = JSON.parse(localStorage.getItem('studyflow_plans') || '[]');
-    var oldPlan = localStorage.getItem('studyflow_plan');
-    var hasPlan = plans.length > 0 || oldPlan;
-    window.location.href = hasPlan
-      ? 'dashboard.html'
-      : 'app.html';
+  var $ = function (id) { return document.getElementById(id); };
+  var MIN_PW = 8;
+  /* Class codes are minted by teacher.html as "SF-" + 4 characters, and
+     app.html's join box checks exactly that. The old placeholder here was
+     "MS-7401", a format nothing accepts. */
+  var CODE_RE = /^SF-[A-Z0-9]{4}$/;
+  var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  var LAST_EMAIL_KEY = 'studyflow_last_email';
+  var mode = 'signin';
+  var busy = false;
+
+  function readLS(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+  function writeLS(k, v) { try { window.localStorage.setItem(k, v); } catch (e) {} }
+
+  /* ── Where to go after signing in ──────────────────────────────────────
+     Plans are stored per account under "sfu:<email>|studyflow_plans" (the
+     SFStore namespace in app.html, dashboard.html and lesson.html). This
+     page read the bare "studyflow_plans" key, which only a pre-namespace
+     browser still has - so a returning learner with plans was sent to make
+     a new plan instead of to the dashboard that held them. */
+  function hasPlans(email) {
+    var id = String(email || '').toLowerCase().trim();
+    var keys = ['studyflow_plans', 'studyflow_plan'];
+    if (id) keys.unshift('sfu:' + id + '|studyflow_plans', 'sfu:' + id + '|studyflow_plan');
+    for (var i = 0; i < keys.length; i++) {
+      var raw = readLS(keys[i]);
+      if (!raw) continue;
+      if (/plans$/.test(keys[i])) {
+        try { if ((JSON.parse(raw) || []).length) return true; } catch (e) {}
+      } else return true;
+    }
+    return false;
+  }
+  function smartRedirect(email) {
+    window.location.href = hasPlans(email) ? 'dashboard.html' : 'app.html';
   }
 
-  // Save user while preserving tier and classCode if it's the same account logging back in
-  function saveUser(fbUser) {
-    var existing = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
-    var sameAccount = existing.email === fbUser.email;
-    localStorage.setItem('studyflow_user', JSON.stringify({
+  /* Keep tier, class code and grade when the same account signs back in.
+     grade is asked once in app.html and remembered here; dropping it on
+     every sign-in would ask a learner their grade every time. */
+  function saveUser(fbUser, extra) {
+    var existing = {};
+    try { existing = JSON.parse(readLS('studyflow_user') || '{}') || {}; } catch (e) {}
+    var same = existing.email === fbUser.email;
+    var user = {
       email: fbUser.email,
-      name: fbUser.displayName || (existing.name || fbUser.email.split('@')[0]),
+      name: fbUser.displayName || (same && existing.name) || String(fbUser.email).split('@')[0],
       uid: fbUser.uid,
-      tier: sameAccount ? (existing.tier || 'free') : 'free',
-      classCode: sameAccount ? (existing.classCode || null) : null
-    }));
+      tier: same ? (existing.tier || 'free') : 'free',
+      classCode: same ? (existing.classCode || null) : null
+    };
+    if (same && existing.grade) user.grade = existing.grade;
+    if (extra) for (var k in extra) user[k] = extra[k];
+    writeLS('studyflow_user', JSON.stringify(user));
+    if ($('remember').checked || mode === 'signup') writeLS(LAST_EMAIL_KEY, fbUser.email);
+    return user;
   }
 
-  // If the user just signed out, end the Firebase session for real
   var params = new URLSearchParams(window.location.search);
-  if (params.get('signout') === '1') {
-    signOut(auth).catch(function(){});
+  if (params.get('signout') === '1') { signOut(auth).catch(function () {}); }
+
+  /* ── UI state ────────────────────────────────────────────────────────── */
+  var COPY = {
+    signin: { title: 'Welcome <em>back</em>', lede: 'Pick up your plan where you left it.', submit: 'Sign in', busy: 'Signing in…',
+              doc: 'Sign in · StudyFlow', switchText: 'New to StudyFlow?', switchBtn: 'Create a free account' },
+    signup: { title: 'Make your <em>first plan</em>', lede: 'Free account. No card, no trial clock.', submit: 'Create account', busy: 'Creating your account…',
+              doc: 'Create your account · StudyFlow', switchText: 'Already have an account?', switchBtn: 'Sign in' },
+    reset:  { title: 'Reset your <em>password</em>', lede: 'Enter the email you signed up with and we will send you a link to choose a new one.', submit: 'Send reset link', busy: 'Sending…',
+              doc: 'Reset password · StudyFlow', switchText: 'Remembered it?', switchBtn: 'Back to sign in' }
+  };
+
+  function setMode(next, opts) {
+    opts = opts || {};
+    mode = next;
+    var c = COPY[mode];
+    var seg = $('seg');
+    seg.hidden = mode === 'reset';
+    seg.dataset.mode = mode === 'signup' ? 'signup' : 'signin';
+    $('seg-signin').setAttribute('aria-pressed', String(mode === 'signin'));
+    $('seg-signup').setAttribute('aria-pressed', String(mode === 'signup'));
+    $('auth-title').innerHTML = c.title;
+    $('auth-lede').textContent = c.lede;
+    $('submit-label').textContent = c.submit;
+    $('switch-text').textContent = c.switchText;
+    $('switch-btn').textContent = c.switchBtn;
+    document.title = c.doc;
+
+    $('social').hidden = mode === 'reset';
+    $('f-name').hidden = mode !== 'signup';
+    $('f-password').hidden = mode === 'reset';
+    $('forgot-link').hidden = mode !== 'signin';
+    $('remember-row').hidden = mode !== 'signin';
+    $('code-wrap').hidden = mode !== 'signup';
+    $('teacher-line').hidden = mode !== 'signup';
+    $('pw-rule').hidden = mode !== 'signup';
+    $('google-label').textContent = mode === 'signup' ? 'Sign up with Google' : 'Continue with Google';
+    $('password').setAttribute('autocomplete', mode === 'signup' ? 'new-password' : 'current-password');
+    $('password').placeholder = mode === 'signup' ? 'Create a password' : 'Your password';
+    $('auth-form').hidden = false;
+    $('sent').hidden = true;
+    $('switch').hidden = false;
+    $('terms').hidden = mode === 'reset';
+
+    if (!opts.keepAlert) hideAlert();
+    ['name', 'email', 'password', 'code'].forEach(function (id) { clearError(id); });
+    updatePwRule();
+
+    try {
+      var u = new URL(window.location.href);
+      if (mode === 'signin') u.searchParams.delete('mode'); else u.searchParams.set('mode', mode);
+      u.searchParams.delete('signout');
+      history.replaceState(null, '', u.pathname + u.search);
+    } catch (e) {}
+
+    if (opts.focus !== false) focusFirstEmpty();
   }
-  // No auto-redirect — the login page always shows the form so users
-  // explicitly sign in to their account (or switch accounts).
 
-  function showMsg(id, type, text) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    el.className = 'msg-box show ' + type;
-    el.textContent = text;
-  }
-
-  function setLoading(btn, loading) {
-    btn.disabled = loading;
-    btn.textContent = loading ? 'Please wait...' : btn.dataset.label;
-  }
-
-  function switchTab(tab) {
-    // Update tab buttons
-    var loginTab  = document.getElementById('tab-login');
-    var signupTab = document.getElementById('tab-signup');
-    loginTab.classList.toggle('active', tab === 'login');
-    signupTab.classList.toggle('active', tab === 'signup');
-    loginTab.setAttribute('aria-selected', tab === 'login');
-    signupTab.setAttribute('aria-selected', tab === 'signup');
-
-    // Slide the pill indicator
-    var indicator = document.getElementById('tab-indicator');
-    if (indicator) indicator.classList.toggle('right', tab === 'signup');
-
-    // Crossfade views
-    var loginView  = document.getElementById('login-view');
-    var signupView = document.getElementById('signup-view');
-    if (tab === 'login') {
-      signupView.style.display = 'none';
-      loginView.style.display  = 'block';
-      loginView.style.animation = 'none';
-      void loginView.offsetWidth; // force reflow
-      loginView.style.animation = 'viewIn .3s cubic-bezier(0.16,1,.3,1) both';
-    } else {
-      loginView.style.display  = 'none';
-      signupView.style.display = 'block';
-      signupView.style.animation = 'none';
-      void signupView.offsetWidth;
-      signupView.style.animation = 'viewIn .3s cubic-bezier(0.16,1,.3,1) both';
+  function focusFirstEmpty() {
+    var order = mode === 'signup' ? ['name', 'email', 'password'] : mode === 'reset' ? ['email'] : ['email', 'password'];
+    for (var i = 0; i < order.length; i++) {
+      var el = $(order[i]);
+      if (el && !el.value) { try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); } return; }
     }
   }
-  window.switchTab = switchTab;
 
-  // ── RIPPLE on submit buttons ──
-  document.querySelectorAll('.btn-submit').forEach(function(btn) {
-    btn.addEventListener('click', function(e) {
-      var r = document.createElement('span');
-      r.className = 'ripple';
-      r.style.left = e.offsetX + 'px';
-      r.style.top  = e.offsetY + 'px';
-      btn.appendChild(r);
-      setTimeout(function() { r.remove(); }, 520);
-    });
-  });
+  var ICON_ERR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+  var ICON_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
 
-  function handleLogin() {
-    var email = document.getElementById('login-email').value.trim();
-    var password = document.getElementById('login-password').value;
-    if (!email || !email.includes('@')) { showMsg('login-msg', 'error', 'Please enter a valid email.'); return; }
-    if (!password) { showMsg('login-msg', 'error', 'Please enter your password.'); return; }
-    var btn = document.querySelector('#login-view .btn-submit');
-    if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
-    showMsg('login-msg', 'success', 'Signing you in...');
-
-    /* "Remember me" now controls real session persistence rather than being a
-       checkbox that does nothing. Local keeps the session across browser
-       restarts; session ends it when the tab closes, which is what someone on
-       a shared or school machine expects. If the call fails we still sign in
-       on the default persistence rather than blocking the learner. */
-    var remember = document.getElementById('login-remember');
-    var mode = (remember && !remember.checked)
-      ? browserSessionPersistence
-      : browserLocalPersistence;
-
-    setPersistence(auth, mode)
-      .catch(function () { /* fall back to the default */ })
-      .then(function () {
-        return signInWithEmailAndPassword(auth, email, password);
-      })
-      .then(function(cred) {
-        saveUser(cred.user);
-        smartRedirect();
-      })
-      .catch(function(err) {
-        if (btn) { btn.disabled = false; btn.textContent = 'Sign in →'; }
-        var msg = err.code === 'auth/user-not-found' ? 'No account found with that email. Please sign up.' :
-                  err.code === 'auth/wrong-password' ? 'Incorrect password. Try again.' :
-                  err.code === 'auth/invalid-credential' ? 'Incorrect email or password.' :
-                  err.code === 'auth/too-many-requests' ? 'Too many attempts. Try again in a few minutes.' :
-                  err.code === 'auth/network-request-failed' ? 'Network error. Check your connection.' :
-                  'Error: ' + err.message;
-        showMsg('login-msg', 'error', msg);
-      });
+  function setError(id, msg) {
+    var input = $(id), err = $(id + '-err');
+    if (!input || !err) return;
+    input.setAttribute('aria-invalid', 'true');
+    err.innerHTML = ICON_ERR + '<span></span>';
+    err.lastChild.textContent = msg;
+    err.classList.add('show');
   }
-  window.handleLogin = handleLogin;
+  function clearError(id) {
+    var input = $(id), err = $(id + '-err');
+    if (input) input.removeAttribute('aria-invalid');
+    if (err) { err.classList.remove('show'); err.textContent = ''; }
+  }
 
-  function handleSignup() {
-    var name = document.getElementById('signup-name').value.trim();
-    var email = document.getElementById('signup-email').value.trim();
-    var password = document.getElementById('signup-password').value;
-    var classCodeEl = document.getElementById('signup-classcode');
-    var classCode = classCodeEl ? classCodeEl.value.trim().toUpperCase() : '';
-    if (!name) { showMsg('signup-msg', 'error', 'Please enter your name.'); return; }
-    if (!email || !email.includes('@')) { showMsg('signup-msg', 'error', 'Please enter a valid email.'); return; }
-    if (!password || password.length < 6) { showMsg('signup-msg', 'error', 'Password must be at least 6 characters.'); return; }
-    var btn = document.querySelector('#signup-view .btn-submit');
-    if (btn) { btn.disabled = true; btn.textContent = 'Creating account...'; }
-    showMsg('signup-msg', 'success', 'Creating your account...');
-    createUserWithEmailAndPassword(auth, email, password)
-      .then(function(cred) {
-        return updateProfile(cred.user, { displayName: name }).then(function() { return cred; });
-      })
-      .then(function(cred) {
-        var user = { email: cred.user.email, name: name, uid: cred.user.uid, classCode: classCode || null, tier: 'free' };
-        localStorage.setItem('studyflow_user', JSON.stringify(user));
-        if (classCode) {
-          var studentRecord = { name: name, email: cred.user.email, joinedAt: new Date().toISOString(), streak: 0, avgScore: null, lastActive: null };
-          var classData = JSON.parse(localStorage.getItem('studyflow_class_' + classCode) || '{"students":[]}');
-          if (!classData.students.find(function(s){ return s.email === cred.user.email; })) {
-            classData.students.push(studentRecord);
-            localStorage.setItem('studyflow_class_' + classCode, JSON.stringify(classData));
-          }
-          // Sync to Firestore for cross-device
-          fetch('api/class', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'join', classCode: classCode, studentData: studentRecord })
-          })
-          .then(function(r){ return r.json(); })
-          .then(function(data){
-            if (data.error === 'class_full') {
-              // Remove classCode — class is full
-              var u = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
-              u.classCode = null;
-              localStorage.setItem('studyflow_user', JSON.stringify(u));
-              showMsg('signup-msg', 'error', 'That class is full (max 5 students on free plan). Your account was created — ask your teacher to upgrade.');
-            }
-          })
-          .catch(function(){});
+  /* One banner for anything that is not about a single field. It can carry
+     one action - "Reset password", "Sign in instead" - because the fix for
+     most auth errors is somewhere else on this page. */
+  function showAlert(kind, text, action) {
+    var el = $('alert');
+    el.className = 'alert show ' + kind;
+    el.innerHTML = (kind === 'ok' ? ICON_OK : ICON_ERR) + '<div><span></span></div>';
+    el.querySelector('span').textContent = text;
+    if (action) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'alert-act'; b.textContent = action.label;
+      b.addEventListener('click', action.run);
+      el.lastChild.appendChild(document.createTextNode(' '));
+      el.lastChild.appendChild(b);
+    }
+  }
+  function hideAlert() { var el = $('alert'); el.className = 'alert'; el.innerHTML = ''; }
+
+  function setBusy(on) {
+    busy = on;
+    var btn = $('submit-btn');
+    btn.disabled = on;
+    btn.setAttribute('aria-busy', on ? 'true' : 'false');
+    $('submit-label').textContent = on ? COPY[mode].busy : COPY[mode].submit;
+    $('google-btn').disabled = on;
+  }
+
+  /* ── Field checks: on blur and on submit, never mid-word (Baymard) ─────── */
+  function checkEmail(show) {
+    var v = $('email').value.trim();
+    if (!v) { if (show) setError('email', 'Enter your email address.'); return false; }
+    if (!EMAIL_RE.test(v)) { if (show) setError('email', 'That doesn’t look like an email address. Check for a missing @ or dot.'); return false; }
+    clearError('email');
+    return true;
+  }
+  function checkPassword(show) {
+    var v = $('password').value;
+    if (!v) { if (show) setError('password', mode === 'signup' ? 'Choose a password.' : 'Enter your password.'); return false; }
+    if (mode === 'signup' && v.length < MIN_PW) { if (show) setError('password', 'Use at least ' + MIN_PW + ' characters.'); return false; }
+    clearError('password');
+    return true;
+  }
+  function checkName(show) {
+    if (!$('name').value.trim()) { if (show) setError('name', 'Tell us what to call you.'); return false; }
+    clearError('name');
+    return true;
+  }
+  /* Forgive the hyphen and the case ("sfab12", "ab12"), but never invent a
+     code: anything that is not SF plus four characters comes back as typed,
+     so the format check can reject it. Truncating "MS-7401" to "SF-MS74"
+     would pass the check and join a class that does not exist. */
+  function normaliseCode(v) {
+    var raw = String(v || '').trim().toUpperCase();
+    var s = raw.replace(/[^A-Z0-9]/g, '');
+    var rest = s.indexOf('SF') === 0 && s.length === 6 ? s.slice(2) : s;
+    return rest.length === 4 ? 'SF-' + rest : raw;
+  }
+  function checkCode(show) {
+    var v = $('code').value.trim();
+    if (!v) { clearError('code'); return true; }
+    var n = normaliseCode(v);
+    if (!CODE_RE.test(n)) { if (show) setError('code', 'Class codes look like SF-AB12. Check with your teacher, or leave it blank.'); return false; }
+    $('code').value = n;
+    clearError('code');
+    return true;
+  }
+  function updatePwRule() {
+    $('pw-rule').classList.toggle('met', $('password').value.length >= MIN_PW);
+  }
+
+  /* "gmial.com" is the commonest reason a verification or reset email never
+     arrives. Suggest, never correct. */
+  var DOMAINS = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'aol.com', 'live.com', 'me.com', 'msn.com', 'protonmail.com'];
+  function editDistance(a, b) {
+    var m = a.length, n = b.length, d = [], i, j;
+    for (i = 0; i <= m; i++) { d[i] = [i]; }
+    for (j = 0; j <= n; j++) { d[0][j] = j; }
+    for (i = 1; i <= m; i++) for (j = 1; j <= n; j++) {
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    return d[m][n];
+  }
+  function suggestEmail() {
+    var hint = $('email-hint');
+    hint.hidden = true; hint.textContent = '';
+    var v = $('email').value.trim().toLowerCase();
+    var at = v.lastIndexOf('@');
+    if (at < 1) return;
+    var dom = v.slice(at + 1);
+    if (!dom || DOMAINS.indexOf(dom) !== -1) return;
+    var best = '', bestD = 3;
+    DOMAINS.forEach(function (d) { var dist = editDistance(dom, d); if (dist < bestD) { bestD = dist; best = d; } });
+    if (!best || bestD > 2) return;
+    var fixed = v.slice(0, at + 1) + best;
+    hint.appendChild(document.createTextNode('Did you mean '));
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'suggest'; b.textContent = fixed;
+    b.addEventListener('click', function () { $('email').value = fixed; hint.hidden = true; checkEmail(false); focusFirstEmpty(); });
+    hint.appendChild(b);
+    hint.appendChild(document.createTextNode('?'));
+    hint.hidden = false;
+  }
+
+  /* ── Auth ────────────────────────────────────────────────────────────── */
+  function errCode(err) { return (err && err.code) || ''; }
+
+  function signIn() {
+    var email = $('email').value.trim(), password = $('password').value;
+    var persistence = $('remember').checked ? browserLocalPersistence : browserSessionPersistence;
+    setBusy(true); hideAlert();
+    /* "Keep me signed in" controls real session persistence: local keeps the
+       session across browser restarts, session ends it when the tab closes -
+       what someone on a shared school computer expects. If setting it fails
+       we still sign in on the default rather than block the learner. */
+    setPersistence(auth, persistence)
+      .catch(function () {})
+      .then(function () { return signInWithEmailAndPassword(auth, email, password); })
+      .then(function (cred) { saveUser(cred.user); smartRedirect(cred.user.email); })
+      .catch(function (err) {
+        setBusy(false);
+        var c = errCode(err);
+        if (c === 'auth/invalid-credential' || c === 'auth/wrong-password' || c === 'auth/invalid-login-credentials') {
+          showAlert('bad', 'That email and password don’t match.', { label: 'Reset your password', run: function () { setMode('reset'); } });
+          $('password').select();
+        } else if (c === 'auth/user-not-found') {
+          showAlert('bad', 'There’s no account with that email yet.', { label: 'Create one', run: function () { setMode('signup'); } });
+        } else if (c === 'auth/invalid-email') {
+          setError('email', 'That doesn’t look like an email address.');
+        } else if (c === 'auth/too-many-requests') {
+          showAlert('bad', 'Too many tries. Wait a few minutes, or reset your password now.', { label: 'Reset password', run: function () { setMode('reset'); } });
+        } else if (c === 'auth/user-disabled') {
+          showAlert('bad', 'This account has been turned off. Contact us and we will sort it out.');
+        } else if (c === 'auth/network-request-failed') {
+          showAlert('bad', 'Can’t reach StudyFlow. Check your internet connection and try again.');
+        } else {
+          showAlert('bad', 'Sign-in didn’t work' + (c ? ' (' + c.replace('auth/', '') + ')' : '') + '. Try again.');
         }
-        // New users always go to app.html to create first plan
-        window.location.href = 'app.html';
-      })
-      .catch(function(err) {
-        if (btn) { btn.disabled = false; btn.textContent = 'Create account →'; }
-        var msg = err.code === 'auth/email-already-in-use' ? 'An account already exists with that email. Please sign in.' :
-                  err.code === 'auth/weak-password' ? 'Password is too weak. Use at least 6 characters.' :
-                  err.code === 'auth/network-request-failed' ? 'Network error. Check your connection.' :
-                  'Error: ' + err.message;
-        showMsg('signup-msg', 'error', msg);
       });
   }
-  window.handleSignup = handleSignup;
+
+  /* Joining a class used to be fire-and-forget with the redirect on the very
+     next line, so the request was usually cancelled by the page unloading
+     and the "class is full" message could never be seen. Wait for it, but
+     never longer than a few seconds. */
+  function joinClass(code, record) {
+    return new Promise(function (resolve) {
+      var t = setTimeout(function () { resolve('timeout'); }, 5000);
+      fetch('api/class', {
+        method: 'POST', keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'join', classCode: code, studentData: record })
+      }).then(function (r) { return r.json(); })
+        .then(function (d) { clearTimeout(t); resolve(d && d.error === 'class_full' ? 'full' : 'ok'); })
+        .catch(function () { clearTimeout(t); resolve('error'); });
+    });
+  }
+
+  function signUp() {
+    var name = $('name').value.trim(), email = $('email').value.trim(), password = $('password').value;
+    var code = $('code').value.trim() ? normaliseCode($('code').value) : '';
+    setBusy(true); hideAlert();
+    createUserWithEmailAndPassword(auth, email, password)
+      .then(function (cred) { return updateProfile(cred.user, { displayName: name }).catch(function () {}).then(function () { return cred; }); })
+      .then(function (cred) {
+        var user = saveUser({ email: cred.user.email, displayName: name, uid: cred.user.uid }, { classCode: code || null, tier: 'free' });
+        if (!code) { window.location.href = 'app.html'; return; }
+        var record = { name: name, email: cred.user.email, joinedAt: new Date().toISOString(), streak: 0, avgScore: null, lastActive: null };
+        try {
+          var classData = JSON.parse(readLS('studyflow_class_' + code) || '{"students":[]}');
+          if (!classData.students.some(function (s) { return s.email === cred.user.email; })) {
+            classData.students.push(record);
+            writeLS('studyflow_class_' + code, JSON.stringify(classData));
+          }
+        } catch (e) {}
+        return joinClass(code, record).then(function (res) {
+          if (res !== 'full') { window.location.href = 'app.html'; return; }
+          user.classCode = null;
+          writeLS('studyflow_user', JSON.stringify(user));
+          setBusy(false);
+          showAlert('info', 'Your account is ready, but class ' + code + ' is full (5 students on a free class). Ask your teacher to upgrade, then add the code later.',
+                    { label: 'Continue to StudyFlow', run: function () { window.location.href = 'app.html'; } });
+        });
+      })
+      .catch(function (err) {
+        setBusy(false);
+        var c = errCode(err);
+        if (c === 'auth/email-already-in-use') {
+          showAlert('info', 'You already have an account with this email.', { label: 'Sign in instead', run: function () { setMode('signin', { keepAlert: false }); } });
+        } else if (c === 'auth/weak-password' || c === 'auth/password-does-not-meet-requirements') {
+          setError('password', 'Choose a stronger password: at least ' + MIN_PW + ' characters, not a common word.');
+        } else if (c === 'auth/invalid-email') {
+          setError('email', 'That doesn’t look like an email address.');
+        } else if (c === 'auth/operation-not-allowed') {
+          showAlert('bad', 'Email sign-up is switched off right now. Use Continue with Google instead.');
+        } else if (c === 'auth/network-request-failed') {
+          showAlert('bad', 'Can’t reach StudyFlow. Check your internet connection and try again.');
+        } else {
+          showAlert('bad', 'We couldn’t create your account' + (c ? ' (' + c.replace('auth/', '') + ')' : '') + '. Try again.');
+        }
+      });
+  }
+
+  /* The old "Forgot password?" refused to do anything until an email had
+     been typed into the sign-in box above it. It is its own screen now, and
+     with email-enumeration protection on, Firebase answers the same whether
+     or not the account exists - so the copy says "if". */
+  function sendReset() {
+    var email = $('email').value.trim();
+    setBusy(true); hideAlert();
+    sendPasswordResetEmail(auth, email)
+      .then(function () {
+        setBusy(false);
+        $('auth-form').hidden = true;
+        $('switch').hidden = true;
+        $('sent-text').innerHTML = 'If there’s an account for <b></b>, a reset link is on its way. It can take a minute, and check spam if it doesn’t show up.';
+        $('sent-text').querySelector('b').textContent = email;
+        $('sent').hidden = false;
+        $('sent-back').focus();
+      })
+      .catch(function (err) {
+        setBusy(false);
+        var c = errCode(err);
+        if (c === 'auth/invalid-email') setError('email', 'That doesn’t look like an email address.');
+        else if (c === 'auth/user-not-found') showAlert('bad', 'There’s no account with that email.', { label: 'Create one', run: function () { setMode('signup'); } });
+        else if (c === 'auth/network-request-failed') showAlert('bad', 'Can’t reach StudyFlow. Check your internet connection and try again.');
+        else showAlert('bad', 'We couldn’t send the link' + (c ? ' (' + c.replace('auth/', '') + ')' : '') + '. Try again.');
+      });
+  }
 
   function googleAuth() {
-    var provider = new GoogleAuthProvider();
-    signInWithPopup(auth, provider)
-      .then(function(cred) {
-        saveUser(cred.user);
-        smartRedirect();
-      })
-      .catch(function(err) {
-        console.error('Google auth error:', err.code, err.message);
-        var msg = err.code === 'auth/popup-closed-by-user' ? 'Sign in cancelled.' :
-                  err.code === 'auth/popup-blocked' ? 'Popup was blocked — please allow popups for this site and try again.' :
-                  err.code === 'auth/unauthorized-domain' ? 'This domain is not authorized. Please contact support.' :
-                  err.code === 'auth/operation-not-allowed' ? 'Google sign in is not enabled. Please contact support.' :
-                  'Google sign in failed: ' + err.message;
-        // Show error on whichever tab is visible
-        showMsg('login-msg', 'error', msg);
-        showMsg('signup-msg', 'error', msg);
+    if (busy) return;
+    hideAlert();
+    $('google-btn').disabled = true;
+    signInWithPopup(auth, new GoogleAuthProvider())
+      .then(function (cred) { saveUser(cred.user); smartRedirect(cred.user.email); })
+      .catch(function (err) {
+        $('google-btn').disabled = false;
+        var c = errCode(err);
+        /* Closing the Google window is a choice, not an error. */
+        if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request') return;
+        console.error('Google auth error:', c, err && err.message);
+        if (c === 'auth/popup-blocked') showAlert('bad', 'Your browser blocked the Google window. Allow pop-ups for this site, then try again.');
+        else if (c === 'auth/account-exists-with-different-credential') showAlert('info', 'This email already has a StudyFlow password. Sign in with it below.', { label: 'Sign in', run: function () { setMode('signin'); } });
+        else if (c === 'auth/unauthorized-domain') showAlert('bad', 'Google sign-in isn’t set up for this web address. Use your email instead, or contact us.');
+        else if (c === 'auth/operation-not-allowed') showAlert('bad', 'Google sign-in is switched off right now. Use your email instead.');
+        else if (c === 'auth/network-request-failed') showAlert('bad', 'Can’t reach Google. Check your internet connection and try again.');
+        else showAlert('bad', 'Google sign-in didn’t work' + (c ? ' (' + c.replace('auth/', '') + ')' : '') + '. Try again, or use your email.');
       });
   }
-  window.googleAuth = googleAuth;
-  function resetPassword() {
-    var email = document.getElementById('login-email').value.trim();
-    if (!email || !email.includes('@')) {
-      showMsg('login-msg', 'error', 'Enter your email above first, then click Forgot password.');
+
+  /* ── Wiring ──────────────────────────────────────────────────────────── */
+  $('auth-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (busy) return;
+    var ok = true, first = null;
+    function need(fn, id) { if (!fn(true)) { ok = false; if (!first) first = id; } }
+    if (mode === 'signup') need(checkName, 'name');
+    need(checkEmail, 'email');
+    if (mode !== 'reset') need(checkPassword, 'password');
+    if (mode === 'signup') need(checkCode, 'code');
+    if (!ok) {
+      if (first === 'code') openCode(true);
+      $(first).focus();
       return;
     }
-    sendPasswordResetEmail(auth, email)
-      .then(function() {
-        showMsg('login-msg', 'success', 'Password reset email sent! Check your inbox.');
-      })
-      .catch(function(err) {
-        var msg = err.code === 'auth/user-not-found' ? 'No account found with that email.' :
-                  err.code === 'auth/invalid-email' ? 'Please enter a valid email.' :
-                  'Error: ' + err.message;
-        showMsg('login-msg', 'error', msg);
-      });
+    if (mode === 'signin') signIn();
+    else if (mode === 'signup') signUp();
+    else sendReset();
+  });
+
+  $('seg-signin').addEventListener('click', function () { if (mode !== 'signin') setMode('signin'); });
+  $('seg-signup').addEventListener('click', function () { if (mode !== 'signup') setMode('signup'); });
+  $('switch-btn').addEventListener('click', function () { setMode(mode === 'signin' ? 'signup' : 'signin'); });
+  $('forgot-link').addEventListener('click', function () { setMode('reset'); });
+  $('sent-back').addEventListener('click', function () { setMode('signin'); });
+  $('google-btn').addEventListener('click', googleAuth);
+
+  $('email').addEventListener('blur', function () { if ($('email').value.trim()) checkEmail(true); suggestEmail(); });
+  $('email').addEventListener('input', function () { if ($('email').getAttribute('aria-invalid')) checkEmail(false); $('email-hint').hidden = true; });
+  $('password').addEventListener('blur', function () { if ($('password').value) checkPassword(true); });
+  $('password').addEventListener('input', function () { updatePwRule(); if ($('password').getAttribute('aria-invalid')) checkPassword(false); });
+  $('name').addEventListener('input', function () { if ($('name').getAttribute('aria-invalid')) checkName(false); });
+  $('code').addEventListener('blur', function () { checkCode(true); });
+  $('code').addEventListener('input', function () { if ($('code').getAttribute('aria-invalid')) checkCode(false); });
+
+  function capsCheck(e) {
+    var on = e.getModifierState && e.getModifierState('CapsLock');
+    $('caps-hint').classList.toggle('show', !!on);
   }
-  /* Show/hide the password. Swaps the eye for an eye-with-slash and keeps
-     aria-pressed in step, so a screen reader announces the state rather than
-     just "button". Defined on window because the markup calls it inline, and
-     this script is a module (its scope is not global). */
-  function togglePassword(inputId, btn) {
-    var inp = document.getElementById(inputId);
-    if (!inp || !btn) return;
+  $('password').addEventListener('keydown', capsCheck);
+  $('password').addEventListener('keyup', capsCheck);
+  $('password').addEventListener('blur', function () { $('caps-hint').classList.remove('show'); });
+
+  /* Show/hide swaps the eye for an eye-with-slash and keeps aria-pressed in
+     step, so a screen reader announces the state rather than just "button". */
+  $('pw-toggle').addEventListener('click', function () {
+    var inp = $('password'), btn = $('pw-toggle');
     var show = inp.type === 'password';
     inp.type = show ? 'text' : 'password';
-    btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+    btn.setAttribute('aria-pressed', String(show));
     btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
     btn.innerHTML = show
-      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-        'stroke-linecap="round" stroke-linejoin="round">' +
-        '<path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 7 10 7a18.5 18.5 0 0 1-2.16 3.19"/>' +
-        '<path d="M6.61 6.61A18.5 18.5 0 0 0 2 11s3.5 7 10 7a9.1 9.1 0 0 0 4.24-1.02"/>' +
-        '<path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M2 2l20 20"/></svg>'
-      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-        'stroke-linecap="round" stroke-linejoin="round">' +
-        '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>' +
-        '<circle cx="12" cy="12" r="3"/></svg>';
-    /* Keep the caret where the learner left it. */
-    try { inp.focus({ preventScroll: true }); } catch (e) { /* older engines */ }
-  }
-  window.togglePassword = togglePassword;
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 7 10 7a18.5 18.5 0 0 1-2.16 3.19"/><path d="M6.61 6.61A18.5 18.5 0 0 0 2 11s3.5 7 10 7a9.1 9.1 0 0 0 4.24-1.02"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M2 2l20 20"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+    try { inp.focus({ preventScroll: true }); } catch (e) {}
+  });
 
-  window.resetPassword = resetPassword;
-
-  var selectedRole = 'student';
-  function selectRole(role) {
-    selectedRole = role;
-    document.getElementById('role-student').classList.toggle('active', role === 'student');
-    document.getElementById('role-teacher').classList.toggle('active', role === 'teacher');
+  function openCode(open) {
+    $('code-toggle').setAttribute('aria-expanded', String(open));
+    $('code-box').hidden = !open;
   }
-  window.selectRole = selectRole;
+  $('code-toggle').addEventListener('click', function () {
+    var open = $('code-toggle').getAttribute('aria-expanded') !== 'true';
+    openCode(open);
+    if (open) $('code').focus();
+  });
+
+  /* ── Starting state ──────────────────────────────────────────────────────
+     ?mode=signup comes from the landing page's "Build my study plan"
+     buttons: a new visitor should land on the form that makes an account,
+     not on "Welcome back". ?class=SF-AB12 comes from a teacher's invite and
+     opens sign-up with the code already in. A device that has signed in
+     before starts on sign-in with the email filled. */
+  (function start() {
+    var want = (params.get('mode') || '').toLowerCase();
+    var code = normaliseCode(params.get('class') || params.get('code') || '');
+    var last = readLS(LAST_EMAIL_KEY) || '';
+    if (last) $('email').value = last;
+    var initial = (want === 'signup' || want === 'reset' || want === 'signin') ? want : (code ? 'signup' : 'signin');
+    if (want === 'signup' && last && !code) {
+      /* Someone who has signed in on this device before and still clicked
+         "Build my study plan" most likely wants their account, not a new one. */
+      initial = 'signin';
+    }
+    setMode(initial, { focus: window.matchMedia('(min-width: 861px)').matches });
+    if (code && CODE_RE.test(code)) { $('code').value = code; openCode(true); }
+  })();
 </script>
 </body>
 </html>

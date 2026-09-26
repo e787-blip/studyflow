@@ -2576,10 +2576,24 @@
     };
     var schema = SCHEMAS[lockType] || SCHEMAS.general;
 
+    /* app.html asks the learner's grade and what to focus on, pitches every
+       day of the plan with them, and saves both onto the plan. The top-up
+       has to match, or question 11 onwards reads as if it were written for
+       someone else. Plans saved before those questions existed have neither
+       field and get the prompt exactly as it was. */
+    var learnerLine = '';
+    var lgGrade = plan && plan.grade ? String(plan.grade) : '';
+    if (/^\d+$/.test(lgGrade)) learnerLine += 'Learner: a grade ' + lgGrade + ' student. Word every question, option and explanation for that reading level.\n';
+    else if (lgGrade === 'college') learnerLine += 'Learner: a college student.\n';
+    else if (lgGrade === 'adult') learnerLine += 'Learner: an adult, not in school.\n';
+    if (plan && plan.focus) learnerLine += 'They asked to focus on (only where it falls inside this topic): ' +
+      String(plan.focus).replace(/[\r\n"]+/g, ' ').replace(/\s{2,}/g, ' ').trim().substring(0, 300) + '\n';
+
     var prompt =
       'TOPIC LOCK: ' + lockLine + '\n' +
       (lockMicro   ? 'Exact scope: ' + lockMicro + '\n' : '') +
       (lockSubject ? 'Course: ' + lockSubject + '\n' : '') +
+      learnerLine +
       (lockTerms   ? 'Vocabulary to draw from: ' + lockTerms + '\n' : '') +
       'Lesson content:\n' + (day.content || '').substring(0, 900) + '\n\n' +
       'Generate 10 completely NEW and UNIQUE practice questions that are ONLY about "' + lockLine + '".\n\n' +
