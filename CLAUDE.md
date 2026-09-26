@@ -25,7 +25,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 
 | File | Size | Role |
 |---|---|---|
-| `index.html` | ~130 KB | Marketing / landing page |
+| `index.html` | ~172 KB | Marketing / landing page. 3D hero, one `<script>` block |
 | `app.html` | ~172 KB | Plan generation. Subject detection, AI prompt, question schemas, validators |
 | `lesson.html` | ~590 KB | The session runtime. Card queue, all question renderers, the whiteboard |
 | `dashboard.html` | ~101 KB | Plan list and progress |
@@ -2038,10 +2038,34 @@ genuinely nothing.
   one-word revert — but it is dead code, and dead code that can silently
   reactivate is exactly how `Scene.equation` kept drawing the card it was
   supposed to have replaced. Decide whether to keep it.
-- **`index.html` has not been reviewed.** It loads clean — no console errors, no
-  broken images, no horizontal overflow, and all eight internal links resolve —
-  but the hero section is still the intended next task. `hero-bg.mp4` has been
-  deleted: 1.6 MB committed and referenced by nothing.
+- **`index.html` was redesigned (Sept 2026).** Reviewed by the user as
+  `index-test.html` before it replaced the live page. What a future edit needs
+  to know:
+  - **The hero is a three.js r128 scene** (same cdnjs build, loaded `defer`,
+    booted at `DOMContentLoaded`). Loose notes tumble in the navy ripple,
+    spiral in and settle as four day cards as the hero scrolls. It has three
+    modes: `journey`, `still` (reduced motion, honoured live) and `flat` (no
+    WebGL). Frame times over 30ms step the canvas resolution down, never up.
+    `window.__sf.hero()` reports the mode and progress.
+  - **"Here's what your plan looks like" is a working mini session.** Hold
+    to build the plan, then the card flips in 3D to a real practice question
+    built from `lesson.html`'s own card styles (`card-header`, `q-option`,
+    `feedback-box`, the monochrome streak pill). If the lesson card's look
+    changes, this copy of it goes stale. The hooks are `window.__holdState()`
+    and `window.__demo()`.
+  - **The nav's entrance animation fills `backwards`, not `both`.** A
+    finished animation that stays "in effect" makes the nav a backdrop root,
+    and then its frosted bar has nothing to blur: headings scrolled under
+    the logo as sharp ghosts.
+  - **`overflow-x: clip`, never `hidden`**, on `html` and `body`. `hidden`
+    creates a scroll container and every pinned (`position: sticky`) section
+    stops pinning.
+  - Phones get a floating "Build my study plan" button only between the
+    hero and pricing, with an iOS-26-style scroll-edge fade behind it.
+  - The waitlist is gone on purpose: a waitlist contradicts a product that
+    is already live, and its counter jumped from 47 to 100.
+
+  `hero-bg.mp4` has been deleted: 1.6 MB committed and referenced by nothing.
 
   **The hero shader is the navy ripple, and that is a decision, not an
   oversight.** A monochrome mesh gradient — black through `#2e2e2e` to white,
@@ -2049,7 +2073,8 @@ genuinely nothing.
   in one sitting (`823564b`, reverted). It was a faithful version of the
   reference and it looked wrong here: the landing page is one blue, and a
   black-and-white hero above it made the rest of the page look like a
-  different product. Try something else before trying that again.
+  different product. Try something else before trying that again. The 3D
+  hero keeps the ripple as its background.
 
 ## Conventions
 
