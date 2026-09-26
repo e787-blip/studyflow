@@ -1,0 +1,2683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>StudyFlow · Study plans from your notes</title>
+<meta name="description" content="Upload your notes and StudyFlow builds a day-by-day study plan with real practice questions. Free to start." />
+<meta name="theme-color" content="#0e142a" />
+<meta property="og:title" content="StudyFlow" />
+<meta property="og:description" content="Upload your notes. Ace your exam. A day-by-day study plan in about a minute." />
+<meta property="og:url" content="https://studyflow-ten-vert.vercel.app/" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNWI4ZGY4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzI4NTFjOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0idXJsKCNnKSIvPgogIDxyZWN0IHg9IjciIHk9IjgiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNyIgcng9IjIuNSIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMjUiLz4KICA8cmVjdCB4PSIxMCIgeT0iOCIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3IiByeD0iMi41IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC45Ii8+CiAgPHJlY3QgeD0iMTMiIHk9IjEzIiB3aWR0aD0iNyIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSIjMzU2N2UwIi8+CiAgPHJlY3QgeD0iMTMiIHk9IjE2LjUiIHdpZHRoPSI1IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMzNTY3ZTAiIG9wYWNpdHk9IjAuNyIvPgogIDxyZWN0IHg9IjEzIiB5PSIyMCIgd2lkdGg9IjYiIGhlaWdodD0iMS41IiByeD0iMC43NSIgZmlsbD0iIzRhN2NmNiIgb3BhY2l0eT0iMC41Ii8+Cjwvc3ZnPg=="/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Inter:wght@700&display=swap" rel="stylesheet">
+<style>
+/* TEST VERSION of index.html. Nothing links here; it exists to be looked at
+   before any of it replaces the live page.
+
+   Design rules this file keeps (CLAUDE.md wins over the design skills):
+   one blue (#4a7cf6) on navy and paper, Instrument Serif + DM Sans, card hover
+   is a blue border only (no lift, no scale), and the hero keeps the navy
+   ripple shader, now as the background of a 3D scene instead of the whole
+   picture.
+
+   Radius system: pills for anything you can click, 20px for cards, 12px for
+   small panels inside cards.
+   Z-index scale: -1 environment layer, 1-3 hero layers, 100 nav, 200 skip link. */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --night: #0e142a;
+  --night-2: #151c38;
+  --ink: #1a1d2e;
+  --ink-2: #2a3150;
+  --paper: #f5f7fc;
+  --card: #fdfdff;
+  --line: #e2e8f4;
+  --line-strong: #c3cfe6;
+  --muted: #5b6378;
+  --blue: #4a7cf6;
+  --blue-btn: #3567e0;
+  --blue-deep: #2851c8;
+  --blue-soft: #e3ecff;
+  --blue-mist: #eef3ff;
+  --ok: #117a5a;
+  --ok-soft: #e0f4ec;
+  --serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'DM Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-io: cubic-bezier(.65, 0, .35, 1);
+  --tshadow: 0 1px 2px rgba(5, 8, 20, .9), 0 3px 14px rgba(5, 8, 20, .6), 0 10px 40px rgba(5, 8, 20, .55);
+  --shadow-card: 0 1px 2px rgba(26, 40, 90, .05), 0 14px 34px -10px rgba(26, 40, 90, .16);
+  /* Film grain, drawn once by the browser from an SVG noise filter. It breaks the
+     banding in large gradients and the sterile flatness of the paper. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  color-scheme: light;
+}
+
+/* overflow-x: clip, NOT hidden. `hidden` on html/body turns them into scroll
+   containers, and a scroll container between a sticky element and the
+   viewport stops it sticking: that is exactly how index.html once killed its
+   two pinned showcases (see its comment on #how). `clip` clips without
+   becoming a scroll container, so #ws, #fs and the hero stage keep pinning. */
+html { scroll-behavior: smooth; overflow-x: clip; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.6;
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+img, svg { max-width: 100%; }
+a { color: inherit; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2.5px solid var(--blue); outline-offset: 3px; border-radius: 6px; }
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.skip { position: absolute; left: 12px; top: -64px; z-index: 200; background: var(--ink); color: #fff; padding: .65rem 1rem; border-radius: 999px; text-decoration: none; font-weight: 600; transition: top .2s var(--ease-out); }
+.skip:focus { top: 12px; }
+
+/* ── ENVIRONMENT: the page is a notebook ──
+   One fixed layer behind every light section: faint ruled lines, the blue
+   margin rule of a notebook page, and a slow drifting glow. Sections are
+   transparent so scrolling reads as moving down one sheet of paper. */
+.env { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.env::before {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(74, 124, 246, .07) 31px, rgba(74, 124, 246, .07) 32px);
+}
+.env::after { content: ""; position: absolute; top: 0; bottom: 0; left: max(22px, 3.2vw); width: 1.5px; background: rgba(74, 124, 246, .15); }
+.grain { position: absolute; inset: 0; pointer-events: none; background-image: var(--grain); background-size: 180px 180px; opacity: .045; }
+.hero-stage .grain { z-index: 2; opacity: .07; }
+.env-glow {
+  position: absolute; left: 50%; top: 50%; width: 80vmax; height: 80vmax; border-radius: 50%;
+  background: radial-gradient(circle, rgba(74, 124, 246, .10) 0%, rgba(74, 124, 246, 0) 62%);
+  transform: translate(-70%, -60%);
+  animation: envDrift 96s ease-in-out -30s infinite alternate;
+}
+@keyframes envDrift {
+  0% { transform: translate(-85%, -70%); }
+  50% { transform: translate(-25%, -35%); }
+  100% { transform: translate(-60%, -85%); }
+}
+@media (max-width: 720px) { .env::after { display: none; } }
+
+/* ── NAV: floating glass pill (kept from index.html) ── */
+nav.site-nav {
+  position: fixed; top: calc(1rem + env(safe-area-inset-top, 0px)); left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 max(16px, 2rem);
+  pointer-events: none;
+  transition: top .35s var(--ease-out);
+  /* backwards, not both: a finished animation still "in effect" makes the nav
+     a backdrop root, and the frosted bar below then had nothing to blur, so
+     headings scrolled under the logo as sharp ghosts. */
+  animation: navIn .8s var(--ease-out) backwards;
+}
+@keyframes navIn { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
+.nav-logo { pointer-events: auto; display: inline-flex; text-decoration: none; }
+.nav-logo svg { width: 150px; height: 38px; }
+.logo-study { fill: #fff; transition: fill .35s; }
+.nav-pill {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: .15rem;
+  background: rgba(255, 255, 255, .07);
+  -webkit-backdrop-filter: blur(22px) saturate(170%);
+  backdrop-filter: blur(22px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 999px; padding: .38rem .45rem;
+  /* The one top-edge highlight is what makes a panel read as glass rather
+     than tinted film (Apple's Liquid Glass specular edge). */
+  box-shadow: 0 4px 24px rgba(0, 0, 0, .18), inset 0 1.5px 0 rgba(255, 255, 255, .24), inset 0 -1px 0 rgba(255, 255, 255, .05);
+  pointer-events: auto;
+  transition: background-color .35s, border-color .35s, box-shadow .35s;
+}
+.nav-pill a {
+  font-size: .84rem; font-weight: 500; color: rgba(255, 255, 255, .84); text-decoration: none;
+  padding: .42rem .85rem; border-radius: 999px; white-space: nowrap;
+  transition: background-color .2s, color .2s;
+}
+.nav-pill a { position: relative; z-index: 1; }
+.nav-pill a:hover { background: rgba(255, 255, 255, .14); color: #fff; }
+/* iOS 26 tab bars slide a lens to the selected tab. Here it slides to the
+   section you are reading. */
+.nav-lens {
+  position: absolute; left: 0; top: .38rem; bottom: .38rem; width: var(--lw, 0px); border-radius: 999px; pointer-events: none;
+  transform: translateX(var(--lx, 0px)); opacity: var(--lo, 0);
+  background: rgba(255, 255, 255, .15); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .3);
+  transition: transform .6s var(--ease-out), width .6s var(--ease-out), opacity .3s ease, background-color .35s;
+}
+.nav-pill a[aria-current] { color: #fff; }
+.nav-right { display: flex; align-items: center; gap: .6rem; pointer-events: auto; }
+.nav-dashboard {
+  display: inline-flex; align-items: center; font-size: .84rem; font-weight: 600; white-space: nowrap;
+  color: rgba(255, 255, 255, .9); text-decoration: none;
+  padding: .5rem 1.05rem; border-radius: 999px;
+  background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .22);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  transition: background-color .2s, border-color .2s, color .2s;
+}
+.nav-dashboard:hover { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .42); }
+.nav-cta {
+  display: inline-flex; align-items: center; font-size: .84rem; font-weight: 700; white-space: nowrap;
+  color: var(--night); background: #f7f9ff; text-decoration: none;
+  padding: .52rem 1.15rem; border-radius: 999px; box-shadow: 0 2px 14px rgba(0, 0, 0, .18);
+  transition: background-color .2s, color .2s, box-shadow .2s;
+}
+.nav-cta:hover { background: var(--blue-soft); }
+nav.site-nav.on-light { top: calc(.6rem + env(safe-area-inset-top, 0px)); }
+/* Past the hero, the logo sat straight on top of headings and on the dark
+   schools panel. A frosted bar behind the whole nav keeps it on paper. */
+nav.site-nav::before {
+  content: ""; position: absolute; z-index: -1; left: 0; right: 0; pointer-events: none;
+  top: calc(-.6rem - env(safe-area-inset-top, 0px)); bottom: -.6rem;
+  background: rgba(245, 247, 252, .93); -webkit-backdrop-filter: blur(16px) saturate(160%); backdrop-filter: blur(16px) saturate(160%);
+  border-bottom: 1px solid rgba(26, 40, 90, .07); box-shadow: 0 1px 0 rgba(255, 255, 255, .7);
+  opacity: 0; transition: opacity .35s;
+}
+@media (prefers-reduced-transparency: reduce) {
+  .nav-pill, .nav-dashboard, .btn-glass, nav.site-nav::before { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .nav-pill { background: rgba(20, 26, 52, .94); }
+  .nav-pill.lit { background: var(--card); }
+  nav.site-nav::before { background: var(--paper); }
+}
+nav.site-nav.on-light::before { opacity: 1; }
+/* Each part of the nav turns dark-on-light on its own (.lit), at the moment
+   the hero's daylight reaches it, so nothing is ever white on a light ground. */
+.nav-logo.lit .logo-study { fill: var(--ink); }
+.nav-pill.lit { background: rgba(253, 253, 255, .8); border-color: rgba(26, 29, 46, .08); box-shadow: 0 2px 20px rgba(26, 40, 90, .10), inset 0 1.5px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(26, 40, 90, .05); }
+.nav-pill.lit a { color: var(--muted); }
+.nav-pill.lit a:hover { background: var(--blue-mist); color: var(--ink); }
+.nav-pill.lit .nav-lens { background: var(--blue-soft); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .9), 0 1px 3px rgba(26, 40, 90, .1); }
+.nav-pill.lit a[aria-current] { color: var(--blue-deep); }
+.nav-dashboard.lit { color: var(--blue-deep); background: rgba(74, 124, 246, .08); border-color: rgba(74, 124, 246, .24); }
+.nav-dashboard.lit:hover { background: rgba(74, 124, 246, .14); border-color: rgba(74, 124, 246, .4); }
+.nav-cta.lit { background: var(--blue-btn); color: #fff; box-shadow: 0 4px 16px -4px rgba(53, 103, 224, .55); }
+.nav-cta.lit:hover { background: var(--blue-deep); }
+@media (max-width: 1080px) { .nav-pill { display: none; } }
+@media (max-width: 640px) {
+  .nav-dashboard { display: none; }
+  .nav-logo svg { width: 132px; height: 34px; }
+}
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  font-family: var(--sans); font-size: .95rem; font-weight: 600; line-height: 1;
+  padding: .95rem 1.55rem; border-radius: 999px; border: 1.5px solid transparent;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+  transition: background-color .2s, border-color .2s, color .2s, box-shadow .2s;
+}
+.btn:active { transform: translateY(1px); }
+.btn-light { background: #f7f9ff; color: var(--night); box-shadow: 0 6px 24px -6px rgba(0, 0, 0, .45); }
+.btn-light:hover { background: var(--blue-soft); }
+.btn-glass { background: rgba(255, 255, 255, .07); color: #fff; border-color: rgba(255, 255, 255, .3); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .2); }
+.btn-glass:hover { background: rgba(255, 255, 255, .15); border-color: rgba(255, 255, 255, .5); }
+.btn-blue { background: var(--blue-btn); color: #fff; box-shadow: 0 8px 24px -8px rgba(53, 103, 224, .7); }
+.btn-blue:hover { background: var(--blue-deep); }
+.btn-outline { background: var(--card); color: var(--blue-deep); border-color: var(--line-strong); }
+.btn-outline:hover { border-color: var(--blue); }
+@media (pointer: coarse) { .btn, .nav-cta, .nav-dashboard { min-height: 44px; } }
+/* Phones: the one action stays in the thumb zone once the hero is behind you,
+   and gets out of the way at the final call to action. */
+.sticky-cta, .edge-fade { display: none; }
+@media (max-width: 760px) {
+  .sticky-cta {
+    display: inline-flex; position: fixed; z-index: 90; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    transform: translate3d(-50%, 160%, 0); transition: transform .55s var(--ease-out);
+    box-shadow: 0 14px 30px -10px rgba(26, 40, 90, .6), inset 0 1.5px 0 rgba(255, 255, 255, .25);
+  }
+  .sticky-cta.show { transform: translate3d(-50%, 0, 0); }
+  /* The floating button sat straight on top of body copy. iOS 26 answers the
+     same problem with a scroll edge effect: content softens and fades as it
+     passes under a floating control, so the two never collide. */
+  .edge-fade {
+    display: block; position: fixed; z-index: 89; left: 0; right: 0; bottom: 0; pointer-events: none;
+    height: calc(104px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to top, rgba(245, 247, 252, .9) 0%, rgba(245, 247, 252, .55) 45%, rgba(245, 247, 252, 0) 100%);
+    -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
+    -webkit-mask-image: linear-gradient(to top, #000 50%, transparent); mask-image: linear-gradient(to top, #000 50%, transparent);
+    opacity: 0; transition: opacity .45s ease;
+  }
+  .edge-fade.show { opacity: 1; }
+}
+@media (max-width: 760px) and (prefers-reduced-transparency: reduce) {
+  .edge-fade { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* ── SHARED SECTION TYPE ── */
+/* Bottom padding a touch larger than the top: equal numbers read as top-heavy. */
+.sec { position: relative; padding-block: clamp(5rem, 10vw, 8rem) clamp(5.5rem, 11vw, 9rem); padding-inline: max(16px, 5vw); }
+.wrap { max-width: 1160px; margin-inline: auto; }
+.center { text-align: center; }
+.h2 {
+  font-family: var(--serif); font-weight: 400;
+  font-size: clamp(2.6rem, 5.6vw, 4.6rem); line-height: 1.02; letter-spacing: -.022em;
+  color: var(--ink); text-wrap: balance;
+}
+.h2 em { font-style: italic; color: var(--blue); }
+.lede { color: var(--muted); font-size: 1.06rem; line-height: 1.7; max-width: 50ch; margin-top: 1.1rem; }
+.center .lede { margin-inline: auto; }
+.eyebrow { font-family: var(--mono); font-weight: 500; font-size: .74rem; line-height: 1; letter-spacing: .14em; text-transform: uppercase; color: var(--blue-deep); margin-bottom: 1.1rem; }
+
+/* ══════════════════════════════════════════
+   HERO: a pinned 3D stage. Scroll progress 0..1 through .hero drives the
+   scene: loose pages, then a spiral stream, then four day cards.
+   Without JS (or with reduced motion) it is one screen with band 1 on it.
+══════════════════════════════════════════ */
+.hero { position: relative; height: 100vh; height: 100svh; background: var(--night); color: #fff; }
+/* The stage is 100svh so bottom-anchored text never hides under a phone's
+   toolbar; when the toolbar retracts, the hero's own ground shows beneath the
+   stage, so that ground follows the night-to-day change too. */
+.hero.is-day { background: var(--paper); }
+.hero.is-journey { height: 460vh; }
+.hero-stage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
+.hero-fallback {
+  position: absolute; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 55% at 68% 48%, rgba(74, 124, 246, .30), rgba(74, 124, 246, 0) 70%),
+    radial-gradient(ellipse 90% 80% at 50% 45%, #18214a 0%, var(--night) 70%);
+}
+#hero-3d { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; display: block; }
+.hero-stage::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 140px; z-index: 2; pointer-events: none;
+  background: linear-gradient(180deg, rgba(8, 11, 26, .72), rgba(8, 11, 26, 0));
+  opacity: calc(1 - var(--day, 0));
+}
+.hero-scrim {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  /* Tuned against the worst frame, not the average: the ripple's bright rings
+     sweep behind the words, so the scrim holds deep across the whole text column. */
+  background: linear-gradient(90deg, rgba(8, 11, 26, .86) 0%, rgba(8, 11, 26, .80) 38%, rgba(8, 11, 26, .56) 49%, rgba(8, 11, 26, .18) 58%, rgba(8, 11, 26, 0) 66%);
+  opacity: calc(1 - var(--day, 0));
+}
+.band {
+  position: absolute; z-index: 3;
+  left: max(24px, 6vw); top: 50%;
+  width: min(580px, 46vw);
+  transform: translateY(-50%);
+}
+.band-1, .band-2 { text-shadow: var(--tshadow); }
+.band .btn { text-shadow: none; }
+.hero:not(.is-journey) .band-2, .hero:not(.is-journey) .band-3 { display: none; }
+.js .is-journey .band-2, .js .is-journey .band-3 { opacity: 0; visibility: hidden; }
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: .5rem;
+  font-family: var(--mono); font-size: .76rem; font-weight: 500; letter-spacing: .12em; text-transform: uppercase;
+  color: rgba(214, 226, 255, .82); margin-bottom: 1.4rem;
+}
+.hero-eyebrow svg { width: 14px; height: 14px; }
+.hero-h1 { font-family: var(--serif); font-weight: 400; line-height: 1.02; letter-spacing: -.02em; margin-bottom: 1.5rem; }
+.hero-h1 .l1, .hero-h1 .hero-em { display: block; font-size: clamp(3rem, 6.4vw, 5.6rem); padding-bottom: .06em; }
+.hero-em {
+  font-style: italic;
+  background: linear-gradient(90deg, #93b4ff 0%, #d5e3ff 35%, #7eb0ff 55%, #c3d6ff 75%, #93b4ff 100%);
+  background-size: 250% auto;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 4px 22px rgba(5, 8, 20, .6));
+}
+.in-view .hero-em { animation: shimmerHero 6s linear -1.4s infinite; }
+@keyframes shimmerHero { 0% { background-position: 200% center; } 100% { background-position: -200% center; } }
+.hero-sub { font-size: clamp(1rem, 1.35vw, 1.14rem); line-height: 1.7; color: rgba(226, 233, 255, .86); max-width: 38ch; margin-bottom: 2rem; }
+.hero-ctas { display: flex; flex-wrap: wrap; gap: .75rem; }
+.band-h { font-family: var(--serif); font-weight: 400; font-size: clamp(2.5rem, 5vw, 4.4rem); line-height: 1.04; letter-spacing: -.02em; margin-bottom: 1.2rem; text-wrap: balance; }
+.band-h em { font-style: italic; }
+.band-p { font-size: clamp(1rem, 1.3vw, 1.12rem); line-height: 1.7; max-width: 40ch; }
+.band-2 .band-p { color: rgba(226, 233, 255, .86); }
+.band-3 { color: var(--ink); }
+.band-3 .band-h em { color: var(--blue); }
+.band-3 .band-p { color: var(--muted); margin-bottom: 1.8rem; }
+
+/* Split text, driven by the band's --k (0..1 assembly progress). Every effect
+   is transform + opacity only, scrubbed by scroll, and reverses on the way up. */
+.js .is-journey .w { display: inline-block; white-space: nowrap; }
+.js .is-journey .c {
+  display: inline-block;
+  --kc: clamp(0, (var(--k, 1) - var(--th, 0)) * 2.6, 1);
+  opacity: var(--kc);
+  transform: translate3d(calc((1 - var(--kc)) * var(--jx, 0px)), calc((1 - var(--kc)) * var(--jy, 0px)), 0) rotate(calc((1 - var(--kc)) * var(--jr, 0deg)));
+}
+.js .is-journey .rw {
+  display: inline-block;
+  --kc: clamp(0, (var(--k, 1) - var(--th, 0)) * 3, 1);
+  opacity: var(--kc);
+  transform: translate3d(0, calc((1 - var(--kc)) * .55em), 0);
+}
+.js .is-journey .band-1 .hero-eyebrow { opacity: clamp(0, var(--k, 1) * 3, 1); }
+.js .is-journey .band-1 .hero-em {
+  --ke: clamp(0, (var(--k, 1) - .32) * 2.4, 1);
+  opacity: var(--ke);
+  transform: scale(calc(.84 + .16 * var(--ke)));
+  transform-origin: 0% 60%;
+}
+.js .is-journey .band-1 .hero-sub, .js .is-journey .band-2 .band-p, .js .is-journey .band-3 .band-p {
+  --ks: clamp(0, (var(--k, 1) - .55) * 3.2, 1);
+  opacity: var(--ks);
+  transform: translate3d(0, calc((1 - var(--ks)) * 14px), 0);
+}
+.js .is-journey .band .hero-ctas {
+  --kb: clamp(0, (var(--k, 1) - .72) * 4.2, 1);
+  opacity: var(--kb);
+  transform: translate3d(0, calc((1 - var(--kb)) * 12px), 0);
+}
+
+@media (max-width: 760px), (orientation: portrait) and (max-width: 1024px) {
+  .hero.is-journey { height: 380vh; }
+  .hero-scrim { background: linear-gradient(0deg, rgba(8, 11, 26, .90) 0%, rgba(8, 11, 26, .74) 34%, rgba(8, 11, 26, .30) 54%, rgba(8, 11, 26, 0) 66%); }
+  .band { left: max(16px, 5vw); right: max(16px, 5vw); width: auto; top: auto; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); transform: none; }
+  .hero-h1 .l1, .hero-h1 .hero-em { font-size: clamp(2.6rem, 11.5vw, 3.6rem); }
+  .band-h { font-size: clamp(2.2rem, 9.5vw, 3rem); }
+  .hero-sub { margin-bottom: 1.5rem; }
+  .hero-ctas .btn { flex: 1 1 auto; }
+  .band-3 .band-p { margin-bottom: 1.3rem; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .hero-h1 .l1, .hero-h1 .hero-em { font-size: clamp(2.2rem, 5vw, 3rem); }
+  .band-h { font-size: clamp(2rem, 4.4vw, 2.8rem); }
+  /* A phone held sideways: the label goes, the words clear the nav, and the
+     two buttons sit side by side instead of stacking off the bottom. */
+  .hero-eyebrow { display: none; }
+  .band { top: calc(50% + 26px); }
+  .hero-sub, .band-p { font-size: .95rem; margin-bottom: 1rem; }
+  .hero-ctas { flex-wrap: nowrap; }
+  .hero-ctas .btn { padding: .72rem 1.05rem; font-size: .86rem; }
+}
+
+/* ── PROOF STRIP: stats + the one marquee ── */
+.proof { padding-block: 3.5rem 3rem; padding-inline: max(16px, 5vw); }
+.proof-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; max-width: 880px; margin-inline: auto; }
+.stat { display: flex; flex-direction: column; align-items: center; gap: .15rem; text-align: center; }
+.stat + .stat { border-left: 1px solid var(--line-strong); }
+.stat-n { font-family: var(--serif); font-size: clamp(2.6rem, 5vw, 3.8rem); line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.stat-l { font-size: .9rem; color: var(--muted); }
+.marquee { margin-top: 3rem; }
+.marquee-label { text-align: center; font-size: .86rem; color: var(--muted); margin-bottom: 1rem; }
+.marquee-view { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
+.marquee-track { display: flex; width: max-content; }
+.marquee-track span { font-family: var(--serif); font-style: italic; font-size: clamp(1.4rem, 2.2vw, 1.8rem); color: var(--ink-2); white-space: nowrap; padding-inline: 1.6rem; display: inline-flex; align-items: center; gap: 3.2rem; }
+.marquee-track span::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--blue); opacity: .5; }
+.marquee.in-view .marquee-track { animation: marquee 42s linear infinite; }
+@keyframes marquee { to { transform: translateX(-50%); } }
+@media (max-width: 560px) { .proof-stats { gap: .5rem; } .stat-l { font-size: .78rem; } }
+
+/* ── REVEALS ── only when JS runs, so a no-JS page is complete at rest ── */
+.js [data-reveal] { transition: opacity .9s var(--ease-out) var(--rd, 0s), transform .9s var(--ease-out) var(--rd, 0s); }
+.js [data-reveal="up"]:not(.in) { opacity: 0; transform: translate3d(0, 34px, 0); }
+.js [data-reveal="tilt"]:not(.in) { opacity: 0; transform: perspective(900px) rotateX(16deg) translate3d(0, 40px, -60px); }
+.js [data-reveal="words"] .word { display: inline-block; transition: opacity .7s var(--ease-out), transform .7s var(--ease-out); transition-delay: calc(var(--wi, 0) * 60ms); }
+.js [data-reveal="words"]:not(.in) .word { opacity: 0; transform: translate3d(0, .5em, 0) rotateX(-50deg); }
+.js [data-reveal="words"].done .word { transition-delay: 0s; }
+
+/* ══════════════════════════════════════════
+   HOW IT WORKS: a hand-drawn spine that draws itself as you scroll, with
+   step tiles that flip into place in 3D.
+══════════════════════════════════════════ */
+.how .h2 { max-width: 19ch; margin-inline: auto; }
+.how-track { position: relative; max-width: 980px; margin: 4.5rem auto 0; }
+.how-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 44px; height: 100%; transform: translateX(-50%); overflow: visible; }
+.how-line path { fill: none; stroke-width: 2.5px; vector-effect: non-scaling-stroke; stroke-linecap: round; }
+.how-line .bg { stroke: var(--line-strong); stroke-dasharray: 2 7; }
+.how-line .fg { stroke: var(--blue); stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--p, 1)); }
+.how-steps { list-style: none; display: grid; gap: clamp(3rem, 7vw, 5.5rem); position: relative; }
+.how-step { display: grid; grid-template-columns: 1fr 104px 1fr; align-items: center; }
+.how-node { grid-column: 2; display: flex; justify-content: center; perspective: 700px; }
+.how-tile {
+  width: 72px; height: 72px; border-radius: 20px; display: grid; place-items: center;
+  color: #fff; background: var(--blue-deep);
+  box-shadow: 0 16px 30px -12px rgba(40, 81, 200, .6), inset 0 1px 0 rgba(255, 255, 255, .25);
+  transition: transform 1s var(--ease-out) .1s, opacity .6s var(--ease-out) .1s;
+}
+.how-tile svg { width: 30px; height: 30px; }
+/* Each icon draws itself once its tile has turned to face you. */
+.how-tile svg * { stroke-dasharray: 1; stroke-dashoffset: 0; transition: stroke-dashoffset 1.1s var(--ease-out) .5s; }
+.how-tile svg *:nth-child(2) { transition-delay: .62s; }
+.how-tile svg *:nth-child(3) { transition-delay: .74s; }
+.how-tile svg *:nth-child(4) { transition-delay: .86s; }
+.js .how-step:not(.in) .how-tile svg * { stroke-dashoffset: 1; }
+.how-step:nth-child(2) .how-tile { background: var(--blue-btn); }
+.how-step:nth-child(3) .how-tile { background: var(--ink); }
+.js .how-step:not(.in) .how-tile { opacity: 0; transform: rotateY(-110deg) rotateX(20deg) scale(.7); }
+.how.in-view .how-step.in .how-tile { animation: tileBob 7s ease-in-out -2s infinite; }
+.how.in-view .how-step:nth-child(2).in .how-tile { animation-delay: -4.3s; }
+.how.in-view .how-step:nth-child(3).in .how-tile { animation-delay: -1.1s; }
+@keyframes tileBob { 0%, 100% { transform: rotateY(-10deg) rotateX(4deg); } 50% { transform: rotateY(10deg) rotateX(-4deg); } }
+.how-copy { grid-column: 3; padding-left: .5rem; transition: opacity .9s var(--ease-out) .2s, transform .9s var(--ease-out) .2s; }
+.how-step:nth-child(even) .how-copy { grid-column: 1; grid-row: 1; text-align: right; padding: 0 .5rem 0 0; }
+.js .how-step:not(.in) .how-copy { opacity: 0; transform: translate3d(28px, 0, 0); }
+.js .how-step:nth-child(even):not(.in) .how-copy { transform: translate3d(-28px, 0, 0); }
+.how-num { font-family: var(--mono); font-size: .78rem; font-weight: 500; letter-spacing: .1em; color: var(--blue-deep); }
+.how-copy h3 { font-family: var(--serif); font-weight: 400; font-size: clamp(1.7rem, 2.6vw, 2.2rem); line-height: 1.1; margin: .35rem 0 .55rem; }
+.how-copy p { color: var(--muted); max-width: 38ch; }
+.how-step:nth-child(even) .how-copy p { margin-left: auto; }
+@media (max-width: 760px) {
+  .how-line { left: 36px; }
+  .how-step { grid-template-columns: 72px 1fr; gap: 1.1rem; align-items: start; }
+  .how-node { grid-column: 1; }
+  .how-tile { width: 60px; height: 60px; border-radius: 17px; }
+  .how-copy, .how-step:nth-child(even) .how-copy { grid-column: 2; grid-row: 1; text-align: left; padding: .2rem 0 0; }
+  .how-step:nth-child(even) .how-copy p { margin-left: 0; }
+  .js .how-step:nth-child(even):not(.in) .how-copy { transform: translate3d(28px, 0, 0); }
+}
+
+/* ══════════════════════════════════════════
+   EXAMPLE PLAN: the card leans back in 3D until it reaches you, and the one
+   interactive moment: hold the button and the scattered notes file themselves
+   into the plan.
+══════════════════════════════════════════ */
+.example { overflow-x: clip; }
+.ex-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); grid-template-areas: "copy stage" "hold stage"; column-gap: clamp(2.5rem, 6vw, 5rem); align-items: center; }
+.ex-copy { grid-area: copy; align-self: end; }
+.ex-grid > .hold { grid-area: hold; align-self: start; }
+.plan-stage { grid-area: stage; }
+.tags { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.6rem; }
+.tag { font-size: .8rem; font-weight: 600; color: var(--blue-deep); background: var(--blue-soft); padding: .35rem .85rem; border-radius: 999px; }
+.hold { margin-top: 2.2rem; display: grid; gap: .8rem; justify-items: start; }
+.hold-btn {
+  position: relative; display: inline-flex; align-items: center; gap: .85rem;
+  padding: .55rem 1.4rem .55rem .55rem; border-radius: 999px; cursor: pointer;
+  background: var(--ink); color: #fff; border: none; font-weight: 600; font-size: .98rem;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none;
+  box-shadow: 0 14px 30px -14px rgba(26, 29, 46, .7);
+  transition: background-color .25s;
+}
+.hold-btn:hover { background: var(--ink-2); }
+.hold-ring { width: 44px; height: 44px; flex: none; transform: rotate(-90deg); }
+.hold-ring circle { fill: none; stroke-width: 3.5; }
+.hold-ring .track { stroke: rgba(255, 255, 255, .18); }
+.hold-ring .fill { stroke: #8fb0ff; stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--h, 0)); stroke-linecap: round; }
+.hold-btn .dot { position: absolute; left: .55rem; top: .55rem; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; }
+.hold-btn .dot::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: #8fb0ff; transform: scale(calc(.8 + var(--h, 0) * .7)); }
+.example.in-view .hold-btn:not(.is-done) .dot::after { content: ""; position: absolute; inset: 8px; border-radius: 50%; border: 2px solid #8fb0ff; animation: holdPulse 2.6s var(--ease-out) -.6s infinite; }
+@keyframes holdPulse { 0% { opacity: .7; transform: scale(.55); } 100% { opacity: 0; transform: scale(1.25); } }
+.hold-btn.is-done { background: var(--ok); }
+.hold-btn.is-done .dot::before { background: #fff; }
+.hold-hint { font-size: .9rem; color: var(--muted); min-height: 1.5em; }
+.hold-reset { font-size: .86rem; font-weight: 600; color: var(--blue-deep); background: none; border: none; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; padding: .3rem 0; }
+
+.plan-stage { perspective: 1500px; perspective-origin: 50% 20%; }
+/* Two transforms, two elements: the scroll lean pivots on the card's bottom
+   edge, the flip on its centre. */
+.tilt {
+  transform-style: preserve-3d; transform-origin: 50% 100%;
+  transform: rotateX(calc((1 - var(--p, 1)) * 26deg)) rotateY(calc((1 - var(--p, 1)) * -16deg)) rotateZ(calc((1 - var(--p, 1)) * 2deg));
+}
+.flip { display: grid; transform-style: preserve-3d; transition: transform 1.05s var(--ease-out); }
+.flip.flipped { transform: rotateY(-180deg); }
+.face { grid-area: 1 / 1; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.face.back { transform: rotateY(180deg); align-self: start; }
+.plan-card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+  box-shadow: 0 2px 4px rgba(26, 40, 90, .04), 0 40px 80px -30px rgba(26, 40, 90, .35);
+  transition: border-color .3s;
+  display: flex; flex-direction: column;
+}
+.plan-foot { padding: 0 1.6rem 1.4rem; margin-top: auto; opacity: 0; transform: translate3d(0, 10px, 0); transition: opacity .5s var(--ease-out) .5s, transform .5s var(--ease-out) .5s; pointer-events: none; }
+.plan-card.ready .plan-foot { opacity: 1; transform: none; pointer-events: auto; }
+.plan-foot .btn { width: 100%; }
+
+/* ── The app's question card (values from lesson.html) ── */
+.qcard { background: var(--card); border: 1.5px solid var(--line); border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 2px 4px rgba(26, 40, 90, .04), 0 40px 80px -30px rgba(26, 40, 90, .35); transition: border-color .3s; }
+.qcard.correct-flash { border-color: #38bfa1; }
+.qcard.wrong-flash { border-color: #ef4444; }
+.q-top { display: flex; align-items: center; gap: .6rem; padding: .85rem 1.2rem; }
+.q-progress { flex: 1; height: 6px; border-radius: 99px; background: var(--blue-mist); overflow: hidden; }
+.q-progress i { display: block; height: 100%; width: 100%; border-radius: inherit; background: var(--blue-btn); transform-origin: 0 50%; transform: scaleX(0); transition: transform .8s var(--ease-out); }
+.stat-pill { font-size: .72rem; font-weight: 700; padding: .22rem .65rem; border-radius: 999px; background: var(--blue-soft); color: var(--blue-deep); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.streak-pill { display: inline-flex; align-items: center; gap: .3rem; font-size: .72rem; font-weight: 700; padding: .22rem .6rem .22rem .5rem; border-radius: 999px; background: var(--paper); color: var(--ink); border: 1px solid var(--line); line-height: 1; }
+.streak-mark { width: 14px; height: 14px; flex: none; opacity: .72; }
+.card-header { position: relative; overflow: hidden; background: linear-gradient(135deg, #4a7cf6, #2851c8); padding: 1.2rem 1.5rem; color: #fff; }
+.card-header::before { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(255, 255, 255, .1) 1px, transparent 1px); background-size: 24px 24px; }
+.card-badge { position: relative; display: inline-flex; align-items: center; background: rgba(255, 255, 255, .2); color: #fff; font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: .25rem .7rem; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .3); margin-bottom: .5rem; }
+.card-header h3 { position: relative; font-family: var(--serif); font-weight: 400; font-size: 1.55rem; line-height: 1.2; letter-spacing: -.01em; }
+.card-body { padding: 1.3rem 1.5rem 1.2rem; }
+.q-text { font-size: 1rem; font-weight: 600; line-height: 1.5; margin-bottom: 1rem; }
+.q-options { display: flex; flex-direction: column; gap: .45rem; }
+.q-option {
+  display: flex; align-items: center; gap: .7rem; width: 100%; text-align: left; cursor: pointer;
+  padding: .72rem 1rem; border-radius: 12px; border: 1.5px solid var(--line); background: var(--paper);
+  font-size: .92rem; font-weight: 500; color: var(--ink);
+  transition: border-color .18s ease, background-color .18s ease, color .18s ease, opacity .25s ease;
+}
+.q-option:hover:not(:disabled) { border-color: var(--blue); background: var(--blue-soft); color: var(--blue-deep); }
+.q-option:active:not(:disabled) { transform: scale(.99); }
+.q-option:disabled { cursor: default; }
+.opt-letter { width: 24px; height: 24px; border-radius: 6px; background: rgba(26, 29, 46, .06); display: grid; place-items: center; font-size: .72rem; font-weight: 700; flex: none; }
+.q-option.correct-ans { background: #d1faf0; border-color: #38bfa1; color: #065f46; animation: optionCorrect .45s cubic-bezier(.34, 1.56, .64, 1) both; }
+.q-option.wrong-ans { background: #fee2e2; border-color: #ef4444; color: #7f1d1d; animation: optionWrong .4s ease both; }
+.q-option.dimmed { opacity: .45; }
+@keyframes optionCorrect { 0% { transform: scale(1); } 45% { transform: scale(1.025); } 100% { transform: scale(1); } }
+@keyframes optionWrong { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-2px); } }
+/* Opens with the grid-rows trick so it animates to its real height. */
+.feedback-box { display: grid; grid-template-rows: 0fr; margin-top: 0; transition: grid-template-rows .45s var(--ease-out), margin-top .45s var(--ease-out); }
+.feedback-box > div { overflow: hidden; min-height: 0; }
+.feedback-box.show { grid-template-rows: 1fr; margin-top: .9rem; }
+.fb-inner { border-radius: 12px; padding: .8rem 1rem; border: 1.5px solid transparent; }
+.correct-fb .fb-inner { background: #d1faf0; border-color: #38bfa1; color: #065f46; }
+.wrong-fb .fb-inner { background: #fee2e2; border-color: #ef4444; color: #7f1d1d; }
+.feedback-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .25rem; }
+.feedback-text { font-size: .86rem; line-height: 1.6; }
+.q-actions { display: flex; justify-content: space-between; gap: 1rem; margin-top: 1rem; }
+.link-btn { background: none; border: none; cursor: pointer; font-size: .86rem; font-weight: 600; color: var(--blue-deep); text-decoration: underline; text-underline-offset: 3px; padding: .3rem 0; }
+.link-btn[hidden] + .link-btn { margin-left: auto; }
+.plan-card:hover, .qcard:hover { border-color: var(--blue); }
+.plan-head { background: var(--blue-btn); color: #fff; padding: 1.35rem 1.6rem; border-radius: 19px 19px 0 0; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.plan-head h3 { font-size: 1.05rem; font-weight: 600; }
+.plan-head p { font-size: .84rem; color: rgba(255, 255, 255, .82); margin-top: .15rem; }
+.plan-status { font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; padding: .35rem .7rem; border-radius: 999px; background: rgba(255, 255, 255, .16); white-space: nowrap; transition: background-color .4s; }
+.plan-card.ready .plan-status { background: #fff; color: var(--blue-deep); }
+.plan-body { list-style: none; padding: .6rem 1.6rem 1rem; }
+.session {
+  display: flex; gap: 1rem; align-items: flex-start; padding: .95rem 0; border-bottom: 1px solid var(--line);
+  position: relative;
+  --re: var(--r, 1);
+  opacity: calc(.8 + .2 * var(--re));
+  transform: translate3d(calc((1 - var(--re)) * var(--sx, 0px)), calc((1 - var(--re)) * var(--sy, 0px)), calc((1 - var(--re)) * var(--sz, 0px))) rotateZ(calc((1 - var(--re)) * var(--srz, 0deg))) rotateX(calc((1 - var(--re)) * var(--srx, 0deg)));
+}
+.session:last-child { border-bottom: none; }
+/* While scattered, each row is its own scrap of paper; the scrap dissolves
+   into the card as the row files itself. */
+.session::before {
+  content: ""; position: absolute; inset: 2px -14px; z-index: -1; border-radius: 12px;
+  background: var(--card); border: 1px solid var(--line); box-shadow: 0 16px 34px -16px rgba(26, 40, 90, .45);
+  opacity: calc(1 - var(--re));
+}
+.session-day { min-width: 50px; text-align: center; font-family: var(--mono); font-size: .74rem; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; border-radius: 9px; padding: .38rem .45rem; color: var(--blue-deep); background: var(--blue-soft); transition: background-color .4s, color .4s; }
+.plan-card.ready .session-day { background: var(--blue-btn); color: #fff; }
+.plan-card.ready .session:nth-child(2) .session-day { transition-delay: .12s; }
+.plan-card.ready .session:nth-child(3) .session-day { transition-delay: .24s; }
+.plan-card.ready .session:nth-child(4) .session-day { transition-delay: .36s; }
+.session-info { flex: 1; min-width: 0; }
+.session-info h4 { font-size: .96rem; font-weight: 600; }
+.session-info p { font-size: .84rem; color: var(--muted); margin-top: .15rem; }
+.session-time { font-family: var(--mono); font-size: .78rem; color: var(--muted); white-space: nowrap; padding-top: .3rem; }
+@media (max-width: 860px) {
+  /* Phones: the card comes before the button, so the notes are on screen
+     while you hold. */
+  .ex-grid { grid-template-columns: 1fr; grid-template-areas: "copy" "stage" "hold"; row-gap: 2rem; }
+  .ex-grid > .hold { margin-top: 0; }
+  .session-time { display: none; }
+  .plan-head { flex-wrap: wrap; }
+}
+
+/* ══════════════════════════════════════════
+   PINNED SHOWCASES (kept: 600vh, sticky 100vh). Why it works turns a number
+   drum on X and a six-sided prism on Y. Features flips a legal pad.
+══════════════════════════════════════════ */
+.sec-head { padding-inline: max(16px, 5vw); padding-top: clamp(5rem, 9vw, 7rem); }
+.show-outer { position: relative; height: 600vh; }
+.show-stage { position: sticky; top: 0; height: 100vh; height: 100svh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(1.4rem, 5vh, 3.2rem); padding-inline: max(16px, 5vw); padding-top: 56px; }
+/* The heading is pinned with the thing it introduces, so the prism and the
+   pad never float alone in an empty screen. */
+.show-stage .sec-head { padding: 0; }
+.show-stage .sec-head .h2 { font-size: clamp(2.2rem, 4.2vw, 3.6rem); }
+@media (max-height: 740px) and (min-width: 861px) {
+  .show-stage .sec-head .eyebrow { display: none; }
+  .show-stage .sec-head .h2 { font-size: clamp(1.9rem, 3.4vw, 2.7rem); }
+}
+.dots { position: absolute; right: max(12px, 1.5vw); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: .2rem; }
+.dots button { width: 28px; height: 28px; border: none; background: none; cursor: pointer; display: grid; place-items: center; }
+.dots button::before { content: ""; width: 6px; height: 6px; border-radius: 3px; background: var(--line-strong); transition: height .35s var(--ease-out), background-color .35s; }
+.dots button[aria-current="true"]::before { height: 22px; background: var(--blue); }
+
+.why-grid { display: grid; grid-template-columns: 250px minmax(0, 480px); gap: clamp(2rem, 6vw, 5.5rem); align-items: center; width: 100%; max-width: 900px; }
+.drum-wrap {
+  position: relative; height: 330px; perspective: 900px;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 28%, #000 72%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 28%, #000 72%, transparent 100%);
+}
+.drum { position: absolute; left: 0; right: 0; top: 50%; height: 200px; margin-top: -100px; transform-style: preserve-3d; transform: translateZ(calc(var(--r, 173px) * -1)) rotateX(calc(var(--rot, 0) * 60deg)); }
+.drum-face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateX(calc(var(--i) * -60deg)) translateZ(var(--r, 173px)); }
+.big { font-family: var(--serif); font-size: 6.4rem; line-height: .95; letter-spacing: -.03em; color: var(--blue); }
+.big small { font-size: .5em; }
+.big-l { font-size: 1rem; font-weight: 600; color: var(--ink); margin-top: .35rem; }
+.big-c { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
+
+.prism-wrap { position: relative; height: 320px; perspective: 1700px; }
+.prism { position: absolute; inset: 0; transform-style: preserve-3d; transform: translateZ(calc(var(--r, 416px) * -1)) rotateY(calc(var(--rot, 0) * -60deg)); }
+.prism-face {
+  position: absolute; inset: 0; background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+  padding: 2rem 2rem 1.6rem; display: flex; flex-direction: column;
+  box-shadow: var(--shadow-card);
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  transform: rotateY(calc(var(--i) * 60deg)) translateZ(var(--r, 416px));
+}
+.prism-face h3 { font-family: var(--serif); font-weight: 400; font-size: 2rem; line-height: 1.1; margin-bottom: .75rem; }
+.prism-face p { color: var(--muted); font-size: .96rem; line-height: 1.7; }
+.prism-face .foot { margin-top: auto; padding-top: .9rem; border-top: 1px solid var(--line); font-size: .82rem; font-style: italic; }
+.face-stat { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.prism-face:not(:first-child), .drum-face:not(:first-child) { opacity: 0; visibility: hidden; }
+
+.feat-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(2rem, 6vw, 5rem); align-items: center; width: 100%; max-width: 1080px; }
+.feat-text { position: relative; height: 360px; perspective: 900px; }
+.ft { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); }
+/* The copy turns with the pad: the old slide tips away as the new one tips
+   in, and they are never both visible, so the text never double-exposes. */
+.js .ft { opacity: var(--o, 0); transform: translate3d(0, calc(-50% + var(--d, 0) * -40px), 0) rotateX(calc(var(--d, 0) * 70deg)); visibility: var(--v, hidden); }
+.ft-tag { font-family: var(--mono); font-size: .76rem; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--blue-deep); margin-bottom: .8rem; }
+.ft-h { font-family: var(--serif); font-weight: 400; font-size: clamp(2rem, 3.4vw, 2.8rem); line-height: 1.08; letter-spacing: -.015em; margin-bottom: 1rem; text-wrap: balance; }
+.ft-h em { font-style: italic; color: var(--blue); }
+.ft-p { color: var(--muted); line-height: 1.75; max-width: 44ch; margin-bottom: 1.1rem; }
+.ft-list { list-style: none; display: grid; gap: .45rem; font-size: .92rem; font-weight: 500; }
+.ft-list li { display: flex; gap: .6rem; align-items: baseline; }
+.ft-list li::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--blue); transform: translateY(-2px); }
+
+.pad-wrap { position: relative; height: 360px; perspective: 1400px; perspective-origin: 50% 35%; }
+.pad { position: absolute; inset: 22px 0 0; transform-style: preserve-3d; }
+.pad-rings { position: absolute; left: 8%; right: 8%; top: -22px; height: 30px; z-index: 20; display: flex; justify-content: space-between; pointer-events: none; transform: translateZ(40px); }
+.pad-rings i { width: 12px; height: 30px; border-radius: 8px; border: 3px solid #9aa6c2; border-bottom-color: transparent; background: linear-gradient(90deg, rgba(255, 255, 255, .6), transparent); }
+.pad-sheet {
+  position: absolute; inset: 0; border-radius: 16px; background: var(--card); border: 1px solid var(--line);
+  box-shadow: 0 30px 60px -30px rgba(26, 40, 90, .45); overflow: hidden;
+  transform-origin: 50% 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  transform: translate3d(0, calc(var(--i) * 12px), calc(var(--i) * -34px));
+}
+.pad-sheet .card-header { padding: 1rem 1.3rem; }
+.pad-sheet .card-header h3 { font-size: 1.35rem; }
+.card-header.vip { background: linear-gradient(135deg, #2a3150, #1a1d2e); }
+.pad-body { padding: 1.05rem 1.3rem; display: grid; gap: .7rem; align-content: start; }
+.q-text.sm { font-size: .92rem; margin: 0; }
+.q-option.static { cursor: default; animation: none; font-size: .84rem; padding: .6rem .85rem; }
+.pad-note { font-size: .8rem; color: var(--muted); line-height: 1.5; }
+.pl-row { display: flex; align-items: center; gap: .75rem; font-size: .86rem; font-weight: 500; padding: .5rem .6rem; border-radius: 10px; }
+.pl-row .session-day { min-width: 44px; padding: .28rem .4rem; font-size: .68rem; }
+.pl-row.on { background: var(--blue-mist); }
+.pl-row.on .session-day { background: var(--blue-btn); color: #fff; }
+.pl-row b { margin-left: auto; font-size: .66rem; font-weight: 700; background: var(--blue-btn); color: #fff; padding: .14rem .5rem; border-radius: 99px; }
+.diff-row { display: flex; align-items: center; justify-content: space-between; font-size: .78rem; font-weight: 600; color: var(--muted); }
+.pips { display: flex; gap: 4px; }
+.pips i { width: 16px; height: 8px; border-radius: 3px; background: var(--line); }
+.pips i.on { background: var(--blue-btn); }
+.write-area { font-size: .82rem; line-height: 1.55; background: var(--paper); border: 1.5px solid var(--line); border-radius: 10px; padding: .6rem .8rem; }
+.score-row { display: flex; align-items: center; gap: .8rem; font-size: .8rem; color: var(--muted); }
+.score-num { font-family: var(--serif); font-size: 2rem; line-height: 1; color: var(--blue-deep); }
+.score-num small { font-size: .5em; color: var(--muted); }
+.ins-top { display: flex; gap: .5rem; }
+.mk-row { display: grid; grid-template-columns: 76px 1fr 38px; gap: .6rem; align-items: center; font-size: .78rem; }
+.mk-row i { height: 6px; border-radius: 3px; background: var(--blue); }
+.mk-row b { font-family: var(--mono); font-weight: 500; color: var(--blue-deep); text-align: right; }
+.pad-sheet.dark { background: linear-gradient(160deg, #1f2542, #26305a); border-color: #2c3561; }
+.chat { display: grid; gap: .55rem; }
+.chat p { font-size: .8rem; line-height: 1.5; padding: .6rem .8rem; max-width: 88%; }
+.chat .ai { background: rgba(255, 255, 255, .08); color: #e6ecff; border-radius: 4px 14px 14px 14px; }
+.chat .me { background: var(--blue-btn); color: #fff; border-radius: 14px 4px 14px 14px; justify-self: end; }
+
+@media (max-width: 860px) {
+  /* Phones keep the old decision: no 600vh pin, every slide stacked as a card. */
+  .show-outer { height: auto; }
+  .show-stage { position: relative; height: auto; display: block; padding-block: 0 1rem; }
+  .show-stage .sec-head { padding-top: clamp(4.5rem, 14vw, 6rem); margin-bottom: 2rem; }
+  .dots, .drum-wrap, .pad-rings { display: none; }
+  /* Phones get the app cards too, as a row you swipe, above the feature list. */
+  .pad-wrap { height: auto; perspective: none; margin: 0 calc(-1 * max(16px, 5vw)) 1.5rem; }
+  .pad { position: static; display: flex; gap: .8rem; overflow-x: auto; scroll-snap-type: x mandatory; padding: .5rem max(16px, 5vw) 1.2rem; transform-style: flat; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .pad::-webkit-scrollbar { display: none; }
+  .pad-sheet { position: relative; inset: auto; flex: 0 0 min(82%, 340px); height: 330px; scroll-snap-align: center; transform: none !important; opacity: 1 !important; backface-visibility: visible; }
+  .pad-sheet::after { display: none; }
+  .why-grid { display: block; }
+  .feat-grid { display: flex; flex-direction: column; align-items: stretch; }
+  .feat-grid .pad-wrap { order: -1; }
+  .prism-wrap, .prism { position: static; height: auto; transform: none; perspective: none; }
+  .prism { display: grid; gap: 1rem; }
+  .prism-face { position: relative; transform: none; opacity: 1 !important; visibility: visible !important; }
+  .face-stat { position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: normal; display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; margin-bottom: .8rem; }
+  .face-stat .big { font-size: 3.6rem; }
+  .face-stat .big-l { margin: 0; }
+  .feat-text { height: auto; display: grid; gap: 1rem; }
+  .js .ft, .ft { position: relative; top: auto; transform: none; opacity: 1; visibility: visible; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 1.6rem 1.4rem; }
+}
+
+/* ── TESTIMONIALS: a bento with one loud card ── */
+.tgrid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-rows: repeat(3, auto); gap: 1.2rem; margin-top: 3.5rem; perspective: 1400px; }
+.tcard { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 1.7rem; box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: 1.2rem; transition: opacity .9s var(--ease-out) var(--rd, 0s), transform 1s var(--ease-out) var(--rd, 0s), border-color .25s ease 0s; }
+.tcard:hover { border-color: var(--blue); }
+.tcard.feature { grid-row: 1 / span 3; background: var(--blue-btn); border-color: var(--blue-btn); color: #fff; padding: clamp(1.8rem, 4vw, 2.8rem); gap: 1.8rem; }
+.tcard.feature .who { margin-top: auto; }
+.tcard.feature:hover { border-color: #0f2a86; }
+.tcard blockquote { font-size: 1rem; line-height: 1.7; }
+.tcard.feature blockquote { font-family: var(--serif); font-size: clamp(1.7rem, 2.8vw, 2.35rem); line-height: 1.22; letter-spacing: -.01em; }
+.stars { display: flex; gap: 2px; color: var(--blue); }
+.stars svg { width: 15px; height: 15px; fill: currentColor; }
+.tcard.feature .stars { color: #cfe0ff; }
+.who { display: flex; align-items: center; gap: .75rem; }
+.who .av { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-weight: 700; font-size: .84rem; background: var(--blue-soft); color: var(--blue-deep); flex: none; }
+.who b { display: block; font-size: .92rem; }
+.who span { font-size: .8rem; color: var(--muted); }
+.tcard.feature .av { background: rgba(255, 255, 255, .18); color: #fff; }
+.tcard.feature .who span { color: rgba(255, 255, 255, .78); }
+.js .tgrid .tcard:not(.in) { opacity: 0; transform: rotateX(18deg) rotateY(-8deg) translate3d(0, 50px, -90px); }
+@media (max-width: 820px) { .tgrid { grid-template-columns: 1fr; } .tcard.feature { grid-row: auto; } }
+
+/* ── PRICING: three cards dealt out of one stack ── */
+.pgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.4rem; max-width: 1020px; margin: 3.6rem auto 0; perspective: 1600px; align-items: stretch; }
+.pcard {
+  position: relative; border-radius: 20px; padding: 2.1rem 1.9rem; display: flex; flex-direction: column;
+  background: var(--card); border: 1.5px solid var(--line); box-shadow: var(--shadow-card);
+  transition: opacity .9s var(--ease-out) var(--rd, 0s), transform 1.1s var(--ease-out) var(--rd, 0s), border-color .25s ease 0s;
+}
+.pcard:hover { border-color: var(--blue); }
+.js .pgrid .pcard:nth-child(1):not(.in) { opacity: 0; transform: translate3d(38%, 30px, -120px) rotateY(34deg) rotateZ(-4deg); }
+.js .pgrid .pcard:nth-child(2):not(.in) { opacity: 0; transform: translate3d(0, 70px, -200px) rotateX(24deg); }
+.js .pgrid .pcard:nth-child(3):not(.in) { opacity: 0; transform: translate3d(-38%, 30px, -120px) rotateY(-34deg) rotateZ(4deg); }
+.pname { font-family: var(--mono); font-size: .76rem; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.price { font-family: var(--serif); font-size: 3.6rem; line-height: 1; margin-top: 1rem; }
+.per { font-size: .88rem; color: var(--muted); margin: .35rem 0 1.6rem; }
+.feats { list-style: none; display: grid; gap: .7rem; margin-bottom: 2rem; font-size: .93rem; }
+.feats li { display: flex; gap: .6rem; align-items: flex-start; }
+.feats svg { width: 17px; height: 17px; flex: none; margin-top: .2rem; stroke: var(--blue-btn); fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.feats li.no { color: var(--muted); }
+.feats li.no svg { stroke: var(--line-strong); }
+.pcard .btn { margin-top: auto; width: 100%; }
+.pcard.pro { background: var(--blue-btn); color: #fff; border-color: var(--blue-btn); box-shadow: 0 30px 60px -24px rgba(53, 103, 224, .55); }
+.pcard.pro:hover { border-color: #0f2a86; }
+.pcard.pro .pname, .pcard.pro .per { color: rgba(255, 255, 255, .8); }
+.pcard.pro .feats svg { stroke: #d2e0ff; }
+.pcard.pro .feats li.no { color: rgba(255, 255, 255, .6); }
+.pcard.pro .feats li.no svg { stroke: rgba(255, 255, 255, .35); }
+.pcard.pro .btn { background: #f7f9ff; color: var(--blue-deep); }
+.pcard.pro .btn:hover { background: var(--blue-soft); }
+.pcard.vip { background: linear-gradient(165deg, #1a1d2e, #1f2850); color: #fff; border-color: #2b3566; }
+.pcard.vip:hover { border-color: var(--blue); }
+.pcard.vip .pname, .pcard.vip .per { color: rgba(214, 226, 255, .72); }
+.pcard.vip .feats svg { stroke: #8fb0ff; }
+.pcard.vip .btn { background: var(--blue-btn); color: #fff; }
+.pcard.vip .btn:hover { background: var(--blue-deep); }
+.badge { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: .72rem; font-weight: 700; letter-spacing: .04em; padding: .32rem .9rem; border-radius: 999px; background: var(--ink); color: #fff; }
+/* The Pro card's living element: a slow light running round its border. */
+.pcard.pro::before {
+  content: ""; position: absolute; inset: -1.5px; border-radius: inherit; padding: 1.5px; pointer-events: none;
+  background: conic-gradient(from var(--ang, 0deg), transparent 0deg, transparent 270deg, rgba(210, 225, 255, .95) 320deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+@property --ang { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+.pricing.in-view .pcard.pro::before { animation: comet 6s linear infinite; }
+@keyframes comet { to { --ang: 360deg; } }
+@media (max-width: 880px) { .pgrid { grid-template-columns: 1fr; max-width: 460px; gap: 2rem; } }
+
+/* ── SCHOOLS: one chalkboard panel, three columns ── */
+.board {
+  position: relative; margin-top: 3.4rem; border-radius: 20px; color: #fff; overflow: hidden;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0, transparent 39px, rgba(255, 255, 255, .045) 39px, rgba(255, 255, 255, .045) 40px),
+    radial-gradient(ellipse 80% 70% at 20% 0%, #1f2a5c 0%, var(--night) 70%);
+  box-shadow: 0 40px 80px -40px rgba(14, 20, 42, .8);
+}
+.board-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tier { padding: 2.3rem 2rem; display: flex; flex-direction: column; }
+.tier + .tier { border-left: 1px solid rgba(255, 255, 255, .1); }
+.tier .pname { color: rgba(214, 226, 255, .72); display: flex; align-items: center; gap: .6rem; }
+.tier .pname b { font-family: var(--sans); letter-spacing: .02em; text-transform: none; font-size: .72rem; padding: .2rem .6rem; border-radius: 999px; background: var(--blue-btn); color: #fff; }
+.tier .price { font-size: 3rem; }
+.tier .per { color: rgba(214, 226, 255, .72); }
+.tier .feats svg { stroke: #8fb0ff; }
+.tier .feats li.no { color: rgba(214, 226, 255, .55); }
+.tier .feats li.no svg { stroke: rgba(255, 255, 255, .25); }
+.tier .btn { margin-top: auto; width: 100%; }
+.board-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.4rem 2rem; border-top: 1px solid rgba(255, 255, 255, .1); background: rgba(255, 255, 255, .03); }
+.board-foot p { color: rgba(226, 233, 255, .82); }
+@media (max-width: 860px) {
+  .board-cols { grid-template-columns: 1fr; }
+  .tier + .tier { border-left: none; border-top: 1px solid rgba(255, 255, 255, .1); }
+  .tier, .board-foot { padding-inline: 1.4rem; }
+}
+
+/* ── FAQ ── */
+.faq-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(2rem, 6vw, 5rem); align-items: start; }
+.faq-side { position: sticky; top: 7rem; }
+.faq-side p { color: var(--muted); margin-top: 1rem; }
+.faq-side a { color: var(--blue-deep); font-weight: 600; }
+.faq-list { display: grid; gap: .7rem; }
+.faq-item { background: var(--card); border: 1.5px solid var(--line); border-radius: 16px; transition: border-color .25s; }
+.faq-item:hover, .faq-item.open { border-color: var(--blue); }
+.faq-q { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1.2rem 1.4rem; background: none; border: none; cursor: pointer; font-size: 1rem; font-weight: 600; color: var(--ink); text-align: left; }
+.faq-icon { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--blue-mist); color: var(--blue-deep); font-size: 1.2rem; line-height: 1; transition: transform .4s var(--ease-out), background-color .25s; }
+.faq-item.open .faq-icon { transform: rotate(45deg); background: var(--blue-soft); }
+.faq-a { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .45s var(--ease-out); }
+.faq-item.open .faq-a { grid-template-rows: 1fr; }
+.faq-a > div { overflow: hidden; }
+.faq-a p { padding: 0 1.4rem 1.25rem; color: var(--muted); line-height: 1.7; }
+@media (max-width: 820px) { .faq-grid { grid-template-columns: 1fr; } .faq-side { position: static; } }
+
+/* ── FINAL CTA: the hero's ending, four day cards, fanned in 3D ── */
+.cta { position: relative; overflow: hidden; color: #fff; background: linear-gradient(140deg, #4a7cf6 0%, #3567e0 45%, #2248b8 100%); }
+.cta::before { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(255, 255, 255, .13) 1px, transparent 1.2px); background-size: 30px 30px; }
+.cta::after, .board::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: var(--grain); background-size: 180px 180px; opacity: .09; }
+.cta-grid { position: relative; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: clamp(2rem, 5vw, 4rem); align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: .5rem; font-size: .8rem; font-weight: 600; padding: .42rem 1rem; border-radius: 999px; background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .32); }
+.cta h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(2.5rem, 5.4vw, 4.4rem); line-height: 1.04; letter-spacing: -.02em; margin: 1.3rem 0 1rem; text-wrap: balance; }
+.cta h2 em { font-style: italic; color: #d6e3ff; }
+.cta p { color: rgba(255, 255, 255, .86); font-size: 1.08rem; max-width: 42ch; }
+.cta .row { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
+.cta .btn-light { color: var(--blue-deep); box-shadow: 0 10px 30px -10px rgba(10, 20, 60, .6); }
+.fan { position: relative; height: 380px; perspective: 1300px; }
+.fan-inner { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateY(calc(-24deg + var(--p, .5) * 30deg)) rotateX(calc(12deg - var(--p, .5) * 10deg)); }
+/* Dealt like a hand of cards: each day lies on top of the one before, so the
+   covered cards show their left edge (day, title, progress) instead of the
+   clipped ends of words ("ds and") that stacking Day 1 in front left. */
+.fan-card { position: absolute; left: 50%; top: 50%; width: 200px; height: 250px; margin: -125px 0 0 -100px; transform-style: preserve-3d; transform: translate3d(calc((var(--i) - 1.5) * 104px), calc((var(--i) - 1.5) * -24px), calc((3 - var(--i)) * -50px)) rotateZ(calc((var(--i) - 1.5) * 5deg)); }
+.dc { width: 100%; height: 100%; border-radius: 18px; background: var(--card); color: var(--ink); padding: 1.1rem 1.1rem 1rem; display: flex; flex-direction: column; box-shadow: 0 30px 50px -24px rgba(8, 20, 70, .6); border: 1px solid rgba(255, 255, 255, .6); }
+.cta.in-view .dc { animation: dcFloat 6.5s ease-in-out infinite; animation-delay: calc(var(--i) * -1.6s); }
+@keyframes dcFloat { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, -12px, 18px); } }
+.dc-top { display: flex; justify-content: space-between; font-family: var(--mono); font-size: .7rem; letter-spacing: .08em; color: var(--blue-deep); }
+.dc-top span + span { color: var(--muted); }
+.dc h4 { font-family: var(--serif); font-weight: 400; font-size: 1.45rem; line-height: 1.1; margin: .55rem 0 .8rem; }
+.dc ul { list-style: none; display: grid; gap: .4rem; font-size: .76rem; color: var(--muted); }
+.dc li { display: flex; gap: .45rem; align-items: center; }
+.dc li::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--line-strong); flex: none; }
+.dc li.on::before { background: var(--blue-btn); border-color: var(--blue-btn); box-shadow: inset 0 0 0 2.5px #fff; }
+.dc-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; font-size: .78rem; font-weight: 600; border-top: 1px solid var(--line); padding-top: .6rem; }
+.dc-diff { display: flex; gap: 3px; }
+.dc-diff i { width: 8px; height: 8px; border-radius: 2px; background: var(--line); }
+.dc-diff i.on { background: var(--blue-btn); }
+@media (max-width: 860px) {
+  .cta-grid { grid-template-columns: 1fr; }
+  .fan { height: 300px; order: -1; }
+  .fan-card { width: 160px; height: 205px; margin: -102px 0 0 -80px; transform: translate3d(calc((var(--i) - 1.5) * 52px), calc((var(--i) - 1.5) * -14px), calc((3 - var(--i)) * -40px)) rotateZ(calc((var(--i) - 1.5) * 6deg)); }
+  .dc h4 { font-size: 1.2rem; }
+}
+
+/* ── FOOTER: links, then the name set huge as the page's last word ── */
+.site-foot { position: relative; overflow: hidden; background: var(--ink); color: rgba(226, 233, 255, .72); padding: 4rem max(16px, 5vw) calc(1.8rem + env(safe-area-inset-bottom, 0px)); font-size: .9rem; }
+.site-foot::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: var(--grain); background-size: 180px 180px; opacity: .06; }
+.foot-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 2rem; }
+.foot-brand { display: grid; gap: 1rem; max-width: 30ch; }
+.foot-logo { display: inline-flex; width: max-content; }
+.foot-links { display: flex; flex-wrap: wrap; gap: .5rem 1.6rem; }
+.site-foot a { color: rgba(226, 233, 255, .8); text-decoration: none; transition: color .2s; }
+.site-foot a:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.foot-mark {
+  font-family: var(--serif); font-size: clamp(5.2rem, 22vw, 20rem); line-height: .8; letter-spacing: -.045em; white-space: nowrap;
+  text-align: center; margin: clamp(2.5rem, 6vw, 4rem) 0 clamp(1.5rem, 3vw, 2.2rem);
+  background: linear-gradient(180deg, rgba(160, 188, 255, .34) 10%, rgba(160, 188, 255, .03) 92%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  padding-bottom: .06em;
+}
+.foot-mark em { font-style: italic; }
+.foot-legal { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .8rem 1.4rem; padding-top: 1.4rem; border-top: 1px solid rgba(226, 233, 255, .12); font-size: .82rem; }
+.foot-legal nav { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; }
+
+/* Every loop pauses on a hidden tab. animation-play-state does not inherit,
+   so this has to hit every element and pseudo-element directly. */
+body.paused *, body.paused *::before, body.paused *::after { animation-play-state: paused !important; }
+
+/* Reduced motion: everything lands in its final state, nothing loops. The
+   hero drops to one static screen (the JS reads the same query). */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .js [data-reveal], .js [data-reveal] .word, .js .tgrid .tcard, .js .pgrid .pcard, .js .how-step .how-tile, .js .how-step .how-copy { opacity: 1 !important; transform: none !important; }
+  .tilt { transform: none; }
+  .session { --re: 1; }
+  .fan-inner { transform: rotateY(-10deg) rotateX(6deg); }
+  .marquee-track { flex-wrap: wrap; width: auto; justify-content: center; }
+  .marquee-track span:nth-child(n+7) { display: none; }
+  .marquee-view { -webkit-mask-image: none; mask-image: none; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="env" aria-hidden="true"><div class="env-glow"></div><div class="grain"></div></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+</svg>
+
+<nav class="site-nav" aria-label="Main">
+  <a href="#" class="nav-logo" aria-label="StudyFlow home">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" aria-hidden="true">
+      <defs>
+        <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#5b8df8"/>
+          <stop offset="100%" style="stop-color:#2851c8"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#iconGrad)"/>
+      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
+      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
+      <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
+      <rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/>
+      <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
+      <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
+      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
+      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
+        <tspan class="logo-study">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
+      </text>
+    </svg>
+  </a>
+  <div class="nav-pill" id="nav-pill">
+    <span class="nav-lens" aria-hidden="true"></span>
+    <a href="#how">How it works</a>
+    <a href="#features">Features</a>
+    <a href="#pricing">Plans</a>
+    <a href="about.html">Our story</a>
+    <a href="contact.html">Help</a>
+  </div>
+  <div class="nav-right">
+    <span id="teacher-nav-link"></span>
+    <a href="login.html" class="nav-cta">Build my plan →</a>
+  </div>
+</nav>
+
+<main id="main" tabindex="-1">
+
+<!-- HERO -->
+<section class="hero" id="hero" aria-label="Introduction">
+  <div class="hero-stage" id="hero-stage">
+    <div class="hero-fallback" aria-hidden="true"></div>
+    <canvas id="hero-3d" aria-hidden="true" tabindex="-1"></canvas>
+    <div class="hero-scrim" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+
+    <div class="band band-1" data-a="0" data-b="0.28" data-entrance="scatter">
+      <p class="hero-eyebrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><use href="#i-star"/></svg>AI-powered studying</p>
+      <h1 class="hero-h1">
+        <span class="sr-only">Upload your notes. Ace your exam.</span>
+        <span class="l1 split" aria-hidden="true">Upload your notes.</span>
+        <span class="hero-em" aria-hidden="true">Ace your exam.</span>
+      </h1>
+      <p class="hero-sub">StudyFlow reads your notes and builds a day-by-day study plan with real practice questions.</p>
+      <div class="hero-ctas">
+        <a href="login.html" class="btn btn-light">Build my study plan →</a>
+        <a href="#how" class="btn btn-glass">See how it works</a>
+      </div>
+    </div>
+
+    <div class="band band-2" data-a="0.34" data-b="0.62" data-ramp="0.06" data-entrance="weave">
+      <h2 class="band-h"><span class="sr-only">Slides. PDFs. A photo of the whiteboard.</span><span class="split" aria-hidden="true">Slides. PDFs. A photo of the whiteboard.</span></h2>
+      <p class="band-p">StudyFlow reads every page you give it and turns it into a lesson, practice questions and a recap for each day.</p>
+    </div>
+
+    <div class="band band-3" data-a="0.72" data-b="1" data-ramp="0.07" data-entrance="rise">
+      <h2 class="band-h"><span class="sr-only">One short session a day. Start in 60 seconds.</span><span class="rise" aria-hidden="true">One short session a day.</span> <em class="rise" aria-hidden="true">Start in 60 seconds.</em></h2>
+      <p class="band-p">Set your exam date. The questions get harder as the test gets closer, so exam day feels familiar.</p>
+      <div class="hero-ctas"><a href="login.html" class="btn btn-blue">Build my study plan →</a></div>
+    </div>
+  </div>
+</section>
+
+<!-- PROOF -->
+<section class="proof" aria-label="StudyFlow in numbers">
+  <div class="proof-stats">
+    <div class="stat"><span class="stat-n" data-count="2400" data-suffix="+">2,400+</span><span class="stat-l">students</span></div>
+    <div class="stat"><span class="stat-n" data-count="4.9" data-dec="1">4.9</span><span class="stat-l">average rating</span></div>
+    <div class="stat"><span class="stat-n" data-count="60" data-suffix="s">60s</span><span class="stat-l">to your first plan</span></div>
+  </div>
+  <div class="marquee" id="marquee">
+    <p class="marquee-label">Trusted by students at</p>
+    <div class="marquee-view">
+      <div class="marquee-track">
+        <span>Punahou School</span><span>Harvard Extension</span><span>UCLA</span><span>UC Berkeley</span><span>NYU</span><span>UMich</span>
+        <span aria-hidden="true">Punahou School</span><span aria-hidden="true">Harvard Extension</span><span aria-hidden="true">UCLA</span><span aria-hidden="true">UC Berkeley</span><span aria-hidden="true">NYU</span><span aria-hidden="true">UMich</span>
+        <span aria-hidden="true">Punahou School</span><span aria-hidden="true">Harvard Extension</span><span aria-hidden="true">UCLA</span><span aria-hidden="true">UC Berkeley</span><span aria-hidden="true">NYU</span><span aria-hidden="true">UMich</span>
+        <span aria-hidden="true">Punahou School</span><span aria-hidden="true">Harvard Extension</span><span aria-hidden="true">UCLA</span><span aria-hidden="true">UC Berkeley</span><span aria-hidden="true">NYU</span><span aria-hidden="true">UMich</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="sec how">
+  <div class="wrap">
+    <h2 class="h2 center" data-reveal="words">From notes to <em>exam-ready</em> in 60 seconds</h2>
+    <div class="how-track" id="how-track">
+      <svg class="how-line" viewBox="0 0 44 1000" preserveAspectRatio="none" aria-hidden="true">
+        <path class="bg" d="M22 0 C 36 110, 8 220, 22 333 S 36 560, 22 666 S 8 890, 22 1000"/>
+        <path class="fg" pathLength="1" d="M22 0 C 36 110, 8 220, 22 333 S 36 560, 22 666 S 8 890, 22 1000"/>
+      </svg>
+      <ol class="how-steps">
+        <li class="how-step" data-reveal-step>
+          <div class="how-node"><div class="how-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path pathLength="1" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline pathLength="1" points="14 2 14 8 20 8"/><line pathLength="1" x1="16" y1="13" x2="8" y2="13"/><line pathLength="1" x1="16" y1="17" x2="8" y2="17"/></svg></div></div>
+          <div class="how-copy"><span class="how-num">01</span><h3>Paste your notes</h3><p>Drop in a PDF, slides or a Word doc, paste text, or snap a photo. StudyFlow reads any subject: biology, history, chemistry, literature.</p></div>
+        </li>
+        <li class="how-step" data-reveal-step>
+          <div class="how-node"><div class="how-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle pathLength="1" cx="12" cy="12" r="10"/><polyline pathLength="1" points="12 6 12 12 16 14"/></svg></div></div>
+          <div class="how-copy"><span class="how-num">02</span><h3>Set your exam date</h3><p>Tell us when your exam is and the grade you want. The AI works out how many days you need and builds sessions around your schedule.</p></div>
+        </li>
+        <li class="how-step" data-reveal-step>
+          <div class="how-node"><div class="how-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline pathLength="1" points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline pathLength="1" points="17 6 23 6 23 12"/></svg></div></div>
+          <div class="how-copy"><span class="how-num">03</span><h3>Study. Score higher.</h3><p>Your plan is ready right away. Every day has a short session with AI questions, difficulty that ramps up, and your score as you go.</p></div>
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- EXAMPLE STUDY PLAN -->
+<section id="example" class="sec example">
+  <div class="wrap ex-grid">
+    <div class="ex-copy">
+      <h2 class="h2" data-reveal="words">Here's what your <em>plan looks like</em></h2>
+      <p class="lede" data-reveal="up">StudyFlow breaks your lesson into short, timed sessions, ordered by what matters most and when your exam is.</p>
+      <div class="tags" data-reveal="up"><span class="tag">Biology Ch. 7</span><span class="tag">Exam in 4 days</span><span class="tag">Medium difficulty</span></div>
+    </div>
+      <div class="hold">
+        <button class="hold-btn" id="hold-btn" type="button" aria-describedby="hold-hint">
+          <svg class="hold-ring" viewBox="0 0 48 48" aria-hidden="true"><circle class="track" cx="24" cy="24" r="20"/><circle class="fill" cx="24" cy="24" r="20" pathLength="1"/></svg>
+          <span class="dot" aria-hidden="true"></span>
+          <span class="hold-label" id="hold-label">Hold to build the plan</span>
+        </button>
+        <p class="hold-hint" id="hold-hint" aria-live="polite">Press and hold. Let go early and the notes drift apart again.</p>
+        <button class="hold-reset" id="hold-reset" type="button" hidden>Scatter the notes again</button>
+      </div>
+    <div class="plan-stage" id="plan-stage">
+      <div class="tilt" id="plan-tilt">
+        <div class="flip" id="demo-flip">
+          <div class="plan-card face" id="plan-card">
+            <div class="plan-head">
+              <div><h3>Biology: Cell Division</h3><p>4 sessions, 2 hr 45 min. Exam on Thursday.</p></div>
+              <span class="plan-status" id="plan-status">Draft</span>
+            </div>
+            <ol class="plan-body">
+              <li class="session"><span class="session-day">Mon</span><div class="session-info"><h4>Mitosis overview and key terms</h4><p>Phases of mitosis, chromosome behavior, vocab review</p></div><span class="session-time">45 min</span></li>
+              <li class="session"><span class="session-day">Tue</span><div class="session-info"><h4>Meiosis and genetic variation</h4><p>Meiosis I vs II, crossing over, practice diagrams</p></div><span class="session-time">50 min</span></li>
+              <li class="session"><span class="session-day">Wed</span><div class="session-info"><h4>Flashcards and practice questions</h4><p>AI flashcards and 10 multiple choice questions</p></div><span class="session-time">40 min</span></li>
+              <li class="session"><span class="session-day">Thu</span><div class="session-info"><h4>Final recap: weak areas only</h4><p>Focused on the concepts you missed most</p></div><span class="session-time">30 min</span></li>
+            </ol>
+            <div class="plan-foot" id="plan-foot">
+              <button class="btn btn-blue" id="try-q" type="button" tabindex="-1">Try Monday's first question →</button>
+            </div>
+          </div>
+          <!-- The back face is built from lesson.html's own components (card header
+               with the dot grid, card badge, lettered options, feedback box,
+               the monochrome streak pill), so this is the app, not a picture of it. -->
+          <div class="qcard face back" id="qcard" aria-hidden="true" inert>
+            <div class="q-top">
+              <span class="q-progress" aria-hidden="true"><i id="q-progress-fill"></i></span>
+              <span class="stat-pill" id="q-count">0 / 8 correct</span>
+              <span class="streak-pill" aria-label="2 day streak"><svg class="streak-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.4 2.6c.4 2.6 2 3.9 3.1 5.4a5.6 5.6 0 0 1 1.1 3.5 4.6 4.6 0 1 1-9.2 0c0-2 .9-3.3 2-4.5.2 1 .7 1.7 1.3 2.1.6-2.3 1-4.3 1.7-6.5Z"/></svg><span>2</span></span>
+            </div>
+            <div class="card-header"><span class="card-badge">Practice question</span><h3>Mitosis overview</h3></div>
+            <div class="card-body">
+              <p class="q-text" id="q-text">During which phase of mitosis do the chromosomes line up across the middle of the cell?</p>
+              <div class="q-options" role="group" aria-labelledby="q-text">
+                <button class="q-option" type="button" data-ok="0"><span class="opt-letter">A</span>Prophase</button>
+                <button class="q-option" type="button" data-ok="1"><span class="opt-letter">B</span>Metaphase</button>
+                <button class="q-option" type="button" data-ok="0"><span class="opt-letter">C</span>Anaphase</button>
+                <button class="q-option" type="button" data-ok="0"><span class="opt-letter">D</span>Telophase</button>
+              </div>
+              <div class="feedback-box" id="q-fb" aria-live="polite"><div><div class="fb-inner"><p class="feedback-label" id="q-fb-label"></p><p class="feedback-text" id="q-fb-text"></p></div></div></div>
+              <div class="q-actions">
+                <button class="link-btn" id="q-again" type="button" hidden>Answer it again</button>
+                <button class="link-btn" id="q-back" type="button">Back to the plan</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY IT WORKS (pinned) -->
+<section id="benefits" class="why" aria-labelledby="why-h">
+  <div id="wo" class="show-outer">
+    <div id="ws" class="show-stage">
+      <div class="sec-head wrap center">
+        <p class="eyebrow">Why it works</p>
+        <h2 class="h2" id="why-h" data-reveal="words">Stop cramming. <em>Start retaining.</em></h2>
+      </div>
+      <div class="why-grid">
+        <div class="drum-wrap" aria-hidden="true">
+          <div class="drum" id="why-drum">
+            <div class="drum-face" style="--i:0"><div class="big">200<small>%</small></div><div class="big-l">better retention</div><div class="big-c">Cepeda et al., 2006</div></div>
+            <div class="drum-face" style="--i:1"><div class="big">50<small>%</small></div><div class="big-l">more absorbed</div><div class="big-c">Kornell et al., 2009</div></div>
+            <div class="drum-face" style="--i:2"><div class="big">4<small>x</small></div><div class="big-l">better recall</div><div class="big-c">Roediger and Karpicke</div></div>
+            <div class="drum-face" style="--i:3"><div class="big">85<small>%</small></div><div class="big-l">gap detection</div><div class="big-c">Feynman Technique</div></div>
+            <div class="drum-face" style="--i:4"><div class="big">40<small>%</small></div><div class="big-l">stronger memory</div><div class="big-c">Taylor and Rohrer, 2010</div></div>
+            <div class="drum-face" style="--i:5"><div class="big">30<small>%</small></div><div class="big-l">better overnight</div><div class="big-c">Walker, 2017</div></div>
+          </div>
+        </div>
+        <div class="prism-wrap">
+          <div class="prism" id="why-prism">
+            <article class="prism-face" style="--i:0"><div class="face-stat"><span class="big">200<small>%</small></span><span class="big-l">better retention</span></div><h3>Spaced repetition</h3><p>Review things right when you're about to forget them. The SM-2 algorithm works out exactly when each concept needs reviewing. Medical students around the world use it.</p><p class="foot">The gold standard for memory retention since 1987</p></article>
+            <article class="prism-face" style="--i:1"><div class="face-stat"><span class="big">50<small>%</small></span><span class="big-l">more absorbed</span></div><h3>Pre-test effect</h3><p>Being tested before you fully know something primes your brain to absorb it 50% faster. StudyFlow shows you questions before each lesson starts.</p><p class="foot">Primes the brain for deeper encoding of new material</p></article>
+            <article class="prism-face" style="--i:2"><div class="face-stat"><span class="big">4<small>x</small></span><span class="big-l">better recall</span></div><h3>Active recall</h3><p>Pulling information out of memory is 4x more effective than rereading it. Every StudyFlow session makes you answer from memory.</p><p class="foot">The most evidence-backed study technique in cognitive science</p></article>
+            <article class="prism-face" style="--i:3"><div class="face-stat"><span class="big">85<small>%</small></span><span class="big-l">gap detection</span></div><h3>Feynman technique</h3><p>Explain a concept simply. If you can't, you don't know it yet. StudyFlow's AI grades your explanation and shows you exactly where your understanding breaks down.</p><p class="foot">Nobel Prize physicist Richard Feynman's own learning method</p></article>
+            <article class="prism-face" style="--i:4"><div class="face-stat"><span class="big">40<small>%</small></span><span class="big-l">stronger memory</span></div><h3>Desirable difficulty</h3><p>Questions that feel slightly too hard build stronger memories. StudyFlow ramps up the difficulty as your exam gets closer, so the real test feels easier.</p><p class="foot">Struggling a little is what makes learning stick</p></article>
+            <article class="prism-face" style="--i:5"><div class="face-stat"><span class="big">30<small>%</small></span><span class="big-l">better overnight</span></div><h3>Sleep consolidation</h3><p>Your brain locks in memories while you sleep, so studying before bed helps you keep what you learned. StudyFlow reminds you to review your hardest topics last.</p><p class="foot">Why cramming the night before works once, then fades fast</p></article>
+          </div>
+        </div>
+      </div>
+      <div class="dots" id="why-dots" role="group" aria-label="Research findings">
+        <button type="button" aria-label="Spaced repetition" aria-current="true"></button>
+        <button type="button" aria-label="Pre-test effect"></button>
+        <button type="button" aria-label="Active recall"></button>
+        <button type="button" aria-label="Feynman technique"></button>
+        <button type="button" aria-label="Desirable difficulty"></button>
+        <button type="button" aria-label="Sleep consolidation"></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section id="testimonials" class="sec">
+  <div class="wrap">
+    <h2 class="h2" data-reveal="words">Students are <em>scoring higher</em></h2>
+    <p class="lede" data-reveal="up">Real feedback from students who used StudyFlow before their exams.</p>
+    <div class="tgrid" id="tgrid">
+      <figure class="tcard feature">
+        <div class="stars" aria-label="5 out of 5 stars"><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg></div>
+        <blockquote>“I have ADHD and studying has always been a nightmare. StudyFlow breaks things into small focused sessions that actually work for my brain. I wish this existed years ago.”</blockquote>
+        <figcaption class="who"><span class="av">SM</span><span><b>Sofia M.</b><span>College Junior, Pre-Med</span></span></figcaption>
+      </figure>
+      <figure class="tcard">
+        <div class="stars" aria-label="5 out of 5 stars"><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg></div>
+        <blockquote>“I used to spend hours rereading my notes and still felt lost before exams. StudyFlow gave me a clear plan in seconds. I actually felt <strong>prepared</strong> for once.”</blockquote>
+        <figcaption class="who"><span class="av">MR</span><span><b>Maya R.</b><span>10th Grade, AP Biology</span></span></figcaption>
+      </figure>
+      <figure class="tcard">
+        <div class="stars" aria-label="5 out of 5 stars"><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg></div>
+        <blockquote>“As a college freshman juggling 5 classes, I was overwhelmed. StudyFlow broke everything down into sessions I could actually handle. My GPA went from a 2.8 to a <strong>3.6</strong> in one semester.”</blockquote>
+        <figcaption class="who"><span class="av">JT</span><span><b>Jordan T.</b><span>College Freshman, Computer Science</span></span></figcaption>
+      </figure>
+      <figure class="tcard">
+        <div class="stars" aria-label="5 out of 5 stars"><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg></div>
+        <blockquote>“I uploaded my history notes the night before a test and got a full study plan in like 30 seconds. Ended up getting an <strong>A-</strong>. This thing is actually crazy.”</blockquote>
+        <figcaption class="who"><span class="av">AK</span><span><b>Aiden K.</b><span>11th Grade, AP US History</span></span></figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES (pinned) -->
+<section id="features" class="feat" aria-labelledby="feat-h">
+  <div id="fo" class="show-outer">
+    <div id="fs" class="show-stage">
+      <div class="sec-head wrap center">
+        <h2 class="h2" id="feat-h" data-reveal="words">Your unfair <em>advantage</em> before every exam</h2>
+      </div>
+      <div class="feat-grid">
+        <div class="feat-text">
+          <div class="ft" id="ft0"><p class="ft-tag">Plans</p><h3 class="ft-h">AI generates your <em>exact study plan</em></h3><p class="ft-p">Paste your notes and set your exam date. StudyFlow reads your content and builds a multi-day plan with daily sessions in under 60 seconds.</p><ul class="ft-list"><li>Detects the subject from your notes</li><li>Adjusts difficulty to your goal</li><li>Works for any subject</li></ul></div>
+          <div class="ft" id="ft1"><p class="ft-tag">Memory</p><h3 class="ft-h">Spaced repetition <em>built right in</em></h3><p class="ft-p">Questions you get wrong come back automatically. The SM-2 algorithm works out exactly when each concept needs another look.</p><ul class="ft-list"><li>SM-2, the gold standard since 1987</li><li>200% better retention</li><li>Fully automatic</li></ul></div>
+          <div class="ft" id="ft2"><p class="ft-tag">Difficulty</p><h3 class="ft-h">Difficulty ramps <em>as exams approach</em></h3><p class="ft-p">Easy recall on day one. Hard application by day four. The pre-test effect primes your brain before each session.</p><ul class="ft-list"><li>Pre-test effect warms up recall</li><li>Harder questions as the exam nears</li><li>Confidence tracked per question</li></ul></div>
+          <div class="ft" id="ft3"><p class="ft-tag">Explaining</p><h3 class="ft-h">Feynman technique <em>graded by AI</em></h3><p class="ft-p">Explain a concept in plain language. StudyFlow's AI scores your answer and tells you exactly what you missed.</p><ul class="ft-list"><li>Write explanations in your own words</li><li>AI scores accuracy out of 10</li><li>Points to exactly what you missed</li></ul></div>
+          <div class="ft" id="ft4"><p class="ft-tag">VIP tutor</p><h3 class="ft-h">An AI tutor that <em>knows your lesson</em></h3><p class="ft-p">Ask anything about today's content. The AI has read your notes, knows what you got wrong, and gives specific answers.</p><ul class="ft-list"><li>Reads your actual lesson notes</li><li>Knows your session accuracy</li><li>VIP only</li></ul></div>
+          <div class="ft" id="ft5"><p class="ft-tag">VIP insights</p><h3 class="ft-h">A personal <em>insights dashboard</em></h3><p class="ft-p">Topic accuracy, predicted exam score, weekly trends, and the concepts you keep missing, updated after every session.</p><ul class="ft-list"><li>Topic-by-topic accuracy</li><li>Predicted exam score</li><li>Weekly performance trends</li></ul></div>
+        </div>
+        <div class="pad-wrap" aria-hidden="true">
+          <div class="pad" id="feat-pad">
+            <div class="pad-rings"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="pad-sheet" style="--i:0">
+              <div class="card-header"><span class="card-badge">Your plan</span><h3>Biology: Cell Division</h3></div>
+              <div class="pad-body">
+                <div class="pl-row on"><span class="session-day">Mon</span><span>Mitosis overview</span><b>Today</b></div>
+                <div class="pl-row"><span class="session-day">Tue</span><span>Meiosis and variation</span></div>
+                <div class="pl-row"><span class="session-day">Wed</span><span>Flashcards and practice</span></div>
+                <div class="pl-row"><span class="session-day">Thu</span><span>Final recap</span></div>
+              </div>
+            </div>
+            <div class="pad-sheet" style="--i:1">
+              <div class="card-header"><span class="card-badge">Try again</span><h3>Cell cycle</h3></div>
+              <div class="pad-body">
+                <p class="q-text sm">When does a cell copy its DNA?</p>
+                <div class="q-options"><div class="q-option static correct-ans"><span class="opt-letter">A</span>During interphase, in S phase</div><div class="q-option static dimmed"><span class="opt-letter">B</span>During prophase</div></div>
+                <p class="pad-note">You missed this on Monday. It comes back in 3 days.</p>
+              </div>
+            </div>
+            <div class="pad-sheet" style="--i:2">
+              <div class="card-header"><span class="card-badge">Pre-test</span><h3>Day 4: hard mode</h3></div>
+              <div class="pad-body">
+                <div class="diff-row"><span>Difficulty</span><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></div>
+                <p class="q-text sm">Why does crossing over increase genetic variation during meiosis I?</p>
+                <p class="pad-note">Day 1 asked for definitions. By day 4 it asks you to explain.</p>
+              </div>
+            </div>
+            <div class="pad-sheet" style="--i:3">
+              <div class="card-header"><span class="card-badge">Teach it back</span><h3>Explain it in your own words</h3></div>
+              <div class="pad-body">
+                <p class="q-text sm">How does DNA replication make sure the copy is accurate?</p>
+                <div class="write-area">Each strand is a template, so A pairs with T and C pairs with G. Polymerase adds the matching nucleotides one by one…</div>
+                <div class="score-row"><span class="score-num">8<small>/10</small></span><span>Missed: the proofreading step</span></div>
+              </div>
+            </div>
+            <div class="pad-sheet dark" style="--i:4">
+              <div class="card-header vip"><span class="card-badge">VIP</span><h3>AI tutor</h3></div>
+              <div class="pad-body chat">
+                <p class="ai">I saw meiosis II tripped you up. Want me to explain it a different way?</p>
+                <p class="me">Yes, why do the chromatids separate?</p>
+                <p class="ai">In meiosis II the centromere splits, so the sister chromatids pull apart. It works a lot like mitosis…</p>
+              </div>
+            </div>
+            <div class="pad-sheet" style="--i:5">
+              <div class="card-header vip"><span class="card-badge">VIP</span><h3>Predicted score: 87%</h3></div>
+              <div class="pad-body">
+                <div class="ins-top"><span class="stat-pill">12 sessions</span><span class="streak-pill" aria-label="9 day streak"><svg class="streak-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.4 2.6c.4 2.6 2 3.9 3.1 5.4a5.6 5.6 0 0 1 1.1 3.5 4.6 4.6 0 1 1-9.2 0c0-2 .9-3.3 2-4.5.2 1 .7 1.7 1.3 2.1.6-2.3 1-4.3 1.7-6.5Z"/></svg><span>9</span></span></div>
+                <div class="mk-row"><span>Mitosis</span><i style="width:92%"></i><b>92%</b></div>
+                <div class="mk-row"><span>Meiosis</span><i style="width:68%;opacity:.55"></i><b>68%</b></div>
+                <div class="mk-row"><span>Cell cycle</span><i style="width:85%;opacity:.8"></i><b>85%</b></div>
+                <p class="pad-note">Meiosis is your weakest topic. Tomorrow starts there.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="dots" id="feat-dots" role="group" aria-label="Features">
+        <button type="button" aria-label="Study plans" aria-current="true"></button>
+        <button type="button" aria-label="Spaced repetition"></button>
+        <button type="button" aria-label="Difficulty ramp"></button>
+        <button type="button" aria-label="Feynman technique"></button>
+        <button type="button" aria-label="AI tutor"></button>
+        <button type="button" aria-label="Insights dashboard"></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="sec pricing">
+  <div class="wrap center">
+    <h2 class="h2" data-reveal="words">Free to start. <em>Pay when you love it.</em></h2>
+    <p class="lede" data-reveal="up">No credit card needed. Get your first study plan in under a minute, completely free.</p>
+  </div>
+  <div class="pgrid" id="pgrid">
+    <div class="pcard">
+      <p class="pname">Free</p>
+      <p class="price">$0</p>
+      <p class="per">Forever free</p>
+      <ul class="feats">
+        <li><svg><use href="#i-check"/></svg>1 study plan a month</li>
+        <li><svg><use href="#i-check"/></svg>Plans up to 7 days long</li>
+        <li><svg><use href="#i-check"/></svg>PDF and notes upload</li>
+        <li><svg><use href="#i-check"/></svg>AI questions and hints</li>
+        <li class="no"><svg><use href="#i-x"/></svg>14-day plans</li>
+        <li class="no"><svg><use href="#i-x"/></svg>AI chat assistant</li>
+      </ul>
+      <a href="login.html" class="btn btn-outline">Start free →</a>
+    </div>
+    <div class="pcard pro">
+      <span class="badge">Most popular</span>
+      <p class="pname">Pro</p>
+      <p class="price">$7.99</p>
+      <p class="per">per month</p>
+      <ul class="feats">
+        <li><svg><use href="#i-check"/></svg>5 study plans a month</li>
+        <li><svg><use href="#i-check"/></svg>Plans up to 14 days long</li>
+        <li><svg><use href="#i-check"/></svg>Fill-in-the-blank questions</li>
+        <li><svg><use href="#i-check"/></svg>Advanced analytics</li>
+        <li><svg><use href="#i-check"/></svg>Priority support</li>
+        <li class="no"><svg><use href="#i-x"/></svg>AI chat assistant</li>
+      </ul>
+      <a href="pricing.html" class="btn">Get Pro →</a>
+    </div>
+    <div class="pcard vip">
+      <p class="pname">VIP</p>
+      <p class="price">$14.99</p>
+      <p class="per">per month</p>
+      <ul class="feats">
+        <li><svg><use href="#i-check"/></svg>Everything in Pro</li>
+        <li><svg><use href="#i-check"/></svg>Unlimited plans, any length</li>
+        <li><svg><use href="#i-check"/></svg>AI chat assistant</li>
+        <li><svg><use href="#i-check"/></svg>Feynman teach-it-back</li>
+        <li><svg><use href="#i-check"/></svg>SM-2 spaced repetition</li>
+        <li><svg><use href="#i-check"/></svg>VIP support</li>
+      </ul>
+      <a href="pricing.html" class="btn">Get VIP →</a>
+    </div>
+  </div>
+</section>
+
+<!-- SCHOOLS -->
+<section class="sec schools" aria-labelledby="schools-h">
+  <div class="wrap">
+    <p class="eyebrow">For schools</p>
+    <h2 class="h2" id="schools-h" data-reveal="words">StudyFlow for <em>classrooms</em></h2>
+    <p class="lede" data-reveal="up">Give every student in your class the same AI study tool, and track their progress as it happens.</p>
+    <div class="board" data-reveal="tilt">
+      <div class="board-cols">
+        <div class="tier">
+          <p class="pname">Free trial</p>
+          <p class="price">$0</p>
+          <p class="per">forever free</p>
+          <ul class="feats">
+            <li><svg><use href="#i-check"/></svg>Up to 5 students</li>
+            <li><svg><use href="#i-check"/></svg>Class code</li>
+            <li><svg><use href="#i-check"/></svg>Basic progress view</li>
+            <li class="no"><svg><use href="#i-x"/></svg>Assign notes</li>
+            <li class="no"><svg><use href="#i-x"/></svg>Insights dashboard</li>
+          </ul>
+          <a href="teacher-login.html" class="btn btn-glass">Try free →</a>
+        </div>
+        <div class="tier">
+          <p class="pname">Classroom <b>Most popular</b></p>
+          <p class="price">$79</p>
+          <p class="per">per month, up to 30 students</p>
+          <ul class="feats">
+            <li><svg><use href="#i-check"/></svg>Up to 30 students</li>
+            <li><svg><use href="#i-check"/></svg>Full teacher dashboard</li>
+            <li><svg><use href="#i-check"/></svg>Assign notes to your class</li>
+            <li><svg><use href="#i-check"/></svg>Real-time insights</li>
+            <li><svg><use href="#i-check"/></svg>Parent view included</li>
+          </ul>
+          <a href="teacher-login.html" class="btn btn-light">Get started →</a>
+        </div>
+        <div class="tier">
+          <p class="pname">School</p>
+          <p class="price">$299</p>
+          <p class="per">per month, unlimited students</p>
+          <ul class="feats">
+            <li><svg><use href="#i-check"/></svg>Unlimited students</li>
+            <li><svg><use href="#i-check"/></svg>Multiple classrooms</li>
+            <li><svg><use href="#i-check"/></svg>Admin dashboard</li>
+            <li><svg><use href="#i-check"/></svg>Priority support</li>
+            <li><svg><use href="#i-check"/></svg>Custom onboarding</li>
+          </ul>
+          <a href="contact.html" class="btn btn-glass">Contact us →</a>
+        </div>
+      </div>
+      <div class="board-foot">
+        <p>Are you a teacher? Set up your classroom in minutes.</p>
+        <a href="teacher-login.html" class="btn btn-blue">Set up your classroom →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="sec">
+  <div class="wrap faq-grid">
+    <div class="faq-side">
+      <h2 class="h2" data-reveal="words">Everything you need to <em>know</em></h2>
+      <p>Still stuck? <a href="contact.html">Ask us anything</a>.</p>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a1">What file types can I upload? <span class="faq-icon" aria-hidden="true">+</span></button>
+        <div class="faq-a" id="faq-a1"><div><p>PDFs, PowerPoint slides, Word docs, photos of your notes, and plain text. Basically anything you'd study from.</p></div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a2">How does the AI create my study plan? <span class="faq-icon" aria-hidden="true">+</span></button>
+        <div class="faq-a" id="faq-a2"><div><p>StudyFlow reads your lesson, finds the key topics, and breaks them into focused study sessions based on your deadline and difficulty level. No two plans are the same.</p></div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a3">Is StudyFlow really free? <span class="faq-icon" aria-hidden="true">+</span></button>
+        <div class="faq-a" id="faq-a3"><div><p>Yes. The free plan gives you 1 study plan a month, up to 7 days long, with no credit card needed. Pro is $7.99 a month for 5 plans a month and plans up to 14 days.</p></div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a4">What subjects does it work for? <span class="faq-icon" aria-hidden="true">+</span></button>
+        <div class="faq-a" id="faq-a4"><div><p>Any subject. Biology, history, math, languages: if you can upload notes for it, StudyFlow can build a plan for it.</p></div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" type="button" aria-expanded="false" aria-controls="faq-a5">Is StudyFlow live yet? <span class="faq-icon" aria-hidden="true">+</span></button>
+        <div class="faq-a" id="faq-a5"><div><p>Yes. StudyFlow is live right now. Create a free account and build your first plan in about a minute.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section id="cta" class="sec cta">
+  <div class="wrap cta-grid">
+    <div>
+      <span class="chip">Free to start, no credit card</span>
+      <h2>Your next exam is <em>already closer</em> than you think.</h2>
+      <p>Build your study plan in under a minute. Free forever, and you only upgrade if you want more.</p>
+      <div class="row">
+        <a href="login.html" class="btn btn-light">Build my study plan →</a>
+        <a href="#pricing" class="btn btn-glass">See plans</a>
+      </div>
+    </div>
+    <div class="fan" id="cta-fan" aria-hidden="true">
+      <div class="fan-inner">
+        <div class="fan-card" style="--i:0"><div class="dc" style="--i:0"><div class="dc-top"><span>DAY 1</span><span>MON</span></div><h4>Mitosis overview</h4><ul><li class="on">Lesson</li><li class="on">Practice questions</li><li class="on">Recap</li></ul><div class="dc-foot"><span>45 min</span><span class="dc-diff"><i class="on"></i><i></i><i></i><i></i></span></div></div></div>
+        <div class="fan-card" style="--i:1"><div class="dc" style="--i:1"><div class="dc-top"><span>DAY 2</span><span>TUE</span></div><h4>Meiosis and variation</h4><ul><li class="on">Lesson</li><li>Practice questions</li><li>Recap</li></ul><div class="dc-foot"><span>50 min</span><span class="dc-diff"><i class="on"></i><i class="on"></i><i></i><i></i></span></div></div></div>
+        <div class="fan-card" style="--i:2"><div class="dc" style="--i:2"><div class="dc-top"><span>DAY 3</span><span>WED</span></div><h4>Flashcards and practice</h4><ul><li>Lesson</li><li>Practice questions</li><li>Recap</li></ul><div class="dc-foot"><span>40 min</span><span class="dc-diff"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></div></div></div>
+        <div class="fan-card" style="--i:3"><div class="dc" style="--i:3"><div class="dc-top"><span>DAY 4</span><span>THU</span></div><h4>Final recap</h4><ul><li>Lesson</li><li>Practice questions</li><li>Recap</li></ul><div class="dc-foot"><span>30 min</span><span class="dc-diff"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+<div class="edge-fade" id="edge-fade" aria-hidden="true"></div>
+<a href="login.html" class="btn btn-blue sticky-cta" id="sticky-cta" tabindex="-1" aria-hidden="true">Build my study plan →</a>
+
+<footer class="site-foot">
+  <div class="wrap foot-top">
+    <div class="foot-brand">
+      <a href="#" class="foot-logo" aria-label="StudyFlow, back to top">
+        <svg viewBox="0 0 40 44" width="34" height="37" aria-hidden="true"><rect x="0" y="2" width="40" height="40" rx="10" fill="#3567e0"/><rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/><rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/><rect x="14" y="10" width="17" height="22" rx="3" fill="white"/><rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/><rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/><rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/></svg>
+      </a>
+      <p>Built for students who want to stop guessing and start learning.</p>
+    </div>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Plans</a>
+      <a href="about.html">Our story</a>
+      <a href="contact.html">Help</a>
+    </nav>
+  </div>
+  <div class="foot-mark" aria-hidden="true"><span>Study</span><em>Flow</em></div>
+  <div class="wrap foot-legal">
+    <span>© 2026 StudyFlow</span>
+    <nav aria-label="Legal">
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms of Service</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </div>
+</footer>
+
+<!-- Same Three.js build the live page already loads. Deferred: it runs after
+     parsing and before DOMContentLoaded, which is when the hero starts. If it
+     never arrives, the hero stays a complete static screen. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
+<script>
+(function () {
+  'use strict';
+  document.documentElement.classList.add('js');
+
+  /* ── helpers ── */
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function smooth(p, e0, e1) { var t = clamp((p - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); }
+  function easeOut3(t) { t = clamp(t, 0, 1); return 1 - Math.pow(1 - t, 3); }
+  function easeIO3(t) { t = clamp(t, 0, 1); return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function rng(seed) { var s = seed >>> 0; return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+  /* Frame-rate independent smoothing: k is the per-frame factor at 60fps. */
+  function follow(k, dt) { return 1 - Math.pow(1 - k, dt / 16.667); }
+  function setVar(el, name, v, cacheKey, eps) {
+    var last = el[cacheKey];
+    if (last === undefined || Math.abs(v - last) > (eps || 0.002) || ((v === 0 || v === 1) && v !== last)) {
+      el[cacheKey] = v;
+      el.style.setProperty(name, (Math.round(v * 10000) / 10000).toString());
+    }
+  }
+
+  var RM = window.matchMedia('(prefers-reduced-motion: reduce)');
+  /* Same query as the CSS that moves the hero text to the bottom. */
+  var TALL = window.matchMedia('(max-width: 760px), (orientation: portrait) and (max-width: 1024px)');
+  var FINE = window.matchMedia('(pointer: fine)');
+  var reduced = RM.matches;
+
+  /* ════════════════════════════════════════
+     HERO
+  ════════════════════════════════════════ */
+  var Hero = (function () {
+    var hero = document.getElementById('hero');
+    var stage = document.getElementById('hero-stage');
+    var canvas = document.getElementById('hero-3d');
+    var nav = document.querySelector('nav.site-nav');
+    var bands = [];
+    var mode = 'none';            // 'journey' | 'still' | 'flat'
+    var gl = null;                // the three.js world, once built
+    var target = 0, shown = 0, day = 0, lastDay = -1;
+    var rafId = null, lastNow = 0, visible = true;
+    var t0 = 0, loadStart = 0, loadK = 0;
+    var pointer = { x: 0, y: 0, sx: 0, sy: 0, on: false };
+    /* Adaptive quality: WebGL heroes cost more than most pages budget for, so if
+       frames keep running long the canvas resolution steps down (never up again
+       in a session, so it cannot oscillate). Level 0 also drops the dust. */
+    var quality = 2, perfSum = 0, perfN = 0;
+    function watchPerf(dt) {
+      if (dt <= 0 || dt > 250 || quality === 0) return;
+      perfSum += dt; perfN++;
+      if (perfN < 90) return;
+      var avg = perfSum / perfN; perfSum = 0; perfN = 0;
+      if (avg > 30) {
+        quality--;
+        resize();
+        if (quality === 0 && gl) gl.motes.visible = false;
+      }
+    }
+
+    /* ── split text for the band entrances (done once, undone for still mode) ── */
+    function splitChars(el, seed, kind) {
+      if (!el.getAttribute('data-src')) el.setAttribute('data-src', el.textContent);
+      var text = el.getAttribute('data-src');
+      var r = rng(seed);
+      var words = text.split(' ');
+      var total = text.replace(/ /g, '').length, n = 0;
+      el.textContent = '';
+      words.forEach(function (word, wi) {
+        var w = document.createElement('span');
+        w.className = 'w';
+        for (var i = 0; i < word.length; i++) {
+          var c = document.createElement('span');
+          c.className = 'c';
+          c.textContent = word[i];
+          var th, jx, jy, jr;
+          if (kind === 'weave') {
+            th = n / total * .5 + r() * .05;
+            jx = 0; jy = (n % 2 ? 1 : -1) * (26 + r() * 16); jr = 0;
+          } else {
+            th = r() * .45;
+            jx = (r() - .5) * 170; jy = (r() - .5) * 120; jr = (r() - .5) * 60;
+          }
+          c.style.cssText = '--th:' + th.toFixed(3) + ';--jx:' + jx.toFixed(1) + 'px;--jy:' + jy.toFixed(1) + 'px;--jr:' + jr.toFixed(1) + 'deg';
+          w.appendChild(c);
+          n++;
+        }
+        el.appendChild(w);
+        if (wi < words.length - 1) el.appendChild(document.createTextNode(' '));
+      });
+    }
+    function splitWords(el, start, total) {
+      if (!el.getAttribute('data-src')) el.setAttribute('data-src', el.textContent);
+      var words = el.getAttribute('data-src').split(' ');
+      el.textContent = '';
+      words.forEach(function (word, i) {
+        var w = document.createElement('span');
+        w.className = 'rw';
+        w.textContent = word;
+        w.style.setProperty('--th', ((start + i) / total * .42).toFixed(3));
+        el.appendChild(w);
+        if (i < words.length - 1) el.appendChild(document.createTextNode(' '));
+      });
+    }
+    function unsplit(el) { var s = el.getAttribute('data-src'); if (s !== null) el.textContent = s; }
+
+    function collectBands() {
+      bands = [].slice.call(hero.querySelectorAll('.band')).map(function (el) {
+        return { el: el, a: parseFloat(el.getAttribute('data-a')), b: parseFloat(el.getAttribute('data-b')),
+                 ramp: parseFloat(el.getAttribute('data-ramp')) || 0, kind: el.getAttribute('data-entrance'),
+                 op: -1, k: -1, vis: null };
+      });
+    }
+    function prepareText(on) {
+      var l1 = hero.querySelector('.band-1 .split');
+      var b2 = hero.querySelector('.band-2 .split');
+      var rise = [].slice.call(hero.querySelectorAll('.band-3 .rise'));
+      if (on) {
+        splitChars(l1, 11, 'scatter');
+        splitChars(b2, 23, 'weave');
+        var total = 0;
+        rise.forEach(function (el) { total += (el.getAttribute('data-src') || el.textContent).split(' ').length; });
+        var start = 0;
+        rise.forEach(function (el) { var n = (el.getAttribute('data-src') || el.textContent).split(' ').length; splitWords(el, start, total); start += n; });
+      } else {
+        unsplit(l1); unsplit(b2); rise.forEach(unsplit);
+      }
+    }
+
+    /* ── bands: opacity plateaus with eased edges, and --k assembly progress ── */
+    function updateBands(p) {
+      var last = bands.length - 1;
+      for (var i = 0; i < bands.length; i++) {
+        var B = bands[i];
+        var f = Math.min(0.02, (B.b - B.a) / 3);
+        var op = (i === 0 ? 1 : smooth(p, B.a, B.a + f)) * (i === last ? 1 : 1 - smooth(p, B.b - f, B.b));
+        var ramp = B.ramp || Math.min(0.025, (B.b - B.a) * 0.35);
+        var k = clamp((p - B.a) / ramp, 0, 1);
+        if (i === 0) k = Math.max(k, loadK);
+        if (Math.abs(op - B.op) > 0.004 || ((op === 0 || op === 1) && op !== B.op)) {
+          B.op = op;
+          B.el.style.opacity = op.toFixed(3);
+          var vis = op > 0.01;
+          if (vis !== B.vis) {
+            B.vis = vis;
+            B.el.style.visibility = vis ? 'visible' : 'hidden';
+          }
+          B.el.style.pointerEvents = op > 0.6 ? 'auto' : 'none';
+        }
+        if (Math.abs(k - B.k) > 0.008 || ((k === 0 || k === 1) && k !== B.k)) {
+          B.k = k;
+          B.el.style.setProperty('--k', k.toFixed(3));
+        }
+      }
+    }
+    function resetBands() {
+      bands.forEach(function (B) {
+        B.op = -1; B.k = -1; B.vis = null;
+        B.el.style.opacity = ''; B.el.style.visibility = ''; B.el.style.pointerEvents = '';
+        B.el.style.removeProperty('--k');
+      });
+    }
+
+    var heroH = 0, stageH = 0, lastBottom = 1e9;
+    function measureHero() { heroH = hero.offsetHeight; stageH = stage.offsetHeight; }
+    function heroProgress() {
+      if (!heroH) measureHero();
+      var r = hero.getBoundingClientRect();
+      lastBottom = r.bottom;
+      var range = heroH - stageH;
+      if (range <= 0) return 0;
+      return clamp(-r.top / range, 0, 1);
+    }
+
+    /* Each button flips on its own: measured from the right cluster's centre,
+       the Dashboard button stayed white for a moment after the light had
+       already reached it. The Dashboard link is injected after load, so the
+       list is collected at measure time. */
+    var navParts = [];
+    /* Is this screen point inside the daylight circle the shader is drawing? */
+    /* The nav is position:fixed and the stage is pinned at the top while the
+       daylight grows, so part centres are measured once per resize, never per
+       frame (a layout read after the band writes would force a reflow). */
+    var navPts = null;
+    function measureNav() {
+      navParts = [].slice.call(nav.querySelectorAll('.nav-logo, .nav-pill, .nav-dashboard, .nav-cta'));
+      navPts = navParts.map(function (el) { var b = el.getBoundingClientRect(); return b.width ? { x: b.left + b.width / 2, y: b.top + b.height / 2 } : null; });
+    }
+    function litAt(el, i) {
+      if (!gl || !gl.w) return false;
+      if (!navPts) measureNav();
+      var pt = navPts[i];
+      if (!pt) return false;
+      var px = pt.x, py = pt.y, mn = Math.min(gl.w, gl.h);
+      var ux = (px * 2 - gl.w) / mn - gl.bgU.uShift.value.x, uy = (gl.h - py * 2) / mn - gl.bgU.uShift.value.y;
+      /* R - 0.275 is where the shader's daylight blend crosses 50%. */
+      return Math.sqrt(ux * ux + uy * uy) < day * gl.bgU.uReach.value - 0.275;
+    }
+    var heroBottom = 1e9;
+    function updateNav(bottom) {
+      if (bottom !== undefined) heroBottom = bottom; else heroBottom = hero.getBoundingClientRect().bottom;
+      var past = heroBottom < 70, all = true;
+      if (!navPts) measureNav();
+      navParts.forEach(function (el, i) {
+        var lit = past || (mode === 'journey' && day > 0 && litAt(el, i));
+        if (!lit && navPts[i]) all = false;   /* a hidden part (no box) does not hold the bar back */
+        if (lit !== el.classList.contains('lit')) el.classList.toggle('lit', lit);
+      });
+      if (all !== nav.classList.contains('on-light')) nav.classList.toggle('on-light', all);
+    }
+
+    /* ════ the three.js world ════ */
+    function buildWorld() {
+      var T = window.THREE;
+      var renderer;
+      try {
+        renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
+      } catch (e) { return null; }
+      if (!renderer || !renderer.getContext()) return null;
+      renderer.outputEncoding = T.sRGBEncoding;
+      renderer.autoClear = false;
+
+      var W = { T: T, renderer: renderer, sheets: [], cards: [], portrait: false, w: 0, h: 0, built: false };
+
+      /* Background: the navy ripple from index.html, kept as the decision it
+         is, with one addition: uDay mixes it up to the paper colour as the
+         plan forms, so the hero ends on the same ground as the page below. */
+      W.bgScene = new T.Scene();
+      W.bgCam = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      W.bgU = {
+        time: { value: 1 }, resolution: { value: new T.Vector2(1, 1) },
+        uDay: { value: 0 }, uShift: { value: new T.Vector2(0, 0) },
+        uPaper: { value: new T.Vector3(0.961, 0.969, 0.988) }, uReach: { value: 3 }
+      };
+      W.bgScene.add(new T.Mesh(new T.PlaneGeometry(2, 2), new T.ShaderMaterial({
+        uniforms: W.bgU, depthWrite: false, depthTest: false,
+        vertexShader: 'void main(){ gl_Position = vec4(position, 1.0); }',
+        fragmentShader: [
+          'precision highp float;',
+          'uniform vec2 resolution; uniform float time; uniform float uDay; uniform vec2 uShift; uniform vec3 uPaper; uniform float uReach;',
+          'void main(void){',
+          '  vec2 uv = (gl_FragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y) - uShift;',
+          '  float t = time * 0.03;',
+          '  float lineWidth = 0.0015;',
+          /* One wave for all three channels: the old per-channel offset split
+             every ring into red, green and blue fringes. Same rings, one blue. */
+          '  float wave = 0.0;',
+          '  for (int i = 0; i < 5; i++) {',
+          '    wave += lineWidth * float(i * i) / abs(fract(t + float(i) * 0.012) * 5.0 - length(uv) + mod(uv.x + uv.y, 0.2));',
+          '  }',
+          '  vec3 color = vec3(0.08, 0.10, 0.18) + wave * vec3(0.18, 0.30, 0.85);',
+          '  float d = length(uv);',
+          '  float vignette = 1.0 - smoothstep(0.4, 1.2, d);',
+          '  color *= (0.75 + 0.25 * vignette);',
+          '  color = clamp(color, 0.0, 0.88);',
+          '  float ring = clamp(wave * 0.55, 0.0, 1.0);',
+          '  vec3 dayc = uPaper - vec3(0.10, 0.065, 0.0) * ring;',
+          /* Daylight spreads out from the plan in a widening circle, so the
+             change never passes through a flat grey half-way. */
+          '  float R = uDay * uReach;',
+          '  float lit = 1.0 - smoothstep(R - 0.55, R, d);',
+          '  float edge = smoothstep(R - 0.55, R - 0.22, d) * (1.0 - smoothstep(R - 0.22, R, d));',
+          '  vec3 col = mix(color, dayc, lit) + vec3(0.16, 0.28, 0.75) * edge * 0.6 * step(0.001, uDay) * (1.0 - uDay);',
+          '  gl_FragColor = vec4(col, 1.0);',
+          '}'
+        ].join('\n')
+      })));
+
+      W.scene = new T.Scene();
+      W.fogNight = new T.Color(0x0e142a).convertSRGBToLinear();
+      W.fogDay = new T.Color(0xf5f7fc).convertSRGBToLinear();
+      W.scene.fog = new T.Fog(W.fogNight.clone(), 7.5, 21);
+      W.camera = new T.PerspectiveCamera(36, 1, 0.1, 60);
+      W.look = new T.Vector3(0, 0, 0);
+
+      W.hemi = new T.HemisphereLight(0xc9dbff, 0x0e142a, 0.8);
+      W.groundNight = new T.Color(0x0e142a); W.groundDay = new T.Color(0xdfe6f5);
+      W.key = new T.DirectionalLight(0xffffff, 0.85);
+      W.key.position.set(-3, 5, 7);
+      W.rim = new T.PointLight(0x4a7cf6, 1.6, 22, 2);
+      W.rim.position.set(4, -1, 5);
+      W.scene.add(W.hemi, W.key, W.rim);
+
+      /* Motes: whisper-level dust in the dark, gone by daylight. */
+      var mr = rng(99), mp = new Float32Array(260 * 3);
+      for (var m = 0; m < 260; m++) { mp[m * 3] = (mr() - .5) * 16; mp[m * 3 + 1] = (mr() - .5) * 9; mp[m * 3 + 2] = -9 + mr() * 12; }
+      var mg = new T.BufferGeometry(); mg.setAttribute('position', new T.BufferAttribute(mp, 3));
+      W.motes = new T.Points(mg, new T.PointsMaterial({ color: 0xa8c2ff, size: 0.035, transparent: true, opacity: 0.55, depthWrite: false }));
+      W.scene.add(W.motes);
+
+      canvas.addEventListener('webglcontextlost', function (e) { e.preventDefault(); fallTo('flat'); }, false);
+      return W;
+    }
+
+    /* ── textures, drawn on canvases: six kinds of notes and four day cards ── */
+    var TITLES = ['Cell division', 'Ch. 7 notes', 'Meiosis I vs II', 'Key terms', 'Mitosis', 'Review!'];
+    function scribble(ctx, x, y, w, r) {
+      ctx.beginPath();
+      var cx = x; ctx.moveTo(cx, y);
+      while (cx < x + w) {
+        var step = 5 + r() * 7;
+        ctx.quadraticCurveTo(cx + step * .5, y + (r() - .5) * 10, cx + step, y + (r() - .5) * 2.5);
+        cx += step;
+        if (r() < .13) { cx += 9 + r() * 6; ctx.moveTo(cx, y); }
+      }
+      ctx.stroke();
+    }
+    function noteCanvas(kind, seed) {
+      var c = document.createElement('canvas'); c.width = 384; c.height = 497;
+      var x = c.getContext('2d'), r = rng(seed), W = c.width, H = c.height, i, y;
+      var bg = ['#fbfcff', '#f6f9ff', '#ffffff', '#ffffff', '#f3f7ff', '#dce7ff'][kind];
+      x.fillStyle = bg; x.fillRect(0, 0, W, H);
+      var g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, 'rgba(255,255,255,0.35)'); g.addColorStop(1, 'rgba(20,40,110,0.07)');
+      x.fillStyle = g; x.fillRect(0, 0, W, H);
+      x.lineCap = 'round'; x.lineJoin = 'round';
+      var ink = 'rgba(34,48,98,0.86)';
+      function title(tx, ty, size) { x.fillStyle = '#1f2c5c'; x.font = 'italic ' + size + 'px "Instrument Serif", Georgia, serif'; x.fillText(TITLES[(seed + kind) % TITLES.length], tx, ty); }
+      if (kind === 0 || kind === 4 || kind === 5) {
+        var gap = kind === 5 ? 34 : 27, top = kind === 4 ? 92 : 78;
+        if (kind !== 5) { x.strokeStyle = 'rgba(74,124,246,0.22)'; x.lineWidth = 1.2; for (y = top; y < H - 14; y += gap) { x.beginPath(); x.moveTo(0, y); x.lineTo(W, y); x.stroke(); } }
+        if (kind === 0) { x.strokeStyle = 'rgba(74,124,246,0.45)'; x.lineWidth = 1.6; x.beginPath(); x.moveTo(56, 0); x.lineTo(56, H); x.stroke(); }
+        if (kind === 4) { x.strokeStyle = '#4a7cf6'; x.lineWidth = 3; x.beginPath(); x.moveTo(0, 62); x.lineTo(W, 62); x.stroke(); }
+        title(kind === 0 ? 70 : 28, kind === 4 ? 48 : 54, kind === 5 ? 44 : 36);
+        x.strokeStyle = ink; x.lineWidth = 2.1;
+        var hl = 2 + Math.floor(r() * 5);
+        for (i = 0, y = top + gap - 7; y < H - 30; y += gap, i++) {
+          var sx = kind === 0 ? 70 : 28, len = (W - sx - 26) * (.45 + r() * .55);
+          if (i === hl) { x.fillStyle = 'rgba(74,124,246,0.24)'; x.fillRect(sx - 4, y - 13, len * .7, 18); }
+          if (r() < .12) continue;
+          scribble(x, sx, y, len, r);
+        }
+        if (kind === 0) { x.strokeStyle = 'rgba(40,81,200,0.75)'; x.lineWidth = 2.2; x.beginPath(); x.arc(W - 70, H - 80, 34, 0, Math.PI * 2); x.stroke(); x.beginPath(); x.arc(W - 64, H - 84, 11, 0, Math.PI * 2); x.stroke(); }
+        if (kind === 5) { x.strokeStyle = '#2851c8'; x.lineWidth = 2.4; x.beginPath(); for (i = 0; i < 11; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? 11 : 26; x.lineTo(W - 60 + Math.cos(a) * rr, 60 + Math.sin(a) * rr); } x.stroke(); }
+      } else if (kind === 1) {
+        x.strokeStyle = 'rgba(74,124,246,0.16)'; x.lineWidth = 1;
+        for (i = 0; i < W; i += 18) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, H); x.stroke(); }
+        for (i = 0; i < H; i += 18) { x.beginPath(); x.moveTo(0, i); x.lineTo(W, i); x.stroke(); }
+        title(26, 50, 34);
+        x.strokeStyle = ink; x.lineWidth = 2; x.beginPath(); x.moveTo(40, 300); x.lineTo(W - 30, 300); x.moveTo(90, 110); x.lineTo(90, 330); x.stroke();
+        x.strokeStyle = '#3567e0'; x.lineWidth = 3; x.beginPath();
+        for (i = 0; i <= 40; i++) { var u = (i - 20) / 20, px = 60 + i * 7, py = 290 - (1 - u * u) * 150; if (i) x.lineTo(px, py); else x.moveTo(px, py); }
+        x.stroke();
+        x.strokeStyle = ink; x.lineWidth = 2;
+        for (y = 370; y < H - 30; y += 34) { scribble(x, 30, y, 90 + r() * 60, r); x.beginPath(); x.moveTo(170, y - 4); x.lineTo(186, y - 4); x.moveTo(170, y + 3); x.lineTo(186, y + 3); x.stroke(); scribble(x, 200, y, 60 + r() * 90, r); }
+      } else if (kind === 2) {
+        x.fillStyle = '#1a1d2e'; x.fillRect(30, 34, 210, 16);
+        x.fillStyle = '#9aa6c2'; x.fillRect(30, 60, 130, 8);
+        x.fillStyle = '#eef3ff'; x.fillRect(W - 150, 90, 120, 110);
+        x.strokeStyle = '#4a7cf6'; x.lineWidth = 2.5; x.beginPath(); x.arc(W - 110, 145, 22, 0, Math.PI * 2); x.stroke(); x.beginPath(); x.arc(W - 62, 145, 14, 0, Math.PI * 2); x.stroke(); x.beginPath(); x.moveTo(W - 88, 145); x.lineTo(W - 76, 145); x.stroke();
+        x.fillStyle = '#c9d0de';
+        for (y = 92; y < H - 26; y += 15) { var right = y < 210 ? W - 170 : W - 30; if (r() < .1) { y += 10; continue; } x.fillRect(30, y, (right - 30) * (y % 5 === 2 ? .6 : 1), 6); }
+        x.strokeStyle = 'rgba(40,81,200,0.8)'; x.lineWidth = 2.4; x.beginPath(); x.ellipse(120, 250, 80, 16, -.03, 0, Math.PI * 2); x.stroke();
+      } else {
+        x.fillStyle = '#f1f5ff'; x.fillRect(22, 22, W - 44, 196); x.strokeStyle = '#cdd9f5'; x.lineWidth = 2; x.strokeRect(22, 22, W - 44, 196);
+        x.fillStyle = '#1a1d2e'; x.font = '600 22px "DM Sans", system-ui, sans-serif'; x.fillText(TITLES[(seed + 2) % TITLES.length], 40, 60);
+        for (i = 0; i < 4; i++) { x.fillStyle = '#4a7cf6'; x.beginPath(); x.arc(46, 96 + i * 30, 4.5, 0, Math.PI * 2); x.fill(); x.fillStyle = '#b8c3da'; x.fillRect(60, 92 + i * 30, 120 + r() * 150, 8); }
+        x.strokeStyle = 'rgba(74,124,246,0.22)'; x.lineWidth = 1.2; for (y = 262; y < H - 14; y += 27) { x.beginPath(); x.moveTo(22, y); x.lineTo(W - 22, y); x.stroke(); }
+        x.strokeStyle = ink; x.lineWidth = 2; for (y = 255; y < H - 30; y += 27) { if (r() < .2) continue; scribble(x, 30, y, (W - 80) * (.4 + r() * .6), r); }
+      }
+      return c;
+    }
+    var DAYS = [
+      { d: 'DAY 1', w: 'MON', t: ['Mitosis', 'overview'], min: '45 min', done: 3, diff: 1 },
+      { d: 'DAY 2', w: 'TUE', t: ['Meiosis and', 'variation'], min: '50 min', done: 1, diff: 2 },
+      { d: 'DAY 3', w: 'WED', t: ['Flashcards and', 'practice'], min: '40 min', done: 0, diff: 3 },
+      { d: 'DAY 4', w: 'THU', t: ['Final', 'recap'], min: '30 min', done: 0, diff: 4 }
+    ];
+    function rr(x, X, Y, w, h, rad) { x.beginPath(); x.moveTo(X + rad, Y); x.arcTo(X + w, Y, X + w, Y + h, rad); x.arcTo(X + w, Y + h, X, Y + h, rad); x.arcTo(X, Y + h, X, Y, rad); x.arcTo(X, Y, X + w, Y, rad); x.closePath(); }
+    function dayCanvas(D) {
+      var c = document.createElement('canvas'); c.width = 512; c.height = 640;
+      var x = c.getContext('2d');
+      x.fillStyle = '#fdfdff'; x.fillRect(0, 0, 512, 640);
+      rr(x, 3, 3, 506, 634, 38); x.lineWidth = 5; x.strokeStyle = '#d5deef'; x.stroke();
+      x.font = '500 26px "DM Mono", ui-monospace, monospace'; x.fillStyle = '#2851c8'; x.fillText(D.d, 44, 70);
+      x.fillStyle = '#7a8199'; x.textAlign = 'right'; x.fillText(D.w, 468, 70); x.textAlign = 'left';
+      x.font = '58px "Instrument Serif", Georgia, serif'; x.fillStyle = '#1a1d2e'; x.fillText(D.t[0], 42, 160); x.fillText(D.t[1], 42, 222);
+      var rows = ['Lesson', 'Practice questions', 'Recap'];
+      x.font = '500 27px "DM Sans", system-ui, sans-serif';
+      for (var i = 0; i < 3; i++) {
+        var y = 300 + i * 62, on = i < D.done;
+        x.beginPath(); x.arc(62, y - 9, 15, 0, Math.PI * 2);
+        if (on) { x.fillStyle = '#3567e0'; x.fill(); x.strokeStyle = '#fff'; x.lineWidth = 3.5; x.beginPath(); x.moveTo(55, y - 9); x.lineTo(60, y - 3); x.lineTo(70, y - 15); x.stroke(); }
+        else { x.lineWidth = 3; x.strokeStyle = '#c3cfe6'; x.stroke(); }
+        x.fillStyle = on ? '#1a1d2e' : '#5b6378'; x.fillText(rows[i], 92, y);
+      }
+      x.fillStyle = '#e2e8f4'; x.fillRect(42, 510, 428, 3);
+      x.font = '600 30px "DM Sans", system-ui, sans-serif'; x.fillStyle = '#1a1d2e'; x.fillText(D.min, 44, 572);
+      for (var k = 0; k < 4; k++) { rr(x, 330 + k * 36, 548, 26, 26, 6); x.fillStyle = k < D.diff ? '#3567e0' : '#e2e8f4'; x.fill(); }
+      return c;
+    }
+    function texFrom(c) {
+      var T = gl.T, t = new T.CanvasTexture(c);
+      t.encoding = T.sRGBEncoding;
+      t.anisotropy = Math.min(8, gl.renderer.capabilities.getMaxAnisotropy());
+      return t;
+    }
+
+    function roundedPlane(w, h, rad) {
+      var T = gl.T, s = new T.Shape(), x = -w / 2, y = -h / 2;
+      s.moveTo(x + rad, y); s.lineTo(x + w - rad, y); s.quadraticCurveTo(x + w, y, x + w, y + rad);
+      s.lineTo(x + w, y + h - rad); s.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+      s.lineTo(x + rad, y + h); s.quadraticCurveTo(x, y + h, x, y + h - rad);
+      s.lineTo(x, y + rad); s.quadraticCurveTo(x, y, x + rad, y);
+      var g = new T.ShapeGeometry(s, 10), pos = g.attributes.position, uv = g.attributes.uv;
+      for (var i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) - x) / w, (pos.getY(i) - y) / h);
+      return g;
+    }
+    function sheetGeometry(variant) {
+      var T = gl.T, g = new T.PlaneGeometry(1, 1.294, 12, 14);
+      var pos = g.attributes.position, n = pos.count;
+      var flat = new Float32Array(n * 3), flatN = new Float32Array(n * 3);
+      for (var i = 0; i < n; i++) {
+        var X = pos.getX(i), Y = pos.getY(i), z;
+        flat[i * 3] = X; flat[i * 3 + 1] = Y; flatN[i * 3 + 2] = 1;
+        if (variant === 0) z = 0.17 * X * X;
+        else if (variant === 1) { var q = Math.max(0, X + Y * .8 - .35); z = 0.35 * q * q + 0.03 * Math.sin(Y * 4); }
+        else z = 0.05 * Math.sin(Y * 4.5 + 1) + 0.09 * X * X;
+        pos.setZ(i, z);
+      }
+      g.computeVertexNormals();
+      g.morphAttributes.position = [new T.Float32BufferAttribute(flat, 3)];
+      g.morphAttributes.normal = [new T.Float32BufferAttribute(flatN, 3)];
+      return g;
+    }
+    function paperMaterial(tex) {
+      var T = gl.T;
+      var m = new T.MeshStandardMaterial({ map: tex, roughness: 0.88, metalness: 0, side: T.DoubleSide, morphTargets: true, morphNormals: true });
+      /* The back of a page is plain paper, not the writing mirrored. */
+      m.onBeforeCompile = function (s) {
+        s.fragmentShader = s.fragmentShader.replace('#include <map_fragment>', [
+          '#ifdef USE_MAP',
+          '  vec4 texelColor = texture2D( map, vUv );',
+          '  texelColor = mapTexelToLinear( texelColor );',
+          '  if ( !gl_FrontFacing ) texelColor.rgb = mix( texelColor.rgb, vec3( 0.86, 0.89, 0.96 ), 0.9 );',
+          '  diffuseColor *= texelColor;',
+          '#endif'
+        ].join('\n'));
+      };
+      return m;
+    }
+
+    /* ── layout: where each sheet lives in each phase, per orientation ── */
+    function layout() {
+      var T = gl.T, P = gl.portrait, r = rng(5), N = gl.sheets.length;
+      var cardPos = [], cardQuat = [];
+      for (var k = 0; k < 4; k++) {
+        var cp, e;
+        if (P) {
+          cp = new T.Vector3(k % 2 ? .76 : -.76, (k < 2 ? 1.0 : -.95) + (k % 2 ? .12 : 0), k % 2 ? -.25 : 0);
+          e = new T.Euler(-.05, k % 2 ? -.1 : .1, k % 2 ? -.03 : .03);
+        } else {
+          cp = new T.Vector3(k % 2 ? 1.52 : -.04, (k < 2 ? .84 : -1.16) + (k % 2 ? .1 : 0), k % 2 ? -.34 : 0);
+          e = new T.Euler(-.1, -.26, k % 2 ? -.02 : .02);
+        }
+        cardPos.push(cp);
+        cardQuat.push(new T.Quaternion().setFromEuler(e));
+      }
+      gl.cardPos = cardPos; gl.cardQuat = cardQuat;
+      gl.sheets.forEach(function (S, i) {
+        var x, y, z;
+        if (P) {
+          x = lerp(-1.9, 1.9, r()); y = lerp(-.5, 2.4, r()); z = lerp(-5.5, 1.6, r());
+          if (y < .3) z = Math.min(z, -3);
+          if (z > 0) y = Math.min(y, 1.9);
+        } else {
+          x = lerp(-2.4, 4.9, r()); y = lerp(-2.8, 2.2, r()); z = lerp(-5.8, 2.1, r());
+          if (x < -.6) z = Math.min(z, -2.8);
+          if (z > 0) y = Math.min(y, 1.6);
+        }
+        S.cloud = new T.Vector3(x, y, z);
+        S.cloudEuler = new T.Euler(r() * 6.28, r() * 6.28, r() * 6.28);
+        S.spin = new T.Vector3((r() - .5) * .5, (r() - .5) * .5, (r() - .5) * .35);
+        S.phase = r() * 6.28;
+        S.cloudScale = .85 + r() * .35;
+        /* Stack: filed behind its day card, a little messy, a few edges peeking. */
+        var j = S.slot, mid = (gl.perGroup - 1) / 2;
+        var off = new T.Vector3((j - mid) * .03 + (r() - .5) * .04, (P ? .2 : .3) + (r() - .5) * .06, -.05 - j * .03);
+        var cardScale = P ? 1.05 : 1.12;
+        S.stackPos = off.multiplyScalar(cardScale).applyQuaternion(cardQuat[S.group]).add(cardPos[S.group]);
+        S.stackQuat = cardQuat[S.group].clone().multiply(new T.Quaternion().setFromEuler(new T.Euler(0, 0, -(j - mid) * .05 + (r() - .5) * .03)));
+        S.stackScale = .95 * cardScale;
+      });
+      gl.cards.forEach(function (C, k) { C.mesh.scale.setScalar(P ? 1.05 : 1.12); });
+      gl.helixR = P ? 1.25 : 1.95;
+      gl.helixTop = P ? 3.0 : 1.7;
+      gl.helixBot = P ? -1.0 : -2.0;
+    }
+
+    function populate() {
+      var T = gl.T;
+      var N = (window.innerWidth < 760) ? 28 : 40;
+      var mats = [], k;
+      for (k = 0; k < 6; k++) mats.push(paperMaterial(texFrom(noteCanvas(k, 3 + k * 7))));
+      var geos = [sheetGeometry(0), sheetGeometry(1), sheetGeometry(2)];
+      var order = [], r = rng(17);
+      for (k = 0; k < N; k++) order.push(k);
+      for (k = N - 1; k > 0; k--) { var j = Math.floor(r() * (k + 1)), tmp = order[k]; order[k] = order[j]; order[j] = tmp; }
+      var slots = [0, 0, 0, 0];
+      gl.perGroup = Math.ceil(N / 4);
+      for (k = 0; k < N; k++) {
+        var mesh = new T.Mesh(geos[k % 3], mats[(k * 5) % 6]);
+        gl.scene.add(mesh);
+        var group = k % 4;
+        gl.sheets.push({ mesh: mesh, group: group, slot: slots[group]++, s: order[k] / (N - 1), jit: r(), rep: new T.Vector3(), repT: new T.Vector3() });
+      }
+      var cardGeo = roundedPlane(1.28, 1.6, .1);
+      DAYS.forEach(function (D, i) {
+        var mat = new T.MeshStandardMaterial({ map: texFrom(dayCanvas(D)), roughness: .6, metalness: 0 });
+        var mesh = new T.Mesh(cardGeo, mat);
+        mesh.visible = false;
+        gl.scene.add(mesh);
+        gl.cards.push({ mesh: mesh });
+      });
+      gl.q = { a: new T.Quaternion(), b: new T.Quaternion(), c: new T.Quaternion(), tmp: new T.Quaternion(), e: new T.Euler(), v: new T.Vector3(), v2: new T.Vector3(), ndc: new T.Vector3(), yAxis: new T.Vector3(0, 1, 0) };
+      layout();
+      gl.built = true;
+      gl.bornAt = performance.now();
+    }
+
+    function resize() {
+      if (!gl) return;
+      var w = stage.clientWidth, h = stage.clientHeight;
+      if (!w || !h) return;
+      measureHero(); navPts = null;
+      var caps = w < 760 ? [1, 1.25, 1.5] : [1, 1.35, 1.75];
+      var dpr = Math.min(window.devicePixelRatio || 1, caps[quality]);
+      gl.renderer.setPixelRatio(dpr);
+      gl.renderer.setSize(w, h, false);
+      gl.w = w; gl.h = h;
+      var P = TALL.matches;
+      var cam = gl.camera;
+      cam.aspect = w / h;
+      cam.fov = P ? 46 : 36;
+      /* Lens shift: the scene stays centred on the origin, the picture moves
+         to the side the words are not on (right on wide screens, up on tall). */
+      var ox = P ? 0 : -0.14 * w, oy = P ? 0.15 * h : 0;
+      cam.setViewOffset(w, h, ox, oy, w, h);
+      cam.updateProjectionMatrix();
+      var d = gl.renderer.getDrawingBufferSize(new gl.T.Vector2());
+      gl.bgU.resolution.value.set(d.x, d.y);
+      var mn = Math.min(w, h);
+      gl.bgU.uShift.value.set(-ox * 2 / mn, oy * 2 / mn);
+      /* How far the daylight circle must grow to cover the farthest corner. */
+      var reach = 0, sx = gl.bgU.uShift.value.x, sy = gl.bgU.uShift.value.y;
+      [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (c) { reach = Math.max(reach, Math.hypot(c[0] * w / mn - sx, c[1] * h / mn - sy)); });
+      gl.bgU.uReach.value = reach + 0.6;
+      if (gl.built && P !== gl.portrait) { gl.portrait = P; layout(); }
+      gl.portrait = P;
+    }
+
+    /* ── the scene at progress p, time t (seconds) ── */
+    function place(p, t, dt) {
+      var T = gl.T, cam = gl.camera, Q = gl.q, P = gl.portrait;
+      /* Camera: a slow push in, then settle on the plan. Pointer sways it. */
+      var camZ = P ? lerp(lerp(10.6, 9.8, smooth(p, .2, .55)), 9.4, smooth(p, .55, .9)) : lerp(lerp(9.2, 8.3, smooth(p, .2, .55)), 8.2, smooth(p, .55, .9));
+      pointer.sx += (pointer.x - pointer.sx) * follow(.06, dt);
+      pointer.sy += (pointer.y - pointer.sy) * follow(.06, dt);
+      cam.position.set(pointer.sx * .5, lerp(.25, .05, p) + pointer.sy * .3, camZ);
+      gl.look.set(0, lerp(0, .08, p), 0);
+      cam.lookAt(gl.look);
+      cam.updateMatrixWorld();
+
+      var born = mode === 'still' ? 1 : easeOut3((performance.now() - gl.bornAt) / 1600);
+      var hTop = gl.helixTop, hBot = gl.helixBot, hR = gl.helixR;
+      var repelOn = pointer.on && FINE.matches;
+
+      for (var i = 0; i < gl.sheets.length; i++) {
+        var S = gl.sheets[i], mesh = S.mesh;
+        var aT = easeIO3((p - (.24 + S.s * .1)) / .2);
+        var bT = easeIO3((p - (.52 + S.group * .045 + S.jit * .04)) / .17);
+
+        /* A: loose in the air, bobbing and tumbling, pushed by the pointer. */
+        var bob = Math.sin(t * .6 + S.phase) * .16;
+        Q.v.set(S.cloud.x, S.cloud.y + bob, S.cloud.z - (1 - born) * 6);
+        if (repelOn && aT < 1) {
+          Q.ndc.copy(Q.v).project(cam);
+          var dx = (Q.ndc.x - pointer.x) * gl.w * .5, dy = (Q.ndc.y - pointer.y) * gl.h * .5;
+          var dist = Math.sqrt(dx * dx + dy * dy), R = 190;
+          if (dist < R) {
+            var f = Math.pow(1 - dist / R, 2) * 1.1, inv = 1 / Math.max(dist, 1);
+            S.repT.set(dx * inv * f, dy * inv * f, f * .6);
+          } else S.repT.set(0, 0, 0);
+        } else S.repT.set(0, 0, 0);
+        S.rep.lerp(S.repT, follow(.08, dt));
+        Q.v.add(S.rep);
+        Q.e.set(S.cloudEuler.x + S.spin.x * t + S.rep.y * .9, S.cloudEuler.y + S.spin.y * t + S.rep.x * .9, S.cloudEuler.z + S.spin.z * t);
+        Q.a.setFromEuler(Q.e);
+
+        /* B: the stream, a descending spiral that turns as you scroll. */
+        var ang = S.s * 6.28 * 1.7 + p * 6.28 * 1.3 + t * .12;
+        var rad = lerp(hR, hR * .28, S.s);
+        Q.v2.set(Math.cos(ang) * rad, lerp(hTop, hBot, S.s), Math.sin(ang) * rad * .6);
+        Q.e.set(.28 * Math.sin(ang * 2), Math.PI / 2 - ang, .35);
+        Q.b.setFromEuler(Q.e);
+
+        var pos = Q.v.lerp(Q.v2, aT);
+        pos.lerp(S.stackPos, bT);
+        mesh.position.copy(pos);
+        Q.tmp.copy(Q.a).slerp(Q.b, aT).slerp(S.stackQuat, bT);
+        mesh.quaternion.copy(Q.tmp);
+        mesh.scale.setScalar(lerp(lerp(S.cloudScale, .9, aT), S.stackScale, bT) * (.2 + .8 * born));
+        mesh.morphTargetInfluences[0] = bT;
+      }
+
+      for (var k = 0; k < gl.cards.length; k++) {
+        var C = gl.cards[k], e = easeOut3((p - (.63 + k * .045)) / .13);
+        C.mesh.visible = e > 0.001;
+        if (!C.mesh.visible) continue;
+        Q.tmp.setFromAxisAngle(Q.yAxis, -(1 - e) * Math.PI * .5);
+        C.mesh.quaternion.copy(gl.cardQuat[k]).multiply(Q.tmp);
+        C.mesh.position.copy(gl.cardPos[k]);
+        C.mesh.position.y += (1 - e) * -.3 + Math.sin(t * .8 + k * 1.3) * .025 * e;
+        C.mesh.position.z += .02;
+      }
+
+      /* Night to day. Lights and fog follow the background. */
+      gl.bgU.uDay.value = day;
+      gl.bgU.time.value = t * 2.4;
+      gl.scene.fog.color.copy(gl.fogNight).lerp(gl.fogDay, day);
+      gl.scene.fog.near = lerp(7.5, 14, day); gl.scene.fog.far = lerp(21, 40, day);
+      gl.hemi.intensity = lerp(.8, 1.05, day);
+      gl.hemi.groundColor.copy(gl.groundNight).lerp(gl.groundDay, day);
+      gl.key.intensity = lerp(.85, .7, day);
+      gl.rim.intensity = lerp(1.6, .25, day);
+      gl.motes.material.opacity = .55 * (1 - day);
+      gl.motes.visible = day < .99 && quality > 0;
+      gl.motes.rotation.y = t * .015;
+      gl.motes.position.y = Math.sin(t * .1) * .3;
+    }
+
+    function render() {
+      var R = gl.renderer;
+      R.clear();
+      R.render(gl.bgScene, gl.bgCam);
+      R.clearDepth();
+      R.render(gl.scene, gl.camera);
+    }
+
+    function frame(now) {
+      rafId = null;
+      var dt = Math.min(100, now - (lastNow || now));
+      lastNow = now;
+      target = heroProgress();
+      shown += (target - shown) * follow(.12, dt);
+      if (Math.abs(target - shown) < 0.0004) shown = target;
+      if (loadStart) loadK = easeOut3((now - loadStart) / 1500);
+      day = smooth(shown, .6, .74);
+      if (Math.abs(day - lastDay) > 0.003 || ((day === 0 || day === 1) && day !== lastDay)) {
+        lastDay = day;
+        hero.style.setProperty('--day', day.toFixed(3));
+        var isDay = day > .5;
+        if (isDay !== hero.classList.contains('is-day')) hero.classList.toggle('is-day', isDay);
+      }
+      updateBands(shown);
+      updateNav(lastBottom);
+      if (gl && gl.built) { place(shown, (now - t0) / 1000, dt); render(); watchPerf(dt); }
+      else if (gl) { gl.bgU.time.value = (now - t0) / 1000 * 2.4; render(); }
+      if (mode === 'journey' && visible && !document.hidden) rafId = requestAnimationFrame(frame);
+    }
+    function kick() { if (rafId === null && mode === 'journey' && !document.hidden) rafId = requestAnimationFrame(frame); }
+
+    function stillFrame() {
+      if (!gl) return;
+      resize();
+      if (gl.built) { place(0, 0, 16); }
+      render();
+    }
+
+    function fontsThen(fn) {
+      var done = false;
+      function go() { if (!done) { done = true; fn(); } }
+      if (document.fonts && document.fonts.load) {
+        Promise.all([
+          document.fonts.load('italic 36px "Instrument Serif"'),
+          document.fonts.load('58px "Instrument Serif"'),
+          document.fonts.load('500 26px "DM Mono"'),
+          document.fonts.load('500 27px "DM Sans"'),
+          document.fonts.load('600 30px "DM Sans"')
+        ]).then(go, go);
+        setTimeout(go, 1800);
+      } else go();
+    }
+
+    function fallTo(m) {
+      mode = m;
+      if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+      hero.classList.remove('is-journey');
+      if (m === 'flat') { canvas.style.display = 'none'; }
+      prepareText(false);
+      resetBands();
+      hero.style.removeProperty('--day');
+      hero.classList.remove('is-day');
+      day = 0; lastDay = -1;
+      updateNav();
+    }
+
+    function applyMode() {
+      var want = reduced ? 'still' : 'journey';
+      if (!gl && mode !== 'none') want = 'flat';
+      if (want === mode) return;
+      if (want === 'journey') {
+        mode = 'journey';
+        hero.classList.add('is-journey');
+        prepareText(true);
+        resetBands();
+        bands[0].el.style.setProperty('--k', loadK.toFixed(3));
+        if (!loadStart) loadStart = performance.now() + 150;
+        resize();
+        lastNow = 0;
+        kick();
+      } else {
+        fallTo(want);
+        if (want === 'still') stillFrame();
+      }
+    }
+
+    function init() {
+      collectBands();
+      t0 = performance.now();
+      if (window.THREE) gl = buildWorld();
+      if (!gl) { mode = 'flat-pending'; fallTo('flat'); return; }
+      canvas.style.opacity = '0';
+      canvas.style.transition = 'opacity .9s ease';
+      resize();
+      applyMode();
+      render();
+      requestAnimationFrame(function () { canvas.style.opacity = '1'; });
+      fontsThen(function () {
+        populate();
+        if (mode === 'still') stillFrame();
+      });
+
+      if ('ResizeObserver' in window) new ResizeObserver(function () { resize(); if (mode === 'still') stillFrame(); kick(); }).observe(stage);
+      else window.addEventListener('resize', function () { resize(); kick(); });
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (es) {
+          visible = es[0].isIntersecting;
+          hero.classList.toggle('in-view', visible);
+          if (visible) kick();
+        }, { threshold: 0 }).observe(stage);
+      }
+      stage.addEventListener('pointermove', function (e) {
+        var rct = stage.getBoundingClientRect();
+        pointer.x = (e.clientX - rct.left) / rct.width * 2 - 1;
+        pointer.y = -((e.clientY - rct.top) / rct.height * 2 - 1);
+        pointer.on = true;
+      }, { passive: true });
+      stage.addEventListener('pointerleave', function () { pointer.x = 0; pointer.y = 0; pointer.on = false; });
+    }
+
+    return {
+      init: init, kick: kick, applyMode: applyMode, updateNav: updateNav,
+      setVisible: function (v) { if (v) { lastNow = 0; kick(); } },
+      debug: function () { return { mode: mode, p: shown, day: day, sheets: gl && gl.sheets.length, built: !!(gl && gl.built), quality: quality }; }
+    };
+  })();
+
+  /* ════════════════════════════════════════
+     SCROLL ENGINE for everything below the hero. Rests when nothing moves.
+  ════════════════════════════════════════ */
+  var Scrub = (function () {
+    var items = [], raf = null, last = 0, dirty = true;
+    function add(it) { it.shown = it.shown === undefined ? 0 : it.shown; it.target = it.shown; it.active = false; items.push(it); return it; }
+    function kick() { if (raf === null) raf = requestAnimationFrame(tick); }
+    function tick(now) {
+      raf = null;
+      var dt = Math.min(100, now - (last || now)); last = now;
+      var vh = window.innerHeight, moving = false;
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        if (!it.active && !it.always) continue;
+        if (dirty) it.target = it.measure(vh);
+        if (reduced) it.shown = it.target;
+        else it.shown += (it.target - it.shown) * follow(it.k || .14, dt);
+        if (Math.abs(it.target - it.shown) < 0.0005) it.shown = it.target; else moving = true;
+        it.apply(it.shown);
+      }
+      dirty = false;
+      if (moving) kick(); else last = 0;
+    }
+    function watch() {
+      var io = 'IntersectionObserver' in window ? new IntersectionObserver(function (es) {
+        es.forEach(function (e) {
+          for (var i = 0; i < items.length; i++) if (items[i].el === e.target) { items[i].active = e.isIntersecting; }
+        });
+        dirty = true; kick();
+      }, { rootMargin: '25% 0px 25% 0px' }) : null;
+      items.forEach(function (it) { if (io) io.observe(it.el); else it.active = true; });
+      window.addEventListener('scroll', function () { dirty = true; kick(); }, { passive: true });
+      window.addEventListener('resize', function () { dirty = true; kick(); });
+    }
+    return { add: add, watch: watch, kick: function () { dirty = true; kick(); } };
+  })();
+
+  /* How it works: the spine draws to wherever you are reading. */
+  var howTrack = document.getElementById('how-track');
+  Scrub.add({ el: howTrack, measure: function (vh) { var r = howTrack.getBoundingClientRect(); return clamp((vh * .72 - r.top) / r.height, 0, 1); },
+    apply: function (v) { setVar(howTrack, '--p', v, '_p'); } });
+
+  /* The plan card leans back until it reaches the middle of the screen. */
+  var planStage = document.getElementById('plan-stage'), planCard = document.getElementById('plan-tilt');
+  Scrub.add({ el: planStage, shown: 0, measure: function (vh) { var r = planStage.getBoundingClientRect(); return clamp((vh - r.top) / (vh * .62), 0, 1); },
+    apply: function (v) { setVar(planCard, '--p', v, '_p'); } });
+
+  /* CTA fan turns as it passes through the screen. */
+  var fan = document.getElementById('cta-fan');
+  Scrub.add({ el: fan, shown: .5, measure: function (vh) { var r = fan.getBoundingClientRect(); return clamp((vh - r.top) / (vh + r.height), 0, 1); },
+    apply: function (v) { setVar(fan, '--p', v, '_p'); } });
+
+  /* ── Pinned showcases (kept from index.html: 600vh, sticky 100vh) ──
+     Detent easing: each face holds still for most of its share of the scroll
+     and turns quickly around the boundary, so a slide is readable at rest. */
+  function detent(u, n) { var e = 0; for (var b = 1; b < n; b++) e += smooth(u, b - .22, b + .22); return e; }
+  function showcase(outerId, n, onApply) {
+    var outer = document.getElementById(outerId);
+    return Scrub.add({ el: outer, k: .12, measure: function (vh) {
+      var range = outer.offsetHeight - vh;
+      if (range <= 0) return 0;
+      return clamp(-outer.getBoundingClientRect().top / range, 0, 1) * n;
+    }, apply: onApply });
+  }
+  function goTo(outerId, n, i) {
+    var outer = document.getElementById(outerId);
+    var range = outer.offsetHeight - window.innerHeight;
+    var top = outer.getBoundingClientRect().top + window.pageYOffset;
+    window.scrollTo({ top: top + ((i + .5) / n) * range, behavior: reduced ? 'auto' : 'smooth' });
+  }
+  function wireDots(id, outerId, n) {
+    var btns = [].slice.call(document.querySelectorAll('#' + id + ' button'));
+    btns.forEach(function (b, i) { b.addEventListener('click', function () { goTo(outerId, n, i); }); });
+    var cur = 0;
+    return function (i) {
+      if (i === cur) return;
+      btns[cur].removeAttribute('aria-current');
+      btns[i].setAttribute('aria-current', 'true');
+      cur = i;
+    };
+  }
+  window.whyGoTo = function (i) { goTo('wo', 6, i); };
+  window.featGoTo = function (i) { goTo('fo', 6, i); };
+
+  var mobileShow = window.matchMedia('(max-width: 860px)');
+  var drum = document.getElementById('why-drum'), prism = document.getElementById('why-prism');
+  var drumFaces = [].slice.call(drum.children), prismFaces = [].slice.call(prism.children);
+  var whyDot = wireDots('why-dots', 'wo', 6);
+  function sizePrism() {
+    if (mobileShow.matches) return;
+    var w = prism.parentNode.clientWidth, h = drum.clientHeight;
+    prism.style.setProperty('--r', (w * .866).toFixed(1) + 'px');
+    drum.style.setProperty('--r', (h * .866).toFixed(1) + 'px');
+  }
+  showcase('wo', 6, function (u) {
+    if (mobileShow.matches) return;
+    var e = detent(u, 6);
+    if (reduced) e = Math.round(e);
+    setVar(drum, '--rot', e, '_rot', .001);
+    setVar(prism, '--rot', e, '_rot', .001);
+    for (var i = 0; i < 6; i++) {
+      var o = smooth(Math.cos((e - i) * Math.PI / 3), .56, .97);
+      var lo = prismFaces[i]._o === undefined ? -1 : prismFaces[i]._o;
+      if (Math.abs(o - lo) > .01 || ((o === 0 || o === 1) && o !== lo)) {
+        prismFaces[i]._o = o;
+        prismFaces[i].style.opacity = o.toFixed(3);
+        prismFaces[i].style.visibility = o > .01 ? 'visible' : 'hidden';
+        drumFaces[i].style.opacity = o.toFixed(3);
+        drumFaces[i].style.visibility = o > .01 ? 'visible' : 'hidden';
+      }
+    }
+    whyDot(Math.round(e));
+  });
+
+  var fts = [0, 1, 2, 3, 4, 5].map(function (i) { return document.getElementById('ft' + i); });
+  var sheets = [].slice.call(document.querySelectorAll('#feat-pad .pad-sheet'));
+  var featDot = wireDots('feat-dots', 'fo', 6);
+  showcase('fo', 6, function (u) {
+    if (mobileShow.matches) return;
+    var e = detent(u, 6);
+    if (reduced) e = Math.round(e);
+    for (var i = 0; i < 6; i++) {
+      var d = e - i;
+      var ft = fts[i];
+      setVar(ft, '--o', clamp(1 - Math.abs(d) * 2.1, 0, 1), '_o', .01);
+      setVar(ft, '--d', clamp(d, -1, 1), '_d', .01);
+      var vis = Math.abs(d) < .5 ? 'visible' : 'hidden';
+      if (ft._v !== vis) { ft._v = vis; ft.style.setProperty('--v', vis); }
+      /* The pad: sheets before the current one have flipped up and over the
+         rings; the ones after wait underneath, a little lower and further back. */
+      var s = sheets[i], flip = clamp(d, 0, 1), depth = Math.max(0, -d);
+      var tf = 'translate3d(0,' + (depth * 12).toFixed(2) + 'px,' + (-depth * 34).toFixed(2) + 'px) rotateX(' + (flip * 172).toFixed(2) + 'deg)';
+      if (s._tf !== tf) { s._tf = tf; s.style.transform = tf; }
+      var op = depth > 3 ? 0 : (depth > 2 ? 3 - depth : 1);
+      if (s._op !== op) { s._op = op; s.style.opacity = op; }
+      setVar(s, '--shade', Math.sin(flip * Math.PI) * .5, '_sh', .01);
+    }
+    featDot(Math.round(e));
+  });
+
+  /* ════════════════════════════════════════
+     THE ONE INTERACTIVE MOMENT: hold to build the plan.
+  ════════════════════════════════════════ */
+  (function () {
+    var btn = document.getElementById('hold-btn'), label = document.getElementById('hold-label');
+    var hint = document.getElementById('hold-hint'), reset = document.getElementById('hold-reset');
+    var card = document.getElementById('plan-card'), status = document.getElementById('plan-status');
+    var rows = [].slice.call(card.querySelectorAll('.session'));
+    var H = 0, holding = false, done = false, raf = null, last = 0;
+    function scatter() {
+    var r = rng(41), f = clamp((card.offsetWidth - 300) / 260, .25, 1);
+    rows.forEach(function (row, i) {
+      /* Spread apart vertically so the scraps never sit on top of each other. */
+      var side = i % 2 ? 1 : -1;
+      row.style.setProperty('--sx', (side * (50 + r() * 60) * f).toFixed(0) + 'px');
+      row.style.setProperty('--sy', ((i - 1.5) * 30 + (r() - .5) * 10).toFixed(0) + 'px');
+      row.style.setProperty('--sz', (40 + r() * 80).toFixed(0) + 'px');
+      row.style.setProperty('--srz', (side * (3 + r() * 5) * (.5 + f * .5)).toFixed(1) + 'deg');
+      row.style.setProperty('--srx', ((r() - .5) * 18).toFixed(1) + 'deg');
+    });
+    }
+    scatter();
+    var scT; window.addEventListener('resize', function () { clearTimeout(scT); scT = setTimeout(scatter, 150); });
+    function apply() {
+      btn.style.setProperty('--h', H.toFixed(3));
+      rows.forEach(function (row, i) { row.style.setProperty('--r', easeOut3((H - i * .14) / .44).toFixed(3)); });
+    }
+    function complete() {
+      done = true; holding = false; H = 1; apply();
+      card.classList.add('ready');
+      btn.classList.add('is-done');
+      label.textContent = 'Plan ready';
+      status.textContent = 'Ready';
+      hint.textContent = 'Four sessions, in order. Now try the first question from Monday.';
+      reset.hidden = false;
+      tryQ.removeAttribute('tabindex');
+    }
+    function tick(now) {
+      raf = null;
+      var dt = Math.min(100, now - (last || now)); last = now;
+      if (done) return;
+      H = clamp(H + (holding ? dt / 1500 : -dt / 650), 0, 1);
+      apply();
+      if (H >= 1) { complete(); return; }
+      if (holding || H > 0) raf = requestAnimationFrame(tick); else last = 0;
+    }
+    function start(e) {
+      if (done) return;
+      if (e && e.type === 'pointerdown') { if (e.button !== 0) return; try { btn.setPointerCapture(e.pointerId); } catch (x) {} }
+      if (reduced) { complete(); return; }
+      holding = true;
+      hint.textContent = 'Keep holding...';
+      if (raf === null) { last = 0; raf = requestAnimationFrame(tick); }
+    }
+    function stop() {
+      if (!holding) return;
+      holding = false;
+      if (!done) hint.textContent = 'Let go early and the notes drift apart again. Hold it all the way.';
+    }
+    btn.addEventListener('pointerdown', start);
+    btn.addEventListener('pointerup', stop);
+    btn.addEventListener('pointercancel', stop);
+    btn.addEventListener('lostpointercapture', stop);
+    btn.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+    btn.addEventListener('keydown', function (e) { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); start(); } });
+    btn.addEventListener('keyup', function (e) { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); stop(); } });
+    btn.addEventListener('click', function (e) { if (reduced && !done) complete(); });
+    /* ── The back of the card: Monday's first question ── */
+    var flip = document.getElementById('demo-flip'), qcard = document.getElementById('qcard'), tryQ = document.getElementById('try-q');
+    var opts = [].slice.call(qcard.querySelectorAll('.q-option'));
+    var fb = document.getElementById('q-fb'), fbLabel = document.getElementById('q-fb-label'), fbText = document.getElementById('q-fb-text');
+    var again = document.getElementById('q-again'), back = document.getElementById('q-back');
+    var qCount = document.getElementById('q-count'), qFill = document.getElementById('q-progress-fill');
+    function face(showQuestion) {
+      flip.classList.toggle('flipped', showQuestion);
+      [[card, !showQuestion], [qcard, showQuestion]].forEach(function (pair) {
+        pair[0].setAttribute('aria-hidden', pair[1] ? 'false' : 'true');
+        if (pair[1]) pair[0].removeAttribute('inert'); else pair[0].setAttribute('inert', '');
+      });
+      var target = showQuestion ? opts[0] : tryQ;
+      setTimeout(function () { try { target.focus({ preventScroll: true }); } catch (x) { target.focus(); } }, reduced ? 0 : 650);
+    }
+    function resetQuestion() {
+      opts.forEach(function (o) { o.disabled = false; o.className = 'q-option'; });
+      fb.className = 'feedback-box'; fbLabel.textContent = ''; fbText.textContent = '';
+      again.hidden = true; qCount.textContent = '0 / 8 correct'; qFill.style.transform = '';
+      qcard.classList.remove('correct-flash', 'wrong-flash');
+    }
+    function answer(btn) {
+      var ok = btn.getAttribute('data-ok') === '1';
+      opts.forEach(function (o) {
+        o.disabled = true;
+        if (o.getAttribute('data-ok') === '1') o.classList.add('correct-ans');
+        else if (o !== btn) o.classList.add('dimmed');
+      });
+      if (!ok) btn.classList.add('wrong-ans');
+      fb.className = 'feedback-box show ' + (ok ? 'correct-fb' : 'wrong-fb');
+      fbLabel.textContent = ok ? 'Correct' : 'Not quite';
+      fbText.textContent = ok
+        ? 'In metaphase, spindle fibers pull every chromosome into one line across the middle of the cell, so each new cell gets a full set.'
+        : 'It is metaphase. The chromosomes line up in the middle first, then split apart in anaphase. StudyFlow will ask you this one again tomorrow.';
+      qCount.textContent = (ok ? 1 : 0) + ' / 8 correct';
+      qFill.style.transform = 'scaleX(.125)';
+      qcard.classList.add(ok ? 'correct-flash' : 'wrong-flash');
+      again.hidden = false;
+      again.focus({ preventScroll: true });
+    }
+    opts.forEach(function (o) { o.addEventListener('click', function () { answer(o); }); });
+    tryQ.addEventListener('click', function () { resetQuestion(); face(true); });
+    back.addEventListener('click', function () { face(false); });
+    again.addEventListener('click', function () { resetQuestion(); opts[0].focus({ preventScroll: true }); });
+    window.__demo = function () { return { flipped: flip.classList.contains('flipped'), fb: fb.className, count: qCount.textContent }; };
+
+    reset.addEventListener('click', function () {
+      if (flip.classList.contains('flipped')) face(false);
+      tryQ.setAttribute('tabindex', '-1');
+      done = false; H = 0; apply();
+      card.classList.remove('ready'); btn.classList.remove('is-done');
+      label.textContent = 'Hold to build the plan'; status.textContent = 'Draft';
+      hint.textContent = 'Press and hold. Let go early and the notes drift apart again.';
+      reset.hidden = true; btn.focus();
+    });
+    apply();
+    window.__holdState = function () { return { H: H, done: done }; };
+  })();
+
+  /* ════════════════════════════════════════
+     REVEALS, counters, section-in-view classes (loops only run on screen)
+  ════════════════════════════════════════ */
+  [].slice.call(document.querySelectorAll('[data-reveal="words"]')).forEach(function (el) {
+    var i = 0;
+    function wrapText(node) {
+      [].slice.call(node.childNodes).forEach(function (ch) {
+        if (ch.nodeType === 3) {
+          var frag = document.createDocumentFragment();
+          ch.textContent.split(/(\s+)/).forEach(function (part) {
+            if (!part) return;
+            if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
+            var s = document.createElement('span'); s.className = 'word'; s.style.setProperty('--wi', i++); s.textContent = part; frag.appendChild(s);
+          });
+          node.replaceChild(frag, ch);
+        } else if (ch.nodeType === 1) wrapText(ch);
+      });
+    }
+    wrapText(el);
+  });
+  var tcards = [].slice.call(document.querySelectorAll('#tgrid .tcard'));
+  tcards.forEach(function (c, i) { c.style.setProperty('--rd', (i * .12) + 's'); });
+  var pcards = [].slice.call(document.querySelectorAll('#pgrid .pcard'));
+  pcards.forEach(function (c, i) { c.style.setProperty('--rd', ([.1, 0, .1][i]) + 's'); });
+
+  function revealIn(el) {
+    el.classList.add('in');
+    if (el.getAttribute('data-reveal') === 'words') setTimeout(function () { el.classList.add('done'); }, 1600);
+  }
+  var toReveal = [].slice.call(document.querySelectorAll('[data-reveal], [data-reveal-step]')).concat(tcards, pcards);
+  if ('IntersectionObserver' in window && !reduced) {
+    var rio = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { revealIn(e.target); rio.unobserve(e.target); } });
+    }, { threshold: .12, rootMargin: '0px 0px -6% 0px' });
+    toReveal.forEach(function (el) { rio.observe(el); });
+  } else toReveal.forEach(revealIn);
+  /* The grids reveal as groups, so one observer on the grid lets them in. */
+  ['tgrid', 'pgrid'].forEach(function (id) {
+    var g = document.getElementById(id);
+    if (!('IntersectionObserver' in window) || reduced) return;
+    var gio = new IntersectionObserver(function (es) {
+      if (es[0].isIntersecting) { [].slice.call(g.children).forEach(revealIn); gio.disconnect(); }
+    }, { threshold: .15 });
+    gio.observe(g);
+  });
+
+  if ('IntersectionObserver' in window) {
+    var vio = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { e.target.classList.toggle('in-view', e.isIntersecting); });
+    }, { threshold: 0 });
+    ['marquee', 'how', 'example', 'pricing', 'cta'].forEach(function (id) { var el = document.getElementById(id); if (el) vio.observe(el); });
+  }
+
+  /* Stats count up once, the first time they are seen. */
+  (function () {
+    var nums = [].slice.call(document.querySelectorAll('.stat-n[data-count]'));
+    function fmt(el, v) {
+      var dec = parseInt(el.getAttribute('data-dec') || '0', 10);
+      var s = dec ? v.toFixed(dec) : Math.round(v).toLocaleString('en-US');
+      el.textContent = s + (el.getAttribute('data-suffix') || '');
+    }
+    if (reduced || !('IntersectionObserver' in window)) return;
+    nums.forEach(function (el) { fmt(el, 0); });
+    var cio = new IntersectionObserver(function (es) {
+      if (!es[0].isIntersecting) return;
+      cio.disconnect();
+      var st = performance.now();
+      (function step(now) {
+        var k = easeOut3((now - st) / 1400);
+        nums.forEach(function (el) { fmt(el, parseFloat(el.getAttribute('data-count')) * k); });
+        if (k < 1) requestAnimationFrame(step);
+      })(st);
+    }, { threshold: .4 });
+    cio.observe(nums[0].parentNode.parentNode);
+  })();
+
+  /* FAQ: one open at a time. */
+  [].slice.call(document.querySelectorAll('.faq-q')).forEach(function (q) {
+    q.addEventListener('click', function () {
+      var item = q.parentNode, open = !item.classList.contains('open');
+      [].slice.call(document.querySelectorAll('.faq-item.open')).forEach(function (o) { o.classList.remove('open'); o.querySelector('.faq-q').setAttribute('aria-expanded', 'false'); });
+      if (open) { item.classList.add('open'); q.setAttribute('aria-expanded', 'true'); }
+    });
+  });
+
+  /* Nav: the right dashboard for whoever is signed in. Storage can throw in
+     a private window, so it is read defensively. */
+  (function () {
+    var teacher = null, student = null;
+    try { teacher = localStorage.getItem('studyflow_teacher'); student = localStorage.getItem('studyflow_user'); } catch (e) {}
+    var slot = document.getElementById('teacher-nav-link');
+    if (!slot) return;
+    var href = teacher ? 'teacher.html' : (student ? 'dashboard.html' : 'login.html');
+    slot.innerHTML = '<a href="' + href + '" class="nav-dashboard">My Dashboard</a>';
+  })();
+
+  /* Nav lens: slides to the link for the section being read. */
+  (function () {
+    var pill = document.getElementById('nav-pill');
+    if (!pill || !('IntersectionObserver' in window)) return;
+    var links = [].slice.call(pill.querySelectorAll('a'));
+    var map = { how: links[0], features: links[1], pricing: links[2] }, order = ['how', 'features', 'pricing'];
+    var seen = {}, active = null;
+    function place() {
+      if (!active) { pill.style.setProperty('--lo', '0'); return; }
+      pill.style.setProperty('--lx', active.offsetLeft + 'px');
+      pill.style.setProperty('--lw', active.offsetWidth + 'px');
+      pill.style.setProperty('--lo', '1');
+    }
+    function pick() {
+      var next = null;
+      order.forEach(function (id) { if (seen[id]) next = map[id]; });
+      if (next === active) return;
+      if (active) active.removeAttribute('aria-current');
+      active = next;
+      if (active) active.setAttribute('aria-current', 'location');
+      place();
+    }
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { seen[e.target.id] = e.isIntersecting; }); pick(); }, { rootMargin: '-45% 0px -54% 0px' });
+    order.forEach(function (id) { var el = document.getElementById(id); if (el) io.observe(el); });
+    window.addEventListener('resize', place);
+  })();
+
+  /* Phones: sticky call to action between the hero and the final section. */
+  (function () {
+    var cta = document.getElementById('sticky-cta'), edge = document.getElementById('edge-fade');
+    if (!cta || !('IntersectionObserver' in window)) return;
+    /* Shown only through the story sections: from pricing on, every section
+       has its own buttons, and near the hold control it would sit on top of it. */
+    var inHero = true, pastPricing = false, nearHold = {};
+    function update() {
+      var hold = false; for (var k in nearHold) if (nearHold[k]) hold = true;
+      var show = !inHero && !pastPricing && !hold;
+      if (show === cta.classList.contains('show')) return;
+      cta.classList.toggle('show', show);
+      if (edge) edge.classList.toggle('show', show);
+      if (show) { cta.removeAttribute('tabindex'); cta.removeAttribute('aria-hidden'); }
+      else { cta.setAttribute('tabindex', '-1'); cta.setAttribute('aria-hidden', 'true'); }
+    }
+    new IntersectionObserver(function (es) { inHero = es[0].isIntersecting; update(); }).observe(document.getElementById('hero'));
+    new IntersectionObserver(function (es) {
+      var e = es[0];
+      pastPricing = e.isIntersecting || e.boundingClientRect.top < 0;
+      update();
+    }).observe(document.getElementById('pricing'));
+    var hio = new IntersectionObserver(function (es) { es.forEach(function (e) { nearHold[e.target.className] = e.isIntersecting; }); update(); }, { rootMargin: '-78% 0px 0px 0px' });
+    [].slice.call(document.querySelectorAll('#example .hold, #example .plan-stage')).forEach(function (el) { hio.observe(el); });
+  })();
+
+  /* Hidden tab: pause every loop and every rAF. */
+  document.addEventListener('visibilitychange', function () {
+    document.body.classList.toggle('paused', document.hidden);
+    if (!document.hidden) { Hero.setVisible(true); Scrub.kick(); }
+  });
+
+  /* Reduced motion, honoured live in both directions. */
+  function onRM() {
+    reduced = RM.matches;
+    Hero.applyMode();
+    if (reduced) {
+      toReveal.forEach(revealIn);
+      tcards.concat(pcards).forEach(revealIn);
+    }
+    Scrub.kick();
+  }
+  if (RM.addEventListener) RM.addEventListener('change', onRM); else if (RM.addListener) RM.addListener(onRM);
+  mobileShow.addEventListener && mobileShow.addEventListener('change', function () { sizePrism(); Scrub.kick(); });
+  window.addEventListener('resize', sizePrism);
+
+  window.addEventListener('scroll', function () { Hero.updateNav(); }, { passive: true });
+
+  function boot() {
+    Hero.init();
+    sizePrism();
+    Scrub.watch();
+    Scrub.kick();
+    window.__sf = { hero: Hero.debug };
+  }
+  /* The three.js script is deferred, so it has run by DOMContentLoaded. */
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
+</body>
+</html>
