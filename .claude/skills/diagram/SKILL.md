@@ -208,6 +208,27 @@ before touching the wording.
 - **Hub layouts print the topic twice** if you pass it as both `title` and
   `center`. Pass `center`, leave `title` empty.
 
+## 5b. A picture generated at runtime: `sf-draw.js`
+
+When the app should draw something itself - while a plan is made, during a
+lesson, on a tap - it goes through `sf-draw.js`, the one file both pages load.
+Never a second copy of a prompt in another file.
+
+1. **Prompt**: add a function next to `lessonPrompt` / `momentPrompt`. Build it
+   the same way: the facts, `SCENE_SHAPES_DOC`, the colour names, the checkable
+   rules, and **an example you rendered and audited first** (§0) - the model
+   copies the example, not the rules.
+2. **Call**: `SFDraw.request(prompt, ms)` → `{spec}` / `{none}`, or a rejection
+   for a failed call.
+3. **Judge**: `SFSceneKit.fromSpec(spec)` in `lesson.html`. Null means no picture.
+4. **Cache**: the spec, or `null` for `{none}` and refusals. **Nothing** on a
+   rejection, so it can be asked again.
+5. **Never block, never auto-fire in a loop, never before an answer** if the
+   picture could contain one (invariant 7).
+6. **Test with `api/generate` mocked**: a good spec, `{"type":"none"}`, prose,
+   a 502, an abort, a timeout with a late reply, and a hostile spec. Then look
+   at a real one before calling it done.
+
 ## 6. House constraints
 
 - **ES5 only** in `lesson.html` — `var`, no arrow functions, no template

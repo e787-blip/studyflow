@@ -29,6 +29,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `app.html` | ~172 KB | Plan generation. Subject detection, AI prompt, question schemas, validators |
 | `lesson.html` | ~590 KB | The session runtime. Card queue, all question renderers, the whiteboard |
 | `dashboard.html` | ~101 KB | Plan list and progress |
+| `sf-draw.js` | ~19 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
 
 `lesson.html` has **two `<script>` blocks**. Block 1 is the session runtime.
 Block 2 is the whiteboard module (`window.SFWhiteboard`). Both must stay
@@ -839,6 +840,41 @@ Two renderer guards, and they are worth more than any amount of prompt:
 - **A near-white text fill is coerced to ink.** `paper`, `faint` and `rule`
   are invisible on this card and against the halo. The model asked for
   white text expecting a dark box; this palette has no dark fills.
+
+### `sf-draw.js` — the drawing skill, and when it draws
+
+One file knows how to ask the model for a picture: `SFDraw.lessonPrompt(day)`,
+`SFDraw.momentPrompt(facts)`, `SFDraw.request(prompt, ms)` (resolves `{spec}`
+or `{none}`, **rejects** on a failed call) and `SFDraw.looksDrawable(spec)`.
+Both pages load it with `<script src="/sf-draw.js">` before their own script.
+The prompts used to live inside `lesson.html`, so the plan page could not ask
+for a picture without a second copy; both were moved **byte-identical**
+(checked against the prompt captured off the wire before the move).
+
+It draws at three moments, and each reads the one before's cache
+(`day.generatedArt` - a spec, `null` for "nothing to draw", absent if never
+asked or the call failed):
+
+| When | Where | What |
+|---|---|---|
+| **while the plan is made** | `app.html`, `predrawFirstLesson` | day 1 only, capped at 25s, "Drawing a picture for your first lesson…" |
+| **during a lesson** | `lesson.html`, `predrawNextDay` | the NEXT day, in the background, chained after today's picture settles - never two in flight |
+| **when a lesson opens** | `lesson.html`, `requestLessonArt` | only if neither of the above got there |
+
+So day 1 opens drawn, and every later day was drawn during the lesson before
+it. Cost is unchanged - one call per day, just earlier - and plan creation is
+one call longer, not fourteen.
+
+**Rendering is not in `sf-draw.js`.** `SFSceneKit` in `lesson.html` stays the
+security boundary and judges every spec when it is drawn; `looksDrawable` is
+only a structural check for `app.html`, which has no renderer. If
+`sf-draw.js` fails to load, every caller checks `window.SFDraw` and the lesson
+keeps its locally built diagram - tested by aborting the file.
+
+Adding a new "draw X on demand": write its prompt in `sf-draw.js` next to the
+other two (copy the shape of `momentPrompt`, with an audited example), call
+`SFDraw.request`, judge with `SFSceneKit.fromSpec`, cache `null` for `{none}`
+and nothing on a rejection. The diagram skill has the checklist.
 
 ### The illustration is drawn WHEN THE LESSON IS OPENED
 

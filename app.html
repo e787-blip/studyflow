@@ -651,6 +651,7 @@
   </div>
 </div>
 
+<script src="/sf-draw.js"></script>
 <script>
 
   /* ── PER-ACCOUNT STORAGE NAMESPACE ─────────────────────────────────────
@@ -3766,6 +3767,40 @@
               }
               checkpointPlan();
 
+              /* Draw the first lesson's picture now, while the plan is being
+                 made, with the focused prompt from sf-draw.js - so day 1 opens
+                 with its drawing already there instead of arriving 5-15s after
+                 the learner has looked at the card. The same request buried
+                 in the 29k day prompt comes back as boxes; asked on its own it
+                 comes back as a drawing (see CLAUDE.md, "What generated art
+                 still is not").
+
+                 Day 1 only: every later day is drawn in the background during
+                 the lesson before it (lesson.html, predrawNextDay), so plan
+                 creation stays ~one call longer, not fourteen. Capped at 25s;
+                 a failure or a slow reply simply leaves the day undrawn and
+                 lesson.html asks on entry, as it always has. */
+              predrawFirstLesson(allDays, saveAndGo);
+      }
+    }
+
+    function predrawFirstLesson(days, then) {
+      var d = days && days[0];
+      if (!d || !window.SFDraw || d.generatedArt !== undefined) { then(); return; }
+      var went = false;
+      function go() { if (!went) { went = true; then(); } }
+      setProgress('Drawing a picture for your first lesson\u2026');
+      SFDraw.request(SFDraw.lessonPrompt(d), 25000).then(function (res) {
+        /* A structural check only - app.html has no renderer. lesson.html
+           judges the spec again through SFSceneKit when it draws it. */
+        d.generatedArt = (res.spec && SFDraw.looksDrawable(res.spec)) ? res.spec : null;
+        go();
+      }, go);
+      setTimeout(go, 27000);
+    }
+
+    function saveAndGo() {
+      {
               var newPlan = {
                 id: Date.now(),
                 createdAt: new Date().toISOString(),
