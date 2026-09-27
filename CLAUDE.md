@@ -1213,8 +1213,10 @@ else `diagramForDay`, the same precedence as the lesson card):
   sentence cards the whole structure is the answer, so any overlap withholds
   it; true/false never gets it (the picture confirms or refutes the claim);
   pre-test cards never do.
-- **After a wrong answer, it opens by itself** under the explanation, headed
-  "Look at it again". `sfRecallOnMiss()` is called from `handleResult` AND
+- **After a wrong answer, it opens by itself ONCE a session** under the
+  explanation, headed "Look at it again", and only when the picture budget
+  picks it (see "The picture budget"). It used to open on every miss it was
+  relevant to, so the same lesson drawing sat under question after question. `sfRecallOnMiss()` is called from `handleResult` AND
   `recordMiss`, so the six self-grading cards get it too. Correct answers do
   nothing. The answer's words count here, under the **same** one-strong-or-
   two-short rule, counted once across stem and answer. It used to be any ONE
@@ -1282,8 +1284,10 @@ Where it is offered, and where it is not:
 - **Question cards, after a miss** — `sfMomentOnMiss`, called from
   `handleResult` and `recordMiss` right after `sfRecallOnMiss`, so it sits
   under "Look at it again" when that shows.
-- **The walkthrough board** (`sfwb-explain`) — `sfMomentBoard`, called from
-  block 2 next to `sfRecallBoard`. Offered after a correct answer too: the
+- **The walkthrough** — the picture is walked through ON the walkthrough
+  card (`sfwb-picwalk`, see "The walkthrough of a picture"). The old board
+  (`sfwb-explain`) keeps `sfMomentBoard` only when no lesson picture is
+  under it: one picture per card. Offered after a correct answer too: the
   learner asked for the walkthrough, and has already answered.
 - **The results screen** — each "What to study more" item carries a slot
   (`momentSlotHtml`). A picture drawn during the session arrives **folded**
@@ -1299,11 +1303,11 @@ Where it is offered, and where it is not:
   `sentence`, `labeldiagram`, `graph`, `tracetable`, `match`, `matchpairs`,
   `readingset` — `MOMENT_NEVER`. Everything else is offered, maths word
   problems included.
-- **Drawn on the spot, without a tap, for the first `MOMENT_AUTO_MAX` (4)
-  misses of a session.** The call starts the instant the answer is marked
+- **Drawn on the spot, without a tap, when the picture budget picks it**, up
+  to `MOMENT_AUTO_MAX` (10) calls a session - a cost ceiling; the budget is
+  what sets how often. The call starts the instant the answer is marked
   wrong, so the picture usually lands while the explanation is being read.
-  After the cap the button is still there: a call is real money and a
-  struggling learner can miss eight in a row. An automatic drawing that comes
+  Past either limit the button is still there. An automatic drawing that comes
   back "nothing to draw" shows nothing (`data-auto`), and one that fails just
   offers the button - the learner did not ask, so nothing apologises.
 
@@ -1354,6 +1358,64 @@ miss through `recordMiss` offers it; a full wrong-answer walk of science,
 maths, history and language sessions throws nothing and offers it on no
 excluded card. **What has NOT been seen is a real model's drawing** — see
 Open items.
+
+### The picture budget — `picChoice`, `PIC_SHARE`, `PIC_GAP`
+
+A struggling learner who missed everything got a picture on **44%** of
+question cards, and the SAME picture over and over: the lesson's drawing under
+every question it touched, and each question's own drawing again on its
+retry, its retest and every later repeat - cached, so identical each time.
+The user's words: "not every question is a drawing, maybe 20-30 percent".
+
+- **At most `PIC_SHARE` (25%) of question cards carry a picture**, and never
+  two within `PIC_GAP` (3) cards. Pre-test and teach-it-back cards are not
+  counted. The labelling card IS a picture and spends from the same budget.
+- **Each picture shows itself once a session** - the lesson's picture once,
+  each question's drawing once. After that it is a chip, "See the picture
+  again" (`data-hold` on the moment host), never pushed.
+- **One picture per card.** The question's own drawing wins; the lesson's
+  picture stands in only when no drawing is coming.
+- An automatic drawing that comes back with nothing is refunded
+  (`picRefund`) - it showed nothing.
+- Buttons are not pictures: "See the diagram" before answering and "Draw it
+  for me" after a miss are unaffected.
+- **The labelling card is never re-asked** as a spaced-repeat retry (its
+  wrong pins were already corrected in place, so the retry asked for what
+  had just been shown), and one built from the lesson's picture is not saved
+  for next-day review.
+
+Measured with a 16-question science day, every answer wrong: **24% of
+question cards with a picture, 0 repeated** (was 44%, with the same drawings
+five times each). `sfRecallOnMiss` and `sfMomentOnMiss` both ask
+`picChoice()`, decided once per showing of a card; `picCount` runs from
+`sfRecallAttach` on every render.
+
+### The walkthrough of a picture — `sfPicWalkFor`, `sfPicWalkRender`
+
+The walkthrough used to be a whiteboard of text rows sized for all of them
+and showing one - a single line over a screen of empty card - with the
+drawing (sometimes two) hung underneath the Next arrow, where nothing on the
+board referred to it. Now, for any question with a picture, `sfwbExplain`
+queues a `sfwb-picwalk` card instead:
+
+- **The picture on top, the steps under it, one tap each** (`#btn-next`, so
+  Enter works). Past steps stay, dimmed; later ones are not shown.
+- **Each step lights up the labels it names** and dims the rest. The step
+  "In the picture" lights the blue part - the moment prompt draws the answer
+  in blue.
+- **The labelling card walks pin by pin**, "Part 2: To heart - you chose
+  Atrium." A pin from the lesson's picture turns back into the lesson's own
+  label at its step (`pins[].orig`), so by the last step the drawing is
+  exactly as the lesson showed it. A model-authored card's names are placed
+  beside their pins, in the least crowded of four spots, clear of the
+  drawing's own words.
+- The picture is the question's drawing (made or on its way), else the
+  lesson's when it covers the question, else "Draw it for me" in its place.
+- **Worked calculations keep the sideways board** - the balance is their
+  picture. So does a format with nothing to picture.
+- The walkthrough now reads the question from `currentCard.q` first. The
+  labelling card builds its question after `currentQuestion` is set, so its
+  walkthrough was explaining the PREVIOUS question.
 
 ### The labelling card draws its picture on the spot — `labelCanWait`
 
@@ -1714,9 +1776,13 @@ What to check after any `buildQueue` or renderer change:
     caption repeats words its SVG already prints.
 18d. **Draw it for me** appears only after an answer: never on an unanswered
     card, a pre-test card, a retry card before it is answered, or any
-    `MOMENT_NEVER` format. The first `MOMENT_AUTO_MAX` distinct misses draw
-    without a tap and the next offers the button; set `MOMENT_AUTO_MAX = 0`
-    in a harness to test the tap path. One request per key; a cached key
+    `MOMENT_NEVER` format. Misses draw without a tap only when the picture
+    budget allows; set `MOMENT_AUTO_MAX = 0` (or `PIC_SHARE = 0`) in a
+    harness to test the tap path. **Walk a whole session answering
+    everything wrong: pictures on at most ~25-30% of question cards, and no
+    picture key auto-shown twice.** A walkthrough of a question with a
+    picture is a `sfwb-picwalk` card whose steps light labels; the labelling
+    card's walkthrough goes pin by pin and never re-queues as a retry. One request per key; a cached key
     (null included) is zero; a failed call is not cached. The labelling card
     waits for a drawing in progress, re-asks after a failed call, skips on
     `null`, and moves on after `LABEL_WAIT_MS`. Mock `api/generate` with a hostile

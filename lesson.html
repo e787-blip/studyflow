@@ -657,6 +657,45 @@
   .sf-moment-fold summary::-webkit-details-marker { display:none; }
   .sf-moment-fold[open] summary { margin-bottom:.5rem; }
   .wrong-item .sf-moment { margin-top:.6rem; }
+
+  /* The walkthrough of a picture (sfPicWalkRender). The picture on top, the
+     steps under it; each step lights the labels it names and dims the rest.
+     Light ground in dark mode, like every panel a drawing sits on. */
+  .pw-fig { margin:0 0 1rem; padding:.7rem; border-radius:14px; background:#f7f9fe; border:1px solid #e3e9f7; text-align:center; }
+  .pw-fig:empty { display:none; }
+  .pw-fig .sf-moment { margin-top:0; }
+  .pw-fig .sf-moment-panel { padding:0; border:0; background:none; }
+  .pw-art svg { display:block; margin:0 auto; max-width:100%; height:auto; }
+  .pw-fig svg text { transition:opacity .25s ease, fill .25s ease; }
+  .pw-fig.has-hot svg text { opacity:.38; }
+  .pw-fig.has-hot svg text.pw-hot { opacity:1; fill:#1e40af !important; font-weight:700; }
+  .pw-fig .ld-pin { transition:opacity .25s ease; }
+  .pw-fig .ld-pin.is-dim { opacity:.35; }
+  .pw-fig .ld-pin.is-hot circle { fill:#3563e9; stroke:#3563e9; }
+  .pw-fig .ld-pin.is-hot text { fill:#fff; }
+  .pw-pinlab { font-family:var(--sans); font-size:12.5px; font-weight:700; fill:#1e40af;
+    stroke:#fff; stroke-width:3.2px; stroke-linejoin:round; paint-order:stroke; opacity:0; transition:opacity .3s ease; }
+  .pw-pinlab.is-hot, .pw-pinlab.is-done { opacity:1; }
+  .pw-pinlab.is-done { fill:#1a1d2e; font-weight:600; }
+  .pw-fig .ld-pin.is-gone { opacity:0; }
+  .pw-orig { opacity:0; transition:opacity .3s ease; }
+  .pw-orig.is-hot, .pw-orig.is-done { opacity:1; }
+  .pw-orig.is-hot text { fill:#1e40af !important; }
+  /* Only the part being named is blue; the ones already named are ink until
+     the last step puts the drawing back exactly as the lesson showed it. */
+  .pw-orig.is-done:not(.is-all) text { fill:#1a1d2e !important; }
+  .pw-rows { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.55rem; }
+  .pw-row { padding:.15rem 0 .15rem .85rem; border-left:3px solid transparent; animation:fadeUp .35s cubic-bezier(.16,1,.3,1) both; }
+  .pw-row.is-later { display:none; }
+  .pw-row.is-now { border-left-color:#4a7cf6; }
+  .pw-row.is-past { opacity:.62; border-left-color:var(--border); }
+  .pw-k { font-size:0.7rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#3563e9; margin-bottom:.15rem; }
+  .pw-d { font-size:0.92rem; line-height:1.55; color:var(--ink); }
+  body.dark .pw-k { color:#8fb0ff; }
+  @media (prefers-reduced-motion:reduce) {
+    .pw-row { animation:none; }
+    .pw-fig svg text, .pw-fig .ld-pin, .pw-pinlab, .pw-orig { transition:none; }
+  }
   body.dark .sf-moment-fold summary { color:#8fb0ff; }
 
   /* Keyboard hint chip */
@@ -3155,7 +3194,93 @@
     return p;
   }
 
+  /* ── THE PICTURE BUDGET ───────────────────────────────────────────────────
+
+     A picture is worth showing when it is rare enough to be looked at. With
+     every miss opening one, a struggling learner got a picture on 44% of
+     question cards, and the SAME picture again and again: the lesson's
+     drawing under every question it touched, and a question's own drawing
+     on its retry, on its retest and on every later repeat - identical each
+     time, because it is cached.
+
+     Three rules, all enforced here and nowhere else:
+       - at most PIC_SHARE of the question cards seen so far carry a picture,
+         and never two within PIC_GAP cards of each other. The labelling card
+         is a picture and spends from the same budget;
+       - each picture is SHOWN by itself once a session. The lesson's picture
+         once; a question's own drawing once. After that it is one tap away
+         ("See the picture again"), never pushed;
+       - one picture per card. The question's own drawing is preferred - it
+         is about this answer - and the lesson's picture stands in for it
+         only when no drawing is coming.
+
+     Buttons are not pictures: "See the diagram" before answering and "Draw
+     it for me" after a miss stay wherever they are offered. They cost
+     nothing until the learner asks. */
+  var PIC_SHARE = 0.25;
+  var PIC_GAP = 3;
+  var picBudget = { cards: 0, shown: 0, last: -99, seen: {}, auto: {} };
+  var picTurn = { card: null, idx: -1, choice: null };
+
+  function picRoom() {
+    if (picBudget.cards - picBudget.last < PIC_GAP) return false;
+    return picBudget.shown + 1 <= Math.ceil(picBudget.cards * PIC_SHARE);
+  }
+  function picSpend(id) {
+    picBudget.shown++;
+    picBudget.last = picBudget.cards;
+    if (id) picBudget.seen[id] = 1;
+  }
+  /* An automatic drawing that came back with nothing showed nothing, so it
+     does not count against the budget. */
+  function picRefund(key) {
+    if (!picBudget.auto[key]) return;
+    delete picBudget.auto[key];
+    if (picBudget.shown > 0) picBudget.shown--;
+  }
+  /* A question card came on screen. Counted once per showing, so a card
+     that re-renders itself (the labelling card, when its drawing lands) is
+     not two cards. */
+  function picCount(card) {
+    if (picTurn.card === card && picTurn.idx === cardIndex) return;
+    var t = fmStr(card && card.type).toLowerCase();
+    if (t === 'labeldiagram' && !card.q) return;   // still waiting for its drawing
+    picTurn = { card: card, idx: cardIndex, choice: null };
+    if (!card || card.isPretest) return;
+    if (t === 'labeldiagram') {
+      picBudget.cards++;
+      picSpend('');                          // the visual question IS a picture
+      return;
+    }
+    if (card.q && t !== 'write') picBudget.cards++;
+  }
+  /* What this card shows after a miss: 'moment', 'lesson' or ''. Decided
+     once per showing, the first time either miss hook asks. */
+  function picChoice() {
+    var card = window.currentCard;
+    if (picTurn.choice !== null && picTurn.card === card) return picTurn.choice;
+    var choice = '', id = '';
+    if (card && card.q && !card.isPretest) {
+      var mk = momentCanDraw(card.q, card.type) ? momentKey(card.q) : '';
+      var c = momentCache();
+      var momentOk = !!mk && !picBudget.seen['m:' + mk] && (
+        (c.hasOwnProperty(mk) && !!c[mk]) || momentArt.inflight[mk] ||
+        (!c.hasOwnProperty(mk) && !!window.SFDraw && momentArt.auto < MOMENT_AUTO_MAX));
+      var sc = document.getElementById('session-card');
+      var lessonOk = !!sc && sc.getAttribute('data-recall') === '1' && !picBudget.seen.lesson;
+      if ((momentOk || lessonOk) && picRoom()) {
+        choice = momentOk ? 'moment' : 'lesson';
+        id = momentOk ? 'm:' + mk : 'lesson';
+        picSpend(id);
+      }
+    }
+    picTurn.card = card;
+    picTurn.choice = choice;
+    return choice;
+  }
+
   function sfRecallAttach(card) {
+    try { picCount(card); } catch (eC) { /* the budget never costs the card */ }
     var r = recallFor(card);
     var sc = document.getElementById('session-card');
     if (!sc) return;
@@ -3195,6 +3320,9 @@
   function sfRecallOnMiss() {
     var sc = document.getElementById('session-card');
     if (!sc || sc.getAttribute('data-recall') !== '1') return;
+    /* Only when the budget picked the lesson's picture for this card - once
+       a session, and not on a card whose own drawing is coming. */
+    if (picChoice() !== 'lesson') return;
     var pic = lessonPicture();
     if (!pic) return;
     var old = sc.querySelector('.sf-recall');
@@ -3296,7 +3424,10 @@
     return {
       type: 'labeldiagram', fromLesson: true, svg: svg,
       question: 'Label the picture from today’s lesson.',
-      pins: picks.map(function (p) { return { x: p.x, y: p.y, answer: p.answer }; }),
+      /* orig: the drawing's own label, kept so the walkthrough can put each
+         name back exactly where the lesson drew it. It is this renderer's
+         output, not model text. */
+      pins: picks.map(function (p) { return { x: p.x, y: p.y, answer: p.answer, orig: p.full }; }),
       options: extra, difficulty: 'medium',
       hint: 'The leader lines still point at each part. Start with the one you remember best.',
       explanation: 'Every part of the picture you studied, in place.'
@@ -3497,7 +3628,7 @@
      the explanation has been read. Capped because a struggling learner can
      miss eight in a row and every drawing is a real call; after the cap the
      button is still there. */
-  var MOMENT_AUTO_MAX = 4;
+  var MOMENT_AUTO_MAX = 10;
   var MOMENT_KEEP = 16;
   /* Where a picture of the answer is already on the card (graph, labelling),
      is the walkthrough's job (an equation - SFStepVisual draws its balance),
@@ -3621,11 +3752,13 @@
          paid for twice to be told the same thing. */
       var svg = null;
       if (res.spec) { try { svg = SFSceneKit.fromSpec(res.spec); } catch (e2) { svg = null; } }
+      if (!svg) picRefund(key);
       cacheMoment(key, svg ? res.spec : null);
       paintMoment(key);
     }, function () {
       delete momentArt.inflight[key];
       momentArt.failed[key] = 1;
+      picRefund(key);
       paintMoment(key);
     });
   }
@@ -3659,10 +3792,30 @@
     } else if (momentArt.inflight[key]) next = 'wait';
     else if (momentArt.failed[key]) next = 'failed';
     else next = 'idle';
+    /* Held by the picture budget: a drawing that exists (or is on its way)
+       is offered, not shown. "Nothing to draw" says nothing at all. */
+    var held = host.getAttribute('data-hold') === '1';
+    if (held && (next === 'drawn' || next === 'wait')) next = 'held';
+    if (held && next === 'none') next = 'held-none';
     if (host.getAttribute('data-state') === next) return;
     var was = host.getAttribute('data-state');
     host.setAttribute('data-state', next);
     host.innerHTML = '';
+
+    if (next === 'held-none') return;
+    if (next === 'held') {
+      var again = momentEl('button', 'sf-moment-btn');
+      again.type = 'button';
+      again.innerHTML = MOMENT_PENCIL + '<span></span>';
+      again.lastChild.textContent = picBudget.seen['m:' + key] ? 'See the picture again' : 'See the picture';
+      again.onclick = function () {
+        host.removeAttribute('data-hold');
+        host.setAttribute('data-asked', '1');
+        paintMomentHost(host);
+      };
+      host.appendChild(again);
+      return;
+    }
 
     var auto = host.getAttribute('data-auto') === '1';
     if (next === 'none' && auto) return;                    // nothing to draw: say nothing
@@ -3672,7 +3825,12 @@
       btn.type = 'button';
       btn.innerHTML = MOMENT_PENCIL + '<span></span>';
       btn.lastChild.textContent = (next === 'failed' && !auto) ? 'Try again' : 'Draw it for me';
-      btn.onclick = function () { host.setAttribute('data-asked', '1'); requestMomentArt(key); };
+      btn.onclick = function () {
+        /* Asked for, so the budget does not hold it back. */
+        host.removeAttribute('data-hold');
+        host.setAttribute('data-asked', '1');
+        requestMomentArt(key);
+      };
       host.appendChild(btn);
       return;
     }
@@ -3732,12 +3890,16 @@
       return;
     }
     host.appendChild(panel);
+    picBudget.seen['m:' + key] = 1;
+    /* Inside a walkthrough the picture is part of the walk: its labels light
+       up with each step, so they are re-lit when the drawing lands. */
+    if (host.getAttribute('data-walk') === '1') { try { picWalkPaint(); } catch (eW) { /* the walk stands without it */ } return; }
     if (was === 'wait') {
       try { panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e3) { /* old browsers */ }
     }
   }
 
-  function momentHost(q, cardType, userAns, fold) {
+  function momentHost(q, cardType, userAns, fold, hold) {
     if (!momentCanDraw(q, cardType)) return null;
     var key = momentKey(q);
     momentArt.facts[key] = momentFacts(q, userAns);
@@ -3745,6 +3907,7 @@
     host.setAttribute('data-mkey', key);
     host.setAttribute('aria-live', 'polite');
     if (fold) host.setAttribute('data-fold', '1');
+    if (hold) host.setAttribute('data-hold', '1');
     paintMomentHost(host);
     return host;
   }
@@ -3769,7 +3932,11 @@
        the lesson one card away. The same question comes back later as a
        retest, and a miss THERE is when the picture is offered. */
     if (card.isPretest) return;
-    var host = momentHost(card.q, card.type, userAns, false);
+    /* Whether this card gets the drawing itself or just the offer is the
+       budget's call (picChoice). Held, a drawing already made is one tap
+       away - "See the picture again" - instead of on the card by itself. */
+    var shows = picChoice() === 'moment';
+    var host = momentHost(card.q, card.type, userAns, false, !shows);
     if (!host) return;
     var after = sc.querySelector('.sf-recall') || sc.querySelector('#feedback-box');
     if (after && after.parentNode) after.parentNode.insertBefore(host, after.nextSibling);
@@ -3782,9 +3949,10 @@
        card as it was (data-auto): the learner did not ask, so there is
        nothing to apologise for. */
     var key = host.getAttribute('data-mkey');
-    if (!momentCache().hasOwnProperty(key) && !momentArt.inflight[key] &&
+    if (shows && !momentCache().hasOwnProperty(key) && !momentArt.inflight[key] &&
         momentArt.auto < MOMENT_AUTO_MAX && window.SFDraw) {
       momentArt.auto++;
+      picBudget.auto[key] = 1;
       host.setAttribute('data-auto', '1');
       host.setAttribute('data-asked', '1');
       requestMomentArt(key);
@@ -3814,6 +3982,286 @@
   function sfMomentPaintAll(root) {
     var hosts = (root || document).querySelectorAll('.sf-moment'), i;
     for (i = 0; i < hosts.length; i++) paintMomentHost(hosts[i]);
+  }
+
+  /* ── THE WALKTHROUGH OF A PICTURE ─────────────────────────────────────────
+
+     The walkthrough used to be a whiteboard of text rows with the picture
+     hung underneath it: a board sized for every row and showing one, so the
+     first step was a single line over a screen of empty card, and the
+     drawing - sometimes two, the lesson's AND the question's - sat below the
+     Next arrow, where nothing on the board ever referred to it.
+
+     Now the picture is the walk. It sits on top; the steps arrive under it
+     one tap at a time; and each step LIGHTS UP the parts of the picture it
+     talks about, dimming the rest. On the labelling card the walk goes pin by
+     pin, writing each part's name back onto the drawing, so by the last step
+     the learner has watched the picture labelled in full.
+
+     One picture only: the question's own drawing when there is one (made,
+     or on its way), else the lesson's picture when it covers the question,
+     else the "Draw it for me" offer in the picture's place. A worked
+     calculation keeps the sideways board - its balance IS its picture - and
+     a question with nothing to picture keeps the board too. */
+  var picWalk = null;
+
+  function picWalkPins(q) {
+    var st = window._labelState;
+    var pins = (st && st.q === q) ? st.pins : ldArr(q.pins).filter(function (p) {
+      return p && fmStr(p.answer) && isFinite(p.x) && isFinite(p.y);
+    }).slice(0, 6);
+    return { pins: pins, picks: (st && st.q === q && st.picks) || [] };
+  }
+
+  function picWalkRows(q) {
+    var spec = null, rows = [], i;
+    try { spec = window.SFWhiteboard ? SFWhiteboard.fromWrongAnswer(q, day || {}) : null; } catch (e) { spec = null; }
+    if (!spec || spec.type === 'worked') return null;
+    if (spec.type === 'compare' && spec.left && spec.right) {
+      var sides = [spec.left, spec.right];
+      for (i = 0; i < 2; i++) {
+        if (sides[i].items && sides[i].items.length) rows.push({ label: fmStr(sides[i].title), detail: sides[i].items.join(', ') });
+      }
+      if (fmStr(q.explanation)) rows.push({ label: 'Why', detail: fmStr(q.explanation) });
+    } else if (spec.items) {
+      for (i = 0; i < spec.items.length && rows.length < 5; i++) {
+        var it = spec.items[i] || {};
+        var lab = fmStr(it.label || it.title), det = fmStr(it.detail || it.text || it.line);
+        if (lab || det) rows.push({ label: lab || ('Step ' + (i + 1)), detail: det });
+      }
+    }
+    return rows.length >= 2 ? rows : null;
+  }
+
+  /* The labels of an SVG string, as written. */
+  function picWalkLabels(svg) {
+    var out = [], m, re = /<text\b[^>]*>([\s\S]*?)<\/text>/gi;
+    while ((m = re.exec(svg || '')) !== null) {
+      var t = m[1].replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+      if (t) out.push(t);
+    }
+    return out;
+  }
+
+  /* What the walkthrough of THIS question would be, or null for the board. */
+  function sfPicWalkFor(q) {
+    if (!q || !day) return null;
+    var t = fmStr(q.type).toLowerCase();
+
+    if (t === 'labeldiagram') {
+      var svg = q.svg || null;
+      if (!svg) { try { svg = SFSceneKit.fromSpec(q.drawing || q.diagram); } catch (e) { svg = null; } }
+      var pp = picWalkPins(q);
+      if (!svg || pp.pins.length < 2) return null;
+      var rows = [], i;
+      for (i = 0; i < pp.pins.length; i++) {
+        var want = fmStr(pp.pins[i].answer), got = fmStr(pp.picks[i]);
+        rows.push({
+          label: 'Part ' + (i + 1), pin: i,
+          detail: want + (!got ? '' : got.toLowerCase() === want.toLowerCase() ? ' — you had this one.' : ' — you chose ' + got + '.')
+        });
+      }
+      if (q.fromLesson) rows.push({ label: 'All together', detail: 'Every part back where the lesson drew it.', pinsAll: true });
+      else if (fmStr(q.explanation)) rows.push({ label: 'Why', detail: fmStr(q.explanation), pinsAll: true });
+      /* The lesson's own labels go back in, hidden, under the pins: each
+         pin turns into its name at its step. */
+      var origs = '';
+      for (i = 0; i < pp.pins.length; i++) {
+        if (pp.pins[i].orig) origs += '<g class="pw-orig" data-pin="' + i + '">' + pp.pins[i].orig + '</g>';
+      }
+      if (origs) svg = svg.replace(/<\/svg>\s*$/, origs + '</svg>');
+      return { kind: 'label', svg: labelPinsSvg(svg, pp.pins), pins: pp.pins, rows: rows,
+               title: 'The picture, part by part' };
+    }
+
+    var base = picWalkRows(q);
+    if (!base) return null;
+    var ct = cardTypeFor(q);
+    var mk = momentCanDraw(q, ct) ? momentKey(q) : '';
+    var c = momentCache();
+    var drawn = mk && c.hasOwnProperty(mk) && !!c[mk];
+    var coming = mk && !!momentArt.inflight[mk];
+    var at = 1;
+    for (var k = 0; k < base.length; k++) {
+      if (/answer|verdict|missing word|order|done correctly/i.test(base[k].label)) { at = k + 1; break; }
+    }
+
+    if (drawn || coming) {
+      base.splice(at, 0, { label: 'In the picture', blue: true,
+        detail: 'The part drawn in blue is the one this answer is about.' });
+      return { kind: 'moment', key: mk, rows: base, title: 'Let’s walk through it' };
+    }
+
+    var r = recallFor({ type: ct, q: q });
+    if (r && r.afterMiss) {
+      /* Name the parts to find, in the drawing's own words. */
+      var want2 = {}, words = recallWords([q.question, q.scenario, recallAnswerText(q, fmStr(q.type).toLowerCase())].join(' '));
+      for (var w2 = 0; w2 < words.length; w2++) want2[words[w2]] = 1;
+      var labs = picWalkLabels(r.pic.svg), names = [], seen = {};
+      for (var j = 0; j < labs.length && names.length < 3; j++) {
+        var lw = recallWords(labs[j]), hit = false;
+        for (var x = 0; x < lw.length; x++) if (want2[lw[x]]) hit = true;
+        if (hit && !seen[labs[j].toLowerCase()] && labs[j].length <= 40) { seen[labs[j].toLowerCase()] = 1; names.push(labs[j]); }
+      }
+      if (names.length) {
+        base.splice(at, 0, { label: 'On the lesson’s picture', names: names,
+          detail: 'Find ' + (names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1] : names[0]) + '.' });
+      }
+      return { kind: 'lesson', svg: r.pic.svg, rows: base, title: 'Let’s walk through it' };
+    }
+
+    /* Nothing drawn yet: the walk still reads better than the board, and the
+       picture's place offers to draw one. */
+    if (mk) return { kind: 'offer', key: mk, rows: base, title: 'Let’s walk through it' };
+    return null;
+  }
+
+  /* Block 2 hands the card over (its renderCard, 'sfwb-picwalk'). */
+  function sfPicWalkRender(mount, card) {
+    var w = card && card.walk;
+    if (!mount || !w || !w.rows || !w.rows.length) return false;
+    picWalk = { w: w, at: 0, q: card.missedQ };
+    var rows = '', i;
+    for (i = 0; i < w.rows.length; i++) {
+      rows += '<li class="pw-row" data-i="' + i + '"><div class="pw-k">' + escHtml(w.rows[i].label) + '</div>' +
+              '<div class="pw-d">' + escHtml(w.rows[i].detail) + '</div></li>';
+    }
+    var fig = '<div class="pw-fig" id="pw-fig">';
+    if (w.kind === 'label' || w.kind === 'lesson') {
+      fig += '<div class="pw-art">' + (typeof SFDiagramKit !== 'undefined' && SFDiagramKit.uniqIds ? SFDiagramKit.uniqIds(w.svg) : w.svg) + '</div>';
+    }
+    fig += '</div>';
+    mount.innerHTML = '<div class="session-card pw-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Walkthrough</div><h2>' + escHtml(w.title) + '</h2></div>' +
+      '<div class="card-body">' + fig + '<ol class="pw-rows">' + rows + '</ol></div>' +
+      '<div class="card-footer"><span class="footer-left" id="pw-count"></span>' +
+      '<button class="btn-next" id="btn-next" onclick="picWalkNext()">Next step →</button></div></div>';
+
+    var figEl = document.getElementById('pw-fig');
+    if (w.kind === 'moment' || w.kind === 'offer') {
+      var q = card.missedQ;
+      var host = momentHost(q, cardTypeFor(q), momentUserAns(q), false, false);
+      if (host) { host.setAttribute('data-walk', '1'); figEl.appendChild(host); }
+      else figEl.parentNode.removeChild(figEl);
+    }
+    if (w.kind === 'lesson') picBudget.seen.lesson = 1;
+    if (w.kind === 'label') picWalkPinLabels();
+    picWalkPaint();
+    return true;
+  }
+
+  /* Each part's name, written next to its pin - hidden until its step. */
+  function picWalkPinLabels() {
+    var svg = document.querySelector('#pw-fig svg');
+    if (!svg || !picWalk) return;
+    var vb = svg.viewBox && svg.viewBox.baseVal, W = vb && vb.width ? vb.width : 400;
+    var x0 = vb ? vb.x : 0, y0 = vb ? vb.y : 0, H = vb && vb.height ? vb.height : 300;
+    var pins = picWalk.w.pins, NS = 'http://www.w3.org/2000/svg', i, k, placed = [];
+    /* A pin that remembers the lesson's own label turns back into it; only a
+       model-authored labelling card needs a name placed. The name tries the
+       right of its pin, then the left, below and above, and takes the first
+       spot clear of the canvas edge, every other pin and every name already
+       placed - two names written into one another is what this replaced. */
+    function cover(a, c) {
+      var ow = Math.min(a.x + a.w, c.x + c.w) - Math.max(a.x, c.x), oh = Math.min(a.y + a.h, c.y + c.h) - Math.max(a.y, c.y);
+      return ow > 0 && oh > 0 ? ow * oh : 0;
+    }
+    /* The drawing's own words are obstacles too. */
+    var own = svg.querySelectorAll('text');
+    for (i = 0; i < own.length; i++) {
+      if (own[i].parentNode && own[i].parentNode.getAttribute && /\bld-pin\b/.test(own[i].parentNode.getAttribute('class') || '')) continue;
+      try { var ob = own[i].getBBox(); if (ob.width) placed.push({ x: ob.x - 2, y: ob.y - 1, w: ob.width + 4, h: ob.height + 2 }); } catch (eO) { /* not laid out */ }
+    }
+    for (i = 0; i < pins.length; i++) {
+      var p = pins[i];
+      if (p.orig) continue;
+      var t = document.createElementNS(NS, 'text');
+      t.setAttribute('class', 'pw-pinlab');
+      t.setAttribute('data-pin', i);
+      t.textContent = fmStr(p.answer);
+      svg.appendChild(t);
+      var spots = [[p.x + 15, p.y + 4, 'start'], [p.x - 15, p.y + 4, 'end'],
+                   [p.x, p.y + 25, 'middle'], [p.x, p.y - 16, 'middle']];
+      /* The cost of a spot is how much of it lands on something - so when
+         nowhere is fully clear, the name takes the least crowded place. */
+      var best = spots[0], bestBox = null, bestCost = Infinity;
+      for (k = 0; k < spots.length; k++) {
+        t.setAttribute('x', spots[k][0]); t.setAttribute('y', spots[k][1]);
+        t.setAttribute('text-anchor', spots[k][2]);
+        var b = null;
+        try { b = t.getBBox(); } catch (eB) { b = null; }
+        if (!b) break;
+        var box = { x: b.x - 2, y: b.y - 1, w: b.width + 4, h: b.height + 2 }, cost = 0, j;
+        cost += Math.max(0, x0 - box.x) * box.h + Math.max(0, box.x + box.w - x0 - W) * box.h;
+        cost += Math.max(0, y0 - box.y) * box.w + Math.max(0, box.y + box.h - y0 - H) * box.w;
+        for (j = 0; j < placed.length; j++) cost += cover(box, placed[j]);
+        for (j = 0; j < pins.length; j++) if (j !== i) cost += cover(box, { x: pins[j].x - 11, y: pins[j].y - 11, w: 22, h: 22 });
+        if (cost < bestCost) { bestCost = cost; best = spots[k]; bestBox = box; }
+        if (!cost) break;
+      }
+      if (bestBox) placed.push(bestBox);
+      t.setAttribute('x', best[0]); t.setAttribute('y', best[1]); t.setAttribute('text-anchor', best[2]);
+    }
+  }
+
+  function picWalkPaint() {
+    if (!picWalk) return;
+    var w = picWalk.w, at = picWalk.at, i;
+    var rowsEl = document.querySelectorAll('.pw-row');
+    if (!rowsEl.length) { picWalk = null; return; }       // walked past it
+    for (i = 0; i < rowsEl.length; i++) {
+      rowsEl[i].className = 'pw-row' + (i < at ? ' is-past' : i === at ? ' is-now' : ' is-later');
+    }
+    var cnt = document.getElementById('pw-count');
+    if (cnt) cnt.textContent = 'Step ' + (at + 1) + ' of ' + w.rows.length;
+    var nb = document.getElementById('btn-next');
+    if (nb) nb.textContent = at < w.rows.length - 1 ? 'Next step →' : 'Got it →';
+
+    var fig = document.getElementById('pw-fig');
+    var svg = fig && (fig.querySelector('.pw-art svg') || fig.querySelector('.sf-moment-art svg'));
+    if (!svg) return;
+    var row = w.rows[at] || {}, hot = 0;
+
+    if (w.kind === 'label') {
+      var gs = svg.querySelectorAll('.ld-pin, .pw-pinlab, .pw-orig');
+      for (i = 0; i < gs.length; i++) {
+        var n = +gs[i].getAttribute('data-pin');
+        var cls = gs[i].getAttribute('class').replace(/\s*\b(is-hot|is-done|is-dim|is-gone|is-all)\b/g, '');
+        if (row.pinsAll) cls += ' is-done is-all';
+        else if (n < row.pin) cls += ' is-done';
+        else if (n === row.pin) cls += ' is-hot';
+        else cls += ' is-dim';
+        /* A pin whose own name is back on the drawing steps aside for it. */
+        if (/\bld-pin\b/.test(cls) && w.pins[n] && w.pins[n].orig && !/is-dim/.test(cls)) cls += ' is-gone';
+        gs[i].setAttribute('class', cls);
+      }
+      return;
+    }
+
+    var want = {}, words = recallWords(row.names ? row.names.join(' ') : row.detail), texts = svg.querySelectorAll('text');
+    for (i = 0; i < words.length; i++) want[words[i]] = 1;
+    for (i = 0; i < texts.length; i++) {
+      var on = false, f = (texts[i].getAttribute('fill') || '').toLowerCase();
+      if (row.blue) on = f === '#1e40af' || f === '#4a7cf6';
+      else {
+        var tw = recallWords(texts[i].textContent);
+        for (var k = 0; k < tw.length; k++) if (want[tw[k]]) on = true;
+      }
+      if (texts[i].classList) texts[i].classList.toggle('pw-hot', on);
+      if (on) hot++;
+    }
+    /* Nothing in the picture matches this step: leave the picture alone
+       rather than dim every word of it. */
+    fig.className = 'pw-fig' + (hot ? ' has-hot' : '');
+  }
+
+  function picWalkNext() {
+    if (!picWalk) { showNextCard(); return; }
+    if (picWalk.at >= picWalk.w.rows.length - 1) { picWalk = null; showNextCard(); return; }
+    picWalk.at++;
+    picWalkPaint();
+    var now = document.querySelector('.pw-row.is-now');
+    if (now) { try { now.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { /* old browsers */ } }
   }
 
   /* ── THE WATCH-OUT DECK ────────────────────────────────────
@@ -7182,9 +7630,10 @@
     var marks = '', i;
     for (i = 0; i < pins.length; i++) {
       var x = pins[i].x, y = pins[i].y;
-      marks += '<circle cx="' + x + '" cy="' + y + '" r="10" fill="#ffffff" stroke="#4a7cf6" stroke-width="2"/>' +
+      /* data-pin: the walkthrough lights one pin at a time. */
+      marks += '<g class="ld-pin" data-pin="' + i + '"><circle cx="' + x + '" cy="' + y + '" r="10" fill="#ffffff" stroke="#4a7cf6" stroke-width="2"/>' +
                '<text x="' + x + '" y="' + (y + 3.6) + '" text-anchor="middle" font-size="10.5" ' +
-               'font-weight="700" fill="#1e40af">' + (i + 1) + '</text>';
+               'font-weight="700" fill="#1e40af">' + (i + 1) + '</text></g>';
     }
     return svg.replace(/<\/svg>\s*$/, marks + '</svg>');
   }
@@ -7271,6 +7720,10 @@
     currentAnswered = true;
     totalAnswered++;
     var sels = document.querySelectorAll('.ld-sel'), right = 0, k;
+    /* What the learner picked, kept BEFORE a wrong menu is set to the right
+       answer below - the walkthrough names both. */
+    st.picks = [];
+    for (k = 0; k < sels.length; k++) st.picks.push(sels[k].value);
     for (k = 0; k < sels.length; k++) {
       var want = st.pins[k] ? fmStr(st.pins[k].answer) : '';
       var got = sels[k].value;
@@ -7785,7 +8238,12 @@
       // FEATURE 1: Spaced repetition — reinject this question ONCE, 4 cards later
       // Only reinject if not already a spaced-repeat card (prevents infinite loop of wrong answers)
       var prevCard = sessionCards[cardIndex - 1];
-      if (wrongQ && prevCard && !prevCard.isReview && !prevCard.isPretest && !prevCard.isSpacedRepeat) {
+      /* Never the labelling card. It is the session's one visual question,
+         and it was coming back four cards later as the same picture with the
+         same pins - the wrong pins already corrected in place on the first
+         try, so the retry asked for what had just been shown. */
+      var isLabel = !!wrongQ && (wrongQ.fromLesson || fmStr(wrongQ.type).toLowerCase() === 'labeldiagram');
+      if (wrongQ && !isLabel && prevCard && !prevCard.isReview && !prevCard.isPretest && !prevCard.isSpacedRepeat) {
         var reinjectAt = cardIndex + 4;
         if (reinjectAt < sessionCards.length) {
           sessionCards.splice(reinjectAt, 0, { type: cardTypeFor(wrongQ), q: wrongQ, isSpacedRepeat: true });
@@ -7794,8 +8252,10 @@
         }
       }
 
-      // Save missed questions for next day's review
-      if (wrongQ) {
+      // Save missed questions for next day's review. Not a labelling card
+      // built from today's picture: it carries the whole SVG, and tomorrow
+      // has a different picture.
+      if (wrongQ && !wrongQ.fromLesson) {
         var missedKey = 'studyflow_missed_day_' + dayIndex;
         var missed = JSON.parse(SFStore.getItem(missedKey) || '[]');
         // Only save if not already saved and not a review card
@@ -18060,6 +18520,18 @@ var SFBoard = (function () {
       }
     }
 
+    /* The walkthrough of a picture: the picture on top, lit one step at a
+       time. Block 1 owns it (sfPicWalkRender); a walk that cannot draw
+       moves on rather than leave a blank card. */
+    if (card && card.type === 'sfwb-picwalk' && mount) {
+      var drewW = false;
+      try { drewW = typeof w.sfPicWalkRender === 'function' && w.sfPicWalkRender(mount, card); }
+      catch (eW) { if (w.console) w.console.error('[SFWhiteboard] picture walkthrough failed', eW); drewW = false; }
+      if (!drewW) { w.showNextCard(); return; }
+      scrollTop();
+      return;
+    }
+
     if (card && card.type === 'sfwb-explain' && mount) {
       try {
         /* render() returns false when the spec had nothing real to draw. That
@@ -18074,8 +18546,14 @@ var SFBoard = (function () {
         /* After a wrong answer: the lesson's picture under the walkthrough,
            when it covers what was missed. */
         try { if (typeof w.sfRecallBoard === 'function') w.sfRecallBoard(mount, card.missedQ || null); } catch (eR) { /* board stands alone */ }
-        /* And a picture of just this question, drawn when asked. */
-        try { if (typeof w.sfMomentBoard === 'function') w.sfMomentBoard(mount, card.missedQ || null); } catch (eM) { /* board stands alone */ }
+        /* Or a picture of just this question, drawn when asked - never both:
+           two pictures under one board is the page the walkthrough of a
+           picture (sfwb-picwalk, below) replaced. */
+        try {
+          if (typeof w.sfMomentBoard === 'function' && !mount.querySelector('.sf-recall-board .sf-recall')) {
+            w.sfMomentBoard(mount, card.missedQ || null);
+          }
+        } catch (eM) { /* board stands alone */ }
         scrollTop();
         return;
       } catch (e) {
@@ -18188,13 +18666,30 @@ var SFBoard = (function () {
        helps for pre-built cards; every buffered or randomly picked question is
        absent from that array, which is why the walkthrough used to receive a
        contentless stub and quietly do nothing. */
-    var q = w.currentQuestion || null;
+    /* The card's own q first: the labelling card builds its question when
+       it is reached, after currentQuestion was set, so currentQuestion still
+       held the PREVIOUS question and its walkthrough explained that one. */
+    var cur = w.currentCard;
+    var q = (cur && cur.q) || w.currentQuestion || null;
     if (!q && cards[idx - 1]) q = cards[idx - 1].q;
     if (!q) q = { question: 'This question', explanation: explanation };
     if (!q.explanation && explanation) q.explanation = explanation;
 
     var decision = w.SFWhiteboard.shouldTrigger({ explainRequest: true });
     if (!decision.trigger) return;
+
+    /* A question with a picture - its own drawing, the lesson's, or the pins
+       of a labelling card - is walked through ON the picture. */
+    var walk = null;
+    try { walk = typeof w.sfPicWalkFor === 'function' ? w.sfPicWalkFor(q) : null; } catch (eP) { walk = null; }
+    if (walk) {
+      if (idx < cards.length) cards.splice(idx, 0, { type: 'sfwb-picwalk', walk: walk, missedQ: q });
+      else cards.push({ type: 'sfwb-picwalk', walk: walk, missedQ: q });
+      var wbtn = w.document.querySelector('.sfwb-explain');
+      if (wbtn) wbtn.disabled = true;
+      w.showNextCard();
+      return;
+    }
 
     var lesson;
     try { lesson = w.SFWhiteboard.fromWrongAnswer(q, g('day') || {}); }
