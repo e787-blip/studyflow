@@ -593,7 +593,8 @@
   }
 
   function shareCode() {
-    var text = 'Join my StudyFlow class! Use code: ' + teacher.classCode + '\nSign up free at studyflow-ten-vert.vercel.app/login.html';
+    /* The link carries the code: login.html opens sign-up with it filled in. */
+    var text = 'Join my StudyFlow class! Use code: ' + teacher.classCode + '\nSign up free at https://studyflow-ten-vert.vercel.app/login.html?class=' + teacher.classCode;
     if (navigator.share) {
       navigator.share({ title: 'Join my StudyFlow class', text: text });
     } else {

@@ -962,7 +962,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   </div>
   <div class="nav-right">
     <span id="teacher-nav-link"></span>
-    <a href="login.html" class="nav-cta">Build my plan →</a>
+    <a href="login.html?mode=signup" class="nav-cta">Build my plan →</a>
   </div>
 </nav>
 
@@ -985,7 +985,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       </h1>
       <p class="hero-sub">StudyFlow reads your notes and builds a day-by-day study plan with real practice questions.</p>
       <div class="hero-ctas">
-        <a href="login.html" class="btn btn-light">Build my study plan →</a>
+        <a href="login.html?mode=signup" class="btn btn-light">Build my study plan →</a>
         <a href="#how" class="btn btn-glass">See how it works</a>
       </div>
     </div>
@@ -998,7 +998,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     <div class="band band-3" data-a="0.72" data-b="1" data-ramp="0.07" data-entrance="rise">
       <h2 class="band-h"><span class="sr-only">One short session a day. Start in 60 seconds.</span><span class="rise" aria-hidden="true">One short session a day.</span> <em class="rise" aria-hidden="true">Start in 60 seconds.</em></h2>
       <p class="band-p">Set your exam date. The questions get harder as the test gets closer, so exam day feels familiar.</p>
-      <div class="hero-ctas"><a href="login.html" class="btn btn-blue">Build my study plan →</a></div>
+      <div class="hero-ctas"><a href="login.html?mode=signup" class="btn btn-blue">Build my study plan →</a></div>
     </div>
   </div>
 </section>
@@ -1292,7 +1292,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
         <li class="no"><svg><use href="#i-x"/></svg>14-day plans</li>
         <li class="no"><svg><use href="#i-x"/></svg>AI chat assistant</li>
       </ul>
-      <a href="login.html" class="btn btn-outline">Start free →</a>
+      <a href="login.html?mode=signup" class="btn btn-outline">Start free →</a>
     </div>
     <div class="pcard pro">
       <span class="badge">Most popular</span>
@@ -1422,7 +1422,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       <h2>Your next exam is <em>already closer</em> than you think.</h2>
       <p>Build your study plan in under a minute. Free forever, and you only upgrade if you want more.</p>
       <div class="row">
-        <a href="login.html" class="btn btn-light">Build my study plan →</a>
+        <a href="login.html?mode=signup" class="btn btn-light">Build my study plan →</a>
         <a href="#pricing" class="btn btn-glass">See plans</a>
       </div>
     </div>
@@ -1439,7 +1439,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 
 </main>
 <div class="edge-fade" id="edge-fade" aria-hidden="true"></div>
-<a href="login.html" class="btn btn-blue sticky-cta" id="sticky-cta" tabindex="-1" aria-hidden="true">Build my study plan →</a>
+<a href="login.html?mode=signup" class="btn btn-blue sticky-cta" id="sticky-cta" tabindex="-1" aria-hidden="true">Build my study plan →</a>
 
 <footer class="site-foot">
   <div class="wrap foot-top">
@@ -2588,6 +2588,13 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     if (!slot) return;
     var href = teacher ? 'teacher.html' : (student ? 'dashboard.html' : 'login.html');
     slot.innerHTML = '<a href="' + href + '" class="nav-dashboard">My Dashboard</a>';
+    /* "Build my study plan" opens sign-up for a visitor. A student who is
+       already signed in goes straight to building one instead of through a
+       sign-in form they do not need. */
+    if (student && !teacher) {
+      var ctas = document.querySelectorAll('a[href="login.html?mode=signup"]');
+      for (var i = 0; i < ctas.length; i++) ctas[i].setAttribute('href', 'app.html');
+    }
   })();
 
   /* Nav lens: slides to the link for the section being read. */

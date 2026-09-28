@@ -2,252 +2,281 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNWI4ZGY4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzI4NTFjOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0idXJsKCNnKSIvPgogIDxyZWN0IHg9IjciIHk9IjgiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNyIgcng9IjIuNSIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMjUiLz4KICA8cmVjdCB4PSIxMCIgeT0iOCIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3IiByeD0iMi41IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC45Ii8+CiAgPHJlY3QgeD0iMTMiIHk9IjEzIiB3aWR0aD0iNyIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSIjMzU2N2UwIi8+CiAgPHJlY3QgeD0iMTMiIHk9IjE2LjUiIHdpZHRoPSI1IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMzNTY3ZTAiIG9wYWNpdHk9IjAuNyIvPgogIDxyZWN0IHg9IjEzIiB5PSIyMCIgd2lkdGg9IjYiIGhlaWdodD0iMS41IiByeD0iMC43NSIgZmlsbD0iIzRhN2NmNiIgb3BhY2l0eT0iMC41Ii8+Cjwvc3ZnPg=="/>
-<title>StudyFlow — Generate Your Study Plan</title>
+<title>Build your study plan · StudyFlow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Inter:wght@600;700&display=swap" rel="stylesheet">
 <style>
+  /* ── The plan builder ───────────────────────────────────────────────────
+     One question per screen, a progress bar, and the landing page's paper
+     and one blue. It used to be two long cards: the notes, then "Two quick
+     questions" - and one of those two (how well do you know it) was never
+     sent to the model at all. Every question asked here now changes the
+     prompt; see buildLearnerBrief(). CLAUDE.md wins over the design skills:
+     choice and card hover is a blue border only, no lift, no scale. */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
   :root {
     /* The autosave indicator uses var(--green) but the token was never
-       declared here, so "\u2713 Saved" rendered in the inherited colour. */
+       declared here, so "✓ Saved" rendered in the inherited colour. */
     --green: #38bfa1;
-    --ink: #1a1d2e; --muted: #6b7280; --soft: #f0f4ff;
-    --blue: #4a7cf6; --blue-light: #dce8ff; --white: #ffffff; --border: #e8ecf4;
-    --serif: 'Instrument Serif', Georgia, serif; --sans: 'DM Sans', sans-serif;
+    --ink: #1a1d2e; --muted: #5b6378; --soft: #f0f4ff;
+    --blue: #4a7cf6; --blue-light: #e3ecff; --white: #fdfdff; --border: #e2e8f4;
+    --paper: #f5f7fc; --line-strong: #c9d4ea; --blue-btn: #3567e0; --blue-deep: #2851c8; --blue-mist: #eef3ff;
+    --ok: #117a5a; --ok-soft: #e0f4ec; --bad: #c4312f; --bad-soft: #fdeeee;
+    --rule: rgba(74, 124, 246, .055);
+    --serif: 'Instrument Serif', Georgia, serif; --sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+    --mono: 'DM Mono', ui-monospace, Menlo, Consolas, monospace;
+    --ease-out: cubic-bezier(.16, 1, .3, 1);
+    --shadow-card: 0 1px 2px rgba(26, 40, 90, .05), 0 18px 40px -18px rgba(26, 40, 90, .22);
   }
-  html { scroll-behavior: smooth; }
-  body { font-family: var(--sans); color: var(--ink); background: var(--soft); min-height: 100vh; }
-  body.dark { --ink:#f1f5f9; --muted:#94a3b8; --soft:#0f1220; --white:#161b28; --border:#2a2d3a; background:#0f1220; color:#f1f5f9; }
-  body.dark nav { background:#161b28; border-color:#2a2d3a; }
-  body.dark .card { background:#161b28; border-color:#2a2d3a; }
-  body.dark .option-btn { background:#1e2029; border-color:#2a2d3a; color:#f1f5f9; }
-  body.dark .option-btn:hover { border-color:var(--blue); }
-  body.dark input, body.dark textarea, body.dark select { background:#1e2029; border-color:#2a2d3a; color:#f1f5f9; }
-  body.dark .upload-area { background:#1e2029; border-color:#2a2d3a; }
-  body.dark .step-dot { background:#2a2d3a; color:#6b7280; }
-  body.dark .step-dot.active { background:var(--blue); color:#fff; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body { font-family: var(--sans); color: var(--ink); background: var(--paper); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+  /* The notebook page from the landing: faint rules behind everything. */
+  body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, var(--rule) 31px, var(--rule) 32px); }
+  button, input, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2.5px solid var(--blue); outline-offset: 3px; border-radius: 8px; }
+  .sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  body.dark { --ink:#f1f5f9; --muted:#9aa6bd; --soft:#0f1220; --white:#161b28; --border:#2a2d3a; --paper:#0f1220;
+    --line-strong:#39405a; --blue-light:#1b2646; --blue-mist:#172038; --blue-deep:#a9c2ff; --ok:#5fd0a8; --ok-soft:#10302a; --bad:#ff8f8c; --bad-soft:#3a1717;
+    --rule: rgba(147, 180, 255, .035); background:#0f1220; color:#f1f5f9; }
+  body.dark nav { background:rgba(22,27,40,.92); border-color:#2a2d3a; }
+  body.dark input, body.dark textarea, body.dark select { background:#1e2029; border-color:#2a2d3a; color:#f1f5f9; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes spin { to { transform: rotate(360deg); } }
-  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(74,124,246,.4); } 50% { box-shadow: 0 0 0 10px rgba(74,124,246,0); } }
-  @keyframes gradientShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
-  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
   @keyframes slideIn { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:none} }
+  @keyframes stepIn { from { opacity: 0; transform: translateX(22px); } to { opacity: 1; transform: none; } }
+  @keyframes stepBack { from { opacity: 0; transform: translateX(-22px); } to { opacity: 1; transform: none; } }
+  @keyframes indet { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+  @keyframes pulseDot { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
 
   nav {
-    background: rgba(255,255,255,.95); backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border); padding: 1rem 5%;
+    background: rgba(245,247,252,.88); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--border); padding: .8rem max(16px, 5%);
     display: flex; align-items: center; justify-content: space-between;
-    position: sticky; top: 0; z-index: 100;
-    box-shadow: 0 2px 20px rgba(74,124,246,.08);
-    animation: fadeUp .5s cubic-bezier(0.16,1,.3,1) both;
+    position: sticky; top: 0; z-index: 100; min-height: 60px;
   }
   .logo { text-decoration: none; display: flex; align-items: center; }
-  nav a.back {
-    font-size: 0.85rem; color: var(--muted); text-decoration: none; font-weight: 500;
-    transition: all .2s; display: flex; align-items: center; gap: .4rem;
-    padding: .4rem .9rem; border-radius: 8px; border: 1px solid var(--border);
-  }
-  nav a.back:hover { color: var(--blue); border-color: var(--blue); background: var(--blue-light); }
+  .nav-right { display: flex; align-items: center; gap: .75rem; }
+  .nav-link { font-size: .86rem; color: var(--muted); text-decoration: none; font-weight: 600; padding: .45rem .8rem; border-radius: 999px; }
+  .nav-link:hover { color: var(--ink); background: var(--blue-mist); }
+  #dark-toggle { background: var(--white); border: 1.5px solid var(--border); border-radius: 999px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; color: var(--ink); }
+  #dark-toggle:hover { border-color: var(--blue); }
 
-  .app-container { max-width: 680px; margin: 0 auto; padding: 2.5rem 1.5rem 6rem; }
+  .app-container { max-width: 660px; margin: 0 auto; padding: 1.4rem max(16px, 1.5rem) 7rem; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 400; letter-spacing: -.02em; }
 
-  .app-header {
-    text-align: center; margin-bottom: 2rem;
-    background: linear-gradient(135deg, #4a7cf6 0%, #3567e0 50%, #2851c8 100%);
-    background-size: 200% 200%;
-    animation: fadeUp .6s .1s cubic-bezier(0.16,1,.3,1) both, gradientShift 6s ease infinite;
-    border-radius: 28px; padding: 2.5rem 2rem;
-    position: relative; overflow: hidden;
-    box-shadow: 0 20px 50px rgba(74,124,246,.3);
-  }
-  .app-header::before {
-    content: ''; position: absolute; inset: 0;
-    background-image: radial-gradient(circle, rgba(255,255,255,.1) 1px, transparent 1px);
-    background-size: 28px 28px; pointer-events: none;
-  }
-  .app-header-badge {
-    display: inline-flex; align-items: center; gap: .4rem;
-    background: rgba(255,255,255,.2); color: #fff;
-    font-size: 0.72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-    padding: .3rem .85rem; border-radius: 999px; border: 1px solid rgba(255,255,255,.3);
-    margin-bottom: 1rem; position: relative; z-index: 1;
-  }
-  .app-header h1 {
-    font-family: var(--serif); font-size: clamp(1.9rem, 5vw, 2.8rem);
-    letter-spacing: -0.03em; line-height: 1.1; margin-bottom: .6rem; position: relative; z-index: 1;
-  }
-  .app-header h1 .white { color: #fff; }
-  .app-header h1 em { font-style: italic; color: #c5d9ff; }
-  .app-header p { color: rgba(255,255,255,.75); font-weight: 300; font-size: 0.95rem; position: relative; z-index: 1; }
+  /* ── Progress: back, a determinate bar, "2 of 7" ── */
+  .flow-top { display: flex; align-items: center; gap: .8rem; margin: .4rem 0 1.2rem; min-height: 40px; }
+  .flow-back { width: 40px; height: 40px; flex: none; border-radius: 999px; border: 1.5px solid var(--border); background: var(--white); color: var(--ink); cursor: pointer; display: grid; place-items: center; transition: border-color .2s; }
+  .flow-back:hover { border-color: var(--blue); }
+  .flow-back svg { width: 18px; height: 18px; }
+  .flow-back[aria-hidden="true"] { visibility: hidden; }
+  .flow-bar { flex: 1; height: 8px; border-radius: 99px; background: var(--blue-light); overflow: hidden; }
+  .flow-bar i { display: block; height: 100%; width: 100%; border-radius: inherit; background: var(--blue-btn); transform-origin: 0 50%; transform: scaleX(0); transition: transform .6s var(--ease-out); }
+  .flow-count { font-family: var(--mono); font-size: .76rem; color: var(--muted); min-width: 3.4rem; text-align: right; font-variant-numeric: tabular-nums; }
 
-  .steps-indicator {
-    display: flex; align-items: center; justify-content: center;
-    gap: .5rem; margin-bottom: 2rem;
-    animation: fadeUp .6s .2s cubic-bezier(0.16,1,.3,1) both;
-  }
-  .step-dot {
-    width: 34px; height: 34px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.78rem; font-weight: 700;
-    background: var(--border); color: var(--muted);
-    transition: all .4s cubic-bezier(0.16,1,.3,1);
-  }
-  .step-dot.active { background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(74,124,246,.4); animation: pulse 2s ease infinite; }
-  .step-dot.done { background: #38bfa1; color: #fff; }
-  .step-line { flex: 1; max-width: 60px; height: 2px; background: var(--border); border-radius: 2px; transition: background .4s; }
-  .step-line.done { background: #38bfa1; }
-
+  /* ── A step ── */
   .card {
-    background: var(--white); border: 1.5px solid var(--border); border-radius: 28px;
-    padding: 2.5rem; box-shadow: 0 8px 40px rgba(74,124,246,.08);
-    display: none; animation: fadeUp .5s cubic-bezier(0.16,1,.3,1) both;
+    background: var(--white); border: 1.5px solid var(--border); border-radius: 24px;
+    padding: clamp(1.4rem, 4vw, 2.3rem); box-shadow: var(--shadow-card); display: none;
   }
-  .card.active { display: block; }
-  .card-icon {
-    width: 52px; height: 52px; border-radius: 16px;
-    background: var(--blue-light); display: flex; align-items: center; justify-content: center;
-    font-size: 1.4rem; margin-bottom: 1.2rem; animation: float 4s ease-in-out infinite;
+  .card.active { display: block; animation: stepIn .45s var(--ease-out) both; }
+  .card.active.from-back { animation-name: stepBack; }
+  .kicker { font-family: var(--mono); font-size: .72rem; font-weight: 500; letter-spacing: .13em; text-transform: uppercase; color: var(--blue-deep); margin-bottom: .7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card h1, .card h2 { font-size: clamp(1.9rem, 5.2vw, 2.45rem); line-height: 1.06; color: var(--ink); margin-bottom: .45rem; outline: none; text-wrap: balance; }
+  .card h1 em, .card h2 em { font-style: italic; color: var(--blue); }
+  .card-sub { color: var(--muted); font-size: .96rem; line-height: 1.6; margin-bottom: 1.6rem; max-width: 52ch; }
+
+  /* Block, not flex: as a flex row the label shrank and "Your notes" broke
+     over two lines beside its hint at 375. */
+  .field-label { display: block; font-size: .88rem; font-weight: 600; color: var(--ink); margin-bottom: .5rem; line-height: 1.45; }
+  .field-label .opt { color: var(--muted); font-weight: 400; margin-left: .35rem; }
+  .field-label #autosave-indicator { margin-left: .35rem; }
+  .field { margin-bottom: 1.4rem; }
+  .field-hint { font-size: .8rem; color: var(--muted); margin-top: .45rem; line-height: 1.5; }
+
+  textarea, .text-input {
+    width: 100%; border: 1.5px solid var(--line-strong); border-radius: 14px; background: var(--white);
+    font-size: 1rem; color: var(--ink); outline: none; transition: border-color .2s, box-shadow .2s;
   }
-  .card h2 { font-family: var(--serif); font-size: 1.7rem; letter-spacing: -0.02em; color: var(--ink); margin-bottom: .3rem; }
-  .card h2 em { font-style: italic; color: var(--blue); }
-  .card-sub { color: var(--muted); font-size: 0.92rem; font-weight: 300; margin-bottom: 1.8rem; line-height: 1.5; }
+  textarea { padding: 1rem 1.1rem; resize: vertical; min-height: 130px; line-height: 1.65; }
+  .text-input { padding: .85rem 1.05rem; min-height: 50px; -webkit-appearance: none; appearance: none; }
+  textarea:focus, .text-input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(74,124,246,.14); }
+  textarea::placeholder, .text-input::placeholder { color: #98a2b8; }
 
-  .field-label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--ink); margin-bottom: .6rem; text-transform: uppercase; letter-spacing: .07em; }
-  .field-label span { color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
-  .field { margin-bottom: 1.6rem; }
-
-  textarea {
-    width: 100%; padding: 1.1rem 1.3rem; border: 1.5px solid var(--border); border-radius: 16px;
-    font-family: var(--sans); font-size: 0.95rem; color: var(--ink);
-    background: var(--soft); resize: vertical; min-height: 160px; outline: none;
-    transition: border-color .25s, box-shadow .25s; line-height: 1.7;
+  /* ── Adding the lesson ── */
+  .drop {
+    position: relative; border: 2px dashed #b9c9ef; border-radius: 18px; background: var(--blue-mist);
+    padding: 1.6rem 1.2rem; text-align: center; cursor: pointer; transition: border-color .2s, background-color .2s;
   }
-  textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(74,124,246,.1); }
-  textarea::placeholder { color: #9ca3af; }
-
-  .text-input {
-    width: 100%; max-width: 100%; box-sizing: border-box;
-    padding: .9rem 1.2rem; border: 1.5px solid var(--border); border-radius: 14px;
-    font-family: var(--sans); font-size: 0.95rem; color: var(--ink);
-    background: var(--soft); outline: none; transition: border-color .25s, box-shadow .25s;
-    -webkit-appearance: none; appearance: none;
+  .drop:hover, .drop.is-over { border-color: var(--blue); background: var(--blue-light); }
+  .drop svg { width: 30px; height: 30px; color: var(--blue); margin: 0 auto .6rem; display: block; }
+  .drop strong { display: block; font-size: 1rem; color: var(--ink); margin-bottom: .25rem; }
+  .drop strong u { color: var(--blue-deep); text-underline-offset: 3px; }
+  .drop span { font-size: .8rem; color: var(--muted); }
+  .src-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0 1rem; }
+  .pill-btn {
+    display: inline-flex; align-items: center; gap: .45rem; min-height: 40px; padding: .45rem 1rem; border-radius: 999px;
+    border: 1.5px solid var(--border); background: var(--white); font-size: .86rem; font-weight: 600; color: var(--ink); cursor: pointer; transition: border-color .2s;
   }
-  .text-input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(74,124,246,.1); }
+  .pill-btn:hover { border-color: var(--blue); }
+  .pill-btn svg { width: 16px; height: 16px; color: var(--blue-deep); }
+  .paste-hint { font-size: .78rem; color: var(--muted); align-self: center; margin-left: auto; }
 
-  .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .6rem; }
-  .option-btn {
-    width: 100%; padding: .7rem .9rem; border-radius: 14px; border: 1.5px solid var(--border);
-    background: var(--soft); font-family: var(--sans); font-size: 0.88rem; font-weight: 500;
-    color: var(--ink); cursor: pointer; transition: all .2s cubic-bezier(0.16,1,.3,1); text-align: left;
+  /* minmax(0, 1fr), not the implicit auto track: an auto track grows to the
+     longest unbroken file name and pushed the page 77px sideways at 320. */
+  .sources { list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: .55rem; margin-bottom: 1.1rem; }
+  .sources:empty { display: none; }
+  .src { min-width: 0; border: 1.5px solid var(--border); border-radius: 14px; background: var(--white); padding: .75rem .8rem .75rem .75rem; animation: fadeUp .35s var(--ease-out) both; }
+  .src-row { display: flex; align-items: center; gap: .75rem; }
+  .src-icon { width: 38px; height: 38px; flex: none; border-radius: 10px; background: var(--blue-light); color: var(--blue-deep); display: grid; place-items: center; font-family: var(--mono); font-size: .62rem; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+  .src[data-status="error"] .src-icon { background: var(--bad-soft); color: var(--bad); }
+  .src[data-status="ready"] .src-icon { background: var(--ok-soft); color: var(--ok); }
+  .src-main { flex: 1; min-width: 0; }
+  .src-name { display: block; font-size: .9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .src-meta { display: block; font-size: .8rem; color: var(--muted); margin-top: .1rem; }
+  .src[data-status="error"] .src-meta { color: var(--bad); }
+  .src-bar { position: relative; height: 4px; border-radius: 99px; background: var(--blue-light); overflow: hidden; margin-top: .45rem; }
+  .src-bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: inherit; background: var(--blue-btn); transition: width .4s var(--ease-out); }
+  .src-bar.indet i { width: 40%; animation: indet 1.3s ease-in-out infinite; }
+  /* The row's one action sits in its info line ("2 pages · 24 words ·
+     Check text"), so on a phone the file name keeps the width. As a
+     third column it squeezed "Chapter 5 notes.pdf" down to "Chapt…". */
+  .src-btn { border: 0; background: none; cursor: pointer; font-size: .8rem; font-weight: 700; color: var(--blue-deep); padding: 0; margin-left: .15rem; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+  .src-btn:hover { color: var(--ink); }
+  .src[data-status="error"] .src-btn { color: var(--bad); }
+  .src-x { flex: none; width: 34px; height: 34px; border-radius: 999px; border: 0; background: none; cursor: pointer; color: var(--muted); display: grid; place-items: center; }
+  .src-x:hover { background: var(--blue-mist); color: var(--ink); }
+  .src-x svg { width: 16px; height: 16px; }
+  @media (max-width: 400px) { .src-icon { width: 32px; height: 32px; font-size: .56rem; } .src-row { gap: .6rem; } }
+  .src-text { margin-top: .7rem; }
+  .src-text textarea { min-height: 150px; font-size: .88rem; }
+  .src-text p { font-size: .76rem; color: var(--muted); margin-top: .35rem; }
+
+  .or-line { display: flex; align-items: center; gap: .9rem; margin: .4rem 0 1rem; color: var(--muted); font-size: .8rem; }
+  .or-line::before, .or-line::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .notes-meta { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-top: .45rem; font-size: .78rem; color: var(--muted); min-height: 1.2em; }
+  #autosave-indicator { font-size: .74rem; font-weight: 500; color: var(--ok); opacity: 0; transition: opacity .4s; }
+  .note-box { margin-top: .7rem; padding: .75rem .95rem; border-radius: 12px; font-size: .84rem; line-height: 1.55; border: 1.5px solid #c8d7fb; background: var(--blue-mist); color: var(--blue-deep); }
+  .topic-field { margin-top: 1.4rem; }
+
+  /* ── Choices: one tap answers and moves on ── */
+  .choices { display: grid; gap: .55rem; }
+  .choice {
+    display: flex; align-items: center; gap: .9rem; width: 100%; text-align: left; cursor: pointer;
+    padding: .9rem 1rem; border-radius: 16px; border: 1.5px solid var(--border); background: var(--white); color: var(--ink);
+    transition: border-color .18s, background-color .18s;
   }
-  .option-btn:hover { border-color: var(--blue); background: var(--blue-light); transform: translateY(-1px); }
-  .option-btn.selected { border-color: var(--blue); background: var(--blue-light); box-shadow: 0 0 0 3px rgba(74,124,246,.15); transform: translateY(-1px); }
-  .option-btn.selected > div > div:first-child { background: var(--blue) !important; }
-  .option-btn.selected > div > div:first-child svg { stroke: #fff !important; }
-  .option-btn.selected > div > div:first-child { color: #fff !important; }
+  .choice:hover { border-color: var(--blue); }
+  .choice[aria-checked="true"] { border-color: var(--blue); background: var(--blue-light); }
+  .choice-key { width: 30px; height: 30px; flex: none; border-radius: 9px; border: 1.5px solid var(--line-strong); display: grid; place-items: center; font-family: var(--mono); font-size: .78rem; color: var(--muted); transition: background-color .18s, border-color .18s, color .18s; }
+  .choice[aria-checked="true"] .choice-key { background: var(--blue-btn); border-color: var(--blue-btn); color: #fff; }
+  .choice b { display: block; font-size: .98rem; font-weight: 600; }
+  .choice small { display: block; font-size: .84rem; color: var(--muted); margin-top: .1rem; line-height: 1.4; }
+  .choices.grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); }
+  .choices.grid .choice { justify-content: center; padding: .85rem .6rem; text-align: center; }
+  .choices.grid .choice b { font-size: .95rem; }
 
+  /* ── When ── */
+  .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+  .chip { min-height: 44px; padding: .55rem 1.1rem; border-radius: 999px; border: 1.5px solid var(--border); background: var(--white); cursor: pointer; font-size: .92rem; font-weight: 600; color: var(--ink); transition: border-color .18s, background-color .18s; }
+  .chip:hover { border-color: var(--blue); }
+  .chip[aria-pressed="true"] { border-color: var(--blue); background: var(--blue-light); color: var(--blue-deep); }
+  .date-summary { margin-top: .9rem; padding: .9rem 1rem; border-radius: 14px; background: var(--blue-mist); border: 1.5px solid #c8d7fb; font-size: .9rem; line-height: 1.55; color: var(--ink); }
+  .date-summary b { color: var(--blue-deep); }
+  .date-summary.warn { background: var(--bad-soft); border-color: #f1b9b7; color: #8a1f1d; }
+
+  /* ── Focus ── */
+  .starters { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: .7rem; }
+  .starter { border: 1.5px dashed var(--line-strong); background: transparent; border-radius: 999px; padding: .4rem .85rem; font-size: .84rem; font-weight: 500; color: var(--ink); cursor: pointer; }
+  .starter:hover { border-color: var(--blue); border-style: solid; }
+
+  /* ── Review ── */
+  .review { list-style: none; border: 1.5px solid var(--border); border-radius: 18px; overflow: hidden; margin-bottom: 1.2rem; }
+  .review li { display: flex; align-items: flex-start; gap: 1rem; padding: .85rem 1rem; border-bottom: 1px solid var(--border); }
+  .review li:last-child { border-bottom: 0; }
+  .review dt, .review .rv-k { flex: 0 0 7.2rem; font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-top: .2rem; }
+  .rv-v { flex: 1; min-width: 0; font-size: .95rem; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+  .rv-v small { display: block; font-weight: 400; color: var(--muted); font-size: .82rem; margin-top: .1rem; }
+  .rv-edit { flex: none; border: 0; background: none; cursor: pointer; font-size: .84rem; font-weight: 600; color: var(--blue-deep); padding: .15rem .4rem; border-radius: 8px; }
+  .rv-edit:hover { background: var(--blue-mist); }
+  .review-note { font-size: .84rem; color: var(--muted); line-height: 1.55; margin-top: .8rem; text-align: center; }
+
+  /* ── Actions: pinned to the thumb on phones ── */
+  .step-actions { margin-top: 1.5rem; display: grid; gap: .5rem; }
   .btn-next {
-    width: 100%; padding: 1.1rem; background: var(--blue); color: #fff;
-    border: none; border-radius: 16px; font-family: var(--sans); font-size: 1rem; font-weight: 600;
-    cursor: pointer; margin-top: 1.5rem; transition: all .3s cubic-bezier(0.16,1,.3,1);
-    box-shadow: 0 6px 20px rgba(74,124,246,.35); letter-spacing: .01em;
+    width: 100%; min-height: 54px; padding: 1rem; border: none; border-radius: 999px; cursor: pointer;
+    background: var(--blue-btn); color: #fff; font-size: 1.02rem; font-weight: 700;
+    box-shadow: 0 10px 26px -12px rgba(53,103,224,.8); transition: background-color .2s, box-shadow .2s;
+    display: flex; align-items: center; justify-content: center; gap: .5rem;
   }
-  .btn-next:hover { background: #3567e0; transform: translateY(-2px); box-shadow: 0 10px 28px rgba(74,124,246,.45); }
-  .btn-next:active { transform: translateY(0) scale(.98); }
-  .btn-back {
-    background: none; border: none; color: var(--muted); font-family: var(--sans);
-    font-size: 0.88rem; cursor: pointer; margin-top: .75rem; display: block;
-    width: 100%; text-align: center; transition: color .2s; padding: .5rem;
-  }
-  .btn-back:hover { color: var(--ink); }
+  .btn-next:hover { background: var(--blue-deep); }
+  body.dark .btn-next:hover { background: #2851c8; }
+  .btn-next:active { transform: translateY(1px); }
+  /* Solid, not translucent: over the sticky bar on a phone a see-through
+     button let the card behind it show through the label. */
+  .btn-next[aria-disabled="true"] { background: #a9bdf0; box-shadow: none; cursor: not-allowed; }
+  body.dark .btn-next[aria-disabled="true"] { background: #2b3a66; color: #9aa6bd; }
+  .btn-quiet { border: 0; background: none; cursor: pointer; font-size: .92rem; font-weight: 600; color: var(--muted); padding: .7rem; border-radius: 999px; }
+  .btn-quiet:hover { color: var(--ink); background: var(--blue-mist); }
 
   .divider { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; color: var(--muted); font-size: 0.8rem; }
   .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-  .loading-screen {
-    display: none; text-align: center; padding: 3rem 1.5rem;
-    background: var(--white); border: 1.5px solid var(--border); border-radius: 28px;
-    box-shadow: 0 8px 40px rgba(74,124,246,.08);
-    animation: fadeUp .5s cubic-bezier(0.16,1,.3,1) both;
-  }
-  .loading-screen.active { display: block; }
-  .spinner-wrap { position: relative; width: 64px; height: 64px; margin: 0 auto 1.5rem; }
-  .spinner { width: 64px; height: 64px; border-radius: 50%; border: 3px solid var(--blue-light); border-top-color: var(--blue); animation: spin 1s linear infinite; position: absolute; inset: 0; }
-  .spinner-inner { width: 44px; height: 44px; border-radius: 50%; border: 3px solid transparent; border-bottom-color: #38bfa1; animation: spin .7s linear infinite reverse; position: absolute; top: 10px; left: 10px; }
-  .loading-screen h3 { font-family: var(--serif); font-size: 1.7rem; color: var(--ink); margin-bottom: .4rem; letter-spacing: -.02em; }
-  .loading-screen p { color: var(--muted); font-weight: 300; margin-bottom: 1.5rem; }
-  .loading-steps { display: flex; flex-direction: column; gap: .5rem; max-width: 320px; margin: 0 auto; }
-  .loading-step {
-    font-size: 0.88rem; color: var(--muted); padding: .6rem 1rem; border-radius: 10px;
-    background: var(--soft); border: 1px solid var(--border);
-    opacity: 0; transform: translateX(-10px);
-    transition: opacity .4s, transform .4s, color .3s, background .3s; text-align: left;
-  }
-  .loading-step.visible { opacity: 1; transform: none; color: var(--ink); }
-  .loading-step.done { background: #d1faf0; border-color: #38bfa1; color: #1a9e80; }
+  #join-class-wrap { margin-top: 1.6rem; padding-top: 1.2rem; border-top: 1px solid var(--border); }
 
-  .result-card { display: none; animation: fadeUp .6s cubic-bezier(0.16,1,.3,1) both; }
-  .result-card.active { display: block; }
-  .result-header {
-    background: linear-gradient(135deg, #4a7cf6, #2851c8); border-radius: 22px 22px 0 0;
-    padding: 1.6rem 2rem; color: #fff; position: relative; overflow: hidden;
-  }
-  .result-header::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(255,255,255,.1) 1px, transparent 1px); background-size: 24px 24px; pointer-events: none; }
-  .result-header h3 { font-size: 1.05rem; font-weight: 600; position: relative; z-index: 1; }
-  .result-header p { font-size: 0.82rem; opacity: .75; margin-top: .2rem; position: relative; z-index: 1; }
-  .result-body {
-    background: var(--white); border: 1.5px solid var(--border); border-top: none;
-    border-radius: 0 0 22px 22px; padding: 2rem;
-    font-size: 0.95rem; line-height: 1.85; color: var(--ink); white-space: pre-wrap;
-    max-height: 480px; overflow-y: auto;
-  }
-  .result-actions { display: flex; gap: 1rem; margin-top: 1.2rem; }
-  .btn-copy { flex: 1; padding: .9rem; background: var(--soft); color: var(--ink); border: 1.5px solid var(--border); border-radius: 14px; font-family: var(--sans); font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: all .25s; }
-  .btn-copy:hover { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
-  .btn-new { flex: 1; padding: .9rem; background: var(--blue); color: #fff; border: none; border-radius: 14px; font-family: var(--sans); font-size: 0.92rem; font-weight: 600; cursor: pointer; transition: all .25s; box-shadow: 0 4px 14px rgba(74,124,246,.3); }
-  .btn-new:hover { background: #3567e0; transform: translateY(-1px); }
+  /* Drop anywhere on the page, not only on the box. */
+  .drop-veil { position: fixed; inset: 0; z-index: 400; display: none; align-items: center; justify-content: center; padding: 1.5rem;
+    background: rgba(14, 20, 42, .55); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); pointer-events: none; }
+  .drop-veil.show { display: flex; }
+  .drop-veil div { border: 2.5px dashed #fff; border-radius: 24px; padding: 2.4rem 2rem; color: #fff; text-align: center; font-family: var(--serif); font-size: clamp(1.7rem, 5vw, 2.4rem); max-width: 520px; }
+  .drop-veil small { display: block; font-family: var(--sans); font-size: .9rem; opacity: .85; margin-top: .4rem; }
+
+  /* ── Building ── */
+  .loading-screen { display: none; }
+  .loading-screen.active { display: block; animation: fadeUp .5s var(--ease-out) both; }
+  .build-days { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1.2rem 0 1rem; }
+  .build-day { min-width: 58px; text-align: center; font-family: var(--mono); font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; padding: .45rem .5rem; border-radius: 10px; background: var(--blue-mist); color: var(--muted); border: 1.5px solid var(--border); transition: background-color .4s, color .4s, border-color .4s; }
+  .build-day[data-state="working"] { color: var(--blue-deep); border-color: var(--blue); animation: pulseDot 1.4s ease-in-out infinite; }
+  .build-day[data-state="done"] { background: var(--blue-btn); border-color: var(--blue-btn); color: #fff; }
+  .build-day[data-state="skipped"] { background: transparent; border-style: dashed; }
+  #gen-progress-text { color: var(--blue-deep); font-weight: 600; font-size: .98rem; }
+  .build-eta { color: var(--muted); font-size: .88rem; margin-top: .3rem; line-height: 1.55; }
+  .build-fact { margin-top: 1.6rem; padding: 1rem 1.1rem; border-radius: 16px; background: var(--blue-mist); border: 1.5px solid var(--border); min-height: 5.4rem; }
+  .build-fact .kicker { margin-bottom: .35rem; font-size: .72rem; line-height: 1.3; }   /* beats `.build-fact p` */
+  .build-fact p { font-size: .92rem; line-height: 1.6; color: var(--ink); transition: opacity .35s; }
+  .build-fact p b { font-weight: 700; }
 
   /* ── MOBILE ── */
   @media(max-width:768px) {
-    nav { padding:.7rem 1rem; }
+    nav { padding:.65rem 1rem; }
     nav svg { width:120px; height:30px; }
-    .app-container { padding:1.2rem 1rem 5rem; }
-    .card { padding:1.5rem 1.2rem; border-radius:20px; }
-    .card h2 { font-size:1.4rem; }
-    .card-sub { font-size:0.88rem; margin-bottom:1.3rem; }
-    .app-header { padding:1.5rem 1.2rem; border-radius:20px; margin-bottom:1rem; }
-    .app-header h1 { font-size:1.6rem; }
-    .steps-indicator { margin:1rem 0; gap:.4rem; }
-    .step-dot { width:28px; height:28px; font-size:0.75rem; }
-    .options-grid { grid-template-columns:1fr 1fr; gap:.5rem; }
-    .option-btn { padding:.65rem .75rem; font-size:0.82rem; border-radius:12px; }
-    textarea { min-height:120px; font-size:0.9rem; padding:.9rem 1rem; }
-    .upload-area { padding:1.5rem 1rem; }
-    .btn-next { padding:1rem; font-size:0.95rem; }
-    .result-actions { flex-direction:column; gap:.6rem; }
-    .loading-screen { padding:2rem 1rem; border-radius:20px; }
-    .loading-screen h3 { font-size:1.4rem; }
-    /* Upgrade modal */
+    .app-container { padding:.8rem 1rem calc(6rem + env(safe-area-inset-bottom, 0px)); }
+    .card { border-radius:20px; }
+    .step-actions { position: sticky; bottom: 0; z-index: 5; margin: 1.2rem calc(-1 * clamp(1.4rem, 4vw, 2.3rem)) calc(-1 * clamp(1.4rem, 4vw, 2.3rem));
+      padding: .9rem clamp(1.4rem, 4vw, 2.3rem) calc(.9rem + env(safe-area-inset-bottom, 0px));
+      background: linear-gradient(to top, var(--white) 72%, rgba(253,253,255,0)); border-radius: 0 0 20px 20px; }
+    body.dark .step-actions { background: linear-gradient(to top, #161b28 72%, rgba(22,27,40,0)); }
+    .paste-hint { display: none; }
     #upgrade-modal > div { padding:1.5rem 1.2rem; }
-    /* Onboarding */
-    #onboarding-overlay > div { padding:1.5rem 1.2rem; }
+    .review .rv-k { flex-basis: 5.6rem; }
+  }
+  @media(max-width:380px) {
+    .review li { flex-wrap: wrap; }
+    .review .rv-k { flex-basis: 100%; padding-top: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card.active, .loading-screen.active, .src, .sf-toast { animation: none !important; }
+    .flow-bar i, .src-bar i { transition: none; }
+    .src-bar.indet i, .build-day[data-state="working"] { animation: none; }
   }
 
-  @media(max-width:390px) {
-    .options-grid { grid-template-columns:1fr; }
-    .card h2 { font-size:1.25rem; }
-  }
-
-  /* ── GLOBAL TYPOGRAPHY STANDARD ── */
-  nav { min-height:60px; }
-  nav .logo-svg { width:140px; height:34px; }
-  h1,h2,h3 { font-family:var(--serif); letter-spacing:-0.02em; }
-  body, p, span, div, button, input, textarea, select, label { font-family:var(--sans); }
-
-  
   /* ── inline notice ───────────────────────────────────────────────────
      Replaces sfNotice(). A modal dialog stops the page, looks like a browser
      error rather than part of the product, and on iOS steals focus from the
@@ -256,25 +285,22 @@
     to { opacity:1; transform:translate(-50%, 0); } }
   @keyframes sfToastOut { from { opacity:1; transform:translate(-50%, 0); }
     to { opacity:0; transform:translate(-50%, 10px); } }
-  .sf-toast { position:fixed; left:50%; bottom:1.5rem; transform:translate(-50%,0);
+  .sf-toast { position:fixed; left:50%; bottom:calc(1.5rem + env(safe-area-inset-bottom, 0px)); transform:translate(-50%,0);
     z-index:9999; max-width:min(28rem, calc(100vw - 2rem));
-    background:#fff; color:#111827; border:1.5px solid #E2E8F0; border-left:4px solid #EF4444;
+    background:#fff; color:#111827; border:1.5px solid #E2E8F0; border-left:4px solid #c4312f;
     border-radius:14px; padding:.8rem 1.1rem; font-family:var(--sans);
     font-size:.9rem; font-weight:600; line-height:1.45;
     box-shadow:0 10px 30px rgba(31,64,122,.16);
     animation:sfToastIn .28s cubic-bezier(.22,.61,.36,1) both; }
   .sf-toast.is-info { border-left-color:#4A7CF6; }
   .sf-toast.is-out { animation:sfToastOut .24s ease both; }
-  @media (prefers-reduced-motion:reduce){
-    .sf-toast, .sf-toast.is-out { animation:none; }
-  }
 </style>
 </head>
 <body>
 
 <nav>
-  <a href="index.html" class="logo">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
+  <a href="index.html" class="logo" aria-label="StudyFlow home">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34" aria-hidden="true">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
       <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
       <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
@@ -289,95 +315,13 @@
       </text>
     </svg>
   </a>
-  <div style="display:flex;align-items:center;gap:.75rem;">
-    <a href="dashboard.html" style="font-size:0.82rem;color:var(--muted);text-decoration:none;font-weight:500;">Dashboard</a>
-    <button onclick="toggleDark()" id="dark-toggle" title="Toggle dark mode" style="background:var(--soft);border:1.5px solid var(--border);border-radius:8px;padding:.35rem .5rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;width:34px;height:34px;">
+  <div class="nav-right">
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <button onclick="toggleDark()" id="dark-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">
       <svg id="dark-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
   </div>
 </nav>
-
-<!-- ONBOARDING OVERLAY -->
-<div id="onboarding-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,29,46,.85);backdrop-filter:blur(8px);z-index:9998;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:28px;padding:2.5rem 2rem;max-width:420px;width:90%;animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both;text-align:center;position:relative;">
-    <div id="onboard-step-1">
-      <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin:0 auto 1rem;display:block;">
-  <rect width="52" height="52" rx="14" fill="#eef4ff"/>
-  <path d="M15 14h10c2.2 0 4 1.8 4 4v16c0-2.2-1.8-4-4-4H15V14z" fill="#4a7cf6" opacity=".2"/>
-  <path d="M37 14H27c-2.2 0-4 1.8-4 4v16c0-2.2 1.8-4 4-4h10V14z" fill="#4a7cf6" opacity=".35"/>
-  <path d="M15 14h10c2.2 0 4 1.8 4 4v16c0-2.2-1.8-4-4-4H15V14z" stroke="#4a7cf6" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
-  <path d="M37 14H27c-2.2 0-4 1.8-4 4v16c0-2.2 1.8-4 4-4h10V14z" stroke="#4a7cf6" stroke-width="1.5" stroke-linejoin="round" fill="none"/>
-  <path d="M23 34v4M29 34v4" stroke="#4a7cf6" stroke-width="1.5" stroke-linecap="round"/>
-  <path d="M18 20h7M18 24h7M18 28h5" stroke="#4a7cf6" stroke-width="1.2" stroke-linecap="round" opacity=".6"/>
-  <path d="M27 20h7M27 24h7M27 28h5" stroke="#4a7cf6" stroke-width="1.2" stroke-linecap="round" opacity=".6"/>
-</svg>
-      <h2 style="font-family:var(--serif);font-size:1.6rem;letter-spacing:-0.02em;margin-bottom:.5rem;">Welcome to <em style="color:var(--blue);">StudyFlow</em></h2>
-      <p style="color:var(--muted);font-size:0.9rem;line-height:1.6;margin-bottom:1.5rem;">The AI study tool built on real cognitive science. Here's how it works in 3 steps.</p>
-      <div style="display:flex;flex-direction:column;gap:.75rem;text-align:left;margin-bottom:1.8rem;">
-        <div style="display:flex;gap:.9rem;align-items:flex-start;">
-          <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">1</div>
-          <div><strong style="font-size:0.9rem;">Paste your notes</strong><br><span style="font-size:0.82rem;color:var(--muted);">Any subject — history, bio, math, English</span></div>
-        </div>
-        <div style="display:flex;gap:.9rem;align-items:flex-start;">
-          <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">2</div>
-          <div><strong style="font-size:0.9rem;">Set your goal and exam date</strong><br><span style="font-size:0.82rem;color:var(--muted);">AI builds a personalized multi-day plan</span></div>
-        </div>
-        <div style="display:flex;gap:.9rem;align-items:flex-start;">
-          <div style="width:32px;height:32px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">3</div>
-          <div><strong style="font-size:0.9rem;">Study daily and track progress</strong><br><span style="font-size:0.82rem;color:var(--muted);">Questions get harder as your exam gets closer</span></div>
-        </div>
-      </div>
-      <button onclick="nextOnboard(2)" style="width:100%;padding:.95rem;background:var(--blue);color:#fff;border:none;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(74,124,246,.3);">Let's go →</button>
-    </div>
-
-    <div id="onboard-step-2" style="display:none;">
-      <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin:0 auto 1rem;display:block;">
-  <rect width="52" height="52" rx="14" fill="#eef4ff"/>
-  <path d="M26 16c-5.5 0-9 3.5-9 8 0 2.5 1 4.5 2.5 6L26 36l6.5-6c1.5-1.5 2.5-3.5 2.5-6 0-4.5-3.5-8-9-8z" fill="#4a7cf6" opacity=".15" stroke="#4a7cf6" stroke-width="1.5" stroke-linejoin="round"/>
-  <path d="M22 22c0-2.2 1.8-4 4-4M26 22v6" stroke="#4a7cf6" stroke-width="1.5" stroke-linecap="round" opacity=".7"/>
-  <circle cx="26" cy="30" r="1.5" fill="#4a7cf6" opacity=".8"/>
-</svg>
-      <h2 style="font-family:var(--serif);font-size:1.5rem;letter-spacing:-0.02em;margin-bottom:.5rem;">Built on real <em style="color:var(--blue);">science</em></h2>
-      <p style="color:var(--muted);font-size:0.88rem;line-height:1.7;margin-bottom:1.5rem;">StudyFlow uses the same techniques that top students and memory champions use:</p>
-      <div style="display:flex;flex-direction:column;gap:.6rem;text-align:left;margin-bottom:1.8rem;">
-        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>Spaced repetition</strong> — missed questions come back automatically</div>
-        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>Difficulty ramping</strong> — starts easy, gets harder toward exam day</div>
-        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>Active recall</strong> — answering questions beats re-reading by 84%</div>
-        <div style="padding:.7rem .9rem;background:var(--soft);border-radius:10px;font-size:0.85rem;"><strong>Sleep science</strong> — your brain consolidates learning while you sleep</div>
-      </div>
-      <button onclick="nextOnboard(3)" style="width:100%;padding:.95rem;background:var(--blue);color:#fff;border:none;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(74,124,246,.3);">Got it →</button>
-    </div>
-
-    <div id="onboard-step-3" style="display:none;">
-      <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin:0 auto 1rem;display:block;">
-  <rect width="52" height="52" rx="14" fill="#eef4ff"/>
-  <circle cx="26" cy="26" r="14" stroke="#4a7cf6" stroke-width="1.5" opacity=".25"/>
-  <circle cx="26" cy="26" r="9" stroke="#4a7cf6" stroke-width="1.5" opacity=".5"/>
-  <circle cx="26" cy="26" r="4" fill="#4a7cf6"/>
-  <path d="M26 12v4M26 36v4M12 26h4M36 26h4" stroke="#4a7cf6" stroke-width="1.5" stroke-linecap="round" opacity=".4"/>
-</svg>
-      <h2 style="font-family:var(--serif);font-size:1.5rem;letter-spacing:-0.02em;margin-bottom:.5rem;">One tip before you <em style="color:var(--blue);">start</em></h2>
-      <p style="color:var(--muted);font-size:0.88rem;line-height:1.7;margin-bottom:1.5rem;">The more detailed your notes, the better your plan. Don't just paste the chapter title — paste the actual content, definitions, dates, formulas.</p>
-      <div style="background:var(--blue-light);border-radius:14px;padding:1rem;text-align:left;margin-bottom:1.5rem;">
-        <div style="font-size:0.75rem;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem;">Pro tip</div>
-        <div style="font-size:0.85rem;color:var(--ink);line-height:1.6;">After studying, sleep on it. Your hippocampus replays everything you learned tonight. That's not a metaphor — it's neuroscience.</div>
-      </div>
-      <button onclick="closeOnboard()" style="width:100%;padding:.95rem;background:linear-gradient(135deg,#4a7cf6,#2851c8);color:#fff;border:none;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(74,124,246,.35);">Build my study plan →</button>
-    </div>
-
-    <!-- Step dots -->
-    <div style="display:flex;justify-content:center;gap:.4rem;margin-top:1.5rem;">
-      <div class="onboard-dot active" id="odot-1"></div>
-      <div class="onboard-dot" id="odot-2"></div>
-      <div class="onboard-dot" id="odot-3"></div>
-    </div>
-  </div>
-</div>
-
-<style>
-  .onboard-dot { width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .3s; }
-  .onboard-dot.active { background:var(--blue); }
-</style>
 
 <!-- UPGRADE MODAL -->
 <div id="upgrade-modal" style="display:none;position:fixed;inset:0;background:rgba(26,29,46,.6);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;">
@@ -386,270 +330,207 @@
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
     </div>
     <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:.4rem;" id="upgrade-modal-days">X days until exam</div>
-    <h2 style="font-family:var(--serif);font-size:1.4rem;letter-spacing:-0.02em;margin-bottom:.5rem;">Unlock more days</h2>
-    <p style="color:var(--muted);font-size:0.88rem;line-height:1.6;margin-bottom:1.5rem;" id="upgrade-modal-msg">Upgrade to get more days.</p>
+    <h2 style="font-family:var(--serif);font-size:1.4rem;letter-spacing:-0.02em;margin-bottom:.5rem;color:#1a1d2e;">Unlock more days</h2>
+    <p style="color:#5b6378;font-size:0.88rem;line-height:1.6;margin-bottom:1.5rem;" id="upgrade-modal-msg">Upgrade to get more days.</p>
     <div style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.2rem;">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:var(--blue-light);border-radius:12px;border:1.5px solid var(--blue);">
-        <div style="text-align:left;"><div style="font-weight:700;font-size:0.9rem;color:var(--ink);">Pro Plan</div><div style="font-size:0.75rem;color:var(--muted);">Up to 14-day plans</div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:#e3ecff;border-radius:12px;border:1.5px solid var(--blue);">
+        <div style="text-align:left;"><div style="font-weight:700;font-size:0.9rem;color:#1a1d2e;">Pro Plan</div><div style="font-size:0.75rem;color:#5b6378;">Up to 14-day plans</div></div>
         <div style="font-weight:800;color:var(--blue);">$7.99<span style="font-size:0.7rem;font-weight:400;">/mo</span></div>
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:#f5f0ff;border-radius:12px;border:1.5px solid #8b5cf6;">
-        <div style="text-align:left;"><div style="font-weight:700;font-size:0.9rem;color:var(--ink);">VIP Plan</div><div style="font-size:0.75rem;color:var(--muted);">Unlimited days + AI chat</div></div>
+        <div style="text-align:left;"><div style="font-weight:700;font-size:0.9rem;color:#1a1d2e;">VIP Plan</div><div style="font-size:0.75rem;color:#5b6378;">Unlimited days + AI chat</div></div>
         <div style="font-weight:800;color:#8b5cf6;">$14.99<span style="font-size:0.7rem;font-weight:400;">/mo</span></div>
       </div>
     </div>
-    <a href="pricing.html" style="display:block;background:var(--blue);color:#fff;padding:.9rem;border-radius:12px;font-weight:700;font-size:0.95rem;text-decoration:none;margin-bottom:.6rem;box-shadow:0 4px 14px rgba(74,124,246,.3);">Upgrade now →</a>
-    <button onclick="closeUpgradeModal()" style="background:none;border:none;color:var(--muted);font-size:0.85rem;cursor:pointer;font-family:var(--sans);">Continue with 7-day plan</button>
+    <a href="pricing.html" style="display:block;background:var(--blue-btn);color:#fff;padding:.9rem;border-radius:999px;font-weight:700;font-size:0.95rem;text-decoration:none;margin-bottom:.6rem;">Upgrade now →</a>
+    <button onclick="closeUpgradeModal()" style="background:none;border:none;color:#5b6378;font-size:0.85rem;cursor:pointer;font-family:var(--sans);">Continue with 7-day plan</button>
   </div>
 </div>
 
-<div class="app-container">
-  <div class="app-header">
-    <div class="app-header-badge">✦ AI-Powered</div>
-    <h1><span class="white">Get your </span><em>study plan</em></h1>
-    <p>Upload anything · Paste text · Get your personalized plan</p>
+<div class="drop-veil" id="drop-veil" aria-hidden="true"><div>Drop to add it to your lesson<small>PDF, Word, PowerPoint, photos, captions or text</small></div></div>
+
+<main class="app-container" id="flow">
+
+  <div class="flow-top" id="flow-top">
+    <button type="button" class="flow-back" id="flow-back" aria-label="Previous question" aria-hidden="true" tabindex="-1">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+    </button>
+    <div class="flow-bar" id="flow-bar" role="progressbar" aria-label="Plan setup progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="flow-fill"></i></div>
+    <span class="flow-count" id="flow-count" aria-hidden="true"></span>
   </div>
 
-  <div class="steps-indicator">
-    <div class="step-dot active" id="dot-1">1</div>
-    <div class="step-line" id="line-1"></div>
-    <div class="step-dot" id="dot-2">2</div>
-    <div class="step-line" id="line-2"></div>
-    <div class="step-dot" id="dot-3">3</div>
-  </div>
+  <!-- ── 1 · THE LESSON ─────────────────────────────────────────────── -->
+  <section class="card active" id="step-notes" aria-labelledby="h-notes">
+    <p class="kicker">Your lesson</p>
+    <h1 id="h-notes" tabindex="-1">What are you <em>studying?</em></h1>
+    <p class="card-sub">Add your notes, slides, a worksheet or photos of your notebook. The more of the real lesson you give us, the better your plan.</p>
 
-  <!-- STEP 1 -->
-  <div class="card active" id="step-1">
-    <div class="card-icon" style="font-size:1.2rem; color:var(--blue); font-weight:700;">01</div>
-    <h2>Add your <em>notes</em></h2>
-    <p class="card-sub">Upload anything — photo of notes, PDF, Word doc, a lecture transcript (.vtt/.srt), or just paste text.</p>
+    <div id="assign-slot"></div>
 
-    <!-- UPLOAD ZONE -->
-    <div id="upload-zone" onclick="document.getElementById('file-input').click()" style="border:2px dashed rgba(74,124,246,.3);border-radius:16px;padding:1.8rem 1.2rem;text-align:center;background:var(--blue-light);cursor:pointer;transition:all .3s;margin-bottom:1rem;">
-      <input type="file" id="file-input" multiple accept=".pdf,.txt,.doc,.docx,.pptx,.md,.vtt,.srt,.sbv,.png,.jpg,.jpeg,.webp,.gif,.heic,.heif,.mp4,.mov,.m4v,.mp3,.m4a,.wav" style="display:none;" onchange="handleFiles(this.files)" />
-      <!-- Upload icon -->
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(74,124,246,.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto .75rem;display:block;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      <strong style="display:block;font-size:0.95rem;color:var(--ink);margin-bottom:.3rem;">Drop files here or tap to browse</strong>
-      <span style="font-size:0.78rem;color:var(--muted);">Photos · PDF · Word · PowerPoint · Video · Audio · Text</span>
+    <div id="upload-zone" class="drop" role="button" tabindex="0" aria-describedby="drop-types">
+      <input type="file" id="file-input" multiple accept=".pdf,.txt,.doc,.docx,.pptx,.md,.vtt,.srt,.sbv,.png,.jpg,.jpeg,.webp,.gif,.heic,.heif,.mp4,.mov,.m4v,.mp3,.m4a,.wav" hidden onchange="handleFiles(this.files)" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <strong>Drop files here, or <u>browse</u></strong>
+      <span id="drop-types">PDF · Word · PowerPoint · photos · captions (.vtt, .srt) · text</span>
     </div>
+    <input type="file" id="camera-input" accept="image/*" capture="environment" hidden onchange="handleFiles(this.files)" />
 
-    <!-- FILE TYPE QUICK BUTTONS -->
-    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;">
-      <button onclick="triggerUpload('image/*')" style="display:flex;align-items:center;gap:.4rem;background:var(--soft);border:1.5px solid var(--border);border-radius:99px;padding:.4rem .9rem;font-family:var(--sans);font-size:0.78rem;font-weight:600;color:var(--ink);cursor:pointer;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        Photo
+    <div class="src-actions">
+      <button type="button" class="pill-btn" id="photo-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Take a photo
       </button>
-      <button onclick="triggerUpload('video/*,audio/*')" style="display:flex;align-items:center;gap:.4rem;background:var(--soft);border:1.5px solid var(--border);border-radius:99px;padding:.4rem .9rem;font-family:var(--sans);font-size:0.78rem;font-weight:600;color:var(--ink);cursor:pointer;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-        Video / Audio
+      <button type="button" class="pill-btn" id="record-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+        Record a class
       </button>
-      <button onclick="triggerUpload('.pdf')" style="display:flex;align-items:center;gap:.4rem;background:var(--soft);border:1.5px solid var(--border);border-radius:99px;padding:.4rem .9rem;font-family:var(--sans);font-size:0.78rem;font-weight:600;color:var(--ink);cursor:pointer;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        PDF
-      </button>
-      <button onclick="triggerUpload('.doc,.docx,.pptx')" style="display:flex;align-items:center;gap:.4rem;background:var(--soft);border:1.5px solid var(--border);border-radius:99px;padding:.4rem .9rem;font-family:var(--sans);font-size:0.78rem;font-weight:600;color:var(--ink);cursor:pointer;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Word / Slides
-      </button>
+      <span class="paste-hint">Tip: paste a screenshot with Ctrl/⌘ + V</span>
     </div>
 
-    <!-- PROCESSING STATUS -->
-    <div id="extract-status" style="display:none;padding:.9rem 1rem;background:var(--blue-light);border-radius:12px;margin-bottom:1rem;font-size:0.85rem;color:var(--blue);font-weight:600;display:none;align-items:center;gap:.6rem;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite;flex-shrink:0;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-      <span id="extract-status-text">Reading your file...</span>
+    <ul class="sources" id="sources" aria-label="Files added to your lesson"></ul>
+    <div id="media-slot"></div>
+
+    <div class="or-line">or type and paste</div>
+    <label class="field-label" for="notes-input">Your notes <span class="opt">definitions, dates, formulas, anything</span> <span id="autosave-indicator">Saved</span></label>
+    <textarea id="notes-input" placeholder="Paste or type your notes here…" oninput="notesChanged();autosaveNotes(this.value)"></textarea>
+    <div class="notes-meta"><span id="notes-counter"></span></div>
+    <div id="notes-warning" class="note-box" hidden></div>
+
+    <div class="field topic-field">
+      <label class="field-label" for="subject-input">Lesson title <span class="opt">optional</span></label>
+      <input type="text" id="subject-input" class="text-input" placeholder="e.g. Photosynthesis, The French Revolution, Two-step equations" autocomplete="off" maxlength="80" />
+      <p class="field-hint" id="topic-hint">We'll fill this in from your notes. Change it if it's not right.</p>
     </div>
 
-    <!-- UPLOADED FILES LIST -->
-    <div id="files-list" style="display:none;margin-bottom:1rem;"></div>
-
-    <div class="divider">or paste text</div>
-
-    <label class="field-label">Your lesson notes
-      <span id="autosave-indicator" style="font-size:0.7rem;font-weight:400;color:var(--green);margin-left:.5rem;opacity:0;transition:opacity .4s;">✓ Saved</span>
-    </label>
-    <textarea id="notes-input" placeholder="Paste your notes here..." oninput="checkNotesLength(this);autosaveNotes(this.value)"></textarea>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:.4rem;">
-      <button id="camera-btn" onclick="openCamera()" style="display:flex;align-items:center;gap:.35rem;background:none;border:none;font-family:var(--sans);font-size:0.75rem;font-weight:600;color:var(--blue);cursor:pointer;padding:.2rem 0;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        Scan with camera
-      </button>
-      <div id="notes-counter" style="font-size:0.72rem;color:var(--muted);"></div>
+    <div class="step-actions">
+      <button type="button" class="btn-next" id="notes-next" onclick="goToStep2()">Continue</button>
     </div>
-    <div id="notes-warning" style="display:none;margin-top:.6rem;padding:.7rem 1rem;background:#fff8e0;border:1px solid #f59e0b;border-radius:10px;font-size:0.82rem;color:#92400e;line-height:1.5;">
-      Your notes are long — we'll use the most important parts to build your plan. For best results, paste the key concepts and vocabulary only.
-    </div>
-
-    <!-- Camera modal -->
-    <div id="camera-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:1rem;">
-      <video id="camera-video" autoplay playsinline style="max-width:100%;max-height:60vh;border-radius:16px;"></video>
-      <div style="display:flex;gap:1rem;">
-        <button onclick="captureCamera()" style="background:#fff;color:var(--ink);border:none;border-radius:12px;padding:.8rem 1.8rem;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Capture</button>
-        <button onclick="closeCamera()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:.8rem 1.4rem;font-family:var(--sans);font-size:0.95rem;font-weight:600;cursor:pointer;">Cancel</button>
-      </div>
-      <canvas id="camera-canvas" style="display:none;"></canvas>
-    </div>
-
-    <div class="field" style="margin-top:1.2rem;">
-      <label class="field-label" for="subject-input">Subject <span>(optional — helps us tailor your questions)</span></label>
-      <input type="text" id="subject-input" class="text-input" placeholder="e.g. US History, Biology, Spanish, Algebra..." autocomplete="off" />
-    </div>
-
-    <button class="btn-next" onclick="goToStep2()" style="margin-top:1.2rem;">Continue →</button>
 
     <!-- JOIN A CLASS -->
-    <div id="join-class-wrap" style="margin-top:1.4rem;padding-top:1.2rem;border-top:1px solid var(--border);">
+    <div id="join-class-wrap">
       <div id="join-class-closed" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;">
         <div style="font-size:0.85rem;color:var(--muted);">In a class? Enter your teacher's code so they can see your progress.</div>
-        <button onclick="document.getElementById('join-class-closed').style.display='none';document.getElementById('join-class-open').style.display='flex';document.getElementById('class-code-input').focus();" style="background:none;border:1.5px solid var(--border);border-radius:10px;padding:.5rem .9rem;font-family:var(--sans);font-size:0.82rem;font-weight:600;color:var(--blue);cursor:pointer;white-space:nowrap;flex-shrink:0;">Join a class</button>
+        <button onclick="document.getElementById('join-class-closed').style.display='none';document.getElementById('join-class-open').style.display='flex';document.getElementById('class-code-input').focus();" class="pill-btn" style="white-space:nowrap;flex-shrink:0;color:var(--blue-deep);">Join a class</button>
       </div>
       <div id="join-class-open" style="display:none;align-items:center;gap:.6rem;">
-        <input id="class-code-input" placeholder="SF-XXXX" maxlength="7" style="flex:1;padding:.7rem .9rem;border:1.5px solid var(--border);border-radius:10px;font-family:var(--sans);font-size:0.9rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()" />
-        <button onclick="joinClass()" style="background:var(--blue);color:#fff;border:none;border-radius:10px;padding:.7rem 1.1rem;font-family:var(--sans);font-size:0.85rem;font-weight:700;cursor:pointer;flex-shrink:0;">Join</button>
+        <input id="class-code-input" class="text-input" placeholder="SF-XXXX" maxlength="7" aria-label="Class code" style="flex:1;font-weight:700;letter-spacing:.06em;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()" />
+        <button onclick="joinClass()" class="btn-next" style="width:auto;min-height:50px;padding:0 1.3rem;box-shadow:none;">Join</button>
       </div>
       <div id="join-class-msg" style="display:none;margin-top:.6rem;font-size:0.82rem;font-weight:600;"></div>
     </div>
-  </div>
 
-  <!-- STEP 2 -->
-  <div class="card" id="step-2">
-    <div class="card-icon" style="font-size:1.2rem; color:var(--blue); font-weight:700;">02</div>
-    <h2>Two quick <em>questions</em></h2>
-    <p class="card-sub">Helps us build the right plan for exactly where you're at right now.</p>
-
-    <!-- GOAL -->
-    <div class="field">
-      <span class="field-label">What's your main goal?</span>
-      <div style="display:flex;flex-direction:column;gap:.5rem;">
-
-        <button class="option-btn goal-btn" onclick="selectOption(this,'goal')" data-value="Score 90%+ on the exam">
-          <div style="display:flex;align-items:center;gap:.75rem;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#eef4ff;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4a7cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            </div>
-            <div style="text-align:left;">
-              <div style="font-weight:700;font-size:0.9rem;">Score 90%+</div>
-              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Shoot for the top — detailed plan, harder questions</div>
-            </div>
-          </div>
-        </button>
-
-        <button class="option-btn goal-btn" onclick="selectOption(this,'goal')" data-value="Pass the exam">
-          <div style="display:flex;align-items:center;gap:.75rem;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#f0fdf9;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bfa1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <div style="text-align:left;">
-              <div style="font-weight:700;font-size:0.9rem;">Pass confidently</div>
-              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Cover everything that matters, no gaps</div>
-            </div>
-          </div>
-        </button>
-
-        <button class="option-btn goal-btn" onclick="selectOption(this,'goal')" data-value="Deeply understand the material">
-          <div style="display:flex;align-items:center;gap:.75rem;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#fdf4ff;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-            </div>
-            <div style="text-align:left;">
-              <div style="font-weight:700;font-size:0.9rem;">Actually understand it</div>
-              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Go deep — Feynman technique, concept mastery</div>
-            </div>
-          </div>
-        </button>
-
-        <button class="option-btn goal-btn" onclick="selectOption(this,'goal')" data-value="Quick review before the exam">
-          <div style="display:flex;align-items:center;gap:.75rem;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#fff8ed;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
-            <div style="text-align:left;">
-              <div style="font-weight:700;font-size:0.9rem;">Cram fast</div>
-              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Exam soon — hit the key points fast</div>
-            </div>
-          </div>
-        </button>
-
+    <!-- Camera modal (desktop webcams; phones use the native camera) -->
+    <div id="camera-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:1rem;">
+      <video id="camera-video" autoplay playsinline style="max-width:100%;max-height:60vh;border-radius:16px;"></video>
+      <div style="display:flex;gap:1rem;">
+        <button onclick="captureCamera()" style="background:#fff;color:#1a1d2e;border:none;border-radius:999px;padding:.8rem 1.8rem;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;">Capture</button>
+        <button onclick="closeCamera()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:.8rem 1.4rem;font-family:var(--sans);font-size:0.95rem;font-weight:600;cursor:pointer;">Cancel</button>
       </div>
+      <canvas id="camera-canvas" style="display:none;"></canvas>
     </div>
+  </section>
 
-    <!-- PRIOR KNOWLEDGE (replaces "difficulty") -->
-    <div class="field" style="margin-top:1.1rem;">
-      <span class="field-label">How well do you know this material right now?</span>
-      <div style="display:flex;flex-direction:column;gap:.5rem;">
+  <!-- ── 2 · WHAT IT IS FOR ─────────────────────────────────────────── -->
+  <section class="card" id="step-purpose" aria-labelledby="h-purpose">
+    <p class="kicker" data-topic-kicker>About your lesson</p>
+    <h2 id="h-purpose" tabindex="-1">What's it <em>for?</em></h2>
+    <p class="card-sub">We'll shape the questions like the real thing.</p>
+    <div class="choices" role="radiogroup" aria-labelledby="h-purpose" data-group="purpose"></div>
+    <div class="step-actions"><button type="button" class="btn-next" data-next>Continue</button></div>
+  </section>
 
-        <button class="option-btn diff-btn" onclick="selectOption(this,'difficulty')" data-value="Easy">
-          <div style="display:flex;align-items:center;gap:.75rem;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#d1faf0;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.78rem;color:#1a9e80;">A</div>
-            <div style="text-align:left;">
-              <div style="font-weight:700;font-size:0.9rem;">I know it pretty well</div>
-              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Familiar with most concepts — just need to sharpen up</div>
-            </div>
-          </div>
-        </button>
-
-        <button class="option-btn diff-btn" onclick="selectOption(this,'difficulty')" data-value="Medium">
-          <div style="display:flex;align-items:center;gap:.75rem;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#fff8ed;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.78rem;color:#d97706;">B</div>
-            <div style="text-align:left;">
-              <div style="font-weight:700;font-size:0.9rem;">I know some of it</div>
-              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Patchy understanding — solid on some things, gaps on others</div>
-            </div>
-          </div>
-        </button>
-
-        <button class="option-btn diff-btn" onclick="selectOption(this,'difficulty')" data-value="Hard">
-          <div style="display:flex;align-items:center;gap:.75rem;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#fee2e2;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.78rem;color:#dc2626;">C</div>
-            <div style="text-align:left;">
-              <div style="font-weight:700;font-size:0.9rem;">Barely started</div>
-              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Most of this is new — start from the basics</div>
-            </div>
-          </div>
-        </button>
-
-        <button class="option-btn diff-btn" onclick="selectOption(this,'difficulty')" data-value="Very hard">
-          <div style="display:flex;align-items:center;gap:.75rem;">
-            <div style="width:36px;height:36px;border-radius:10px;background:#f3f4f6;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.78rem;color:#6b7280;">?</div>
-            <div style="text-align:left;">
-              <div style="font-weight:700;font-size:0.9rem;">Haven't looked at it yet</div>
-              <div style="font-size:0.75rem;color:var(--muted);font-weight:400;">Starting from zero — build the full foundation</div>
-            </div>
-          </div>
-        </button>
-
-      </div>
+  <!-- ── 3 · WHEN ───────────────────────────────────────────────────── -->
+  <section class="card" id="step-date" aria-labelledby="h-date">
+    <p class="kicker" data-topic-kicker>About your lesson</p>
+    <h2 id="h-date" tabindex="-1">When's the <em>test?</em></h2>
+    <p class="card-sub">Your plan spreads the work out and gets harder as the day gets closer.</p>
+    <div class="chips" id="date-chips" role="group" aria-label="Quick dates">
+      <button type="button" class="chip" data-days="1" aria-pressed="false">Tomorrow</button>
+      <button type="button" class="chip" data-days="3" aria-pressed="false">In 3 days</button>
+      <button type="button" class="chip" data-days="7" aria-pressed="false">In a week</button>
+      <button type="button" class="chip" data-days="14" aria-pressed="false">In 2 weeks</button>
     </div>
+    <label class="field-label" for="deadline-input">Or pick the date</label>
+    <input type="date" class="text-input" id="deadline-input" required />
+    <div class="date-summary" id="date-summary" aria-live="polite" hidden></div>
+    <div class="step-actions"><button type="button" class="btn-next" data-next>Continue</button></div>
+  </section>
 
-    <!-- EXAM DATE -->
-    <div class="field" style="margin-top:1.1rem;">
-      <span class="field-label">When is your exam?</span>
-      <input type="date" class="text-input" id="deadline-input" required />
-      <div style="font-size:0.75rem;color:var(--muted);margin-top:.4rem;">We use this to spread your sessions and ramp difficulty toward exam day.</div>
+  <!-- ── 4 · WHAT THEY KNOW ─────────────────────────────────────────── -->
+  <section class="card" id="step-known" aria-labelledby="h-known">
+    <p class="kicker" data-topic-kicker>About you</p>
+    <h2 id="h-known" tabindex="-1">How well do you know it <em>right now?</em></h2>
+    <p class="card-sub">Be honest. It decides where day 1 starts.</p>
+    <div class="choices" role="radiogroup" aria-labelledby="h-known" data-group="known"></div>
+    <div class="step-actions"><button type="button" class="btn-next" data-next>Continue</button></div>
+  </section>
+
+  <!-- ── 5 · GOAL ───────────────────────────────────────────────────── -->
+  <section class="card" id="step-goal" aria-labelledby="h-goal">
+    <p class="kicker" data-topic-kicker>About you</p>
+    <h2 id="h-goal" tabindex="-1">What would <em>success</em> look like?</h2>
+    <p class="card-sub">This sets how hard the questions get.</p>
+    <div class="choices" role="radiogroup" aria-labelledby="h-goal" data-group="goal"></div>
+    <div class="step-actions"><button type="button" class="btn-next" data-next>Continue</button></div>
+  </section>
+
+  <!-- ── 6 · GRADE (asked once, remembered) ─────────────────────────── -->
+  <section class="card" id="step-grade" aria-labelledby="h-grade">
+    <p class="kicker">About you</p>
+    <h2 id="h-grade" tabindex="-1">What grade are <em>you in?</em></h2>
+    <p class="card-sub">So every question is worded for you, not for a textbook. We'll remember it.</p>
+    <div class="choices grid" role="radiogroup" aria-labelledby="h-grade" data-group="grade"></div>
+    <div class="step-actions"><button type="button" class="btn-next" data-next>Continue</button></div>
+  </section>
+
+  <!-- ── 7 · FOCUS (optional, in their own words) ───────────────────── -->
+  <section class="card" id="step-focus" aria-labelledby="h-focus">
+    <p class="kicker" data-topic-kicker>Almost done</p>
+    <h2 id="h-focus" tabindex="-1">Anything we should <em>focus on?</em></h2>
+    <p class="card-sub">What did your teacher say will be on it? What keeps confusing you? Optional, but it makes the plan yours.</p>
+    <div class="starters" id="starters">
+      <button type="button" class="starter" data-text="My teacher said the test covers ">My teacher said the test covers…</button>
+      <button type="button" class="starter" data-text="I keep mixing up ">I keep mixing up…</button>
+      <button type="button" class="starter" data-text="I don't get ">I don't get…</button>
+      <button type="button" class="starter" data-text="There will be questions on ">There will be questions on…</button>
     </div>
-
-    <button class="btn-next" onclick="generatePlan()" style="margin-top:1.4rem;">✦ Build my study plan</button>
-    <button class="btn-back" onclick="goToStep(1)">← Back</button>
-  </div>
-
-  <!-- LOADING -->
-  <div class="loading-screen" id="loading" style="text-align:center;padding:2rem;">
-    <p id="gen-progress-text" style="color:var(--blue);font-weight:600;font-size:1rem;">Building your study plan...</p>
-  </div>
-
-  <!-- RESULT -->
-  <div class="result-card" id="result">
-    <div class="result-header">
-      <h3 id="result-title">✦ Your Study Plan</h3>
-      <p id="result-subtitle">Personalized just for you</p>
+    <label class="sr-only" for="focus-input">What to focus on</label>
+    <textarea id="focus-input" maxlength="400" placeholder="e.g. The test is mostly on the light reactions. I keep mixing up the stroma and the thylakoid." style="min-height:120px"></textarea>
+    <div class="notes-meta"><span></span><span id="focus-count">0 / 400</span></div>
+    <div class="step-actions">
+      <button type="button" class="btn-next" data-next>Continue</button>
+      <button type="button" class="btn-quiet" id="focus-skip">Skip this</button>
     </div>
-    <div class="result-body" id="result-body"></div>
-    <div class="result-actions">
-      <button class="btn-copy" onclick="copyPlan()">Copy plan</button>
-      <button class="btn-new" onclick="startOver()">New plan →</button>
+  </section>
+
+  <!-- ── 8 · REVIEW ─────────────────────────────────────────────────── -->
+  <section class="card" id="step-review" aria-labelledby="h-review">
+    <p class="kicker">Ready when you are</p>
+    <h2 id="h-review" tabindex="-1">Here's your <em>plan</em></h2>
+    <p class="card-sub">Check it over, then we'll build it.</p>
+    <ul class="review" id="review-list"></ul>
+    <div class="step-actions">
+      <button type="button" class="btn-next" id="build-btn" onclick="generatePlan()">Build my study plan</button>
     </div>
-  </div>
-</div>
+    <p class="review-note" id="review-note"></p>
+  </section>
+
+  <!-- Generation stopped with no days at all -->
+  <section class="card" id="gen-error" aria-live="assertive"></section>
+
+  <!-- ── BUILDING ───────────────────────────────────────────────────── -->
+  <section class="card loading-screen" id="loading" aria-live="polite">
+    <p class="kicker" id="build-kicker">Building</p>
+    <h2>Making your <em>plan</em></h2>
+    <p id="gen-progress-text">Building your study plan…</p>
+    <p class="build-eta" id="build-eta">About 40 seconds a day. You can keep this tab open and come back.</p>
+    <div class="build-days" id="build-days" aria-hidden="true"></div>
+    <div class="build-fact" aria-live="off">
+      <p class="kicker">Why it works</p>
+      <p id="build-fact-text"></p>
+    </div>
+  </section>
+</main>
 
 <script src="/sf-draw.js"></script>
 <script>
@@ -694,12 +575,17 @@
     };
   })();
 
-  var selectedGoal = '', selectedDifficulty = '', generatedPlan = '', fileContent = '';
-  var fileReading = false;
+  /* selectedDifficulty is "how well do you know it". It was asked on every
+     plan and never reached the model: the prompt only ever read the goal.
+     It now goes into buildLearnerBrief() with the other answers. */
+  var selectedGoal = '', selectedDifficulty = '';
+
+  function escHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
 
   window.addEventListener('load', function() {
-    var loader = document.getElementById('page-loader');
-    if (loader) loader.style.display = 'none';
     loadAssignment();
   });
 
@@ -710,52 +596,540 @@
     var a = JSON.parse(SFStore.getItem('studyflow_pending_assignment') || 'null');
     if (!a || !a.notes) return;
 
-    // Prefill notes and exam date
+    // Prefill notes, the lesson title and the test date
     var notesEl = document.getElementById('notes-input');
     notesEl.value = a.notes;
-    checkNotesLength(notesEl);
-    if (a.date) document.getElementById('deadline-input').value = a.date;
+    if (a.topic) { document.getElementById('subject-input').value = String(a.topic).substring(0, 80); topicTouched = true; }
+    if (a.date) { document.getElementById('deadline-input').value = a.date; updateDateSummary(); }
+    notesChanged();
 
-    // Show banner so student knows this came from their teacher
-    var banner = document.createElement('div');
-    banner.style.cssText = 'background:#eef4ff;border:1.5px solid #4a7cf6;border-radius:14px;padding:.8rem 1.1rem;margin-bottom:1rem;font-size:0.85rem;color:#2851c8;font-weight:600;display:flex;align-items:center;gap:.6rem;';
-    banner.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg><span>Lesson assigned by ' + (a.teacherName || 'your teacher') + ': <strong>' + a.topic + '</strong>. Notes and exam date are filled in — just pick your goal and generate.</span>';
-    notesEl.parentElement.insertBefore(banner, notesEl);
+    /* The teacher's name and topic arrive from api/class, so they are
+       escaped: they went into innerHTML raw. */
+    var slot = document.getElementById('assign-slot');
+    slot.innerHTML = '<div class="note-box" style="display:flex;gap:.6rem;align-items:flex-start;margin:0 0 1rem;">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:.15rem;"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>' +
+      '<span>Lesson assigned by ' + escHtml(a.teacherName || 'your teacher') + ': <strong>' + escHtml(a.topic || 'this lesson') +
+      '</strong>. The notes' + (a.date ? ' and test date are' : ' are') + ' filled in. Add anything else you have, then tap Continue.</span></div>';
 
     // Clean up so a refresh doesn't re-trigger
     SFStore.removeItem('studyflow_pending_assignment');
-    window.history.replaceState({}, '', window.location.pathname);
+    window.history.replaceState({ sfStep: 'notes' }, '', window.location.pathname);
   }
 
-  // ONBOARDING — show for first time users
-  // Upgrade modal
-  var pendingGenerateArgs = null;
+  /* ── THE QUESTIONS ──────────────────────────────────────────────────────
+     One source for each question's options: the buttons are drawn from it,
+     the review screen reads its labels, and buildLearnerBrief() reads its
+     `p` - the sentence the model actually gets. A question only earns a
+     screen here if its answer changes that sentence.
 
+     `known` and `goal` keep the values they always had ("Easy",
+     "Score 90%+ on the exam"...) because plans already saved carry them. */
+  var CHOICES = {
+    purpose: [
+      { v: 'quiz', t: 'A quiz or unit test', d: 'A test in class on just this topic',
+        p: 'A short in-class quiz or unit test on exactly this material. Prioritise the facts, terms and methods a teacher is most likely to ask about directly.' },
+      { v: 'exam', t: 'A big exam', d: 'A midterm, final or end-of-term test',
+        p: 'A bigger exam such as a midterm or final. Mix recall with application, and connect ideas within the notes so they can be used together.' },
+      { v: 'standardized', t: 'A standardized test', d: 'AP, SAT, ACT, IB or a state test',
+        p: 'A standardized test (AP, SAT, ACT, IB or a state test). Where the question types allow, give a short stimulus first - a passage, a data table, a scenario - and build distractors from common misconceptions, the way those tests do.' },
+      { v: 'essay', t: 'An essay or project', d: 'You will write or present about it',
+        p: 'An essay or project. Favour causes, evidence, comparisons and connections over isolated facts, and let the write questions practise making a claim and backing it with the notes.' },
+      { v: 'learn', t: 'Just to learn it', d: 'No test, you want to really get it',
+        p: 'No test: they want to understand it. Favour why and how, with concrete examples from the notes.' }
+    ],
+    known: [
+      { v: 'Easy', t: 'I know it pretty well', d: 'I just need to sharpen up',
+        p: 'Knows most of it already. Skip bare definition questions; favour application, comparison and the harder corners of the notes, even on day 1.' },
+      { v: 'Medium', t: 'I know some of it', d: 'Solid on some parts, shaky on others',
+        p: 'Patchy. Secure the core terms early, then move quickly to using them.' },
+      { v: 'Hard', t: 'I’ve barely started', d: 'Most of it is new to me',
+        p: 'Most of it is new. Introduce each term in plain words before testing it, and keep day 1 to recall and understanding.' },
+      { v: 'Very hard', t: 'I haven’t looked at it yet', d: 'Start me from zero',
+        p: 'Starting from zero. Assume nothing: one idea at a time, everyday language before the textbook term, and explanations that spell out every step.' }
+    ],
+    goal: [
+      { v: 'Score 90%+ on the exam', t: 'Ace it', d: 'Aim for 90%+ with harder questions',
+        p: 'Aim high. Include the hardest questions the notes can support, with close distractors.' },
+      { v: 'Pass the exam', t: 'Pass with confidence', d: 'Cover everything that matters, no gaps',
+        p: 'Breadth first. Every major idea in the notes should be tested at least once across the plan; leave no gaps.' },
+      { v: 'Deeply understand the material', t: 'Really understand it', d: 'Go deep on the why and the how',
+        p: 'Depth first. Favour why and how questions, and explanations that connect ideas to each other.' },
+      { v: 'Quick review before the exam', t: 'Review fast', d: 'Short on time: key points first',
+        p: 'Short on time. Concentrate on the highest-yield ideas and the most common mistakes.' }
+    ],
+    grade: [
+      { v: '5', t: '5th grade' }, { v: '6', t: '6th grade' }, { v: '7', t: '7th grade' }, { v: '8', t: '8th grade' },
+      { v: '9', t: '9th grade' }, { v: '10', t: '10th grade' }, { v: '11', t: '11th grade' }, { v: '12', t: '12th grade' },
+      { v: 'college', t: 'College' }, { v: 'adult', t: 'Not in school' }
+    ]
+  };
+
+  var intake = { purpose: '', grade: '', focus: '' };
+  var topicTouched = false;
+
+  function choiceOf(group, v) {
+    var list = CHOICES[group] || [];
+    for (var i = 0; i < list.length; i++) if (list[i].v === v) return list[i];
+    return null;
+  }
+  function valueOf(group) {
+    return group === 'goal' ? selectedGoal : group === 'known' ? selectedDifficulty : (intake[group] || '');
+  }
+
+  /* The grade is the one answer the model cannot infer from the notes, and
+     it changes every sentence it writes: a 7th grader's photosynthesis and
+     an AP student's are the same notes read at different levels. */
+  function gradeBrief(g) {
+    if (!g) return '';
+    if (g === 'college') return 'A college student. Academic wording is fine; do not over-explain basics the notes treat as known.';
+    if (g === 'adult') return 'An adult learner, not in school. Plain, direct wording and no classroom framing.';
+    var n = parseInt(g, 10);
+    if (!n) return '';
+    var ord = n + (n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th');
+    var age = (n + 5) + '-' + (n + 6);
+    if (n <= 8) return 'A ' + ord + ' grader, about ' + age + ' years old. Write every question, option and explanation at that reading level: short sentences, everyday words, and a plain definition the first time any technical term appears. Simplify the language, never the facts.';
+    if (n <= 10) return 'A ' + ord + ' grader, about ' + age + ' years old. Clear high-school wording; define specialist terms the first time they appear.';
+    return 'An ' + ord + ' grader, about ' + age + ' years old. Upper high-school level; exam-style wording is fine.';
+  }
+
+  /* Their words go into the prompt, so they are flattened to one line,
+     stripped of quotes that would break out of the quoted block, and capped. */
+  function cleanFocus(s) {
+    return String(s || '').replace(/[\r\n\t]+/g, ' ').replace(/["“”]/g, '\'')
+      .replace(/\s{2,}/g, ' ').trim().substring(0, 400);
+  }
+
+  function buildLearnerBrief() {
+    var lines = [];
+    var g = gradeBrief(intake.grade);
+    if (g) lines.push('WHO IS STUDYING: ' + g);
+    var p = choiceOf('purpose', intake.purpose);
+    if (p) lines.push('WHAT IT IS FOR: ' + p.p);
+    var k = choiceOf('known', selectedDifficulty);
+    if (k) lines.push('WHAT THEY KNOW NOW: ' + k.p);
+    var gl = choiceOf('goal', selectedGoal);
+    if (gl) lines.push('THEIR GOAL: ' + gl.p);
+    var f = cleanFocus(intake.focus);
+    if (f) lines.push('IN THEIR OWN WORDS, WHAT TO FOCUS ON: "' + f + '"\n' +
+      '  Weight the day toward this wherever the notes cover it. It is a priority, never permission\n' +
+      '  to leave the notes: if it names something the notes do not contain, ignore that part.');
+    if (!lines.length) return '';
+    return '\nABOUT THIS LEARNER (pitch every question and explanation for them):\n' + lines.join('\n') + '\n';
+  }
+
+  /* ── THE STEP ENGINE ────────────────────────────────────────────────────
+     One screen per question. Each step is pushed onto history, so a phone's
+     back gesture goes to the previous question instead of leaving the page
+     with everything typed. A single-choice answer moves on by itself; the
+     Continue button is there for someone who came back to change one. */
+  var STEPS = ['notes', 'purpose', 'date', 'known', 'goal', 'grade', 'focus', 'review'];
+  var currentStep = 'notes';
+  var generating = false;
+  /* A grade already on the profile skips its screen; it stays on the
+     review, one tap from being changed. */
+  var gradeFromProfile = false;
+  (function () {
+    try {
+      var u = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
+      if (u && u.grade && choiceOf('grade', String(u.grade))) { intake.grade = String(u.grade); gradeFromProfile = true; }
+    } catch (e) {}
+  })();
+
+  function flowSteps() {
+    return STEPS.filter(function (s) { return !(s === 'grade' && gradeFromProfile); });
+  }
+
+  function renderChoices() {
+    var boxes = document.querySelectorAll('.choices[data-group]');
+    for (var b = 0; b < boxes.length; b++) {
+      var box = boxes[b], group = box.getAttribute('data-group'), list = CHOICES[group] || [], html = '';
+      for (var i = 0; i < list.length; i++) {
+        var c = list[i];
+        html += '<button type="button" class="choice" role="radio" aria-checked="false" data-group="' + group +
+          '" data-value="' + escHtml(c.v) + '">' +
+          (group === 'grade' ? '' : '<span class="choice-key" aria-hidden="true">' + (i + 1) + '</span>') +
+          '<span><b>' + escHtml(c.t) + '</b>' + (c.d ? '<small>' + escHtml(c.d) + '</small>' : '') + '</span></button>';
+      }
+      box.innerHTML = html;
+    }
+    syncChoices();
+  }
+
+  function syncChoices() {
+    var all = document.querySelectorAll('.choice');
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      el.setAttribute('aria-checked', String(valueOf(el.getAttribute('data-group')) === el.getAttribute('data-value')));
+    }
+    var steps = { purpose: 'purpose', known: 'known', goal: 'goal', grade: 'grade' };
+    for (var s in steps) {
+      var btn = document.querySelector('#step-' + s + ' [data-next]');
+      if (btn) btn.setAttribute('aria-disabled', valueOf(steps[s]) ? 'false' : 'true');
+    }
+  }
+
+  var advanceTimer = null;
+  function choose(group, value) {
+    if (group === 'goal') selectedGoal = value;
+    else if (group === 'known') selectedDifficulty = value;
+    else intake[group] = value;
+    if (group === 'grade') saveGradeToProfile(value);
+    syncChoices();
+    saveIntakeDraft();
+    clearTimeout(advanceTimer);
+    /* Long enough to see the tick land, short enough not to feel like a wait. */
+    advanceTimer = setTimeout(nextStep, 260);
+  }
+
+  function saveGradeToProfile(g) {
+    try {
+      var u = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
+      if (!u || !u.email) return;
+      u.grade = g;
+      SFStore.setItem('studyflow_user', JSON.stringify(u));
+    } catch (e) {}
+  }
+
+  function stepReady(name, quiet) {
+    if (name === 'notes') {
+      if (readingCount()) { if (!quiet) sfNotice('Still reading ' + readingCount() + ' file' + (readingCount() === 1 ? '' : 's') + ' — one moment.', 'info'); return false; }
+      if (!allNotes().trim()) { if (!quiet) sfNotice('Add a file or paste your notes first.'); return false; }
+      return true;
+    }
+    if (name === 'date') {
+      var d = daysUntil(document.getElementById('deadline-input').value);
+      if (d === null) { if (!quiet) sfNotice('Pick a date, or tap one of the quick options.'); return false; }
+      if (d < 0) { if (!quiet) sfNotice('That date has already passed. Pick today or later.'); return false; }
+      return true;
+    }
+    if (name === 'purpose' || name === 'known' || name === 'goal' || name === 'grade') {
+      if (!valueOf(name)) { if (!quiet) sfNotice('Pick one to continue.'); return false; }
+      return true;
+    }
+    return true;
+  }
+
+  function nextStep() {
+    if (!stepReady(currentStep)) return;
+    var list = flowSteps(), i = list.indexOf(currentStep);
+    if (i < 0 || i >= list.length - 1) return;
+    goToStep(list[i + 1]);
+  }
+
+  function prevStep() {
+    var list = flowSteps(), i = list.indexOf(currentStep);
+    if (i > 0) goToStep(list[i - 1], { back: true });
+  }
+
+  function setFlowChrome(show) {
+    document.getElementById('flow-top').style.visibility = show ? 'visible' : 'hidden';
+  }
+
+  function goToStep(name, opts) {
+    opts = opts || {};
+    /* Old callers passed numbers: 1 was the notes card, 2 the questions. */
+    if (name === 1) name = 'notes';
+    if (name === 2) name = 'date';
+    if (STEPS.indexOf(name) === -1) name = 'notes';
+    var prev = currentStep;
+    currentStep = name;
+    clearTimeout(advanceTimer);
+    var cards = document.querySelectorAll('.card');
+    for (var c = 0; c < cards.length; c++) cards[c].classList.remove('active', 'from-back');
+    document.getElementById('loading').classList.remove('active');
+    var card = document.getElementById('step-' + name);
+    if (card) {
+      if (opts.back) card.classList.add('from-back');
+      card.classList.add('active');
+    }
+    setFlowChrome(true);
+    if (name === 'date') { dateCopy(); updateDateSummary(); }
+    if (name === 'review') renderReview();
+    if (name === 'focus') updateFocusCount();
+    refreshTopicKickers();
+
+    var list = flowSteps(), i = list.indexOf(name);
+    var pct = Math.round(((i + 1) / list.length) * 100);
+    document.getElementById('flow-fill').style.transform = 'scaleX(' + ((i + 1) / list.length) + ')';
+    document.getElementById('flow-bar').setAttribute('aria-valuenow', String(pct));
+    document.getElementById('flow-count').textContent = (i + 1) + ' of ' + list.length;
+    var back = document.getElementById('flow-back');
+    back.setAttribute('aria-hidden', i > 0 ? 'false' : 'true');
+    back.tabIndex = i > 0 ? 0 : -1;
+
+    if (!opts.fromHistory && prev !== name) {
+      try { history.pushState({ sfStep: name }, '', window.location.pathname + window.location.search); } catch (e) {}
+    }
+    saveIntakeDraft();
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
+    /* Move focus to the new question so a screen reader announces it and the
+       number keys act on this screen rather than the last one. */
+    var h = card && card.querySelector('h1, h2');
+    if (h && !opts.noFocus) { try { h.focus({ preventScroll: true }); } catch (e) {} }
+  }
+
+  window.addEventListener('popstate', function (e) {
+    if (generating) return;
+    var s = e.state && e.state.sfStep;
+    if (!s) s = 'notes';
+    var list = flowSteps();
+    var back = list.indexOf(s) < list.indexOf(currentStep);
+    goToStep(s, { fromHistory: true, back: back });
+  });
+
+  function goToStep2() {
+    if (!stepReady('notes')) return;
+    nextStep();
+  }
+
+  /* ── When ── */
+  function localDateStr(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  // Parse as LOCAL noon, never UTC midnight: "2026-07-11" at UTC midnight is
+  // July 10 in Hawaii, and the day count comes out one short.
+  function daysUntil(deadlineStr) {
+    if (!deadlineStr) return null;
+    var parts = String(deadlineStr).split('-');
+    if (parts.length !== 3) return null;
+    var examDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 12, 0, 0);
+    if (isNaN(examDate.getTime())) return null;
+    var today = new Date(); today.setHours(12, 0, 0, 0);
+    return Math.round((examDate - today) / 86400000);
+  }
+  function userTier() {
+    try { return (JSON.parse(SFStore.getItem('studyflow_user') || '{}').tier) || 'free'; } catch (e) { return 'free'; }
+  }
+  function maxDaysFor(tier) { return tier === 'vip' ? 999 : (tier === 'pro' ? 14 : 7); }
+  /* The same arithmetic generatePlan uses, so the number promised on the
+     date screen is the number that gets built. */
+  function planDaysFor(daysLeft, tier) {
+    var maxDays = maxDaysFor(tier);
+    if (daysLeft !== null && daysLeft >= 1) return Math.min(maxDays, daysLeft);
+    if (daysLeft === 0) return 1;
+    return Math.min(maxDays, 7);
+  }
+
+  function updateDateSummary() {
+    var input = document.getElementById('deadline-input');
+    var box = document.getElementById('date-summary');
+    if (!input || !box) return;
+    try { input.min = localDateStr(new Date()); } catch (e) {}
+    var d = daysUntil(input.value);
+    var chips = document.querySelectorAll('#date-chips .chip');
+    for (var i = 0; i < chips.length; i++) chips[i].setAttribute('aria-pressed', String(d !== null && parseInt(chips[i].getAttribute('data-days'), 10) === d));
+    if (d === null) { box.hidden = true; return; }
+    box.hidden = false;
+    box.classList.toggle('warn', d < 0);
+    if (d < 0) { box.textContent = 'That date has already passed. Pick today or later.'; return; }
+    var tier = userTier(), n = planDaysFor(d, tier);
+    var when = d === 0 ? 'today' : d === 1 ? 'tomorrow' : 'in ' + d + ' days';
+    var nice = '';
+    try {
+      var p = input.value.split('-');
+      nice = new Date(+p[0], +p[1] - 1, +p[2], 12).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    } catch (e) {}
+    var html = (nice ? escHtml(nice) + ' is ' + when + '. ' : 'That is ' + when + '. ') +
+      (d === 0 ? 'You get <b>one focused session</b> today.' : 'You get <b>' + n + ' study session' + (n === 1 ? '' : 's') + '</b>, one a day.');
+    if (d > n && d > 0) {
+      html += ' <br>' + (tier === 'free'
+        ? 'Free plans cover 7 days, so your plan will be the last 7 before the test. Pro covers 14.'
+        : 'Your plan covers the ' + n + ' days before the test.');
+    }
+    box.innerHTML = html;
+  }
+
+  /* The date question follows the answer before it: an essay is due, a
+     "just learn it" plan needs an end, and only a test has a test day. */
+  var DATE_COPY = {
+    essay: ['When is it <em>due?</em>', 'Due'],
+    learn: ['When do you want to <em>know it by?</em>', 'Know it by']
+  };
+  function dateCopy() {
+    var c = DATE_COPY[intake.purpose] || ['When\u2019s the <em>test?</em>', 'Test day'];
+    document.getElementById('h-date').innerHTML = c[0];
+    return c[1];
+  }
+
+  /* ── Focus ── */
+  function updateFocusCount() {
+    var f = document.getElementById('focus-input');
+    document.getElementById('focus-count').textContent = f.value.length + ' / 400';
+  }
+
+  /* ── Review ── */
+  function refreshTopicKickers() {
+    var t = (document.getElementById('subject-input').value || '').trim();
+    var ks = document.querySelectorAll('[data-topic-kicker]');
+    for (var i = 0; i < ks.length; i++) {
+      if (!ks[i].getAttribute('data-default')) ks[i].setAttribute('data-default', ks[i].textContent);
+      ks[i].textContent = t || ks[i].getAttribute('data-default');
+    }
+  }
+
+  function renderReview() {
+    var list = document.getElementById('review-list');
+    var notes = allNotes(), words = wordCount(notes);
+    var ready = sources.filter(function (s) { return s.status === 'ready'; }).length;
+    var typed = document.getElementById('notes-input').value.trim();
+    var topic = (document.getElementById('subject-input').value || '').trim();
+    var d = daysUntil(document.getElementById('deadline-input').value);
+    var tier = userTier(), n = planDaysFor(d, tier);
+    var dateText = '—';
+    if (d !== null && d >= 0) {
+      try {
+        var p = document.getElementById('deadline-input').value.split('-');
+        dateText = new Date(+p[0], +p[1] - 1, +p[2], 12).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+      } catch (e) { dateText = document.getElementById('deadline-input').value; }
+    }
+    var parts = [];
+    if (ready) parts.push(ready + ' file' + (ready === 1 ? '' : 's'));
+    if (typed) parts.push('typed notes');
+    function row(k, v, sub, step) {
+      return '<li><span class="rv-k">' + k + '</span><span class="rv-v">' + v + (sub ? '<small>' + sub + '</small>' : '') +
+        '</span><button type="button" class="rv-edit" data-edit="' + step + '" aria-label="Change ' + k.toLowerCase() + '">Change</button></li>';
+    }
+    var focus = cleanFocus(intake.focus);
+    var html =
+      row('Lesson', escHtml(topic || 'Named from your notes'), escHtml(parts.join(' + ')) + ' · ' + words.toLocaleString() + ' words', 'notes') +
+      row('For', escHtml((choiceOf('purpose', intake.purpose) || {}).t || '—'), '', 'purpose') +
+      row(dateCopy(), escHtml(dateText), d === null ? '' : n + '-day plan', 'date') +
+      row('You know', escHtml((choiceOf('known', selectedDifficulty) || {}).t || '—'), '', 'known') +
+      row('Goal', escHtml((choiceOf('goal', selectedGoal) || {}).t || '—'), '', 'goal') +
+      row('Grade', escHtml((choiceOf('grade', intake.grade) || {}).t || 'Not set'), '', 'grade') +
+      row('Focus', focus ? '“' + escHtml(focus) + '”' : '<span style="font-weight:400;color:var(--muted)">Nothing specific</span>', '', 'focus');
+    list.innerHTML = html;
+    var btn = document.getElementById('build-btn');
+    btn.textContent = d === null ? 'Build my study plan' : 'Build my ' + n + '-day plan';
+    var mins = Math.max(1, Math.round(n * 40 / 60));
+    var note = 'Takes about ' + mins + ' minute' + (mins === 1 ? '' : 's') + '. Keep this tab open while it builds.';
+    if (notes.length > NOTES_PROMPT_CAP) note += ' Your notes are long, so the first ~' + Math.round(NOTES_PROMPT_CAP / 6.2).toLocaleString() + ' words shape the plan.';
+    document.getElementById('review-note').textContent = note;
+  }
+
+  /* ── Draft: a refresh keeps every answer ── */
+  function saveIntakeDraft() {
+    try {
+      SFStore.setItem('studyflow_intake_draft', JSON.stringify({
+        purpose: intake.purpose, focus: intake.focus, goal: selectedGoal, known: selectedDifficulty,
+        deadline: document.getElementById('deadline-input').value || '',
+        subject: document.getElementById('subject-input').value || '', topicTouched: topicTouched
+      }));
+    } catch (e) {}
+  }
+  function restoreIntakeDraft() {
+    try {
+      var d = JSON.parse(SFStore.getItem('studyflow_intake_draft') || 'null');
+      if (!d) return;
+      intake.purpose = d.purpose || '';
+      intake.focus = d.focus || '';
+      selectedGoal = d.goal || '';
+      selectedDifficulty = d.known || '';
+      if (d.deadline && daysUntil(d.deadline) !== null && daysUntil(d.deadline) >= 0) document.getElementById('deadline-input').value = d.deadline;
+      if (d.subject) { document.getElementById('subject-input').value = d.subject; topicTouched = !!d.topicTouched; }
+      document.getElementById('focus-input').value = intake.focus;
+    } catch (e) {}
+  }
+  function clearDrafts() {
+    SFStore.removeItem('studyflow_intake_draft');
+    SFStore.removeItem('studyflow_notes_draft');
+    SFStore.removeItem('studyflow_sources_draft');
+  }
+
+  /* ── Wiring ── */
+  function isTyping(el) {
+    return el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && el.type !== 'checkbox' && el.type !== 'radio'));
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    var ch = t.closest && t.closest('.choice');
+    if (ch) { choose(ch.getAttribute('data-group'), ch.getAttribute('data-value')); return; }
+    var nx = t.closest && t.closest('[data-next]');
+    if (nx) { nextStep(); return; }
+    var ed = t.closest && t.closest('[data-edit]');
+    if (ed) { goToStep(ed.getAttribute('data-edit'), { back: true }); return; }
+    var chip = t.closest && t.closest('#date-chips .chip');
+    if (chip) {
+      var dt = new Date(); dt.setDate(dt.getDate() + parseInt(chip.getAttribute('data-days'), 10));
+      document.getElementById('deadline-input').value = localDateStr(dt);
+      updateDateSummary(); saveIntakeDraft();
+      clearTimeout(advanceTimer);
+      advanceTimer = setTimeout(nextStep, 420);
+      return;
+    }
+    var st = t.closest && t.closest('.starter');
+    if (st) {
+      var f = document.getElementById('focus-input');
+      var add = st.getAttribute('data-text');
+      f.value = (f.value.trim() ? f.value.replace(/\s*$/, '') + ' ' : '') + add;
+      intake.focus = f.value; updateFocusCount(); saveIntakeDraft();
+      f.focus(); try { f.setSelectionRange(f.value.length, f.value.length); } catch (err) {}
+    }
+  });
+
+  /* Number keys pick an answer; Enter continues. Never while typing. */
+  document.addEventListener('keydown', function (e) {
+    if (generating || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (isTyping(document.activeElement)) {
+      if (e.key === 'Enter' && document.activeElement.id === 'deadline-input') { e.preventDefault(); nextStep(); }
+      return;
+    }
+    var card = document.getElementById('step-' + currentStep);
+    if (!card) return;
+    if (/^[1-9]$/.test(e.key)) {
+      var opts = card.querySelectorAll('.choices:not(.grid) .choice');
+      var o = opts[parseInt(e.key, 10) - 1];
+      if (o) { e.preventDefault(); o.focus(); choose(o.getAttribute('data-group'), o.getAttribute('data-value')); }
+      return;
+    }
+    if (e.key === 'Enter' && (!document.activeElement || document.activeElement === document.body || /^H[12]$/.test(document.activeElement.tagName))) {
+      e.preventDefault();
+      if (currentStep === 'notes') goToStep2();
+      else if (currentStep === 'review') generatePlan();
+      else nextStep();
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('flow-back').addEventListener('click', prevStep);
+    document.getElementById('deadline-input').addEventListener('input', function () { updateDateSummary(); saveIntakeDraft(); });
+    document.getElementById('deadline-input').addEventListener('change', function () { updateDateSummary(); saveIntakeDraft(); });
+    document.getElementById('focus-input').addEventListener('input', function () { intake.focus = this.value; updateFocusCount(); saveIntakeDraft(); });
+    document.getElementById('focus-skip').addEventListener('click', function () {
+      intake.focus = ''; document.getElementById('focus-input').value = ''; saveIntakeDraft(); nextStep();
+    });
+    document.getElementById('subject-input').addEventListener('input', function () {
+      topicTouched = !!this.value.trim();
+      document.getElementById('topic-hint').textContent = topicTouched
+        ? 'Used as the title of your plan.' : 'We’ll fill this in from your notes. Change it if it’s not right.';
+      saveIntakeDraft();
+    });
+  });
+
+  // Upgrade modal
   document.getElementById('upgrade-modal').style.cssText = 'display:none;position:fixed;inset:0;background:rgba(26,29,46,.6);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;';
 
-  function showUpgradeModal(msg, days) {
+  /* The modal opens for two different reasons and its second button means
+     different things in each. For "the test is more than 7 days away" it
+     builds the 7-day plan the free tier covers. For "you have used this
+     month's plans" it must NOT build anything - it used to, which made the
+     monthly limit a click away from not existing. */
+  var upgradeReason = 'days';
+  function showUpgradeModal(msg, days, reason) {
+    upgradeReason = reason || 'days';
     document.getElementById('upgrade-modal-msg').textContent = msg;
     document.getElementById('upgrade-modal-days').textContent = days;
+    var alt = document.querySelector('#upgrade-modal button[onclick="closeUpgradeModal()"]');
+    if (alt) alt.textContent = upgradeReason === 'limit' ? 'Not now' : 'Continue with a 7-day plan';
     document.getElementById('upgrade-modal').style.display = 'flex';
   }
 
   function closeUpgradeModal() {
     document.getElementById('upgrade-modal').style.display = 'none';
-    var notes = fileContent || document.getElementById('notes-input').value.trim();
+    if (upgradeReason === 'limit') return;
     var deadline = document.getElementById('deadline-input') ? document.getElementById('deadline-input').value : '';
-    // Calculate real days — don't hardcode 7 (free plan cap is enforced inside startGeneration)
-    var numDays = 7; // default for free plan
-    if (deadline) {
-      var parts = deadline.split('-');
-      if (parts.length === 3) {
-        var examDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
-        var today = new Date(); today.setHours(12, 0, 0, 0);
-        var days = Math.round((examDate - today) / 86400000);
-        if (days >= 1) numDays = Math.min(7, days); // free plan cap of 7
-        else if (days === 0) numDays = 1;
-      }
-    }
-    startGeneration(notes, numDays, deadline, 'free');
+    // Free plan cap of 7, from the same arithmetic the date screen showed
+    startGeneration(allNotes(), planDaysFor(daysUntil(deadline), 'free'), deadline, 'free');
   }
 
   // ── JOIN A CLASS ──
@@ -832,33 +1206,12 @@
     if (icon) icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
   }
 
-  function showOnboarding() {
-    var seen = SFStore.getItem('studyflow_onboarded');
-    if (!seen) {
-      document.getElementById('onboarding-overlay').style.display = 'flex';
-    }
-  }
-
-  function nextOnboard(step) {
-    document.querySelectorAll('[id^="onboard-step-"]').forEach(function(el){ el.style.display = 'none'; });
-    document.querySelectorAll('.onboard-dot').forEach(function(el){ el.classList.remove('active'); });
-    document.getElementById('onboard-step-' + step).style.display = 'block';
-    document.getElementById('odot-' + step).classList.add('active');
-  }
-
-  function closeOnboard() {
-    SFStore.setItem('studyflow_onboarded', '1');
-    document.getElementById('onboarding-overlay').style.display = 'none';
-  }
-
-  showOnboarding();
-
   // Auth guard — redirect to login if not signed in
   if (!SFStore.getItem('studyflow_user')) {
     window.location.href = 'login.html';
   }
 
-  // ── FILE HANDLING — supports photos, video, audio, PDF, DOCX, TXT ──
+  // ── FILE HANDLING — supports photos, video, audio, PDF, DOCX, PPTX, TXT ──
 
   // Load mammoth.js for DOCX
   (function() {
@@ -877,74 +1230,304 @@
     document.head.appendChild(z);
   })();
 
-  var extractedTexts = []; // accumulate text from multiple files
+  /* ── SOURCES ────────────────────────────────────────────────────────────
+     Every file is its own card now - reading, then ready or failed - instead
+     of text dumped into the notes box plus one shared status line.
 
-  function triggerUpload(accept) {
-    var inp = document.getElementById('file-input');
-    inp.accept = accept;
-    inp.click();
+     What that replaced, and why each part was a bug rather than a style:
+     - Extracted text was appended to the textarea AND copied into
+       `fileContent`, and everything downstream read `fileContent ||
+       textarea`. Anything typed or deleted after an upload was ignored: the
+       stale copy won. allNotes() is now the only reader.
+     - `fileReading` was declared, checked by Continue, and never set, so
+       Continue went ahead while a PDF was still being read.
+     - One status line for every file: the first to finish hid it while the
+       others were still going.
+     - A file could not be taken back out without hand-deleting its text.
+
+     The text of each source can still be opened and corrected - OCR of
+     handwriting gets words wrong, and that fix used to happen in the box. */
+  var sources = [];
+  var srcSeq = 0;
+  /* How much of the notes the model reads. It was 3500 characters - about
+     two pages - so most of an uploaded chapter never reached the prompt.
+     8000 adds ~4.5k to a prompt measured at 30.5k, well inside the 60k cap
+     in api/generate.js (see CLAUDE.md, "The prompt budget"). */
+  var NOTES_PROMPT_CAP = 8000;
+
+  var KIND_LABEL = { pdf: 'PDF', image: 'Photo', docx: 'Word', pptx: 'Slides', text: 'Text', caption: 'Captions', live: 'Live', media: 'Media' };
+
+  function wordCount(t) { t = String(t || '').trim(); return t ? t.split(/\s+/).length : 0; }
+
+  function allNotes() {
+    var parts = [];
+    var typed = (document.getElementById('notes-input') || {}).value || '';
+    if (typed.trim()) parts.push(typed.trim());
+    for (var i = 0; i < sources.length; i++) {
+      if (sources[i].status === 'ready' && sources[i].text.trim()) parts.push(sources[i].text.trim());
+    }
+    return parts.join('\n\n');
+  }
+  function readingCount() {
+    return sources.filter(function (s) { return s.status === 'reading'; }).length;
   }
 
-  function showStatus(msg) {
-    var el = document.getElementById('extract-status');
-    var txt = document.getElementById('extract-status-text');
-    el.style.display = 'flex';
-    txt.textContent = msg;
+  function newSource(name, kind, file) {
+    var s = { id: ++srcSeq, name: String(name || 'File'), kind: kind, status: 'reading', text: '', meta: '',
+              detail: 'Reading…', progress: null, file: file || null, open: false };
+    sources.push(s);
+    renderSource(s);
+    notesChanged();
+    return s;
+  }
+  function srcProgress(s, detail, done, total) {
+    if (!s || s.removed) return;
+    s.detail = detail;
+    s.progress = total ? { done: done, total: total } : null;
+    renderSource(s);
+  }
+  function srcDone(s, text, meta) {
+    if (!s || s.removed) return;
+    s.status = 'ready'; s.text = String(text || '').trim(); s.meta = meta || '';
+    renderSource(s);
+    notesChanged();
+    saveSourcesDraft();
+  }
+  function srcFail(s, msg, retryable) {
+    if (!s || s.removed) return;
+    s.status = 'error'; s.detail = msg; s.retry = retryable !== false && !!s.file;
+    renderSource(s);
+    notesChanged();
+  }
+  function removeSource(id) {
+    for (var i = 0; i < sources.length; i++) {
+      if (sources[i].id === id) {
+        sources[i].removed = true;
+        sources.splice(i, 1);
+        var el = document.querySelector('.src[data-id="' + id + '"]');
+        if (el) el.parentNode.removeChild(el);
+        break;
+      }
+    }
+    notesChanged();
+    saveSourcesDraft();
   }
 
-  function hideStatus() {
-    document.getElementById('extract-status').style.display = 'none';
+  var ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+  function renderSource(s) {
+    var list = document.getElementById('sources');
+    if (!list) return;
+    var li = list.querySelector('.src[data-id="' + s.id + '"]');
+    var isNew = !li;
+    if (isNew) { li = document.createElement('li'); li.className = 'src'; li.setAttribute('data-id', s.id); }
+    li.setAttribute('data-status', s.status);
+    var meta = s.status === 'ready'
+      ? (s.meta ? escHtml(s.meta) + ' · ' : '') + wordCount(s.text).toLocaleString() + ' words'
+      : escHtml(s.detail);
+    var bar = '';
+    if (s.status === 'reading') {
+      bar = s.progress
+        ? '<div class="src-bar"><i style="width:' + Math.round(100 * s.progress.done / Math.max(1, s.progress.total)) + '%"></i></div>'
+        : '<div class="src-bar indet"><i></i></div>';
+    }
+    var btn = '';
+    if (s.status === 'ready') btn = ' \u00b7 <button type="button" class="src-btn" data-src-act="peek" aria-expanded="' + (s.open ? 'true' : 'false') + '">' + (s.open ? 'Hide text' : 'Check text') + '</button>';
+    if (s.status === 'error' && s.retry) btn = ' <button type="button" class="src-btn" data-src-act="retry">Try again</button>';
+    li.innerHTML =
+      '<div class="src-row">' +
+        '<span class="src-icon" aria-hidden="true">' + (s.status === 'error' ? '!' : escHtml(KIND_LABEL[s.kind] || 'File')) + '</span>' +
+        '<div class="src-main"><span class="src-name" title="' + escHtml(s.name) + '">' + escHtml(s.name) + '</span>' +
+          '<span class="src-meta"><span class="src-meta-t">' + meta + '</span>' + btn + '</span>' + bar + '</div>' +
+        '<button type="button" class="src-x" data-src-act="remove" aria-label="Remove ' + escHtml(s.name) + '">' + ICON_X + '</button>' +
+      '</div>' +
+      (s.status === 'ready' && s.open
+        ? '<div class="src-text"><label class="sr-only" for="src-t-' + s.id + '">Text read from ' + escHtml(s.name) + '</label>' +
+          '<textarea id="src-t-' + s.id + '" data-src-text="' + s.id + '"></textarea>' +
+          '<p>This is exactly what goes into your plan. Fix anything the reader got wrong.</p></div>'
+        : '');
+    if (isNew) list.appendChild(li);
+    var ta = li.querySelector('textarea[data-src-text]');
+    if (ta) ta.value = s.text;
   }
 
-  function addFileToList(name, status, ok) {
-    var list = document.getElementById('files-list');
-    list.style.display = 'block';
-    var item = document.createElement('div');
-    item.style.cssText = 'display:flex;align-items:center;gap:.6rem;padding:.6rem .85rem;border-radius:10px;margin-bottom:.4rem;font-size:0.82rem;font-weight:600;' +
-      (ok ? 'background:#d1faf0;color:#1a9e80;border:1px solid #38bfa1;' : 'background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;');
-    item.innerHTML = (ok ?
-      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' :
-      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>') +
-      '<span>' + name + ' — ' + status + '</span>';
-    list.appendChild(item);
+  function sourceById(id) {
+    for (var i = 0; i < sources.length; i++) if (sources[i].id === id) return sources[i];
+    return null;
   }
 
-  function appendToNotes(text) {
-    var ta = document.getElementById('notes-input');
-    var existing = ta.value.trim();
-    ta.value = existing ? existing + '\n\n' + text : text;
-    fileContent = ta.value;
-    checkNotesLength(ta);
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-src-act]');
+    if (!b) return;
+    var li = b.closest('.src'), s = sourceById(parseInt(li.getAttribute('data-id'), 10));
+    if (!s) return;
+    var act = b.getAttribute('data-src-act');
+    if (act === 'remove') removeSource(s.id);
+    else if (act === 'peek') { s.open = !s.open; renderSource(s); if (s.open) { var t = li.querySelector('textarea'); if (t) t.focus(); } }
+    else if (act === 'retry' && s.file) { removeSource(s.id); readOneFile(s.file); }
+  });
+  var srcEditTimer = null;
+  document.addEventListener('input', function (e) {
+    var id = e.target.getAttribute && e.target.getAttribute('data-src-text');
+    if (!id) return;
+    var s = sourceById(parseInt(id, 10));
+    if (!s) return;
+    s.text = e.target.value;
+    var meta = e.target.closest('.src').querySelector('.src-meta-t');
+    if (meta) meta.textContent = (s.meta ? s.meta + ' · ' : '') + wordCount(s.text).toLocaleString() + ' words';
+    clearTimeout(srcEditTimer);
+    srcEditTimer = setTimeout(function () { notesChanged(); saveSourcesDraft(); }, 500);
+  });
+
+  /* Ready sources survive a refresh. An OCR'd 12-page scan is minutes of
+     vision calls, and a stray reload used to throw all of it away. */
+  function saveSourcesDraft() {
+    try {
+      var keep = [], total = 0;
+      for (var i = 0; i < sources.length; i++) {
+        var s = sources[i];
+        if (s.status !== 'ready') continue;
+        total += s.text.length;
+        if (total > 200000) break;
+        keep.push({ name: s.name, kind: s.kind, text: s.text, meta: s.meta });
+      }
+      if (keep.length) SFStore.setItem('studyflow_sources_draft', JSON.stringify(keep));
+      else SFStore.removeItem('studyflow_sources_draft');
+    } catch (e) {}
+  }
+  function restoreSourcesDraft() {
+    try {
+      var keep = JSON.parse(SFStore.getItem('studyflow_sources_draft') || '[]') || [];
+      for (var i = 0; i < keep.length; i++) {
+        if (!keep[i] || !keep[i].text) continue;
+        var s = { id: ++srcSeq, name: keep[i].name, kind: keep[i].kind, status: 'ready', text: keep[i].text,
+                  meta: keep[i].meta || '', detail: '', progress: null, file: null, open: false };
+        sources.push(s);
+        renderSource(s);
+      }
+    } catch (e) {}
+  }
+
+  /* Everything that depends on how much lesson there is: the counter, the
+     long-notes note, the detected title, and whether Continue is ready. */
+  var notesTimer = null;
+  function notesChanged() {
+    var all = allNotes(), words = wordCount(all);
+    var counter = document.getElementById('notes-counter');
+    var reading = readingCount();
+    if (counter) {
+      counter.textContent = reading
+        ? 'Reading ' + reading + ' file' + (reading === 1 ? '' : 's') + '…'
+        : (words ? words.toLocaleString() + ' words in your lesson' : '');
+    }
+    var warn = document.getElementById('notes-warning');
+    if (warn) {
+      /* Honest about what the model reads. The old warning appeared at 2000
+         characters and promised "the most important parts" - the code has
+         always taken the FIRST part. */
+      if (all.length > NOTES_PROMPT_CAP) {
+        warn.hidden = false;
+        warn.textContent = 'That’s a long lesson. Your plan is built from the first ~' +
+          Math.round(NOTES_PROMPT_CAP / 6.2).toLocaleString() + ' words, so put the part the test is on first, ' +
+          'or remove anything it won’t cover. You can also say what to focus on in a later question.';
+      } else warn.hidden = true;
+    }
+    var next = document.getElementById('notes-next');
+    if (next) {
+      next.setAttribute('aria-disabled', (reading || !all.trim()) ? 'true' : 'false');
+      next.textContent = reading ? 'Reading your files…' : 'Continue';
+    }
+    clearTimeout(notesTimer);
+    notesTimer = setTimeout(detectTopicFromNotes, 450);
+  }
+  function checkNotesLength() { notesChanged(); }   // older callers
+
+  /* Name the lesson from the notes, as a suggestion the learner can
+     overwrite. detectSubject() is local - no API call - and it is exactly
+     what startGeneration() would have picked anyway, so showing it just
+     lets the learner catch a wrong one before the plan is built on it. */
+  function detectTopicFromNotes() {
+    if (topicTouched) return;
+    var input = document.getElementById('subject-input');
+    var hint = document.getElementById('topic-hint');
+    var all = allNotes();
+    if (!all.trim()) { input.value = ''; return; }
+    var d = detectSubject(all, '');
+    if (d && d !== 'General Study') {
+      input.value = d;
+      hint.textContent = 'Filled in from your notes. Change it if it’s not right.';
+    } else {
+      input.value = '';
+      hint.textContent = 'We couldn’t tell from the notes. Give it a name so every day stays on topic.';
+    }
+    refreshTopicKickers();
+    saveIntakeDraft();
   }
 
   // ── IMAGE → Claude Vision ──
-  function handleImage(file) {
-    showStatus('Reading ' + file.name + ' with AI vision...');
-    var ext = file.name.split('.').pop().toLowerCase();
-    var mediaTypeMap = { jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp', gif:'image/gif', heic:'image/jpeg', heif:'image/jpeg' };
-    var mediaType = mediaTypeMap[ext] || 'image/jpeg';
+  /* Photos are shrunk and re-encoded before they are sent. A phone photo is
+     3-6 MB, which is 4-8 MB as base64, and Vercel rejects a request body
+     over 4.5 MB before api/extract ever runs - so the most common upload a
+     student makes failed with "Failed - paste notes manually". Claude reads
+     images at up to ~1568px on the long side anyway, so 1600px loses
+     nothing. It also fixes HEIC, which was sent labelled "image/jpeg": the
+     browser decodes it (Safari can) and it leaves as a real JPEG. */
+  var IMG_MAX_EDGE = 1600;
+  function prepareImage(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var w = img.naturalWidth, h = img.naturalHeight;
+          var k = Math.min(1, IMG_MAX_EDGE / Math.max(w, h));
+          var c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+          var ctx = c.getContext('2d');
+          ctx.fillStyle = '#ffffff';                 // transparent PNGs turn black as JPEG
+          ctx.fillRect(0, 0, c.width, c.height);
+          ctx.drawImage(img, 0, 0, c.width, c.height);
+          URL.revokeObjectURL(url);
+          resolve({ data: c.toDataURL('image/jpeg', 0.85).split(',')[1], mediaType: 'image/jpeg' });
+        } catch (e) { URL.revokeObjectURL(url); reject(e); }
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        /* The browser could not decode it (HEIC outside Safari). Send it as
+           is only if it is a type the reader accepts and small enough. */
+        var t = (file.type || '').toLowerCase();
+        if (/^image\/(jpeg|png|webp|gif)$/.test(t) && file.size < 3.2 * 1024 * 1024) {
+          var r = new FileReader();
+          r.onload = function (e) { resolve({ data: String(e.target.result).split(',')[1], mediaType: t }); };
+          r.onerror = function () { reject(new Error('read')); };
+          r.readAsDataURL(file);
+        } else reject(new Error('decode'));
+      };
+      img.src = url;
+    });
+  }
 
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var base64 = e.target.result.split(',')[1];
-      fetch('api/extract', {
+  function handleImage(file, s) {
+    s = s || newSource(file.name, 'image', file);
+    srcProgress(s, 'Reading the photo with AI…');
+    prepareImage(file).then(function (img) {
+      return fetch('api/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageData: base64, mediaType: mediaType, filename: file.name })
-      })
-      .then(function(r){ return r.json(); })
-      .then(function(data) {
-        hideStatus();
-        if (data.error) { addFileToList(file.name, 'Could not read image', false); return; }
-        appendToNotes(data.text);
-        addFileToList(file.name, 'Photo read by AI', true);
-      })
-      .catch(function() {
-        hideStatus();
-        addFileToList(file.name, 'Failed — paste notes manually', false);
+        body: JSON.stringify({ imageData: img.data, mediaType: img.mediaType, filename: file.name })
+      }).then(function (r) {
+        return r.json().catch(function () { throw new Error('http ' + r.status); });
+      }).then(function (data) {
+        if (data.error || !data.text || !String(data.text).trim()) { srcFail(s, 'Couldn’t read any writing in this photo.'); return; }
+        srcDone(s, data.text, 'Photo read by AI');
       });
-    };
-    reader.readAsDataURL(file);
+    }).catch(function (err) {
+      if (err && err.message === 'decode') {
+        srcFail(s, 'This photo format won’t open in this browser. Take a screenshot of it, or save it as a JPG.', false);
+      } else {
+        srcFail(s, 'Couldn’t reach the reader. Check your connection.');
+      }
+    });
   }
 
   /* ── VIDEO / AUDIO ────────────────────────────────────────────────────────
@@ -971,44 +1554,50 @@
           API is actually for. */
 
   function handleVideoAudio(file) {
-    hideStatus();
-    addFileToList(file.name, 'Media files need a transcript \u2014 see below', false);
+    var s = newSource(file.name, 'media', null);
+    srcFail(s, 'Recordings need their captions — see the options below.', false);
     showMediaHelp(file.name);
   }
 
-  function showMediaHelp(fileName) {
-    var host = document.getElementById('files-list');
-    if (!host) return;
-    if (document.getElementById('media-help')) return;   // one panel is enough
+  function triggerUpload(accept) {
+    var inp = document.getElementById('file-input');
+    var original = inp.getAttribute('accept');
+    inp.accept = accept;
+    inp.click();
+    /* Put the full list back, or every later "browse" is stuck on the
+       narrow filter this one needed. */
+    setTimeout(function () { inp.setAttribute('accept', original); }, 1000);
+  }
 
-    host.style.display = 'block';
-    var box = document.createElement('div');
+  function showMediaHelp(fileName) {
+    var host = document.getElementById('media-slot');
+    if (!host) return;
+    var box = document.getElementById('media-help');
+    if (box) { box.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return; }   // one panel is enough
+    box = document.createElement('div');
     box.id = 'media-help';
     box.style.cssText =
-      'margin-top:.5rem;padding:.9rem 1rem;border:1.5px solid var(--border);' +
-      'border-radius:12px;background:var(--soft);font-size:0.82rem;line-height:1.6;color:var(--ink);';
+      'margin:0 0 1.1rem;padding:1rem 1.1rem;border:1.5px solid var(--border);' +
+      'border-radius:14px;background:var(--blue-mist);font-size:0.86rem;line-height:1.6;color:var(--ink);';
     box.innerHTML =
+      '<div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;">' +
       '<div style="font-weight:700;margin-bottom:.45rem;">Getting the words out of ' +
-      (fileName ? '\u201c' + fileName + '\u201d' : 'a recording') + '</div>' +
+      (fileName ? '“' + escHtml(fileName) + '”' : 'a class or recording') + '</div>' +
+      '<button type="button" class="src-x" onclick="var b=document.getElementById(\'media-help\');if(b)b.parentNode.removeChild(b);" aria-label="Close">' + ICON_X + '</button></div>' +
       '<div style="color:var(--muted);margin-bottom:.7rem;">' +
-      'A browser cannot read speech out of a file on its own. Two options that do work:</div>' +
+      'A browser can’t pull speech out of a file on its own. Two ways that do work:</div>' +
       '<div style="margin-bottom:.6rem;">' +
-      '<strong>1. Upload the captions.</strong> If the lecture came from Zoom, Teams, ' +
+      '<strong>1. Upload the captions.</strong> If it came from Zoom, Teams, ' +
       'Panopto or YouTube, download the transcript or subtitle file ' +
       '(<code>.vtt</code>, <code>.srt</code>) and drop it here. This is exact.</div>' +
-      '<div style="margin-bottom:.75rem;">' +
-      '<strong>2. Listen live.</strong> Play the recording out loud (or start this ' +
-      'during class) and StudyFlow will transcribe as it listens.</div>' +
+      '<div style="margin-bottom:.8rem;">' +
+      '<strong>2. Listen live.</strong> Start this during class, or play the recording out loud, ' +
+      'and StudyFlow writes down what it hears.</div>' +
       '<div style="display:flex;gap:.5rem;flex-wrap:wrap;">' +
-      '<button type="button" onclick="triggerUpload(\'.vtt,.srt,.txt\')" ' +
-      'style="font:inherit;font-size:.8rem;font-weight:700;padding:.5rem .9rem;border-radius:10px;' +
-      'border:1.5px solid var(--border);background:#fff;color:var(--ink);cursor:pointer;">' +
-      'Upload a transcript file</button>' +
-      '<button type="button" id="live-listen-btn" onclick="toggleLiveListen()" ' +
-      'style="font:inherit;font-size:.8rem;font-weight:700;padding:.5rem .9rem;border-radius:10px;' +
-      'border:1.5px solid var(--blue);background:var(--blue);color:#fff;cursor:pointer;">' +
-      'Start listening</button></div>' +
-      '<div id="live-listen-status" style="margin-top:.6rem;font-size:.78rem;color:var(--muted);"></div>';
+      '<button type="button" class="pill-btn" onclick="triggerUpload(\'.vtt,.srt,.sbv,.txt\')">Upload a caption file</button>' +
+      '<button type="button" class="pill-btn" id="live-listen-btn" onclick="toggleLiveListen()" ' +
+      'style="background:var(--blue-btn);border-color:var(--blue-btn);color:#fff;">Start listening</button></div>' +
+      '<div id="live-listen-status" style="margin-top:.6rem;font-size:.8rem;color:var(--muted);" aria-live="polite"></div>';
     host.appendChild(box);
   }
 
@@ -1036,23 +1625,15 @@
     return out.join(' ').replace(/\s{2,}/g, ' ').trim();
   }
 
-  function handleCaptionFile(file) {
-    showStatus('Reading ' + file.name + '...');
+  function handleCaptionFile(file, s) {
+    s = s || newSource(file.name, 'caption', file);
     var reader = new FileReader();
     reader.onload = function (e) {
-      hideStatus();
       var text = parseCaptions(e.target.result);
-      if (text.length > 40) {
-        appendToNotes(text);
-        addFileToList(file.name, 'Transcript added (' + text.split(/\s+/).length + ' words)', true);
-      } else {
-        addFileToList(file.name, 'That file had no readable captions', false);
-      }
+      if (text.length > 40) srcDone(s, text, 'Transcript');
+      else srcFail(s, 'That file had no readable captions.', false);
     };
-    reader.onerror = function () {
-      hideStatus();
-      addFileToList(file.name, 'Could not read that file', false);
-    };
+    reader.onerror = function () { srcFail(s, 'Couldn\u2019t open that file.'); };
     reader.readAsText(file);
   }
 
@@ -1112,9 +1693,9 @@
       if (btn) { btn.textContent = 'Start listening'; btn.style.background = 'var(--blue)'; }
       var finalText = liveText.trim();
       if (finalText.length > 40) {
-        appendToNotes(finalText);
-        addFileToList('Live recording', 'Transcribed (' + finalText.split(/\s+/).length + ' words)', true);
-        if (out) out.textContent = 'Added ' + finalText.split(/\s+/).length + ' words to your notes.';
+        var ls = newSource('Live recording', 'live', null);
+        srcDone(ls, finalText, 'Transcribed live');
+        if (out) out.textContent = 'Added ' + wordCount(finalText) + ' words to your lesson.';
       } else if (out) {
         out.textContent = 'Not enough speech captured to use.';
       }
@@ -1133,19 +1714,22 @@
   window.toggleLiveListen = toggleLiveListen;
 
   // ── PDF ──
-  function handlePDF(file) {
-    showStatus('Reading ' + file.name + '...');
+  function handlePDF(file, s) {
+    s = s || newSource(file.name, 'pdf', file);
+    srcProgress(s, 'Opening the PDF…');
     var reader = new FileReader();
     reader.onload = function(e) {
       var buf = e.target.result;
       var pdfDoc = null;
       var tryPDF = function(attempts) {
-        if (attempts <= 0) { extractRawPdfText(buf, file.name); return; }
+        if (s.removed) return;
+        if (attempts <= 0) { extractRawPdfText(buf, file.name, s); return; }
         if (!window.pdfjsLib) { setTimeout(function(){ tryPDF(attempts-1); }, 400); return; }
         window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         window.pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise
           .then(function(pdf) {
             pdfDoc = pdf;
+            srcProgress(s, 'Reading ' + pdf.numPages + ' page' + (pdf.numPages === 1 ? '' : 's') + '…');
             var pages = [];
             for (var i = 1; i <= pdf.numPages; i++) pages.push(i);
             return Promise.all(pages.map(function(n) {
@@ -1160,18 +1744,17 @@
             var text = pageTexts.join('\n').replace(/[ \t]+/g,' ').replace(/\n{3,}/g,'\n\n').trim();
             /* No text layer: it is a scan. Read the pages as images rather
                than telling the learner to photograph what they just gave us. */
-            if (text.length < 30) { ocrPdfPages(pdfDoc, file.name, buf); return; }
-            hideStatus();
-            appendToNotes(text);
-            addFileToList(file.name, 'PDF read', true);
+            if (text.length < 30) { ocrPdfPages(pdfDoc, file.name, buf, s); return; }
+            srcDone(s, text, pdfDoc.numPages + ' page' + (pdfDoc.numPages === 1 ? '' : 's'));
           })
           .catch(function() {
-            if (pdfDoc) ocrPdfPages(pdfDoc, file.name, buf);
-            else extractRawPdfText(buf, file.name);
+            if (pdfDoc) ocrPdfPages(pdfDoc, file.name, buf, s);
+            else extractRawPdfText(buf, file.name, s);
           });
       };
       tryPDF(15);
     };
+    reader.onerror = function () { srcFail(s, 'Couldn’t open that file.'); };
     reader.readAsArrayBuffer(file);
   }
 
@@ -1190,31 +1773,29 @@
      dropped in by accident should not fire 200 of them. */
   var PDF_OCR_MAX_PAGES = 12;
 
-  function ocrPdfPages(pdf, name, rawBuf) {
+  function ocrPdfPages(pdf, name, rawBuf, s) {
     var total = Math.min(pdf.numPages, PDF_OCR_MAX_PAGES);
     var texts = [];
 
     function done() {
-      hideStatus();
       var text = texts.join('\n\n').replace(/\s{3,}/g, ' ').trim();
       if (text.length > 40) {
-        appendToNotes(text);
-        var note = 'Scanned PDF read by AI \u00b7 ' + texts.length + ' page' +
-                   (texts.length === 1 ? '' : 's');
+        var note = 'Scanned · ' + texts.length + ' page' + (texts.length === 1 ? '' : 's') + ' read by AI';
         if (pdf.numPages > total) note += ' (first ' + total + ' of ' + pdf.numPages + ')';
-        addFileToList(name, note, true);
+        srcDone(s, text, note);
       } else if (rawBuf) {
         /* Vision found nothing either - fall back to the old byte scrape
            rather than lose the file entirely. */
-        extractRawPdfText(rawBuf, name);
+        extractRawPdfText(rawBuf, name, s);
       } else {
-        addFileToList(name, 'Could not read this PDF \u2014 paste the text instead', false);
+        srcFail(s, 'Couldn’t read this PDF. Paste the text instead.');
       }
     }
 
     function page(n) {
+      if (s.removed) return;
       if (n > total) { done(); return; }
-      showStatus('Reading page ' + n + ' of ' + total + ' with AI vision...');
+      srcProgress(s, 'Scanned PDF · reading page ' + n + ' of ' + total + ' with AI…', n - 1, total);
       pdf.getPage(n).then(function (pg) {
         /* Render wide enough that small print survives, but cap the width so
            the base64 payload stays sane. */
@@ -1246,7 +1827,7 @@
     page(1);
   }
 
-  function extractRawPdfText(buf, name) {
+  function extractRawPdfText(buf, name, s) {
     var arr = new Uint8Array(buf);
     var str = '';
     for (var i = 0; i < arr.length; i++) {
@@ -1254,15 +1835,10 @@
     }
     var matches = str.match(/\(([^\)]{2,200})\)/g) || [];
     var text = matches.map(function(m){ return m.slice(1,-1).trim(); })
-      .filter(function(s){ return s.length > 2 && /[a-zA-Z]/.test(s); })
+      .filter(function(t){ return t.length > 2 && /[a-zA-Z]/.test(t); })
       .join(' ').replace(/\s+/g,' ').trim();
-    hideStatus();
-    if (text.length > 50) {
-      appendToNotes(text);
-      addFileToList(name, 'PDF text extracted', true);
-    } else {
-      addFileToList(name, 'Scanned PDF — try taking a photo of the pages instead', false);
-    }
+    if (text.length > 50) srcDone(s, text, 'Text pulled from the PDF — check it');
+    else srcFail(s, 'Couldn’t read this PDF. If it’s a scan, try a photo of each page.');
   }
 
   // ── PPTX (PowerPoint) ──
@@ -1294,16 +1870,14 @@
     return out.join(' ').replace(/\s{2,}/g, ' ').trim();
   }
 
-  function handlePPTX(file) {
-    showStatus('Reading ' + file.name + '...');
+  function handlePPTX(file, s) {
+    s = s || newSource(file.name, 'pptx', file);
+    srcProgress(s, 'Opening the slides…');
     var reader = new FileReader();
     reader.onload = function (e) {
       var tryZip = function (attempts) {
-        if (attempts <= 0) {
-          hideStatus();
-          addFileToList(file.name, 'Could not open the deck — paste the text instead', false);
-          return;
-        }
+        if (s.removed) return;
+        if (attempts <= 0) { srcFail(s, 'Couldn’t open the deck. Export it as a PDF and add that.'); return; }
         if (!window.JSZip) { setTimeout(function () { tryZip(attempts - 1); }, 400); return; }
         window.JSZip.loadAsync(e.target.result).then(function (zip) {
           var slides = [], notes = {};
@@ -1311,12 +1885,9 @@
             if (/^ppt\/slides\/slide\d+\.xml$/.test(path)) slides.push(path);
             else if (/^ppt\/notesSlides\/notesSlide\d+\.xml$/.test(path)) notes[pptxSlideNumber(path)] = path;
           });
-          if (!slides.length) {
-            hideStatus();
-            addFileToList(file.name, 'No slides found in this file', false);
-            return;
-          }
+          if (!slides.length) { srcFail(s, 'No slides found in this file.', false); return; }
           slides.sort(function (a, b) { return pptxSlideNumber(a) - pptxSlideNumber(b); });
+          srcProgress(s, 'Reading ' + slides.length + ' slide' + (slides.length === 1 ? '' : 's') + '…');
 
           return Promise.all(slides.map(function (path) {
             var n = pptxSlideNumber(path);
@@ -1333,126 +1904,161 @@
             });
           })).then(function (chunks) {
             var text = chunks.filter(function (c) { return c; }).join('\n\n').trim();
-            hideStatus();
-            if (text.length < 20) {
-              addFileToList(file.name, 'Slides look like images — export as PDF and upload that', false);
-              return;
-            }
-            appendToNotes(text);
+            if (text.length < 20) { srcFail(s, 'These slides look like pictures. Export as PDF and add that.', false); return; }
             var withNotes = chunks.filter(function (c) { return c.indexOf('Speaker notes:') !== -1; }).length;
-            addFileToList(file.name,
-              slides.length + ' slide' + (slides.length === 1 ? '' : 's') + ' read' +
-              (withNotes ? ' · ' + withNotes + ' with notes' : ''), true);
+            srcDone(s, text, slides.length + ' slide' + (slides.length === 1 ? '' : 's') +
+              (withNotes ? ' · ' + withNotes + ' with speaker notes' : ''));
           });
         }).catch(function () {
-          hideStatus();
-          addFileToList(file.name, 'Could not open the deck — paste the text instead', false);
+          srcFail(s, 'Couldn’t open the deck. Export it as a PDF and add that.');
         });
       };
       tryZip(15);
     };
+    reader.onerror = function () { srcFail(s, 'Couldn’t open that file.'); };
     reader.readAsArrayBuffer(file);
   }
 
   // ── DOCX ──
-  function handleDOCX(file) {
-    showStatus('Reading ' + file.name + '...');
+  function handleDOCX(file, s) {
+    s = s || newSource(file.name, 'docx', file);
+    srcProgress(s, 'Reading the document…');
     var reader = new FileReader();
     reader.onload = function(e) {
       var tryMammoth = function(attempts) {
-        if (attempts <= 0) { hideStatus(); addFileToList(file.name, 'Could not read — paste notes manually', false); return; }
+        if (s.removed) return;
+        if (attempts <= 0) { srcFail(s, 'Couldn’t read this Word file. Paste the text instead.'); return; }
         if (!window.mammoth) { setTimeout(function(){ tryMammoth(attempts-1); }, 400); return; }
         window.mammoth.extractRawText({ arrayBuffer: e.target.result })
           .then(function(result) {
-            hideStatus();
-            var text = result.value.replace(/\s+/g,' ').trim();
-            appendToNotes(text);
-            addFileToList(file.name, 'Word doc read', true);
+            /* Keep paragraph breaks: they are where one idea ends. */
+            var text = String(result.value || '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+            if (!text) { srcFail(s, 'This document has no text in it.', false); return; }
+            srcDone(s, text, 'Word document');
           })
-          .catch(function() { hideStatus(); addFileToList(file.name, 'Could not read Word file', false); });
+          .catch(function() { srcFail(s, 'Couldn’t read this Word file. Paste the text instead.'); });
       };
       tryMammoth(15);
     };
+    reader.onerror = function () { srcFail(s, 'Couldn’t open that file.'); };
     reader.readAsArrayBuffer(file);
   }
 
   // ── TXT / MD ──
-  function handleText(file) {
-    showStatus('Reading ' + file.name + '...');
+  function handleText(file, s) {
+    s = s || newSource(file.name, 'text', file);
     var reader = new FileReader();
     reader.onload = function(e) {
-      hideStatus();
-      var text = e.target.result.trim();
-      appendToNotes(text);
-      addFileToList(file.name, 'Text file read', true);
+      var text = String(e.target.result || '').trim();
+      if (!text) { srcFail(s, 'This file is empty.', false); return; }
+      srcDone(s, text, 'Text file');
     };
+    reader.onerror = function () { srcFail(s, 'Couldn’t open that file.'); };
     reader.readAsText(file);
   }
 
   // ── MAIN DISPATCHER ──
+  var IMAGE_EXTS = ['jpg','jpeg','png','webp','gif','heic','heif'];
+  var MEDIA_EXTS = ['mp4','mov','m4v','avi','mkv','mp3','m4a','wav','ogg','webm'];
+  /* Caption and subtitle files are the reliable way to get a lecture's
+     words in. They are checked before the plain text types so a .vtt is
+     parsed as captions rather than dumped in with its timestamps. */
+  var CAPTION_EXTS = ['vtt','srt','sbv'];
+  var TEXT_EXTS = ['txt','md'];
+
+  function readOneFile(file) {
+    var name = String(file.name || 'pasted-image.png');
+    var ext = name.indexOf('.') !== -1 ? name.split('.').pop().toLowerCase() : '';
+    var type = String(file.type || '').toLowerCase();
+    if (IMAGE_EXTS.indexOf(ext) !== -1 || /^image\//.test(type)) handleImage(file);
+    else if (CAPTION_EXTS.indexOf(ext) !== -1) handleCaptionFile(file);
+    else if (MEDIA_EXTS.indexOf(ext) !== -1 || /^(audio|video)\//.test(type)) handleVideoAudio(file);
+    else if (ext === 'pdf' || type === 'application/pdf') handlePDF(file);
+    else if (ext === 'docx') handleDOCX(file);
+    else if (ext === 'pptx') handlePPTX(file);
+    else if (TEXT_EXTS.indexOf(ext) !== -1 || type === 'text/plain') handleText(file);
+    /* .doc and .ppt are the old binary formats, and reading them as text
+       produced pages of symbols that went straight into the prompt. */
+    else if (ext === 'doc' || ext === 'ppt') {
+      srcFail(newSource(name, 'text', null), 'Old ' + (ext === 'doc' ? 'Word (.doc)' : 'PowerPoint (.ppt)') +
+        ' files can’t be read. Save it as ' + (ext === 'doc' ? '.docx' : '.pptx') + ' or PDF and add it again.', false);
+    }
+    else srcFail(newSource(name, 'text', null), 'This file type can’t be read. Try a PDF, a photo, or paste the text.', false);
+  }
+
   function handleFiles(files) {
     if (!files || !files.length) return;
-    for (var i = 0; i < files.length; i++) {
-      var file = files[i];
-      var ext = file.name.split('.').pop().toLowerCase();
-      var imageExts = ['jpg','jpeg','png','webp','gif','heic','heif'];
-      var videoExts = ['mp4','mov','m4v','avi','mkv','mp3','m4a','wav','ogg'];
-      var docExts   = ['pdf'];
-      var docxExts  = ['docx'];
-      var pptExts   = ['pptx'];
-      var textExts  = ['txt','md','doc'];
-      /* Caption and subtitle files are the reliable way to get a lecture's
-         words in. They are checked before the plain text types so a .vtt is
-         parsed as captions rather than dumped in with its timestamps. */
-      var captionExts = ['vtt','srt','sbv'];
-
-      if (imageExts.includes(ext))  { handleImage(file); }
-      else if (captionExts.includes(ext)) { handleCaptionFile(file); }
-      else if (videoExts.includes(ext)) { handleVideoAudio(file); }
-      else if (docExts.includes(ext))   { handlePDF(file); }
-      else if (docxExts.includes(ext))  { handleDOCX(file); }
-      else if (pptExts.includes(ext))   { handlePPTX(file); }
-      else if (textExts.includes(ext))  { handleText(file); }
-      else { addFileToList(file.name, 'File type not supported — paste text instead', false); }
-    }
-    // Reset input so same file can be re-selected
-    document.getElementById('file-input').value = '';
+    var list = Array.prototype.slice.call(files);
+    for (var i = 0; i < list.length; i++) readOneFile(list[i]);
+    // Reset inputs so the same file can be re-selected
+    var ids = ['file-input', 'camera-input'];
+    for (var k = 0; k < ids.length; k++) { var el = document.getElementById(ids[k]); if (el) el.value = ''; }
+    if (currentStep !== 'notes') goToStep('notes', { back: true });
   }
 
-  // Drag and drop on upload zone
+  /* ── Getting files in: the box, the whole window, and the clipboard ── */
   document.addEventListener('DOMContentLoaded', function() {
     var zone = document.getElementById('upload-zone');
-    if (!zone) return;
-    zone.addEventListener('dragover', function(e) {
-      e.preventDefault();
-      zone.style.borderColor = 'var(--blue)';
-      zone.style.background = '#d0e4ff';
+    var veil = document.getElementById('drop-veil');
+    zone.addEventListener('click', function () { document.getElementById('file-input').click(); });
+    zone.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('file-input').click(); }
     });
-    zone.addEventListener('dragleave', function() {
-      zone.style.borderColor = 'rgba(74,124,246,.3)';
-      zone.style.background = 'var(--blue-light)';
-    });
-    zone.addEventListener('drop', function(e) {
-      e.preventDefault();
-      zone.style.borderColor = 'rgba(74,124,246,.3)';
-      zone.style.background = 'var(--blue-light)';
-      handleFiles(e.dataTransfer.files);
-    });
-  });
 
-  function checkNotesLength(textarea) {
-    var len = textarea.value.length;
-    var counter = document.getElementById('notes-counter');
-    var warning = document.getElementById('notes-warning');
-    counter.textContent = len.toLocaleString() + ' characters';
-    if (len > 2000) {
-      warning.style.display = 'block';
-      counter.style.color = '#f59e0b';
-    } else {
-      warning.style.display = 'none';
-      counter.style.color = 'var(--muted)';
+    /* A file dragged anywhere over the page lands in the lesson. The old
+       target was only the dashed box, and a file dropped a few pixels
+       outside it was opened by the browser, replacing the page and
+       everything typed on it. */
+    var depth = 0;
+    function hasFiles(e) {
+      var t = e.dataTransfer && e.dataTransfer.types;
+      if (!t) return false;
+      for (var i = 0; i < t.length; i++) if (t[i] === 'Files') return true;
+      return false;
     }
-  }
+    window.addEventListener('dragenter', function (e) {
+      if (!hasFiles(e) || generating) return;
+      depth++; veil.classList.add('show'); zone.classList.add('is-over');
+    });
+    window.addEventListener('dragover', function (e) { if (hasFiles(e)) e.preventDefault(); });
+    window.addEventListener('dragleave', function (e) {
+      if (!hasFiles(e)) return;
+      depth = Math.max(0, depth - 1);
+      if (!depth) { veil.classList.remove('show'); zone.classList.remove('is-over'); }
+    });
+    window.addEventListener('drop', function (e) {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth = 0; veil.classList.remove('show'); zone.classList.remove('is-over');
+      if (!generating) handleFiles(e.dataTransfer.files);
+    });
+
+    /* Paste a screenshot or a copied file. Text pastes are left alone so
+       they go into whatever box has focus, as they always did. */
+    document.addEventListener('paste', function (e) {
+      if (generating) return;
+      var cd = e.clipboardData;
+      if (!cd || !cd.files || !cd.files.length) return;
+      var text = cd.getData && cd.getData('text/plain');
+      if (text && isTyping(document.activeElement)) return;
+      e.preventDefault();
+      var files = Array.prototype.slice.call(cd.files).map(function (f, i) {
+        if (f.name && f.name !== 'image.png') return f;
+        try { return new File([f], 'Pasted image' + (cd.files.length > 1 ? ' ' + (i + 1) : '') + '.png', { type: f.type || 'image/png' }); }
+        catch (err) { return f; }
+      });
+      handleFiles(files);
+    });
+
+    /* Phones get the native camera - focus, flash and retake for free.
+       A desktop webcam gets the old in-page capture. */
+    document.getElementById('photo-btn').addEventListener('click', function () {
+      var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      if (coarse) document.getElementById('camera-input').click();
+      else openCamera();
+    });
+    document.getElementById('record-btn').addEventListener('click', function () { showMediaHelp(null); });
+  });
 
   // ── AUTOSAVE — debounced 800ms, survives refresh ──
   var autosaveTimer;
@@ -1470,25 +2076,27 @@
     }, 800);
   }
 
-  // Restore draft on page load
-  (function restoreNotesDraft() {
+  // Restore drafts on page load: typed notes, files already read, answers.
+  (function restoreDrafts() {
     try {
       var draft = SFStore.getItem('studyflow_notes_draft');
-      if (draft) {
-        var ta = document.getElementById('notes-input');
-        if (ta && !ta.value) {
-          ta.value = draft;
-          checkNotesLength(ta);
-        }
-      }
+      var ta = document.getElementById('notes-input');
+      if (draft && ta && !ta.value) ta.value = draft;
     } catch(e) {}
+    restoreSourcesDraft();
+    restoreIntakeDraft();
+    renderChoices();
+    updateDateSummary();
+    notesChanged();
+    try { history.replaceState({ sfStep: 'notes' }, '', window.location.pathname + window.location.search); } catch (e) {}
+    goToStep('notes', { fromHistory: true, noFocus: true });
   })();
 
   // ── CAMERA — scan handwritten notes ──
   var cameraStream = null;
   function openCamera() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      sfNotice('Camera not supported on this device. Try uploading a photo instead.');
+      document.getElementById('camera-input').click();
       return;
     }
     var modal = document.getElementById('camera-modal');
@@ -1500,7 +2108,7 @@
       })
       .catch(function() {
         modal.style.display = 'none';
-        sfNotice('Could not access camera. Please allow camera permission or upload a photo instead.');
+        sfNotice('Couldn’t open the camera. Allow camera access, or add a photo instead.');
       });
   }
 
@@ -1512,7 +2120,7 @@
     canvas.getContext('2d').drawImage(video, 0, 0);
     canvas.toBlob(function(blob) {
       closeCamera();
-      var file = new File([blob], 'camera-notes.jpg', { type: 'image/jpeg' });
+      var file = new File([blob], 'Camera photo.jpg', { type: 'image/jpeg' });
       handleFiles([file]);
     }, 'image/jpeg', 0.92);
   }
@@ -1522,62 +2130,24 @@
     document.getElementById('camera-modal').style.display = 'none';
   }
 
-  function selectOption(btn, group) {
-    document.querySelectorAll('[onclick*="' + group + '"]').forEach(function(b) { b.classList.remove('selected'); });
-    btn.classList.add('selected');
-    // Read data-value if present (new card-style buttons), else fall back to textContent
-    var val = btn.dataset.value || btn.textContent.trim().split('\n')[0].trim();
-    if (group === 'goal') selectedGoal = val;
-    if (group === 'difficulty') selectedDifficulty = val;
-  }
-
-  function goToStep2() {
-    if (fileReading) { sfNotice('Still reading your file — please wait a moment!'); return; }
-    var notes = fileContent || document.getElementById('notes-input').value;
-    if (!notes.trim()) { sfNotice('Please upload a file or paste your notes first!'); return; }
-    goToStep(2);
-  }
-
-  function goToStep(n) {
-    document.querySelectorAll('.card').forEach(function(c) { c.classList.remove('active'); });
-    document.getElementById('loading').classList.remove('active');
-    document.getElementById('result').classList.remove('active');
-    var card = document.getElementById('step-' + n);
-    if (card) card.classList.add('active');
-    updateDots(n);
-  }
-
-  function updateDots(active) {
-    for (var i = 1; i <= 3; i++) {
-      var dot = document.getElementById('dot-' + i);
-      dot.classList.remove('active','done');
-      if (i < active) dot.classList.add('done');
-      else if (i === active) dot.classList.add('active');
-      if (i < 3) {
-        var line = document.getElementById('line-' + i);
-        line.classList.remove('done');
-        if (i < active) line.classList.add('done');
-      }
-    }
-  }
-
   function generatePlan() {
+    if (generating) return;
     var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
     var userPlan = user.tier || 'free';
-    if (!selectedGoal) { sfNotice('Please select your goal!'); return; }
-    if (!selectedDifficulty) { sfNotice('Please select a difficulty!'); return; }
 
-    /* Choosing a goal or a difficulty re-renders the wizard, which can replace
-       these inputs - so by the time generatePlan runs, getElementById may
-       return null and `.value` throws, killing the click with nothing shown to
-       the learner. Read defensively and fall back to the same notice the empty
-       case uses. */
-    var notesEl = document.getElementById('notes-input');
-    var notes = fileContent || (notesEl ? notesEl.value : '');
-    if (!notes || !notes.trim()) { sfNotice('Please upload a file or paste your notes!'); goToStep(1); return; }
+    /* Walk the questions in order and send the learner back to the first one
+       still unanswered, rather than a bare "please select" with no way to
+       see which. Choosing a goal or a difficulty used to re-render the
+       wizard and could replace the inputs read below, so they are still
+       read defensively. */
+    var list = flowSteps();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] === 'review' || list[i] === 'focus') continue;
+      if (!stepReady(list[i], true)) { goToStep(list[i], { back: true }); stepReady(list[i]); return; }
+    }
+    var notes = allNotes();
     var deadlineEl = document.getElementById('deadline-input');
     var deadline = deadlineEl ? deadlineEl.value : '';
-    if (!deadline) { sfNotice('Please enter your exam date!'); goToStep(2); return; }
 
     // Check plan count limits
     var allPlans = JSON.parse(SFStore.getItem('studyflow_plans') || '[]');
@@ -1604,49 +2174,24 @@
     var limit = planLimits[userPlan] || 1;
 
     if (plansThisMonth >= limit) {
-      document.getElementById('upgrade-modal').style.display = 'flex';
-      document.getElementById('upgrade-modal-days').textContent =
-        userPlan === 'free' ? 'Free plan: 1 plan per month' : 'Pro plan: 5 plans per month';
-      document.getElementById('upgrade-modal-msg').textContent =
+      showUpgradeModal(
         userPlan === 'free'
-          ? 'You\'ve used your 1 free plan this month. Upgrade to Pro for 5 plans/month or VIP for unlimited.'
-          : 'You\'ve used all 5 Pro plans this month. Upgrade to VIP for unlimited plans.';
+          ? 'You\'ve used your 1 free plan this month. Upgrade to Pro for 5 plans a month or VIP for unlimited.'
+          : 'You\'ve used all 5 Pro plans this month. Upgrade to VIP for unlimited plans.',
+        userPlan === 'free' ? 'Free plan: 1 plan per month' : 'Pro plan: 5 plans per month',
+        'limit');
       return;
     }
 
-    var maxDays = userPlan === 'vip' ? 999 : (userPlan === 'pro' ? 14 : 7);
-
-    // ── CORRECT DAY CALCULATION ──
-    // Parse deadline as LOCAL date (not UTC midnight which causes timezone errors)
-    // "2026-07-11" at UTC midnight = July 10 2pm in Hawaii → wrong count
-    // Fix: parse as local noon so it's always the same calendar day everywhere
-    function daysUntilExam(deadlineStr) {
-      if (!deadlineStr) return null;
-      var parts = deadlineStr.split('-');
-      if (parts.length !== 3) return null;
-      // Set to local noon to avoid any timezone-crossing issues
-      var examDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
-      var today = new Date();
-      today.setHours(12, 0, 0, 0); // compare noon to noon — full calendar days
-      var diff = Math.round((examDate - today) / 86400000);
-      return diff;
-    }
-
-    var daysLeft = daysUntilExam(deadline);
-    var numDays;
-    if (daysLeft !== null && daysLeft >= 1) {
-      numDays = Math.min(maxDays, daysLeft);
-    } else if (daysLeft === 0) {
-      numDays = 1; // exam is today — give them a 1-day cram session
-    } else {
-      numDays = Math.min(maxDays, 7); // no deadline — default 7
-    }
+    // ── CORRECT DAY CALCULATION ── daysUntil() parses the date as local
+    // noon, so the count is the same calendar arithmetic everywhere.
+    var daysLeft = daysUntil(deadline);
+    var numDays = planDaysFor(daysLeft, userPlan);
 
     // Show upgrade modal if free user has exam more than 7 days away
     if (userPlan === 'free' && daysLeft !== null && daysLeft > 7) {
-      document.getElementById('upgrade-modal').style.display = 'flex';
-      document.getElementById('upgrade-modal-msg').textContent = 'Your exam is ' + daysLeft + ' days away but free plans are capped at 7 days. Upgrade to Pro for 14-day plans or VIP for unlimited.';
-      document.getElementById('upgrade-modal-days').textContent = daysLeft + ' days until your exam';
+      showUpgradeModal('Your test is ' + daysLeft + ' days away, and free plans cover 7 days. Upgrade to Pro for 14-day plans or VIP for unlimited, or start with the last 7 days.',
+                       daysLeft + ' days until your test', 'days');
       return;
     }
 
@@ -2485,13 +3030,18 @@
 
   function startGeneration(notes, numDays, deadline, userPlan) {
     userPlan = userPlan || (JSON.parse(SFStore.getItem('studyflow_user') || '{}').tier || 'free');
+    generating = true;
     document.querySelectorAll('.card').forEach(function(c) { c.classList.remove('active'); });
     var loadEl = document.getElementById('loading');
     loadEl.classList.add('active');
-    updateDots(3);
+    setFlowChrome(false);
+    showBuildScreen(numDays);
 
-    // More notes context for Claude
-    var notesForPrompt = notes.substring(0, 3500);
+    // More notes context for Claude - see NOTES_PROMPT_CAP
+    var notesForPrompt = notes.substring(0, NOTES_PROMPT_CAP);
+    /* What the learner told us about themselves and the test. Built once:
+       every day of the plan is pitched the same way. */
+    var learnerBrief = buildLearnerBrief();
 
     // Classify from what user typed — no extra API call
     var subjectInput = document.getElementById('subject-input');
@@ -2514,6 +3064,8 @@
     window.__sfSubjectType = subjectType;
     var strategy    = getSubjectStrategy(subjectType, subject, notes);
     var allDays = [];
+    var kick = document.getElementById('build-kicker');
+    if (kick) kick.textContent = subject;
 
     // ── Background tab protection ──
     // Browsers throttle JS timers and fetch when tab is hidden.
@@ -2571,45 +3123,49 @@
         SFStore.setItem('studyflow_plan_checkpoint', JSON.stringify({
           id: Date.now(), createdAt: new Date().toISOString(),
           subject: subject, goal: selectedGoal, deadline: deadline || '',
+          purpose: intake.purpose, known: selectedDifficulty, grade: intake.grade, focus: cleanFocus(intake.focus),
           subjectType: subjectType, days: allDays, _partial: allDays.length < numDays
         }));
       } catch(e) {}
     }
 
-    // ── Clean error UI — shows on the step-2 card ──
+    // ── Clean error UI — its own card, so no question is overwritten ──
+    /* This used to replace the innerHTML of the "two quick questions" card,
+       which destroyed the questions: after a failure, Start over was the
+       only way back to them. */
     function showFatalError(dayNum, retryFn) {
-      // Hide loading screen
       var le = document.getElementById('loading');
       if (le) le.classList.remove('active');
-      // Show step-2 card with error content
       document.querySelectorAll('.card').forEach(function(c) { c.classList.remove('active'); });
-      var s2 = document.getElementById('step-2');
-      if (!s2) return;
-      s2.classList.add('active');
-      s2.innerHTML =
-        '<div style="text-align:center;padding:2rem 1.2rem;">' +
-        '<div style="width:56px;height:56px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">' +
-        '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+      var box = document.getElementById('gen-error');
+      if (!box) return;
+      generating = false;
+      box.classList.add('active');
+      box.innerHTML =
+        '<div style="text-align:center;padding:1rem .4rem;">' +
+        '<div style="width:56px;height:56px;border-radius:18px;background:var(--bad-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">' +
+        '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c4312f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
         '</div>' +
-        '<h3 style="font-family:var(--serif);font-size:1.4rem;margin-bottom:.6rem;color:var(--ink);">Generation paused</h3>' +
-        '<p style="color:var(--muted);font-size:0.88rem;margin-bottom:.5rem;line-height:1.65;">' +
-        'Day ' + dayNum + ' of ' + numDays + ' hit a snag after 3 attempts. ' +
-        '</p>' +
-        '<p style="color:var(--muted);font-size:0.82rem;margin-bottom:1.5rem;">Your notes are safe. Tap Retry \u2014 this almost always works on the second go.</p>' +
-        '<div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;">' +
-        '<button id="gen-retry-btn" style="background:var(--blue);color:#fff;border:none;padding:.9rem 1.8rem;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(74,124,246,.35);">Retry \u2192</button>' +
-        '<button onclick="window.location.reload()" style="background:var(--soft);color:var(--ink);border:1.5px solid var(--border);padding:.9rem 1.4rem;border-radius:14px;font-family:var(--sans);font-size:0.95rem;font-weight:600;cursor:pointer;">Start over</button>' +
+        '<h2 style="margin-bottom:.5rem;">The plan didn\u2019t <em>finish</em></h2>' +
+        '<p class="card-sub" style="margin:0 auto .5rem;">' +
+        'Day ' + dayNum + ' of ' + numDays + ' hit a snag after 3 attempts. That is almost always the connection or a busy server.</p>' +
+        '<p class="card-sub" style="margin:0 auto 1.4rem;font-size:.86rem;">Your notes and answers are saved. Retry usually works on the second go.</p>' +
+        '<div style="display:grid;gap:.5rem;max-width:340px;margin:0 auto;">' +
+        '<button id="gen-retry-btn" class="btn-next">Retry</button>' +
+        '<button id="gen-edit-btn" class="btn-quiet">Change my answers</button>' +
         '</div></div>';
-      updateDots(2);
       var btn = document.getElementById('gen-retry-btn');
       if (btn && retryFn) btn.onclick = function() {
-        s2.innerHTML = '';
-        s2.classList.remove('active');
+        box.innerHTML = '';
+        box.classList.remove('active');
+        generating = true;
         var le2 = document.getElementById('loading');
         if (le2) le2.classList.add('active');
-        updateDots(3);
+        showBuildScreen(numDays);
         retryFn();
       };
+      var edit = document.getElementById('gen-edit-btn');
+      if (edit) edit.onclick = function () { box.classList.remove('active'); goToStep('review', { back: true }); };
     }
 
     // ── Sanitize questions ──
@@ -2982,6 +3538,9 @@
         'Your job is to test what the notes actually say, at the level the notes are written.\n\n' +
         'SUBJECT: ' + subject + '\nSTUDENT NOTES:\n' + notesForPrompt + '\n\n' +
         'Day ' + dayNum + ' of ' + totalDays + '. Difficulty: ' + difficulty + '. Goal: ' + selectedGoal + '.\n' +
+        /* The intake answers: grade, what the test is, what they know,
+           the goal spelled out, and their own words. ~400-1100 chars. */
+        learnerBrief +
         (isLast ? 'FINAL DAY \u2014 pull the whole topic together and test it as a connected whole. '
           + 'Harder means requiring more of the notes at once, NOT material beyond them.\n' : '') +
         '\nTOPIC LOCK (highest priority - this overrides every other instruction):\n' +
@@ -3807,6 +4366,13 @@
                 subject: subject,
                 goal: selectedGoal,
                 deadline: deadline || '',
+                /* The intake answers travel with the plan, so anything that
+                   generates more for it later (the mid-session top-up, the
+                   VIP chat) can pitch it the same way. */
+                purpose: intake.purpose || '',
+                known: selectedDifficulty || '',
+                grade: intake.grade || '',
+                focus: cleanFocus(intake.focus),
                 subjectType: subjectType,
                 days: allDays
               };
@@ -3822,6 +4388,9 @@
               SFStore.removeItem('studyflow_timer_day');
               SFStore.removeItem('studyflow_minutes');
               SFStore.setItem('studyflow_current_day', '0');
+              /* The plan is saved, so the drafts have done their job. Left in
+                 place, the next "new plan" opened on this one's notes. */
+              clearDrafts();
               cleanupBgHandlers();
               window.location.href = 'dashboard.html';
       }
@@ -3848,16 +4417,19 @@
       }
 
       function launch(dayNum) {
+        markBuildDay(dayNum, 'working');
         generateDay(dayNum, numDays, subjectType, strategy, function(err, day) {
           if (done) return;
           if (err) {
             /* Noted and skipped. The plan is worth more than the day. */
             console.warn('[gen] day ' + dayNum + ' dropped:', err.message);
+            markBuildDay(dayNum, 'skipped');
             onSettled();
             return;
           }
           results[dayNum - 1] = day;
           completed++;
+          markBuildDay(dayNum, 'done');
           onSettled();
         });
       }
@@ -3868,22 +4440,48 @@
   }
 
 
-  function copyPlan() {
-    navigator.clipboard.writeText(generatedPlan).then(function() {
-      var btn = document.querySelector('.btn-copy');
-      btn.textContent = '✓ Copied!';
-      setTimeout(function() { btn.textContent = 'Copy plan'; }, 2000);
-    });
+  /* ── The build screen ─────────────────────────────────────────────────
+     Plans are generated one day at a time, about 40 seconds each, so a
+     7-day plan is several minutes of waiting. It used to be one line of
+     text. Now each day has a chip that fills in as it lands, the wait is
+     stated up front, and the "why this works" notes that used to sit in a
+     three-screen modal in front of the first question are read here,
+     while there is genuinely nothing else to do. */
+  var BUILD_FACTS = [
+    '<b>Answering beats re-reading.</b> Pulling an idea out of your memory is what makes it stick, so every day is mostly questions.',
+    '<b>Spacing it out works.</b> A little each day beats one long night. Questions you miss come back on later days.',
+    '<b>It starts easy on purpose.</b> Day 1 is about getting the basics right. It gets harder as your test gets closer.',
+    '<b>Sleep is part of studying.</b> Your brain replays what you learned while you sleep, so the day before counts double.',
+    '<b>Explaining it proves it.</b> Each session ends by asking you to teach the idea back in your own words.'
+  ];
+  var factTimer = null, factAt = 0;
+  function showBuildScreen(numDays) {
+    var box = document.getElementById('build-days');
+    if (box) {
+      var html = '';
+      for (var i = 1; i <= numDays; i++) html += '<span class="build-day" data-day="' + i + '" data-state="waiting">Day ' + i + '</span>';
+      box.innerHTML = html;
+    }
+    var mins = Math.max(1, Math.round(numDays * 40 / 60));
+    var eta = document.getElementById('build-eta');
+    if (eta) eta.textContent = 'About ' + mins + ' minute' + (mins === 1 ? '' : 's') + ' for ' + numDays + ' day' + (numDays === 1 ? '' : 's') +
+      '. Keep this tab open — you can switch to another and come back.';
+    var fact = document.getElementById('build-fact-text');
+    if (fact) {
+      factAt = 0; fact.innerHTML = BUILD_FACTS[0];
+      clearInterval(factTimer);
+      factTimer = setInterval(function () {
+        if (!document.getElementById('loading').classList.contains('active')) { clearInterval(factTimer); return; }
+        factAt = (factAt + 1) % BUILD_FACTS.length;
+        fact.style.opacity = '0';
+        setTimeout(function () { fact.innerHTML = BUILD_FACTS[factAt]; fact.style.opacity = '1'; }, 350);
+      }, 8000);
+    }
+    try { window.scrollTo(0, 0); } catch (e) {}
   }
-
-  function startOver() {
-    selectedGoal = ''; selectedDifficulty = ''; generatedPlan = ''; fileContent = '';
-    document.getElementById('notes-input').value = '';
-    document.getElementById('deadline-input').value = '';
-    document.querySelectorAll('.option-btn').forEach(function(b) { b.classList.remove('selected'); });
-    ['ls-1','ls-2','ls-3','ls-4'].forEach(function(id) { var el = document.getElementById(id); el.classList.remove('visible','done'); });
-    document.getElementById('result').classList.remove('active');
-    goToStep(1);
+  function markBuildDay(dayNum, state) {
+    var el = document.querySelector('#build-days .build-day[data-day="' + dayNum + '"]');
+    if (el) el.setAttribute('data-state', state);
   }
 </script>
 </body>
