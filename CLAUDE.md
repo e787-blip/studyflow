@@ -1703,6 +1703,20 @@ re-run the queue as many times as it likes.
 Serving the harness itself from a second port and injecting it with a `<script>`
 tag keeps test fixtures out of the repo.
 
+**The whole suite is one command now** (it used to live in scratch folders
+that vanished with each session):
+
+```bash
+bash .claude/skills/morning-check/scripts/run_all.sh /tmp/sf-morning
+```
+
+17 checks on real page loads with `api/generate` mocked - parse, every card
+type answered wrong, walkthroughs, the picture budget, the labelling card,
+plan-time drawing, board text sizes, and every diagram against an audited
+baseline. Proven to catch a syntax error and a broken picture budget. The
+morning routine runs it daily (`.claude/skills/morning-check/SKILL.md`), and
+`LOG.md` beside it holds the visual backlog.
+
 What to check after any `buildQueue` or renderer change:
 
 1. Both script blocks parse — `new Function(blockSource)` for each
