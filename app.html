@@ -735,8 +735,17 @@
     } catch (e) {}
   })();
 
+  /* Set when a step is opened from the review's "Change" button: the next
+     Continue (or auto-advance) goes straight back to the review instead of
+     walking every later question again. */
+  var returnToReview = false;
+
+  /* The grade screen is skipped when the profile already has one, but it
+     must still count as a step while it is on screen - it is reached from
+     the review's "Change" button. Filtered out, it had no index, so Continue
+     and picking a grade both went nowhere and the learner was stuck on it. */
   function flowSteps() {
-    return STEPS.filter(function (s) { return !(s === 'grade' && gradeFromProfile); });
+    return STEPS.filter(function (s) { return !(s === 'grade' && gradeFromProfile && currentStep !== 'grade'); });
   }
 
   function renderChoices() {
@@ -811,8 +820,10 @@
 
   function nextStep() {
     if (!stepReady(currentStep)) return;
+    if (returnToReview && currentStep !== 'review') { goToStep('review'); return; }
     var list = flowSteps(), i = list.indexOf(currentStep);
-    if (i < 0 || i >= list.length - 1) return;
+    if (i < 0) { goToStep('review'); return; }
+    if (i >= list.length - 1) return;
     goToStep(list[i + 1]);
   }
 
@@ -833,6 +844,7 @@
     if (STEPS.indexOf(name) === -1) name = 'notes';
     var prev = currentStep;
     currentStep = name;
+    if (name === 'review') returnToReview = false;
     clearTimeout(advanceTimer);
     var cards = document.querySelectorAll('.card');
     for (var c = 0; c < cards.length; c++) cards[c].classList.remove('active', 'from-back');
@@ -856,6 +868,9 @@
     var back = document.getElementById('flow-back');
     back.setAttribute('aria-hidden', i > 0 ? 'false' : 'true');
     back.tabIndex = i > 0 ? 0 : -1;
+    /* Say where Continue goes when it jumps back to the review. */
+    var nexts = document.querySelectorAll('.step-actions [data-next], #step-focus [data-next]');
+    for (var nb = 0; nb < nexts.length; nb++) nexts[nb].textContent = returnToReview ? 'Back to review' : 'Continue';
 
     if (!opts.fromHistory && prev !== name) {
       try { history.pushState({ sfStep: name }, '', window.location.pathname + window.location.search); } catch (e) {}
@@ -1047,7 +1062,7 @@
     var nx = t.closest && t.closest('[data-next]');
     if (nx) { nextStep(); return; }
     var ed = t.closest && t.closest('[data-edit]');
-    if (ed) { goToStep(ed.getAttribute('data-edit'), { back: true }); return; }
+    if (ed) { returnToReview = true; goToStep(ed.getAttribute('data-edit'), { back: true }); return; }
     var chip = t.closest && t.closest('#date-chips .chip');
     if (chip) {
       var dt = new Date(); dt.setDate(dt.getDate() + parseInt(chip.getAttribute('data-days'), 10));
