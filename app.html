@@ -2336,7 +2336,16 @@
                    'acceleration', 'velocity', 'newton', 'catalyst', 'respiration',
                    'traits', 'reproduce']],
               [1, ['science', 'cell', 'element', 'compound', 'reaction', 'force',
-                   'energy', 'organ', 'tissue', 'evolution']]],
+                   'energy', 'organ', 'tissue', 'evolution']],
+              /* Earth and space science had no words here, so "Earth science:
+                 the rock cycle" scored for geography off "erosion" and
+                 "sediment", and a solar-system lesson scored nothing and went
+                 to general. The science/earth subtopic was nearly unreachable.
+                 Volcano and earthquake stay out: physical geography teaches
+                 them too, and geography/physical is written for that. */
+              [3, ['earth science', 'rock cycle', 'igneous', 'metamorphic',
+                   'sedimentary', 'geology', 'astronomy', 'solar system']],
+              [2, ['planet', 'galaxy', 'mineral', 'fossil']]],
 
     psychology: [[3, ['pavlov', 'piaget', 'freud', 'classical conditioning',
                       'operant conditioning', 'cognitive dissonance', 'neurotransmitter',
@@ -2406,7 +2415,14 @@
                     'declension', 'gendered noun']],
                [2, ['spanish', 'french', 'german', 'japanese', 'chinese', 'korean',
                     'arabic', 'latin', 'italian', 'portuguese', 'pronunciation']],
-               [1, ['language', 'verb', 'noun', 'translate', 'tense', 'accent']]]
+               [1, ['language', 'verb', 'noun', 'translate', 'tense', 'accent']]],
+
+    /* Study skills are general's one subtopic, and nothing pointed at it:
+       "Study skills: flashcards and revision" scored 2 for psychology off
+       the word "recall" and never reached general/study. */
+    general: [[3, ['study skills', 'study habits', 'study habit', 'revision', 'note-taking',
+                   'note taking', 'time management', 'exam technique', 'procrastination',
+                   'spaced repetition', 'active recall', 'flashcard']]]
   };
 
   function classifySubject(subjectName, notes) {
@@ -2651,6 +2667,28 @@
     return parts.join(', ');
   }
 
+  /* The types a schema string asks for, in order. A reading set's inner
+     questions carry no "type", so each set counts once. */
+  function schemaTypes(schema) {
+    var out = [], re = /\{"type":"(\w+)"/g, m;
+    while ((m = re.exec(String(schema || '')))) out.push(m[1]);
+    return out;
+  }
+
+  /* The format quota the model reads, written from the day's own schema.
+     It used to be SUBJECT_FORMAT_MANDATE, a hand-written paragraph per
+     subject that predated the subtopic mixes and contradicted nearly every
+     one of them: "AT LEAST 2 wordproblem" on science, "errorspot" on every
+     language day, "sequence" on subtopics with none - followed by "a
+     question whose format contradicts the quota above is a defect". Two
+     quotas that disagree read to the model as permission to improvise, and
+     lesson.html then throws away whatever it improvised off the palette. */
+  function mixMandate(types) {
+    return 'Of these ' + types.length + ' questions, exactly: ' + tallyFor(types) + '.\n' +
+      'Use ONLY these formats, in these numbers. A question in any other format - a word\n' +
+      'problem, an equation, anything not listed - is thrown away before the learner sees it.';
+  }
+
   /* ── SUBTOPICS ────────────────────────────────────────────────────────────
      A subject is not one kind of knowledge. "English" is reading comprehension
      one week and comma splices the next, and the same nine-question mix serves
@@ -2745,8 +2783,11 @@
         visual:'compare two study designs, or a 2x2 matrix for variable types.' },
       { key:'bioCog', label:'Biological and cognitive',
         terms:['brain','neuron','neural','cortex','memory','cognit','perception','attention','sensation','encoding','retrieval','sleep','conditioning','learning','language','neurotransmitter','hormone'],
-        types:['twopart','labeldiagram','sequence:process','fill','mcq','truefalse','write','classify','estimate'],
-        guide:'ASK: the path information takes and where it breaks down. AVOID: asking who discovered something, which tests trivia rather than understanding.',
+        /* The scenario was a classify, which made this mix identical to
+           geography/physical's, type for type. Applying a memory or
+           perception effect to a concrete case is this subtopic's own work. */
+        types:['twopart','labeldiagram','sequence:process','fill','mcq','truefalse','write','scenario','estimate'],
+        guide:'ASK: the path information takes and where it breaks down. Use the scenario to apply a memory or perception effect to one concrete situation. AVOID: asking who discovered something, which tests trivia rather than understanding.',
         visual:'a flow for a processing path, parts for brain structure.' },
       { key:'social', label:'Social and developmental',
         terms:['social','develop','child','adolescen','attachment','personality','group','conform','obedien','attitude','prejudice','stage','moral','identity','therapy','disorder','stress'],
@@ -2784,8 +2825,11 @@
         visual:'a flow for the steps, graph for how cost grows, compare for two approaches.' },
       { key:'systems', label:'Theory and systems',
         fallback:true,
-        types:['twopart','matchpairs','classify','mcq','truefalse','fill','write','estimate','highlight'],
-        guide:'ASK: how two things differ and when each is used. AVOID: acronym expansion as an end in itself.',
+        /* The trace table was an estimate, which made this mix identical to
+           geography/maps's, type for type. Running a system's procedure by
+           hand is what this material has that maps do not. */
+        types:['twopart','matchpairs','classify','mcq','truefalse','fill','write','tracetable','highlight'],
+        guide:'ASK: how two things differ and when each is used. Use the trace table for a procedure the system runs - a binary conversion, a logic gate\'s outputs, a packet\'s hops. AVOID: acronym expansion as an end in itself.',
         visual:'a hierarchy for layered systems, compare for two designs.' }
     ],
     language: [
@@ -2936,57 +2980,10 @@
       'ZERO "fill". Typing a remembered term is not practice at solving.\n' +
       'If the notes seem too thin for 7 solvable problems, they are not: vary the ' +
       'numbers, vary the form, apply the same method to a new situation. Write ' +
-      'easier problems on the same material. Never switch format to fill the count.',
-
-    science:
-      'Mostly mechanism and prediction. Of 9: AT LEAST 3 "mcq" or "scenario" that ask ' +
-      'what happens and why, AT LEAST 2 "wordproblem" or "bigequation" where the notes ' +
-      'contain any quantity, formula or rate, AT LEAST 1 "classify" or "sequence" for ' +
-      'processes and categories. AT MOST 2 "fill", and only for terms the notes define ' +
-      'explicitly.',
-
-    cs:
-      'PROGRAMMING IS PROCEDURAL. Of 9: AT LEAST 3 "errorspot" (buggy code to fix) or ' +
-      '"sequence" (order the steps of an algorithm), AT LEAST 2 "write" where the learner ' +
-      'traces or produces code, AT LEAST 1 "wordproblem" on cost or complexity. ' +
-      'AT MOST 2 mcq. ZERO "fill" for syntax trivia.',
-
-    language:
-      'LANGUAGE IS PROCEDURAL. Of 9: AT LEAST 4 "fill" where the blank is a form the ' +
-      'learner must PRODUCE (conjugate, decline, agree), AT LEAST 2 "write" (translate ' +
-      'or correct a full sentence), AT LEAST 1 "errorspot" (a sentence with one grammar ' +
-      'mistake). AT MOST 2 mcq, never about grammar terminology in the abstract.',
-
-    economics:
-      'Reasoning about change. Of 9: AT LEAST 3 "scenario" or "mcq" asking what happens ' +
-      'to price, quantity or incentives when one thing changes, AT LEAST 2 "wordproblem" ' +
-      'wherever the notes carry numbers, AT LEAST 1 "classify" (which curve shifts). ' +
-      'AT MOST 2 "fill".',
-
-    history:
-      'Largely declarative, so retrieval formats are correct here. Of 9: AT LEAST 3 "mcq" ' +
-      'on causes, consequences and motives, AT LEAST 1 "sequence" (order events), ' +
-      'AT LEAST 1 "classify", AT LEAST 1 "write" (explain a cause in a sentence or two). ' +
-      'AT MOST 3 "fill", and only for names, terms or dates the notes emphasise.',
-
-    psychology:
-      'Applying named ideas. Of 9: AT LEAST 3 "scenario" applying a theory or effect to a ' +
-      'concrete situation, AT LEAST 1 "classify", AT LEAST 1 "write". AT MOST 3 "fill", ' +
-      'and never "who discovered this" trivia.',
-
-    geography:
-      'Process and pattern. Of 9: AT LEAST 3 "mcq" or "scenario" on how a process produces ' +
-      'an observed pattern, AT LEAST 1 "classify", AT LEAST 1 "sequence". Include ' +
-      '"wordproblem" wherever the notes carry figures. AT MOST 3 "fill".',
-
-    english:
-      'Effect of a choice on a reader. Of 9: AT LEAST 3 "passage" or "scenario" tied to a ' +
-      'specific quoted line, AT LEAST 2 "write" (explain what a device achieves), ' +
-      'AT LEAST 1 "sentence" or "errorspot". AT MOST 2 "fill", never bare device-naming.',
-
-    general:
-      'Of 9: AT LEAST 3 "mcq" on the central claims, AT LEAST 1 "write", AT LEAST 1 ' +
-      '"sequence" or "classify" if the notes contain any order or grouping. AT MOST 3 "fill".'
+      'easier problems on the same material. Never switch format to fill the count.'
+    /* Maths only. The other subjects had a paragraph each here that
+       predated the subtopic mixes and contradicted them; their quota is now
+       written from the day's own schema by mixMandate(). */
   };
 
   var SUBJECT_QUESTION_GUIDE = {
@@ -3030,7 +3027,7 @@
     };
     var picked = strategies[subjectType] || strategies.general;
     picked.questionGuide = SUBJECT_QUESTION_GUIDE[subjectType] || SUBJECT_QUESTION_GUIDE.general;
-    picked.formatMandate = SUBJECT_FORMAT_MANDATE[subjectType] || SUBJECT_FORMAT_MANDATE.general;
+    picked.formatMandate = SUBJECT_FORMAT_MANDATE[subjectType] || '';
     /* A subject is not one kind of knowledge. When the topic resolves to a
        subtopic, its mix and its guidance replace the subject-wide ones; when
        it does not, everything below is untouched and the subject keeps the
@@ -3658,7 +3655,7 @@
         'most common failure. The research is settled: procedures are learned by\n' +
         'PRODUCING answers, facts are learned by RETRIEVING them. Recognising a\n' +
         'correct answer among four options does not build procedural skill.\n' +
-        (strategy.formatMandate || '') + '\n' +
+        (subjectType === 'math' ? (strategy.formatMandate || '') : mixMandate(schemaTypes(questionSchema))) + '\n' +
         'A question whose format contradicts the quota above is a defect, not a\n' +
         'stylistic choice. Rewrite it before returning the JSON.\n' +
         '\nWHAT A GOOD QUESTION LOOKS LIKE FOR THIS SUBJECT:\n' +
@@ -4245,6 +4242,13 @@
              can hold every question - generated or topped up - to the
              subject it belongs to. */
           day.allowedTypes = subjectPalette(subjectType);
+          /* Plus anything this day's own schema asked for. A subject whose
+             notes match no subtopic gets its older fallback mix, and English's
+             asks for three "passage" cards - a type no English subtopic uses,
+             so the palette dropped all three and the day arrived six long. */
+          schemaTypes(questionSchema).forEach(function (t) {
+            if (day.allowedTypes.indexOf(t) === -1) day.allowedTypes.push(t);
+          });
           sanitizeDayQuestions(day);
           callback(null, day);
         })

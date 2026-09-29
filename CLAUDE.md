@@ -302,6 +302,12 @@ Two rules that are easy to break:
   "Causes of the French Revolution" resolved to `language`, not `history`. Same for
   the German invasion of Poland, the Spanish conquest of the Americas, the Japanese
   occupation of China.
+- **Earth/space science and study skills need their own words in
+  `SUBJECT_TERMS`.** Without them "Earth science: the rock cycle" went to
+  geography (off "erosion", "sediment") and "Study skills" to psychology (off
+  "recall"), so `science/earth` and `general/study` were close to
+  unreachable. Volcano and earthquake stay out of science on purpose -
+  physical geography teaches them too.
 - **`buildQueue`'s `isMath` / `isScience` / `isHistory` / `isEnglish` / `isLanguage`
   flags defer to `qType`**, and only fall back to their own text patterns when
   `qType` is `general`. Those patterns recognise far more arithmetic than the
@@ -411,6 +417,23 @@ question passes through it** — the plan's and the top-up's.
   `SUBTOPICS` the way two copies of a list always do.
 - `PALETTE_FALLBACK` in `lesson.html` covers plans saved before that field
   existed. It is the only mirrored copy, and it exists solely for old plans.
+- **The palette also takes whatever the day's own schema asked for.** A
+  subject whose notes match no subtopic gets its older fallback mix, and
+  English's asks for three `passage` cards - a type no English subtopic
+  uses - so all three were dropped and those days arrived six questions
+  long.
+- **The format quota is written from the schema too** (`mixMandate`). It was
+  `SUBJECT_FORMAT_MANDATE`, a paragraph per subject older than the subtopic
+  mixes, still in the prompt and contradicting nearly every one ("AT LEAST 2
+  wordproblem" on science, "errorspot" on every language day). Only maths
+  keeps a hand-written mandate.
+- **No two subtopics may share a mix.** `psychology/bioCog` and
+  `geography/physical` were identical type for type, and so were
+  `cs/systems` and `geography/maps`; bioCog's classify became a scenario and
+  systems' estimate a trace table. `test_mix.js` in the morning suite
+  captures the real prompt for every subject and subtopic and fails on a
+  shared mix, an off-palette type, a quota that contradicts the mix, or a
+  test topic that classifies to the wrong subject.
 - **A thin session is worse than an off-type question**, so if holding the
   line would leave fewer than 4 questions the strays are kept and a warning
   is logged. **Maths is exempt from that mercy** — its mix IS the point
