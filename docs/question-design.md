@@ -270,6 +270,31 @@ output is an argument from evidence.
   comes from the literature; the only thing measured here is what the
   palettes currently contain.
 
+## 8. Mixes for subjects nobody wrote a list for
+
+Since Sept 2026 the day mixes are composed by `sf-topics.js` from what the
+notes contain, so a subject with no premade entry — music, law, cooking — is no
+longer handed one generic mix. The composition rules are this document's
+findings written as code, not new claims:
+
+| Rule | Rests on |
+|---|---|
+| every kind's core has fill and write, and a new mix keeps **3 of 9** producing | §1 — production generally beats selection, and no mix is MCQ only |
+| `facts` puts fill and matchpairs first, recall before recognition | §7 — productive retrieval builds the knowledge the learner uses |
+| `mechanism` leads with `twopart`, its rule asks for a prediction first | §5 two-tier diagnostics; §7 Predict–Observe–Explain |
+| `procedure` leads with `errorspot`; calculation earns `tracetable` | §2 worked-example effect; §5 tracetable as the active form |
+| code earns `sequence:parsons` (never distractor lines) and `tracetable` | §7 Parsons problems |
+| sources earn corroborate and sourcing, and **with dates** contextualisation | §7 all four Reading Like a Historian skills |
+| categories earn one `classify`, never more | §3 — interleaving helps confusable categories, and it is the weakest evidence here |
+| an ordering card only with a real order, a labelling card only with real parts | invariant 6; the labelling card's own section in `CLAUDE.md` |
+| an inherited premade mix keeps its own producing count | §7 — the spread between subjects is not itself a defect |
+
+**What this does not establish:** that the model describes material honestly
+(nothing has been measured against a real model yet), or that six kinds are
+the right six. They are the distinctions §1–§7 already draw — mechanism,
+procedure, fact, reading, application, language production — and nothing more
+was invented to fill the table.
+
 ## What none of this establishes
 
 - **The specific counts.** That reading comprehension gets four passage

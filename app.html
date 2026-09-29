@@ -248,6 +248,8 @@
   .build-day[data-state="skipped"] { background: transparent; border-style: dashed; }
   #gen-progress-text { color: var(--blue-deep); font-weight: 600; font-size: .98rem; }
   .build-eta { color: var(--muted); font-size: .88rem; margin-top: .3rem; line-height: 1.55; }
+  .build-covers { color: var(--ink); font-size: .88rem; margin-top: .55rem; line-height: 1.55; }
+  .build-covers b { font-weight: 600; }
   .build-fact { margin-top: 1.6rem; padding: 1rem 1.1rem; border-radius: 16px; background: var(--blue-mist); border: 1.5px solid var(--border); min-height: 5.4rem; }
   .build-fact .kicker { margin-bottom: .35rem; font-size: .72rem; line-height: 1.3; }   /* beats `.build-fact p` */
   .build-fact p { font-size: .92rem; line-height: 1.6; color: var(--ink); transition: opacity .35s; }
@@ -524,6 +526,7 @@
     <h2>Making your <em>plan</em></h2>
     <p id="gen-progress-text">Building your study plan…</p>
     <p class="build-eta" id="build-eta">About 40 seconds a day. You can keep this tab open and come back.</p>
+    <p class="build-covers" id="build-covers" hidden></p>
     <div class="build-days" id="build-days" aria-hidden="true"></div>
     <div class="build-fact" aria-live="off">
       <p class="kicker">Why it works</p>
@@ -533,6 +536,7 @@
 </main>
 
 <script src="/sf-draw.js"></script>
+<script src="/sf-topics.js"></script>
 <script>
 
   /* ── PER-ACCOUNT STORAGE NAMESPACE ─────────────────────────────────────
@@ -3139,7 +3143,7 @@
           id: Date.now(), createdAt: new Date().toISOString(),
           subject: subject, goal: selectedGoal, deadline: deadline || '',
           purpose: intake.purpose, known: selectedDifficulty, grade: intake.grade, focus: cleanFocus(intake.focus),
-          subjectType: subjectType, days: allDays, _partial: allDays.length < numDays
+          subjectType: subjectType, topics: planTopics, days: allDays, _partial: allDays.length < numDays
         }));
       } catch(e) {}
     }
@@ -3496,11 +3500,28 @@
          plan spanning two of them teaches both instead of repeating one. */
       var subs = (strategy && strategy.subtopics) || [];
       var sub = subs.length ? subs[(dayNum - 1) % subs.length] : null;
+      /* What the prompt calls the subject. "GENERAL" is the name of a
+         fallback, not of anything a learner studies - "answerable by a person
+         who knows no GENERAL at all" was the content lock on every music,
+         law and cooking plan. When sf-topics.js named the field, say that. */
+      var fieldName = String((strategy && strategy.field) || subjectType).toUpperCase();
+
+      /* A subtopic made from the notes (sf-topics.js) is a PART of them, not
+         only a kind of question - so the day is told which part is its own.
+         Every day in the first pass through the parts gets one; after that
+         the last day is left whole, for the final day's pulling-together. */
+      var focusLine = '';
+      if (sub && sub.dynamic && subs.length > 1 && (dayNum <= subs.length || !isLast)) {
+        focusLine = '\nTODAY\'S PART OF THE NOTES: ' + sub.focus + '\n' +
+          'This plan teaches the notes one part a day, and this is today\'s part. Build the title, the lesson\n' +
+          'and most of the questions around it. It is still inside the notes above: the TOPIC LOCK holds.\n' +
+          (isLast ? 'It is also the last day, so end by connecting this part to the rest of the notes.\n' : '');
+      }
 
       if (sub) {
         /* Tally and schema are both generated from sub.types, so the quota the
            model reads and the shapes it is handed cannot disagree. */
-        questionInstructions = '\n\n' + String(subjectType).toUpperCase() + ' \u2014 ' +
+        questionInstructions = '\n\n' + fieldName + ' \u2014 ' +
                                sub.label.toUpperCase() + ': ' + tallyFor(sub.types) + '.\n';
         questionSchema = buildQuestionSchema(sub.types, d);
       } else if (subjectType === 'math') {
@@ -3565,6 +3586,7 @@
         'If you run out of distinct material, test the SAME material in a different way - ask it as a\n' +
         'true/false, or a fill-in-the-blank, or applied to a fresh example. Do NOT reach for more advanced\n' +
         'material to fill space, and do NOT go sideways to a new topic.\n' +
+        focusLine +
 
         '\nSTAY AT THE LEVEL OF THE NOTES (this is where generated questions most often go wrong):\n' +
         '- Every question must be answerable by someone who has read ONLY the notes above. If answering\n' +
@@ -3658,7 +3680,11 @@
         'most common failure. The research is settled: procedures are learned by\n' +
         'PRODUCING answers, facts are learned by RETRIEVING them. Recognising a\n' +
         'correct answer among four options does not build procedural skill.\n' +
-        (strategy.formatMandate || '') + '\n' +
+        /* A made subtopic brings its own mandate, written from the same kind
+           and mix as its quota. The subject-wide ones predate the subtopics
+           and still ask for counts their own palettes forbid (science's asks
+           for word problems), which the model reads as licence to improvise. */
+        ((sub && sub.mandate) || strategy.formatMandate || '') + '\n' +
         'A question whose format contradicts the quota above is a defect, not a\n' +
         'stylistic choice. Rewrite it before returning the JSON.\n' +
         '\nWHAT A GOOD QUESTION LOOKS LIKE FOR THIS SUBJECT:\n' +
@@ -3911,7 +3937,7 @@
            has to be about what the question TESTS, not what it is labelled. */
         '\nCONTENT LOCK - this matters as much as the type:\n' +
         'Every question must be answerable only by someone who understands THIS SUBJECT. If a question could be\n' +
-        'answered correctly by a person who knows no ' + String(subjectType).toUpperCase() + ' at all, just by doing arithmetic on\n' +
+        'answered correctly by a person who knows no ' + fieldName + ' at all, just by doing arithmetic on\n' +
         'the numbers in the question, it is a maths question and it does not belong here. Delete it and ask a real one.\n' +
         'Numbers are welcome when the SUBJECT is what makes them meaningful.\n' +
         'SCIENCE - BAD: "A plant absorbs 12 photons per second for 5 seconds. How many photons?" (arithmetic; the\n' +
@@ -4245,6 +4271,25 @@
              can hold every question - generated or topped up - to the
              subject it belongs to. */
           day.allowedTypes = subjectPalette(subjectType);
+          /* A made subtopic can earn a format its family's premade list
+             never used - a labelling card for the parts of a guitar, a trace
+             table for a ledger. The palette is a permission set, so the
+             day's own mix joins it; sf-topics.js has already refused
+             anything the material or the family cannot carry. The part
+             travels with the day, so the mid-session top-up asks about the
+             same part the plan did. */
+          if (sub && sub.dynamic) {
+            (function () {
+              var seen = {}, i, t;
+              for (i = 0; i < day.allowedTypes.length; i++) seen[day.allowedTypes[i]] = 1;
+              for (i = 0; i < sub.types.length; i++) {
+                t = String(sub.types[i]).split(':')[0];
+                if (!seen[t]) { seen[t] = 1; day.allowedTypes.push(t); }
+              }
+            })();
+            day.subtopic = { key: sub.key, name: sub.name, parent: sub.parent,
+                             covers: sub.covers, guide: sub.guide };
+          }
           sanitizeDayQuestions(day);
           callback(null, day);
         })
@@ -4327,7 +4372,10 @@
             if (fromTimeout) console.warn('[gen] global timeout - saving what arrived');
               // Save whatever came back, in order, holes removed.
               clearTimeout(timeoutId);
-              allDays = results.filter(function(d){ return d != null; });
+              /* results is created when the first day is launched, which
+                 now waits for the subtopic map (capped well inside the
+                 global timeout) - but never let a timer reach an undefined. */
+              allDays = (results || []).filter(function(d){ return d != null; });
 
               if (allDays.length === 0) {
                 done = false;
@@ -4391,6 +4439,10 @@
                 subjectType: subjectType,
                 days: allDays
               };
+              /* What sf-topics.js made of the notes: the field, the parts and
+                 their mixes. Absent when the map was not made (a failed or
+                 slow call, maths), exactly as plans were before it. */
+              if (planTopics) newPlan.topics = planTopics;
               try {
                 var allPlans = JSON.parse(SFStore.getItem('studyflow_plans') || '[]');
                 allPlans.push(newPlan);
@@ -4451,7 +4503,86 @@
 
       pump();
     }
-    generateAllParallel();
+
+    /* ── WHAT THE NOTES ARE MADE OF (sf-topics.js) ───────────────────────
+       One call before the first day: the model reads the notes and names
+       their parts, and sf-topics.js turns that into one mix per part. It
+       replaces the premade keyword match, which sent eight subjects in ten
+       (music, law, nursing, cooking, even astronomy) to one generic mix.
+
+       It never blocks a plan. Capped at TOPICS_TIMEOUT_MS; a failure, a
+       slow reply, a reply the judge refuses, or sf-topics.js failing to load
+       all leave strategy exactly as getSubjectStrategy built it, and the
+       plan is made the way it always was. A reply that lands after the cap
+       is ignored - the days have already started, and day 2 must not be
+       planned from a different map than day 1.
+
+       Maths is skipped: its mix is MATH_MIX and the synthesis floor
+       (invariant 1), and it has no subtopics on purpose. */
+    var TOPICS_TIMEOUT_MS = 20000;
+    var planTopics = null;
+
+    function mapTopicsThen(next) {
+      /* A previous build's list (the learner went back and changed an
+         answer) must not sit on this one's screen. */
+      var cov0 = document.getElementById('build-covers');
+      if (cov0) cov0.hidden = true;
+      if (subjectType === 'math' || !window.SFTopics) { next(); return; }
+      var went = false;
+      function go() { if (!went) { went = true; next(); } }
+      setProgress('Reading what your notes cover\u2026');
+      SFTopics.request(SFTopics.prompt({ subject: subject, notes: notesForPrompt, days: numDays,
+                                         archetypes: SUBTOPICS }), TOPICS_TIMEOUT_MS)
+        .then(function (raw) {
+          if (went) return;
+          try {
+            var t = SFTopics.judge(raw, { localType: subjectType, days: numDays, subject: subject,
+                                          archetypes: SUBTOPICS });
+            if (t) applyTopics(t);
+          } catch (e) { console.warn('[topics] map refused:', e && e.message); }
+          go();
+        }, function (err) {
+          console.warn('[topics] not mapped, using the premade subtopics:', err && err.message);
+          go();
+        });
+      setTimeout(go, TOPICS_TIMEOUT_MS + 1500);
+    }
+
+    function applyTopics(t) {
+      /* judge() only ever moves "general" to a named family, never to
+         maths, and never overrides one the local classifier chose.
+         Everything is worked out first and committed in one step: a throw
+         half way must not leave the family changed and the strategy not. */
+      var nextType = t.family || subjectType;
+      var next = (nextType !== subjectType) ? getSubjectStrategy(nextType, subject, notes) : strategy;
+      next.subtopics = t.subtopics;
+      next.subtopic = t.subtopics[0] || null;
+      if (t.field) next.field = t.field;
+      /* "Building your General plan" and "a study day for a General
+         student" - the fallback's name, printed as if it were a subject. */
+      if (nextType === 'general' && t.field) next.label = t.field;
+      if (nextType !== subjectType) console.log('[topics] family:', subjectType, '->', nextType);
+      subjectType = nextType;
+      window.__sfSubjectType = subjectType;
+      strategy = next;
+      planTopics = t;
+      console.log('[topics]', t.field || t.subject, '|', t.subtopics.map(function (s) {
+        return s.name + ' <' + s.types.join(',') + '>';
+      }).join(' | '));
+      try {
+        var cov = document.getElementById('build-covers');
+        if (cov && t.subtopics.length > 1) {
+          cov.textContent = '';
+          var b = document.createElement('b');
+          b.textContent = 'Your notes cover: ';
+          cov.appendChild(b);
+          cov.appendChild(document.createTextNode(t.subtopics.map(function (s) { return s.name; }).join(' \u00b7 ')));
+          cov.hidden = false;
+        }
+      } catch (e) {}
+    }
+
+    mapTopicsThen(generateAllParallel);
   }
 
 

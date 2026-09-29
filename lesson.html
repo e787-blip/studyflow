@@ -2628,10 +2628,26 @@
     if (plan && plan.focus) learnerLine += 'They asked to focus on (only where it falls inside this topic): ' +
       String(plan.focus).replace(/[\r\n"]+/g, ' ').replace(/\s{2,}/g, ' ').trim().substring(0, 300) + '\n';
 
+    /* The part of the notes this day was built around, and what a good
+       question on it asks - written by sf-topics.js when the plan was made.
+       Without it the top-up knew only the day's title, so a music plan's
+       question 11 onwards reverted to generic recall. Plans made before the
+       skill, or when its call failed, have no day.subtopic and get the
+       prompt exactly as it was. */
+    var partLine = '';
+    var dsub = day && day.subtopic;
+    if (dsub && typeof dsub === 'object' && dsub.name) {
+      partLine = 'Part of the course: ' + fmStr(dsub.name).substring(0, 60) +
+        (dsub.parent && fmStr(dsub.parent) !== fmStr(dsub.name) ? ', within ' + fmStr(dsub.parent).substring(0, 60) : '') + '\n' +
+        (dsub.guide ? 'What a good question on it does: ' +
+          fmStr(dsub.guide).replace(/[\r\n]+/g, ' ').substring(0, 500) + '\n' : '');
+    }
+
     var prompt =
       'TOPIC LOCK: ' + lockLine + '\n' +
       (lockMicro   ? 'Exact scope: ' + lockMicro + '\n' : '') +
       (lockSubject ? 'Course: ' + lockSubject + '\n' : '') +
+      partLine +
       learnerLine +
       (lockTerms   ? 'Vocabulary to draw from: ' + lockTerms + '\n' : '') +
       'Lesson content:\n' + (day.content || '').substring(0, 900) + '\n\n' +
@@ -7042,6 +7058,14 @@
       cs:         'Explain what the code does, step by step, then say why it works and when it would break.',
       general:    'Write it simply. Don\'t look at your notes — just explain what you know.'
     };
+    /* "general" is where every subject this table has never heard of lands
+       - music, law, cooking - and one generic line serves them all. When the
+       plan was mapped by sf-topics.js, the model wrote a tip for the actual
+       subject. It is model text going into innerHTML, so it is escaped. */
+    if (!tips[subjectType] || subjectType === 'general') {
+      var mt = (typeof plan !== 'undefined' && plan && plan.topics && typeof plan.topics === 'object') ? plan.topics.tip : '';
+      if (mt && typeof mt === 'string' && mt.length >= 12) return escHtml(mt.substring(0, 160));
+    }
     return tips[subjectType] || tips.general;
   }
 
