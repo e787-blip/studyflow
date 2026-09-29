@@ -35,7 +35,7 @@ Top first. One item per morning. Tick it when done and say which run did it.
 ## Runs
 
 ### 2026-09-28 - set up
-The suite was moved into the repo (`scripts/run_all.sh`, 17 checks, all green
+The suite was moved into the repo (`scripts/run_all.sh`, 17 checks - 18 with the plan builder's review test added 2026-09-29, all green
 on main at `1e90cf4`). Checked that it catches real breakage: a syntax error
 in `lesson.html` fails parse and every browser test; switching off the
 "each picture once" rule fails the picture budget (60% of cards, 16 repeats).
