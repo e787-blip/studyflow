@@ -4138,6 +4138,23 @@
                 visual: (st.visual && typeof st.visual === 'object') ? st.visual : null
               };
             }).filter(function (st) { return st && st.line.length > 1; }).slice(0, 6);
+            /* The 40-character cap on line is asked for and was broken on 2
+               of 4 steps in a live run (48 and 57 chars); the board shrinks a
+               long line to fit, so on a phone it came out small. Where the
+               line has a clause break in a sensible place, the first clause
+               stays the line and the rest leads the reason. Never an
+               equation - cutting one changes what it says. */
+            steps.forEach(function (st) {
+              if (st.line.length <= 40 || /=/.test(st.line)) return;
+              var m = /^(.{12,44}?)(?:,\s+|;\s+|\s+[\u2014\u2013-]\s+|:\s+)(.+)$/.exec(st.line);
+              if (!m) return;
+              var rest = m[2].replace(/[.\s]+$/, '');
+              st.line = m[1].replace(/[,;:\s]+$/, '');
+              /* "which pass them on" continues the line above it; say so. */
+              var lead = /^(which|that|and|so|then|but|because|where|while|as)\b/i.test(rest)
+                ? '\u2026' + rest : rest.charAt(0).toUpperCase() + rest.slice(1);
+              st.why = (lead + '.' + (st.why ? ' ' + st.why : '')).slice(0, 240);
+            });
             if (steps.length < 2) { day.workedExample = null; return; }
             day.workedExample = {
               problem: String(we.problem || we.question || '').trim().slice(0, 90),

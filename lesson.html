@@ -167,6 +167,9 @@
     animation:optionWrong .4s ease both;
   }
   .q-option.dimmed { opacity:.45; pointer-events:none; }
+  /* Answered, in dark mode: tinted, not pastel slabs on a dark card. */
+  body.dark .q-option.correct-ans, body.dark .tf-btn.correct-ans { background:rgba(56,191,161,.14) !important; color:#a7f3d0 !important; box-shadow:none !important; }
+  body.dark .q-option.wrong-ans, body.dark .tf-btn.wrong-ans { background:rgba(239,68,68,.12) !important; color:#fecaca !important; }
   .tf-btn.correct-ans {
     background:#d1faf0 !important; border-color:var(--green) !important; color:#065f46 !important;
     animation:optionCorrect .4s cubic-bezier(0.34,1.56,0.64,1) both;
@@ -183,7 +186,7 @@
   }
   .card-header::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle,rgba(255,255,255,.1) 1px,transparent 1px); background-size:24px 24px; pointer-events:none; }
   .card-badge { display:inline-flex; align-items:center; gap:.4rem; background:rgba(255,255,255,.2); color:#fff; font-size:0.68rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:.25rem .7rem; border-radius:999px; border:1px solid rgba(255,255,255,.3); margin-bottom:.55rem; position:relative; z-index:1; }
-  .card-header h2 { font-family:var(--serif); font-size:clamp(1.2rem,3vw,1.6rem); color:#fff; letter-spacing:-0.02em; position:relative; z-index:1; line-height:1.2; }
+  .card-header h2 { font-family:var(--serif); font-weight:400; font-size:clamp(1.5rem,4.4vw,1.8rem); color:#fff; letter-spacing:-0.005em; position:relative; z-index:1; line-height:1.12; }
 
   /* STRUGGLING LESSON CARD */
   .card-header.struggling-header { background:linear-gradient(135deg,#f59e0b,#d97706); }
@@ -329,7 +332,19 @@
     align-items:center; justify-content:center; }
   .ld-sel { flex:1 1 auto; min-width:0; padding:.45rem .55rem; border:1.5px solid var(--border);
     border-radius:9px; font-family:inherit; font-size:.85rem; background:var(--white); color:var(--ink); }
-  body.dark .ld-fig { background:#1e2336; }
+  /* Every drawing is ink for paper, so whatever holds one keeps a paper
+     ground in dark mode: on #1e2336 the lesson picture's title vanished and
+     its haloed labels smeared into white blobs. .art-paper is that ground. */
+  .art-paper { background:#f7f9fe; border:1px solid #e3e9f7; border-radius:14px; }
+  body.dark .ld-fig { background:#f7f9fe; border:1px solid #e3e9f7; }
+  /* A graded menu. These were inline pastel backgrounds with --ink text, so
+     in dark mode the answers were near-white on pink - unreadable. */
+  .ld-sel:disabled, .mp-sel:disabled, .tt-in:disabled, .hl-sent:disabled { opacity:1; color:var(--ink); }
+  .sel-right, .sel-right:disabled { border-color:#10b981 !important; background:#ecfdf5 !important; color:#065f46; }
+  .sel-wrong, .sel-wrong:disabled { border-color:#ef4444 !important; background:#fef2f2 !important; color:#991b1b; }
+  body.dark .sel-right, body.dark .sel-right:disabled { background:rgba(16,185,129,.14) !important; color:#6ee7b7; }
+  body.dark .sel-wrong, body.dark .sel-wrong:disabled { background:rgba(239,68,68,.13) !important; color:#fca5a5; }
+  .mp-sel { background:var(--white); color:var(--ink); }
 
   /* KEY TERMS */
   .terms-list { display:flex; flex-direction:column; gap:.55rem; }
@@ -339,12 +354,19 @@
 
   /* QUESTION META */
   .q-meta { display:flex; align-items:center; gap:.5rem; margin-bottom:.85rem; flex-wrap:wrap; }
-  .q-type-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.18rem .55rem; border-radius:999px; }
+  /* ONE chip style. Each format used to set its own inline colour - purple,
+     amber, orange, red, green, sky, slate, indigo - eleven hues on a page
+     whose palette is one blue, and red on "Find the error" read as "wrong". */
+  .q-type-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.18rem .55rem; border-radius:999px;
+    background:#eef3ff; color:#2f5bd8; }
+  body.dark .q-type-label { background:rgba(74,124,246,.16); color:#a9c1ff; }
+  .q-chip-plain { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.18rem .55rem; border-radius:999px;
+    color:var(--muted); border:1px solid var(--border); }
   /* INTERACTIVE COORDINATE GRAPH */
   .graph-wrap { background:var(--soft); border-radius:16px; padding:1.2rem; margin-bottom:1rem; }
   .graph-svg { width:100%; height:auto; display:block; touch-action:none; user-select:none; }
   .graph-controls { display:flex; flex-direction:column; align-items:center; gap:.5rem; margin-top:1rem; }
-  .graph-value { font-family:var(--serif); font-size:1.4rem; font-weight:700; color:#7c3aed; }
+  .graph-value { font-family:var(--serif); font-size:1.6rem; font-weight:400; color:var(--blue-deep, #2851c8); }
   .graph-slider-track { position:relative; width:100%; height:36px; display:flex; align-items:center; }
   .graph-slider-rail { position:absolute; left:0; right:0; height:4px; background:var(--border); border-radius:2px; }
   .graph-slider-dot {
@@ -352,8 +374,8 @@
     transform:translateX(-50%); cursor:pointer; transition:background .15s;
   }
   .graph-slider-handle {
-    position:absolute; width:30px; height:30px; border-radius:50%; background:#7c3aed;
-    border:3px solid #fff; box-shadow:0 2px 8px rgba(124,58,237,.4);
+    position:absolute; width:30px; height:30px; border-radius:50%; background:#3563e9;
+    border:3px solid #fff; box-shadow:0 2px 8px rgba(74,124,246,.4);
     transform:translate(-50%,-50%); top:50%; cursor:grab; transition:left .1s ease-out;
     display:flex; align-items:center; justify-content:center;
   }
@@ -404,10 +426,21 @@
 
   /* CONFIDENCE BUTTONS - update existing if present */
   .conf-btn.sure svg, .conf-btn.unsure svg, .conf-btn.guess svg { display:inline-block; vertical-align:-2px; margin-right:3px; }
-  .q-difficulty { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.18rem .55rem; border-radius:999px; }
-  .q-difficulty.easy { background:#d1faf0; color:#1a9e80; }
-  .q-difficulty.medium { background:#fff0e0; color:#c06b1a; }
-  .q-difficulty.hard { background:#fee2e2; color:#dc2626; }
+  /* Difficulty is a level, not a warning: a quiet chip with a three-bar
+     meter in the brand blue. It was green / AMBER / RED - amber that means
+     "hint" or "flagged" everywhere else, and red that means "wrong". */
+  .q-difficulty { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.18rem .55rem .18rem .45rem; border-radius:999px;
+    display:inline-flex; align-items:center; gap:.35rem; color:var(--muted); border:1px solid var(--border);
+    --b1:#4a7cf6; --b2:#d5e0fa; --b3:#d5e0fa; }
+  .q-difficulty::before { content:''; flex:none; width:13px; height:9px;
+    background:linear-gradient(var(--b1),var(--b1)) 0 100%/3px 4px no-repeat,
+               linear-gradient(var(--b2),var(--b2)) 5px 100%/3px 6.5px no-repeat,
+               linear-gradient(var(--b3),var(--b3)) 10px 100%/3px 9px no-repeat; }
+  .q-difficulty.medium { --b2:#4a7cf6; }
+  .q-difficulty.hard { --b2:#4a7cf6; --b3:#4a7cf6; }
+  body.dark .q-difficulty { --b2:#2b3556; --b3:#2b3556; }
+  body.dark .q-difficulty.medium { --b2:#4a7cf6; }
+  body.dark .q-difficulty.hard { --b2:#4a7cf6; --b3:#4a7cf6; }
   .q-text { font-size:1rem; font-weight:600; color:var(--ink); line-height:1.5; margin-bottom:1.1rem; }
 
   /* MCQ */
@@ -554,8 +587,19 @@
 
   .feedback-box { margin-top:.9rem; border-radius:12px; padding:.85rem 1.1rem; display:none; animation:fadeIn .3s ease; }
   .feedback-box.show { display:block; }
-  .feedback-box.correct-fb { background:#d1faf0; border:1.5px solid var(--green); }
-  .feedback-box.wrong-fb { background:#fee2e2; border:1.5px solid var(--red); }
+  /* A tint and a rule down the side, not a slab: the wrong-answer box was
+     solid #fee2e2 with a red outline, the loudest thing on the card at the
+     moment a learner most needs to read calmly. */
+  .feedback-box.correct-fb { background:#effcf8; border:1px solid #bdeee0; border-left:4px solid var(--green); }
+  .feedback-box.wrong-fb { background:#fef6f6; border:1px solid #fbd5d5; border-left:4px solid var(--red); }
+  body.dark .feedback-box.correct-fb { background:rgba(56,191,161,.1); border-color:rgba(56,191,161,.3); border-left-color:var(--green); }
+  body.dark .feedback-box.wrong-fb { background:rgba(239,68,68,.09); border-color:rgba(239,68,68,.28); border-left-color:var(--red); }
+  body.dark .feedback-box.info-fb { background:rgba(74,124,246,.12); }
+  body.dark .correct-fb .feedback-text { color:#a7f3d0; }
+  body.dark .wrong-fb .feedback-text { color:#fecaca; }
+  body.dark .info-fb .feedback-text { color:#c7d7ff; }
+  body.dark .wrong-fb .feedback-label { color:#f87171; }
+  body.dark .correct-fb .feedback-label { color:#5eead4; }
   .feedback-box.info-fb { background:var(--blue-light); border:1.5px solid var(--blue); }
   .feedback-label { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.28rem; }
   .correct-fb .feedback-label { color:#1a9e80; }
@@ -771,13 +815,27 @@
   /* RESULTS */
   .results-wrap { display:none; animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both; }
   .results-wrap.show { display:block; }
-  .results-top { border-radius:24px; padding:2.5rem 2rem; text-align:center; margin-bottom:1.2rem; position:relative; overflow:hidden; }
-  .results-top::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle,rgba(255,255,255,.1) 1px,transparent 1px); background-size:24px 24px; }
-  .results-top.great { background:linear-gradient(135deg,#38bfa1,#059669); box-shadow:0 12px 40px rgba(56,191,161,.25); }
-  .results-top.good { background:linear-gradient(135deg,#4a7cf6,#2851c8); box-shadow:0 12px 40px rgba(74,124,246,.25); }
-  .results-top.retry { background:linear-gradient(135deg,#f59e0b,#d97706); box-shadow:0 12px 40px rgba(245,158,11,.25); }
-  .results-score { font-size:4rem; font-weight:700; color:#fff; line-height:1; position:relative; z-index:1; }
-  .results-msg { font-size:1rem; color:rgba(255,255,255,.85); margin-top:.4rem; position:relative; z-index:1; }
+  .results-top { background:var(--white); border:1.5px solid var(--border); border-radius:24px; padding:1.4rem 1.5rem;
+    margin-bottom:1rem; display:flex; align-items:center; gap:1.3rem; }
+  .r-ring-wrap { position:relative; flex:0 0 112px; width:112px; height:112px; }
+  .r-ring { width:112px; height:112px; display:block; }
+  .results-score { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:var(--serif); font-weight:400; font-size:2.6rem; color:var(--ink); line-height:1; }
+  .results-score small { font-size:.5em; margin-left:1px; color:var(--muted); }
+  .r-top-text { min-width:0; }
+  .r-kicker { font-size:0.7rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:#3563e9; margin-bottom:.3rem; }
+  .results-msg { font-family:var(--serif); font-size:1.35rem; line-height:1.2; color:var(--ink); }
+  .r-streak { display:inline-flex; align-items:center; gap:.35rem; margin-top:.55rem; font-size:0.8rem; font-weight:600; color:var(--muted); }
+  .r-note { background:#f1f5ff; border:1px solid #d6e1fb; border-radius:14px; padding:.9rem 1.1rem; margin-bottom:1.2rem;
+    font-size:0.88rem; color:var(--ink); line-height:1.6; }
+  .r-note strong { color:#2851c8; }
+  .wr-group { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--ink); margin:.9rem 0 .45rem; }
+  .wr-group span { color:var(--muted); font-weight:600; text-transform:none; letter-spacing:0; }
+  .wi-times { font-size:0.7rem; font-weight:600; color:var(--muted); background:var(--white); border:1px solid var(--border);
+    border-radius:999px; padding:.05rem .45rem; margin-left:.25rem; white-space:nowrap; }
+  body.dark { --ring-track:#222a44; }
+  body.dark .r-note { background:rgba(74,124,246,.1); border-color:rgba(74,124,246,.28); }
+  body.dark .r-note strong, body.dark .r-kicker { color:#8fb0ff; }
   .results-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:.8rem; margin-bottom:1.2rem; }
   .r-stat { background:#fff; border:1.5px solid var(--border); border-radius:16px; padding:1.1rem; text-align:center; }
   .r-stat-val { font-size:1.7rem; font-weight:700; color:var(--ink); letter-spacing:-0.02em; }
@@ -867,7 +925,8 @@
     /* Write area */
     .write-area { min-height:130px; max-height:300px; font-size:0.88rem; }
     /* Results */
-    .results-score { font-size:3.5rem; }
+    .results-top { padding:1.1rem 1.1rem; gap:1rem; }
+    .results-msg { font-size:1.2rem; }
     .results-stats { grid-template-columns:repeat(3,1fr); gap:.4rem; }
     .r-stat { padding:.75rem .4rem; border-radius:12px; }
     .r-stat-val { font-size:1.3rem; }
@@ -888,14 +947,19 @@
 
   @media(max-width:390px) {
     .q-text { font-size:0.88rem; }
-    .results-stats { grid-template-columns:repeat(2,1fr); }
-    .card-header h2 { font-size:1.05rem; }
+    .card-header h2 { font-size:1.4rem; }
   }
 
   /* ── GLOBAL TYPOGRAPHY STANDARD ── */
   nav { min-height:60px; }
   nav .logo-svg { width:140px; height:34px; }
-  h1,h2,h3 { font-family:var(--serif); letter-spacing:-0.02em; }
+  /* Instrument Serif has ONE weight. Headings are bold by default, so the
+     browser was smearing a fake bold over every one of them - with the
+     tightened spacing the letters ran into each other ("The heart and blood
+     vessels" read as one word). The landing page and plan builder always set
+     400; this page never did. font-synthesis stops it coming back through a
+     rule that asks for bold. */
+  h1,h2,h3 { font-family:var(--serif); font-weight:400; font-synthesis-weight:none; letter-spacing:-0.01em; }
   body, p, span, div, button, input, textarea, select, label { font-family:var(--sans); }
 
   
@@ -1144,7 +1208,7 @@
       <p>You've missed a few in a row — no worries. Review the lesson content and try again.</p>
       <button class="btn-review-lesson" onclick="showReviewCard()">Review lesson →</button>
     </div>
-    <button onclick="document.getElementById('struggling-banner').classList.remove('show');recentWrong=0;" style="position:absolute;top:.6rem;right:.75rem;background:none;border:none;cursor:pointer;color:#92400e;font-size:1.1rem;line-height:1;padding:.2rem .4rem;border-radius:6px;font-weight:700;" title="Dismiss">✕</button>
+    <button onclick="closeStruggling()" style="position:absolute;top:.6rem;right:.75rem;background:none;border:none;cursor:pointer;color:#92400e;font-size:1.1rem;line-height:1;padding:.2rem .4rem;border-radius:6px;font-weight:700;" title="Dismiss">✕</button>
   </div>
 
   <!-- RECAP CARD -->
@@ -2794,6 +2858,8 @@
     if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
     currentAnswered = false;
     fillAttempts = 0;
+    var sbn = document.getElementById('struggling-banner');
+    if (sbn) sbn.classList.remove('show');
 
     // Clean up graph drag listeners from previous card
     if (window._graphCleanup) window._graphCleanup();
@@ -3588,7 +3654,7 @@
     if (sfLesson && sfLesson.panes && sfLesson.panes.length) {
       sfLesson.panes[0].html = sfLesson.panes[0].html.replace(
         /<div id="lesson-art"[^>]*>[\s\S]*?<\/div>\s*(?=<div class="content-text")/,
-        '<div id="lesson-art" style="text-align:center;padding:.75rem;background:var(--soft);border-radius:14px;">' + inner + '</div>');
+        '<div id="lesson-art" class="art-paper" style="text-align:center;padding:.75rem;">' + inner + '</div>');
     }
     var host = document.getElementById('lesson-art');
     if (host) {
@@ -4015,8 +4081,9 @@
      One picture only: the question's own drawing when there is one (made,
      or on its way), else the lesson's picture when it covers the question,
      else the "Draw it for me" offer in the picture's place. A worked
-     calculation keeps the sideways board - its balance IS its picture - and
-     a question with nothing to picture keeps the board too. */
+     calculation keeps the sideways board - its balance IS its picture. A
+     question with nothing to picture gets the same walk with no picture
+     (kind 'text'). */
   var picWalk = null;
 
   function picWalkPins(q) {
@@ -4044,6 +4111,11 @@
         if (lab || det) rows.push({ label: lab || ('Step ' + (i + 1)), detail: det });
       }
     }
+    /* A walk that never says the answer. The sentence walkthrough went
+       "What was asked" then "Why" - the correct sentence was nowhere. */
+    var hasAns = false, ans = correctAnswerText(q);
+    for (i = 0; i < rows.length; i++) if (/answer|verdict|missing word|order|done correctly/i.test(rows[i].label)) hasAns = true;
+    if (!hasAns && ans && rows.length) rows.splice(1, 0, { label: 'The answer', detail: ans });
     return rows.length >= 2 ? rows : null;
   }
 
@@ -4127,7 +4199,11 @@
     /* Nothing drawn yet: the walk still reads better than the board, and the
        picture's place offers to draw one. */
     if (mk) return { kind: 'offer', key: mk, rows: base, title: 'Let’s walk through it' };
-    return null;
+    /* Nothing to picture at all (match, matchpairs, sentence, trace table):
+       the same steps, one tap each, with no picture. These used to get the
+       old text board, sized for every row and showing one - a single line
+       of text over a screen of empty card. */
+    return { kind: 'text', rows: base, title: 'Let’s walk through it' };
   }
 
   /* Block 2 hands the card over (its renderCard, 'sfwb-picwalk'). */
@@ -4267,6 +4343,25 @@
     /* Nothing in the picture matches this step: leave the picture alone
        rather than dim every word of it. */
     fig.className = 'pw-fig' + (hot ? ' has-hot' : '');
+
+    /* "In the picture" names what is blue, in the drawing's own words -
+       "Look at the valve" beats "the part drawn in blue". Read off the
+       drawing on screen, so it works whether it was cached or just landed. */
+    if (row.blue && !row.named) {
+      var names = [], seenN = {};
+      for (i = 0; i < texts.length && names.length < 2; i++) {
+        var tf = (texts[i].getAttribute('fill') || '').toLowerCase(), tt = fmStr(texts[i].textContent).trim();
+        if ((tf === '#1e40af' || tf === '#4a7cf6') && tt && tt.length <= 32 && !seenN[tt.toLowerCase()]) {
+          seenN[tt.toLowerCase()] = 1; names.push(tt);
+        }
+      }
+      if (names.length) {
+        row.named = true;
+        row.detail = 'Find \u201c' + names.join('\u201d and \u201c') + '\u201d in the picture. It is drawn in blue because it is what this answer is about.';
+        var dEl = document.querySelector('.pw-row[data-i="' + at + '"] .pw-d');
+        if (dEl) dEl.textContent = row.detail;
+      }
+    }
   }
 
   function picWalkNext() {
@@ -4680,7 +4775,7 @@
         artSvg = drawSpec(lessonArt.spec);
       }
       if (artSvg || (dgm && dgm.svg)) {
-        dgmHtml = '<div id="lesson-art" style="text-align:center;padding:.75rem;background:var(--soft);border-radius:14px;">' +
+        dgmHtml = '<div id="lesson-art" class="art-paper" style="text-align:center;padding:.75rem;">' +
           (artSvg || dgm.svg) +
           diagramCaptionHtml(artSvg || dgm.svg,
             artSvg ? (fmStr(lessonArt.spec.title) || fmStr(day.title)) : dgm.caption, CAPTION_STYLE) +
@@ -5241,8 +5336,8 @@
     grid += '<text x="' + (ax - 5) + '" y="' + (ay + 13) + '" text-anchor="end" font-size="9" fill="#94a3b8" font-family="DM Sans, sans-serif">0</text>';
 
     // ── ARROWHEAD MARKER ──
-    var defs = '<defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#7c3aed"/></marker>' +
-      '<marker id="arr2" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto-start-reverse"><path d="M0,0 L0,6 L6,3 z" fill="#7c3aed"/></marker></defs>';
+    var defs = '<defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#3563e9"/></marker>' +
+      '<marker id="arr2" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto-start-reverse"><path d="M0,0 L0,6 L6,3 z" fill="#3563e9"/></marker></defs>';
 
     var body = '<div class="q-meta"><span class="q-type-label graph">Interactive Graph</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
@@ -5250,8 +5345,8 @@
       '<div class="graph-wrap">' +
       '<svg class="graph-svg" viewBox="0 0 ' + size + ' ' + size + '" id="graph-svg">' +
       defs + grid +
-      '<line id="graph-line" x1="0" y1="0" x2="0" y2="0" stroke="#7c3aed" stroke-width="2.5" stroke-linecap="round" marker-end="url(#arr)" marker-start="url(#arr2)"/>' +
-      '<circle id="graph-dot" cx="' + toSvgX(0) + '" cy="' + toSvgY(0) + '" r="7" fill="#7c3aed" stroke="#fff" stroke-width="2.5"/>' +
+      '<line id="graph-line" x1="0" y1="0" x2="0" y2="0" stroke="#3563e9" stroke-width="2.5" stroke-linecap="round" marker-end="url(#arr)" marker-start="url(#arr2)"/>' +
+      '<circle id="graph-dot" cx="' + toSvgX(0) + '" cy="' + toSvgY(0) + '" r="7" fill="#3563e9" stroke="#fff" stroke-width="2.5"/>' +
       '</svg>' +
       '<div class="graph-controls">' +
       '<div class="graph-value" style="font-size:1.1rem;">y-intercept = (0, <span id="graph-val" style="font-weight:800;">0</span>)</div>' +
@@ -5468,16 +5563,16 @@
     }
 
     var body =
-      '<div class="q-meta"><span class="q-type-label" style="background:#f3f0ff;color:#7c3aed;">' + typeLabel + '</span>' +
+      '<div class="q-meta"><span class="q-type-label">' + typeLabel + '</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
       /* Inside a reading set the learner has just read this passage on its own
          card, so re-printing 200 words above every follow-up question buries
          the question and makes the set feel like the same passage four times.
          It collapses to a line they can open to check a detail. */
       (q.collapsePassage
-        ? '<details style="margin-bottom:1rem;"><summary style="cursor:pointer;font-size:0.68rem;font-weight:700;letter-spacing:.08em;color:#7c3aed;">' + passageLabel + ' — tap to re-read</summary>'
-        : '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.08em;color:#7c3aed;margin-bottom:.35rem;">' + passageLabel + '</div>') +
-      '<div style="background:var(--soft);border-left:3px solid #7c3aed;border-radius:0 12px 12px 0;padding:.9rem 1rem 1rem;margin-bottom:1rem;font-size:0.88rem;line-height:1.8;color:var(--ink);font-style:italic;">' +
+        ? '<details style="margin-bottom:1rem;"><summary style="cursor:pointer;font-size:0.68rem;font-weight:700;letter-spacing:.08em;color:#3563e9;">' + passageLabel + ' — tap to re-read</summary>'
+        : '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.08em;color:#3563e9;margin-bottom:.35rem;">' + passageLabel + '</div>') +
+      '<div style="background:var(--soft);border-left:3px solid #3563e9;border-radius:0 12px 12px 0;padding:.9rem 1rem 1rem;margin-bottom:1rem;font-size:0.88rem;line-height:1.8;color:var(--ink);font-style:italic;">' +
       passageText +
       '</div>' +
       (q.collapsePassage ? '</details>' : '') +
@@ -5580,7 +5675,7 @@
 
     var body =
       '<div class="q-meta">' +
-      '<span class="q-type-label" style="background:#f3f0ff;color:#7c3aed;">' + topic.label + '</span>' +
+      '<span class="q-type-label">' + topic.label + '</span>' +
       '<span class="q-difficulty ' + diffClass + '">' + diff + '</span>' +
       '</div>' +
       '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:.75rem;">' + topic.instruction + '</div>' +
@@ -5705,7 +5800,7 @@
           '\u00a0' + pad(top) + '<br>' +
           op + pad(bot) + '<br>' +
           '<span style="display:inline-block;border-top:3px solid var(--ink);width:100%;margin:4px 0;"></span><br>' +
-          '<span style="color:#7c3aed;">___</span>' +
+          '<span style="color:#3563e9;">___</span>' +
           '</div></div>';
       }
     }
@@ -5720,7 +5815,7 @@
           '\u00a0\u00a0' + a + '<br>' +
           '×\u00a0' + b + '<br>' +
           '<span style="display:inline-block;border-top:3px solid var(--ink);width:100%;margin:4px 0;"></span><br>' +
-          '<span style="color:#7c3aed;">___</span>' +
+          '<span style="color:#3563e9;">___</span>' +
           '</div></div>';
       }
     }
@@ -5760,7 +5855,7 @@
       return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:.5rem;">' +
         (fracHtml || '<span style="' + SERIF + 'font-size:2rem;font-weight:700;color:var(--ink);">' + eq + '</span>') +
         '<span style="font-size:1.8rem;font-weight:700;color:var(--muted);vertical-align:middle;margin:0 .3rem;">=</span>' +
-        '<span style="' + SERIF + 'font-size:2rem;font-weight:700;color:#7c3aed;">?</span>' +
+        '<span style="' + SERIF + 'font-size:2rem;font-weight:700;color:#3563e9;">?</span>' +
         '</div>';
     }
 
@@ -5779,9 +5874,9 @@
           '<div style="' + SERIF + 'font-size:1.6rem;font-weight:700;color:var(--ink);">x = ' + inputVal + '</div>' +
           '</div>' +
           '<div style="font-size:1.4rem;color:var(--muted);">→</div>' +
-          '<div style="text-align:center;padding:.6rem 1rem;background:#f3f0ff;border-radius:10px;border:1.5px solid #7c3aed;">' +
-          '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.07em;color:#7c3aed;text-transform:uppercase;">Output</div>' +
-          '<div style="' + SERIF + 'font-size:1.6rem;font-weight:700;color:#7c3aed;">f(' + inputVal + ') = ?</div>' +
+          '<div style="text-align:center;padding:.6rem 1rem;background:#eef3ff;border-radius:10px;border:1.5px solid #3563e9;">' +
+          '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.07em;color:#3563e9;text-transform:uppercase;">Output</div>' +
+          '<div style="' + SERIF + 'font-size:1.6rem;font-weight:700;color:#3563e9;">f(' + inputVal + ') = ?</div>' +
           '</div>' +
           '</div>' : '') +
         '</div>';
@@ -5805,7 +5900,7 @@
       return '<div style="' + BOX + 'margin:.5rem 0 .9rem;text-align:center;">' +
         '<div style="' + SERIF + 'font-size:2rem;font-weight:700;color:var(--ink);margin-bottom:.5rem;line-height:1.4;">' + eq + '</div>' +
         '<div style="display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:.6rem;">' +
-        '<span style="font-size:0.72rem;padding:.25rem .6rem;background:#f3f0ff;color:#7c3aed;border-radius:6px;font-weight:600;">Power rule: d/dx[xⁿ] = nxⁿ⁻¹</span>' +
+        '<span style="font-size:0.72rem;padding:.25rem .6rem;background:#eef3ff;color:#3563e9;border-radius:6px;font-weight:600;">Power rule: d/dx[xⁿ] = nxⁿ⁻¹</span>' +
         '<span style="font-size:0.72rem;padding:.25rem .6rem;background:#eef4ff;color:#4a7cf6;border-radius:6px;font-weight:600;">Chain rule: d/dx[f(g(x))] = f\'(g(x))·g\'(x)</span>' +
         '</div>' +
         '</div>';
@@ -6502,7 +6597,7 @@
         '</div>';
     }
 
-    var body = '<div class="q-meta"><span class="q-type-label" style="background:#fff8ed;color:#d97706;">Word Problem</span>' +
+    var body = '<div class="q-meta"><span class="q-type-label">Word Problem</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
       '<div style="background:linear-gradient(135deg,#f0f7ff,#e8f4ff);border-left:4px solid #4a7cf6;border-radius:0 14px 14px 0;padding:1rem 1.1rem;margin-bottom:.75rem;font-size:0.9rem;line-height:1.75;color:var(--ink);">' +
       scenario + '</div>' +
@@ -6576,7 +6671,7 @@
                 '<span>' + p[1].trim() + '</span>' +
                 '</span>';
             }).join('<span style="font-size:1.2rem;font-weight:700;color:var(--muted);vertical-align:middle;margin:0 .2rem;">=</span>') +
-            '<span style="font-family:Georgia,serif;font-size:1.2rem;font-weight:700;color:#7c3aed;margin-left:.3rem;">?</span>' +
+            '<span style="font-family:Georgia,serif;font-size:1.2rem;font-weight:700;color:#3563e9;margin-left:.3rem;">?</span>' +
             '</div>';
         }
       } else if (topic.id === 'add' || topic.id === 'subtract') {
@@ -6604,7 +6699,7 @@
         '</button>';
     }).join('');
 
-    var body = '<div class="q-meta"><span class="q-type-label" style="background:#fee2e2;color:#dc2626;">Find the Error</span>' +
+    var body = '<div class="q-meta"><span class="q-type-label">Find the Error</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
       '<div class="q-text">' + qText(q) + '</div>' +
       topicVisual +
@@ -6773,7 +6868,7 @@
         '<span class="seq-text">' + word + '</span></div>';
     }).join('');
 
-    var body = '<div class="q-meta"><span class="q-type-label" style="background:#eef4ff;color:#4a7cf6;">Sentence Builder</span>' +
+    var body = '<div class="q-meta"><span class="q-type-label">Sentence Builder</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
       '<div class="q-text">' + qText(q) + '</div>' +
       (q.translation ? '<div style="background:var(--soft);border-radius:10px;padding:.6rem .85rem;margin:.5rem 0 .75rem;font-size:0.82rem;color:var(--muted);font-style:italic;">"' + q.translation + '"</div>' : '') +
@@ -7275,7 +7370,7 @@
 
   function renderWrite(q) {
     var concept = feynmanConcept(q);
-    var body = '<div class="q-meta"><span class="q-type-label write">Feynman Technique</span><span class="q-difficulty medium">Deep Learning</span></div>' +
+    var body = '<div class="q-meta"><span class="q-type-label write">Feynman Technique</span><span class="q-chip-plain">Not scored</span></div>' +
       '<div class="q-text">Explain this concept <strong>in your own words</strong>, as if teaching it to a friend:</div>' +
       '<div style="background:var(--blue-light);border-radius:10px;padding:.75rem 1rem;margin:.5rem 0 .75rem;font-size:0.88rem;color:var(--blue);font-weight:600;">' + concept + '</div>' +
       '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:.5rem;">' + getFeynmanTip(plan.subjectType) + '</div>' +
@@ -7314,7 +7409,7 @@
         item + '</button>';
     }).join('');
 
-    var body = '<div class="q-meta"><span class="q-type-label" style="background:#f3f0ff;color:#7c3aed;">Classify</span>' +
+    var body = '<div class="q-meta"><span class="q-type-label">Classify</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
       '<div class="q-text">' + qText(q) + '</div>' +
       '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:.8rem;">Tap an item, then tap a category to place it</div>' +
@@ -7323,8 +7418,8 @@
       '<div id="classify-bucketA" onclick="classifyDrop(\'A\')" style="min-height:80px;border:2px dashed #4a7cf6;border-radius:14px;padding:.6rem;background:rgba(74,124,246,.04);cursor:pointer;transition:background .2s;">' +
       '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#4a7cf6;margin-bottom:.4rem;">' + (q.categoryA||'Category A') + '</div>' +
       '<div id="classify-a-items" style="display:flex;flex-wrap:wrap;gap:.3rem;min-height:36px;"></div></div>' +
-      '<div id="classify-bucketB" onclick="classifyDrop(\'B\')" style="min-height:80px;border:2px dashed #7c3aed;border-radius:14px;padding:.6rem;background:rgba(124,58,237,.04);cursor:pointer;transition:background .2s;">' +
-      '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#7c3aed;margin-bottom:.4rem;">' + (q.categoryB||'Category B') + '</div>' +
+      '<div id="classify-bucketB" onclick="classifyDrop(\'B\')" style="min-height:80px;border:2px dashed #94a3b8;border-radius:14px;padding:.6rem;background:rgba(100,116,139,.05);cursor:pointer;transition:background .2s;">' +
+      '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#475569;margin-bottom:.4rem;">' + (q.categoryB||'Category B') + '</div>' +
       '<div id="classify-b-items" style="display:flex;flex-wrap:wrap;gap:.3rem;min-height:36px;"></div></div>' +
       '</div>' +
       '<button onclick="checkClassify()" id="classify-check-btn" style="margin-top:.9rem;background:var(--blue);color:#fff;border:none;border-radius:10px;padding:.7rem 1.4rem;font-family:var(--sans);font-size:0.88rem;font-weight:700;cursor:pointer;">Check →</button>' +
@@ -7440,8 +7535,8 @@
     var words = String(q.passage || '').split(/\s+/).filter(Boolean).length;
     var mins = Math.max(1, Math.round(words / 200));
     var n = (q.questions || []).length;
-    var body = '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.08em;color:#7c3aed;margin-bottom:.5rem;">READ THIS FIRST</div>' +
-      '<div style="background:var(--soft);border-left:3px solid #7c3aed;border-radius:0 12px 12px 0;padding:1rem 1.1rem 1.1rem;margin-bottom:.9rem;font-size:0.92rem;line-height:1.85;color:var(--ink);">' +
+    var body = '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.08em;color:#3563e9;margin-bottom:.5rem;">READ THIS FIRST</div>' +
+      '<div style="background:var(--soft);border-left:3px solid #3563e9;border-radius:0 12px 12px 0;padding:1rem 1.1rem 1.1rem;margin-bottom:.9rem;font-size:0.92rem;line-height:1.85;color:var(--ink);">' +
       esc(q.passage || '') + '</div>' +
       '<p class="content-text" style="text-align:center;font-size:.84rem;color:var(--muted);">' +
       n + ' question' + (n === 1 ? '' : 's') + ' follow. You can re-open the passage on each one.</p>';
@@ -7465,7 +7560,7 @@
 
     var passage = q.passage ? '<div class="tp-passage" style="background:#f8fafc;border-left:4px solid #4a7cf6;border-radius:0 12px 12px 0;padding:.85rem 1rem;margin-bottom:.9rem;font-size:.88rem;line-height:1.7;">' + esc(q.passage) + '</div>' : '';
 
-    var body = '<div class="q-meta"><span class="q-type-label" style="background:#eef2ff;color:#4338ca;">Two-part</span>' +
+    var body = '<div class="q-meta"><span class="q-type-label">Two-part</span>' +
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       passage +
       '<div style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;">Part A</div>' +
@@ -7554,7 +7649,7 @@
         '<span class="opt-text">' + esc(opt) + '</span></button>';
     }).join('');
 
-    var body = '<div class="q-meta"><span class="q-type-label" style="background:#fef3c7;color:#92400e;">Compare sources</span>' +
+    var body = '<div class="q-meta"><span class="q-type-label">Compare sources</span>' +
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       '<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:.9rem;">' +
       srcBlock(A, { bg: '#eff6ff', br: '#bfdbfe', fg: '#1d4ed8' }) +
@@ -7586,7 +7681,7 @@
 
     window._highlightState = { q: q };
 
-    var body = '<div class="q-meta"><span class="q-type-label" style="background:#ecfdf5;color:#047857;">Find the evidence</span>' +
+    var body = '<div class="q-meta"><span class="q-type-label">Find the evidence</span>' +
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       '<div class="q-text" style="margin-bottom:.8rem;">' + esc(q.question) + '</div>' +
       '<div>' + sentHtml + '</div>' +
@@ -7610,8 +7705,8 @@
     var all = document.querySelectorAll('.hl-sent');
     for (var k = 0; k < all.length; k++) {
       all[k].disabled = true;
-      if (k === q.correctIndex) { all[k].style.borderColor = '#10b981'; all[k].style.background = '#ecfdf5'; }
-      else if (all[k] === btn) { all[k].style.borderColor = '#ef4444'; all[k].style.background = '#fef2f2'; }
+      if (k === q.correctIndex) all[k].classList.add('sel-right');
+      else if (all[k] === btn) all[k].classList.add('sel-wrong');
       else { all[k].style.opacity = '.5'; }
     }
     if (ok) spawnConfetti();
@@ -7642,12 +7737,18 @@
     /* Injected before the closing tag so the pins share the drawing's own
        viewBox and scale with it. The kit's output always ends '</svg>'. */
     var marks = '', i;
+    /* Sized to the drawing. A fixed r=10 / 10.5pt pin on a 400-wide drawing
+       came out as an 8px numeral on a phone - the one thing on this card
+       the learner has to read to answer it. Capped at 12 because pins can
+       sit 24 units apart and must not touch. */
+    var vbm = /viewBox="\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)/.exec(svg), vw = vbm ? parseFloat(vbm[1]) : 400;
+    var pr = Math.max(10, Math.min(12, vw * 0.03)), pf = +(pr * 1.05).toFixed(1);
     for (i = 0; i < pins.length; i++) {
       var x = pins[i].x, y = pins[i].y;
       /* data-pin: the walkthrough lights one pin at a time. */
-      marks += '<g class="ld-pin" data-pin="' + i + '"><circle cx="' + x + '" cy="' + y + '" r="10" fill="#ffffff" stroke="#4a7cf6" stroke-width="2"/>' +
-               '<text x="' + x + '" y="' + (y + 3.6) + '" text-anchor="middle" font-size="10.5" ' +
-               'font-weight="700" fill="#1e40af">' + (i + 1) + '</text></g>';
+      marks += '<g class="ld-pin" data-pin="' + i + '"><circle cx="' + x + '" cy="' + y + '" r="' + pr + '" fill="#ffffff" stroke="#3563e9" stroke-width="2.4"/>' +
+               '<text x="' + x + '" y="' + (y + pf * 0.36).toFixed(1) + '" text-anchor="middle" font-size="' + pf + '" ' +
+               'font-weight="700" fill="#1e40af" font-family="DM Sans, system-ui, sans-serif">' + (i + 1) + '</text></g>';
     }
     return svg.replace(/<\/svg>\s*$/, marks + '</svg>');
   }
@@ -7710,7 +7811,7 @@
 
     window._labelState = { q: q, pins: pins };
 
-    var body = '<div class="q-meta"><span class="q-type-label" style="background:#eef2ff;color:#4338ca;">Label the diagram</span>' +
+    var body = '<div class="q-meta"><span class="q-type-label">Label the diagram</span>' +
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.question || 'Label each numbered part.') + '</div>' +
       '<div class="ld-fig">' + labelPinsSvg(svg, pins) + '</div>' +
@@ -7743,9 +7844,9 @@
       var got = sels[k].value;
       sels[k].disabled = true;
       if (got && got.toLowerCase() === want.toLowerCase()) {
-        right++; sels[k].style.borderColor = '#10b981'; sels[k].style.background = '#ecfdf5';
+        right++; sels[k].classList.add('sel-right');
       } else {
-        sels[k].style.borderColor = '#ef4444'; sels[k].style.background = '#fef2f2';
+        sels[k].classList.add('sel-wrong');
         /* Show what it should have been - a wrong label with no correction
            teaches the wrong label twice. */
         var opt = document.createElement('option');
@@ -7774,13 +7875,13 @@
       return '<div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;flex-wrap:wrap;">' +
         '<div style="flex:1 1 120px;min-width:0;font-size:.87rem;font-weight:600;">' + esc(p.left) + '</div>' +
         '<select class="mp-sel" data-i="' + i + '" style="flex:1 1 150px;min-width:0;padding:.45rem .55rem;border:1.5px solid #e2e8f0;' +
-        'border-radius:9px;font-family:inherit;font-size:.85rem;background:#fff;color:inherit;">' +
+        'border-radius:9px;font-family:inherit;font-size:.85rem;">' +
         '<option value="">— choose —</option>' + optTags + '</select></div>';
     }).join('');
 
     window._matchPairsState = { q: q, pairs: pairs };
 
-    var body = '<div class="q-meta"><span class="q-type-label" style="background:#f0f9ff;color:#0369a1;">Match</span>' +
+    var body = '<div class="q-meta"><span class="q-type-label">Match</span>' +
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       '<div class="q-text" style="margin-bottom:.8rem;">' + esc(q.question || 'Match each item to its pair.') + '</div>' +
       rowsHtml +
@@ -7806,8 +7907,8 @@
       var want = st.pairs[k] ? st.pairs[k].right : '';
       var got = sels[k].value;
       sels[k].disabled = true;
-      if (got === want) { right++; sels[k].style.borderColor = '#10b981'; sels[k].style.background = '#ecfdf5'; }
-      else { sels[k].style.borderColor = '#ef4444'; sels[k].style.background = '#fef2f2'; }
+      if (got === want) { right++; sels[k].classList.add('sel-right'); }
+      else { sels[k].classList.add('sel-wrong'); }
     }
     var all = right === st.pairs.length && st.pairs.length > 0;
     var btn = document.getElementById('mp-check-btn');
@@ -7850,7 +7951,7 @@
     var setupTxt = String(q.setup || '').split('\n').map(function (ln) { return esc(ln); }).join('\n');
     var setup = setupTxt ? '<pre style="background:#0f172a;color:#e2e8f0;border-radius:10px;padding:.7rem .85rem;overflow-x:auto;font-size:.8rem;line-height:1.6;margin-bottom:.85rem;white-space:pre-wrap;">' + setupTxt + '</pre>' : '';
 
-    var body = '<div class="q-meta"><span class="q-type-label" style="background:#f1f5f9;color:#334155;">Trace it</span>' +
+    var body = '<div class="q-meta"><span class="q-type-label">Trace it</span>' +
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.question) + '</div>' + setup +
       '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>' + head + '</tr></thead><tbody>' + bodyRows + '</tbody></table></div>' +
@@ -7877,9 +7978,9 @@
       var want = fmStr((rows[ri] || [])[st.blank]).trim().toLowerCase();
       var got = fmStr(ins[k].value).trim().toLowerCase();
       ins[k].disabled = true;
-      if (got === want && got !== '') { right++; ins[k].style.borderColor = '#10b981'; ins[k].style.background = '#ecfdf5'; }
+      if (got === want && got !== '') { right++; ins[k].classList.add('sel-right'); }
       else {
-        ins[k].style.borderColor = '#ef4444'; ins[k].style.background = '#fef2f2';
+        ins[k].classList.add('sel-wrong');
         ins[k].value = ins[k].value ? ins[k].value + '  →  ' + ((rows[ri] || [])[st.blank] || '') : ((rows[ri] || [])[st.blank] || '');
       }
     }
@@ -7898,7 +7999,7 @@
     window._estimateState = { q: q };
     var unit = q.unit ? '<span style="font-size:.9rem;color:var(--muted);margin-left:.45rem;">' + esc(q.unit) + '</span>' : '';
 
-    var body = '<div class="q-meta"><span class="q-type-label" style="background:#fff7ed;color:#c2410c;">Estimate</span>' +
+    var body = '<div class="q-meta"><span class="q-type-label">Estimate</span>' +
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       '<div class="q-text" style="margin-bottom:.8rem;">' + esc(q.question) + '</div>' +
       /* Wraps, and the field flexes: a fixed 150px box with the unit beside it
@@ -7937,8 +8038,7 @@
     if (!isFinite(tol) || tol <= 0) tol = Math.abs(want) * 0.1;
     var ok = isFinite(got) && isFinite(want) && Math.abs(got - want) <= tol;
     el.disabled = true;
-    el.style.borderColor = ok ? '#10b981' : '#ef4444';
-    el.style.background = ok ? '#ecfdf5' : '#fef2f2';
+    el.classList.add(ok ? 'sel-right' : 'sel-wrong');
     var btn = document.getElementById('est-check-btn');
     if (btn) btn.disabled = true;
     var msg = ok ? '' : ('A good estimate was about ' + st.q.answer + (st.q.unit ? ' ' + st.q.unit : '') + '. ');
@@ -7955,9 +8055,9 @@
         '<span class="opt-text">' + opt + '</span></button>';
     }).join('');
 
-    var body = '<div class="q-meta"><span class="q-type-label" style="background:#fff8e0;color:#b45309;">Real Scenario</span>' +
+    var body = '<div class="q-meta"><span class="q-type-label">Real Scenario</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
-      '<div style="background:linear-gradient(135deg,#f8f7ff,#f3f0ff);border-left:4px solid #7c3aed;border-radius:0 14px 14px 0;padding:.9rem 1.1rem;margin-bottom:.85rem;font-size:0.9rem;line-height:1.75;color:var(--ink);font-style:italic;">' +
+      '<div style="background:linear-gradient(135deg,#f5f8ff,#eef3ff);border-left:4px solid #3563e9;border-radius:0 14px 14px 0;padding:.9rem 1.1rem;margin-bottom:.85rem;font-size:0.9rem;line-height:1.75;color:var(--ink);font-style:italic;">' +
       q.question + '</div>' +
       '<div style="font-size:0.78rem;font-weight:600;color:var(--muted);margin-bottom:.6rem;">Which concept BEST explains this?</div>' +
       optHtml +
@@ -8227,6 +8327,38 @@
     return c.textContent.replace(/\s+/g, ' ').trim();
   }
 
+  /* What the learner actually answered, for "Your answer" on the results
+     screen and for the drawing prompt. Most graders hand over the CHECK
+     BUTTON as wrongEl, so the results screen printed "Your answer: Check
+     answers" for labelling, matching, trace tables and estimates - and "—"
+     for every fill-in, whose grader passes nothing. Read the card instead. */
+  function isCheckButton(el) {
+    return !!el && el.nodeType === 1 && el.tagName === 'BUTTON' &&
+      (/check|submit/i.test(el.id || '') || /^\s*(check|submit)/i.test(el.textContent || ''));
+  }
+  function answerFromCard() {
+    var sc = document.getElementById('session-card');
+    if (!sc) return '';
+    var cc = window.currentCard || {}, st = window._labelState, out = [], i;
+    if ((cc.type === 'labeldiagram' || (cc.q && cc.q.type === 'labeldiagram')) && st && st.picks) {
+      for (i = 0; i < st.picks.length; i++) out.push(fmStr(st.picks[i]) || '(blank)');
+      return out.join(', ');
+    }
+    var sels = sc.querySelectorAll('select');
+    for (i = 0; i < sels.length; i++) {
+      var o = sels[i].options[sels[i].selectedIndex];
+      out.push(o && sels[i].value ? o.textContent.replace(/\s*\u2190 correct\s*$/, '') : '(blank)');
+    }
+    if (out.length) return out.join(', ');
+    var ins = sc.querySelectorAll('input[type=text], input[type=number], input:not([type])');
+    for (i = 0; i < ins.length; i++) {
+      /* A graded trace-table cell reads "mine  →  right"; keep the first half. */
+      var v = fmStr(ins[i].value).split('  \u2192  ')[0].trim();
+      if (v) out.push(v);
+    }
+    return out.join(', ');
+  }
+
   function handleResult(isCorrect, explanation, wrongEl) {
     if (isCorrect) {
       correctCount++;
@@ -8241,9 +8373,14 @@
       checkMilestone();
     } else {
       currentStreak = 0;
-      recentWrong++;
+      /* The pre-test is asked BEFORE any teaching - missing it is what it is
+         for. Three pre-test misses were raising "Let's slow down a bit" over
+         the welcome card, and it then sat above the lesson telling the
+         learner to review the lesson they were reading. */
+      if (!(window.currentCard && window.currentCard.isPretest)) recentWrong++;
       var wrongQ = sessionCards[cardIndex - 1] ? sessionCards[cardIndex - 1].q : null;
-      var wrongItem = { q: wrongQ || { question: 'Question', explanation: explanation }, userAns: wrongEl ? answerTextOf(wrongEl) : '—', explanation: explanation };
+      var said = (wrongEl && !isCheckButton(wrongEl)) ? answerTextOf(wrongEl) : answerFromCard();
+      var wrongItem = { q: wrongQ || { question: 'Question', explanation: explanation }, userAns: said || '\u2014', explanation: explanation };
       wrongItems.push(wrongItem);
 
       // SM-2: Update algorithm — wrong answer resets interval
@@ -8344,8 +8481,11 @@
     fb.innerHTML = metaMsg +
       '<div class="feedback-label">' + (isCorrect ? '✓ Correct!' : '✗ Not yet — keep going') + '</div>' +
       '<div class="feedback-text">' + (explanation || (isCorrect ? 'Great work — your brain just built a stronger connection!' : 'Review this concept and you\'ll get it next time.')) + '</div>' +
-      (isCorrect ? '' : '<div class="feedback-growth">Mistakes are how your brain grows. Every wrong answer = stronger memory when you get it right. </div>');
+      /* Once a session. Under every miss it stopped being encouragement
+         and became furniture - the same two sentences, eleven times. */
+      (isCorrect || growthShown++ ? '' : '<div class="feedback-growth">Mistakes are how your brain grows. Every wrong answer = stronger memory when you get it right.</div>');
   }
+  var growthShown = 0;
 
   function flashCard(correct) {
     var sc = document.getElementById('session-card');
@@ -8471,10 +8611,19 @@
   }
 
   /* ── STRUGGLING ── */
+  /* Shown at the miss that earns it - the third in a row, then every third
+     after - and gone on the next card. It used to stay up on every card that
+     followed, lesson and flashcards included, for the rest of the session.
+     Closing it closes it for good. */
+  var struggleClosed = false;
   function checkStruggling() {
-    if (recentWrong >= 3) {
+    if (!struggleClosed && recentWrong >= 3 && recentWrong % 3 === 0) {
       document.getElementById('struggling-banner').classList.add('show');
     }
+  }
+  function closeStruggling() {
+    struggleClosed = true; recentWrong = 0;
+    document.getElementById('struggling-banner').classList.remove('show');
   }
 
   function showReviewCard() {
@@ -8666,8 +8815,7 @@
     document.getElementById('recap-card').classList.remove('show');
 
     var pct = totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : 100;
-    var topClass = pct >= 80 ? 'great' : (pct >= 60 ? 'good' : 'retry');
-    var msg = pct >= 80 ? 'Excellent work! You crushed it.' : (pct >= 60 ? 'Solid session — keep building.' : 'Keep grinding — consistency is everything.');
+    var msg = pct >= 80 ? 'Excellent work — you know this.' : (pct >= 60 ? 'Solid session — keep building.' : 'A hard one. The list below is exactly what to go over.');
     var timeStudied = Math.max(1, Math.round((totalSeconds - secondsLeft) / 60));
 
     // Calculate streak for end screen
@@ -8683,9 +8831,21 @@
       else break;
     }
 
+    /* One entry per QUESTION. A missed question comes back as a spaced-repeat
+       retry, and missing that too pushed a second entry - so the list read
+       "MISSED 21" for eight questions, the same one printed twice in a row. */
+    var seenMiss = {}, uniqMisses = [];
+    wrongItems.forEach(function(item) {
+      var q0 = item.q || {};
+      var k = fmStr(q0.type) + '|' + fmStr(q0.question || q0.scenario || q0.title);
+      if (seenMiss[k]) { seenMiss[k].times++; return; }
+      seenMiss[k] = { q: item.q, userAns: item.userAns, explanation: item.explanation, times: 1 };
+      uniqMisses.push(seenMiss[k]);
+    });
+
     // Categorize wrong answers by difficulty
     var wrongByDiff = { Easy:[], Medium:[], Hard:[] };
-    wrongItems.forEach(function(item) {
+    uniqMisses.forEach(function(item) {
       /* Normalised, because the sources do not agree on case: the plan says
          "Medium", the lesson's own labelling card says "medium", and a model
          can say either. An item whose difficulty matched no bucket was left
@@ -8705,26 +8865,22 @@
       wrongHtml = '<div style="background:#d1faf0;border:1.5px solid #38bfa1;border-radius:14px;padding:1.2rem;text-align:center;color:#1a9e80;font-weight:600;font-size:1rem;margin-bottom:1.5rem;">Perfect session — every answer correct!</div>';
     } else if (wrongItems.length > 0) {
       wrongHtml = '<div class="wrong-reviews"><h3>What to study more</h3>';
-      if (wrongByDiff.Hard.length > 0) {
-        wrongHtml += '<div style="font-size:0.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#dc2626;margin:.8rem 0 .4rem;">Hard — missed ' + wrongByDiff.Hard.length + '</div>';
-        wrongByDiff.Hard.slice(0,3).forEach(function(item){ wrongHtml += buildWrongItem(item); });
-      }
-      if (wrongByDiff.Medium.length > 0) {
-        wrongHtml += '<div style="font-size:0.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#c06b1a;margin:.8rem 0 .4rem;">Medium — missed ' + wrongByDiff.Medium.length + '</div>';
-        wrongByDiff.Medium.slice(0,3).forEach(function(item){ wrongHtml += buildWrongItem(item); });
-      }
-      if (wrongByDiff.Easy.length > 0) {
-        wrongHtml += '<div style="font-size:0.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:.8rem 0 .4rem;">Easy — missed ' + wrongByDiff.Easy.length + '</div>';
-        wrongByDiff.Easy.slice(0,2).forEach(function(item){ wrongHtml += buildWrongItem(item); });
-      }
+      /* Group headings are quiet: the red rule on each item already says
+         "missed", and red and orange headings above it said it twice more. */
+      ['Hard', 'Medium', 'Easy'].forEach(function (lvl) {
+        var list = wrongByDiff[lvl];
+        if (!list.length) return;
+        wrongHtml += '<div class="wr-group">' + lvl + ' <span>· ' + list.length + ' question' + (list.length === 1 ? '' : 's') + '</span></div>';
+        list.slice(0, lvl === 'Easy' ? 2 : 3).forEach(function(item){ wrongHtml += buildWrongItem(item); });
+      });
       wrongHtml += '</div>';
     }
 
     var adviceHtml = '';
     if (pct < 60) {
-      adviceHtml = '<div style="background:#fff8e0;border:1.5px solid #f59e0b;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.2rem;font-size:0.88rem;color:#92400e;line-height:1.6;"><strong>Study tip:</strong> Re-read today\'s lesson before your next session. Focus on understanding the why behind each answer, not just memorizing the answer itself.</div>';
-    } else if (pct >= 80 && wrongItems.length > 0) {
-      adviceHtml = '<div style="background:#d1faf0;border:1.5px solid #38bfa1;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.2rem;font-size:0.88rem;color:#065f46;line-height:1.6;"><strong>Almost perfect!</strong> Review the ' + wrongItems.length + ' missed question' + (wrongItems.length>1?'s':'') + ' below — then you\'ll be fully ready.</div>';
+      adviceHtml = '<div class="r-note"><strong>Study tip:</strong> Re-read today\'s lesson before your next session. Focus on understanding the why behind each answer, not just memorizing the answer itself.</div>';
+    } else if (pct >= 80 && uniqMisses.length > 0) {
+      adviceHtml = '<div class="r-note"><strong>Almost perfect!</strong> Review the ' + uniqMisses.length + ' missed question' + (uniqMisses.length>1?'s':'') + ' below — then you\'ll be fully ready.</div>';
     }
 
     // Sleep tip
@@ -8734,11 +8890,22 @@
       '</div>';
 
     // Streak display
+    /* Monochrome, like the streak mark in the header - it was the orange
+       flame the header stopped using. */
     var streakHtml = streak >= 2
-      ? '<div style="display:flex;align-items:center;justify-content:center;gap:.5rem;margin:.75rem 0;font-size:0.9rem;font-weight:700;color:#f59e0b;">' +
-        '<svg width="18" height="18" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><path d="M12 2C9 7 7 10 7 14a5 5 0 0 0 10 0c0-4-3-7-5-12zm-1 15a1 1 0 0 1-1-1c0-1.5 1-2.5 1-4 1 1.5 2 2.5 2 4a1 1 0 0 1-2 0z"/></svg>' +
+      ? '<div class="r-streak">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M12 2C9 7 7 10 7 14a5 5 0 0 0 10 0c0-4-3-7-5-12zm-1 15a1 1 0 0 1-1-1c0-1.5 1-2.5 1-4 1 1.5 2 2.5 2 4a1 1 0 0 1-2 0z"/></svg>' +
         streak + ' day streak — keep it up!</div>'
       : '';
+    /* The score as a ring: the same calm card for 0% and 100%. It was a
+       full-width slab in green, blue or ORANGE by score - the loudest thing
+       in the app, turned up highest on a learner's worst day. */
+    var RING_R = 44, RING_C = 2 * Math.PI * RING_R;
+    var ringHtml = '<svg class="r-ring" viewBox="0 0 108 108" aria-hidden="true">' +
+      '<circle cx="54" cy="54" r="' + RING_R + '" fill="none" stroke="var(--ring-track,#e6edfd)" stroke-width="9"/>' +
+      '<circle cx="54" cy="54" r="' + RING_R + '" fill="none" stroke="#4a7cf6" stroke-width="9" stroke-linecap="round"' +
+      ' stroke-dasharray="' + (RING_C * pct / 100).toFixed(1) + ' ' + RING_C.toFixed(1) + '" transform="rotate(-90 54 54)"' +
+      (pct === 0 ? ' opacity="0"' : '') + '/></svg>';
 
     // Share results button
     var shareSubject = plan ? plan.subject || 'my subject' : 'my subject';
@@ -8748,10 +8915,11 @@
       'Share my score</button>';
 
     document.getElementById('results-wrap').innerHTML =
-      '<div class="results-top ' + topClass + '">' +
-        '<div class="results-score" style="animation:scoreReveal .6s cubic-bezier(0.16,1,.3,1) both;">' + pct + '%</div>' +
-        '<div class="results-msg">' + msg + '</div>' +
-        streakHtml +
+      '<div class="results-top">' +
+        '<div class="r-ring-wrap" style="animation:scoreReveal .6s cubic-bezier(0.16,1,.3,1) both;">' + ringHtml +
+          '<div class="results-score">' + pct + '<small>%</small></div></div>' +
+        '<div class="r-top-text"><div class="r-kicker">Session complete</div>' +
+          '<div class="results-msg">' + msg + '</div>' + streakHtml + '</div>' +
       '</div>' +
       '<div class="results-stats">' +
         '<div class="r-stat"><div class="r-stat-val">' + correctCount + '/' + totalAnswered + '</div><div class="r-stat-label">Correct</div></div>' +
@@ -8818,16 +8986,32 @@
     SFStore.setItem('studyflow_study_times', JSON.stringify(studyTimes));
   }
 
+  /* The right answer as words, for any format - the results screen and
+     the walkthrough both need it, and most formats have no .answer. */
+  function correctAnswerText(q) {
+    q = q || {};
+    var t = fmStr(q.type).toLowerCase();
+    function pick(arr, f) { return (Object.prototype.toString.call(arr) === '[object Array]' ? arr : []).map(f).filter(Boolean); }
+    if (t === 'truefalse') return fmStr(q.correct);
+    if (q.options && typeof q.correctIndex === 'number') return fmStr(q.options[q.correctIndex]);
+    if (t === 'labeldiagram') return pick(q.pins, function (p, i) { return p && p.answer ? (i + 1) + ' ' + p.answer : ''; }).join(', ');
+    if (t === 'matchpairs') return pick(q.pairs, function (p) { return p && p.left ? p.left + ' → ' + p.right : ''; }).join('; ');
+    if (t === 'sequence') return pick(q.items, fmStr).join(' → ');
+    if (t === 'sentence') return pick(q.words, fmStr).join(' ');
+    if (t === 'estimate' && q.answer !== undefined) return 'about ' + q.answer + (q.unit ? ' ' + q.unit : '');
+    return fmStr(q.answer); // fill, bigequation, wordproblem all use .answer
+  }
+
   function buildWrongItem(item) {
     var q = item.q || {};
-    var correctAns = '—';
-    if (q.type === 'truefalse') correctAns = q.correct || '—';
-    else if (q.options && typeof q.correctIndex === 'number') correctAns = q.options[q.correctIndex] || '—';
-    else if (q.answer) correctAns = q.answer; // fill, bigequation, wordproblem all use .answer
+    var correctAns = correctAnswerText(q) || '—';
+    /* Escaped: "Your answer" is what the learner TYPED, since the fill-in
+       and estimate graders started reporting it. */
     return '<div class="wrong-item">' +
-      '<div class="wi-q">' + (q.question || 'Question') + '</div>' +
-      (item.userAns ? '<div class="wi-yours">Your answer: ' + item.userAns + '</div>' : '') +
-      '<div class="wi-correct">Correct: ' + correctAns + '</div>' +
+      '<div class="wi-q">' + (q.question || 'Question') +
+        (item.times > 1 ? ' <span class="wi-times">missed ' + item.times + '×</span>' : '') + '</div>' +
+      (item.userAns ? '<div class="wi-yours">Your answer: ' + escHtml(item.userAns) + '</div>' : '') +
+      '<div class="wi-correct">Correct: ' + escHtml(correctAns) + '</div>' +
       '<div class="wi-why">' + (q.explanation || 'Review this in your notes.') + '</div>' +
       /* The picture drawn for this miss, if one was, folded; otherwise the
          offer - "what to study more" is exactly when to ask for one. */
@@ -16211,12 +16395,14 @@ var SFBoard = (function () {
        question. The two the learner can actually use are the ones that
        stayed: the count, and the dots, which are tap targets. */
     var o = '', head = '';
+    /* Classed so dark mode can reach them: this header sits on the page, not
+       on a panel, and navy on the dark page was all but invisible. */
     head += text(PAD, 20, kicker.toUpperCase(),
-                 { anchor: 'start', size: KICK, weight: 700, fill: MUTED });
+                 { anchor: 'start', size: KICK, weight: 700, fill: MUTED, cls: 'sfb-hk' });
     if (problem) {
       var ps = TITLE + 4;
       while (ps > 12 && measure(problem, ps, 700) > W - PAD * 2) ps -= 0.5;
-      head += text(PAD, 40, problem, { anchor: 'start', size: ps, weight: 700, fill: INK });
+      head += text(PAD, 40, problem, { anchor: 'start', size: ps, weight: 700, fill: INK, cls: 'sfb-hp' });
     }
     o += g(0, head);
 
@@ -16796,6 +16982,7 @@ var SFBoard = (function () {
      navy on near-black, so the board's own title was barely readable. */
   'body.dark .sfb{color:#E8ECF4;}' +
   'body.dark .sfb-title{color:#E8ECF4;}' +
+  'body.dark .sfb .sfb-hp{fill:#E8ECF4;}body.dark .sfb .sfb-hk{fill:#A9B4C6;}' +
   'body.dark .sfb-count,body.dark .sfb-prose .content-text{color:#A9B4C6;}' +
 
   '@media (prefers-reduced-motion:reduce){.sfb-b{transition:none;}}' +

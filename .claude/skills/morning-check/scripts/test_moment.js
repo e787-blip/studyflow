@@ -93,7 +93,15 @@ const assert = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) pro
   await page.evaluate(() => endSession());
   await page.waitForTimeout(900);
   const r = await page.evaluate(() => Array.from(document.querySelectorAll('#results-wrap .sf-moment')).map(h => h.getAttribute('data-state') + ':' + (h.querySelector('details') ? 'folded' : 'open')));
-  assert(r.indexOf('drawn:folded') !== -1 && r.length === 2, 'results screen folds the drawn picture: ' + r.join(','));
+  /* One entry per QUESTION. The pre-test picks at random; when it asked this
+     same valves question and that was missed too, the list used to print it
+     twice. Since 2026-09-30 a repeat is one entry marked "missed Nx". */
+  const u = await page.evaluate(() => {
+    const k = {}; wrongItems.forEach(w => { const q = w.q || {}; k[(q.type || '') + '|' + (q.question || q.scenario || q.title || '')] = 1; });
+    return { distinct: Object.keys(k).length, raw: wrongItems.length, times: document.querySelectorAll('#results-wrap .wi-times').length };
+  });
+  assert(r.indexOf('drawn:folded') !== -1 && r.length === u.distinct, 'results screen folds the drawn picture, one slot per missed question: ' + r.join(',') + ' ' + JSON.stringify(u));
+  assert((u.raw > u.distinct) === (u.times > 0), 'a question missed more than once is listed once and marked: ' + JSON.stringify(u));
   await page.locator('#results-wrap .wrong-reviews').scrollIntoViewIfNeeded();
   await page.locator('#results-wrap .wrong-reviews').screenshot({ path: 'm6_results' + tag + '.png' });
   console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'no page errors');

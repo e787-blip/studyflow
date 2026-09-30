@@ -74,6 +74,29 @@ the fonts or the no-build-step stack.
   node to. Amber stays where it *means* something: hints, flagged questions, the
   unsure button, the struggling header. Check by rendering and scanning output
   for hues 25–70°, never by grepping source.
+- **Instrument Serif has ONE weight - every serif heading is `font-weight:400`.**
+  `lesson.html` and `dashboard.html` never set it, so every `h1`-`h3` was a
+  browser-faked bold, and with the tightened letter-spacing "The heart and
+  blood vessels" read as one smeared word. `font-synthesis-weight:none` on the
+  global heading rule stops a later `bold` bringing it back.
+- **One chip style for question types** (`.q-type-label`, blue tint) and a
+  **neutral difficulty chip with a three-bar meter** (`.q-difficulty`). Each
+  format used to set its own inline colour - eleven hues, red on "Find the
+  error" - and difficulty was green / amber / red. Do not give a new format
+  its own chip colour. Purple is not a UI colour here; the sorting card's
+  second bucket is slate, as the diagram kit's `OTHER` is.
+- **Anything that holds a drawing keeps a paper ground in dark mode**
+  (`.art-paper`, `#f7f9fe`): the lesson card's picture, the labelling card,
+  the walkthrough, the moment panel. On a dark ground the drawing's title
+  vanished and its haloed labels smeared. Graded answers use `.sel-right` /
+  `.sel-wrong`, never inline pastels - inline `#fef2f2` with `--ink` text was
+  unreadable in dark mode on the labelling, matching, trace-table, highlight
+  and estimate cards.
+- **"Let's slow down a bit" is a moment, not a banner that stays.** It shows at
+  the third miss in a row (then every third), is gone on the next card, never
+  counts the pre-test (missing it is what it is for), and closing it is final.
+  It used to fire off the pre-test and sit above the lesson for the rest of
+  the session.
 
 ## Pricing
 
@@ -280,8 +303,11 @@ when at least two steps carry a real line:
 "workedExample": { "problem": "", "steps": [ {"title":"", "line":"", "why":""} ] }
 ```
 
-`line` is printed large, so it is capped at 40 characters in the prompt. The
-prompt also states the rule the whole feature rests on: **the example must not
+`line` is printed large, so it is capped at 40 characters in the prompt -
+and the validator enforces it where it can: a line over 40 with a clause
+break (comma, semicolon, dash, colon) keeps its first clause as the line and
+moves the rest to the front of `why` (with a leading "…" when it continues
+the sentence). Equations are never cut. The prompt also states the rule the whole feature rests on: **the example must not
 be any of the day's questions, or share their numbers or answers.**
 
 Three files move together here: the prompt text, the output schema string, and
@@ -371,6 +397,8 @@ structure. Labelling is exactly that.
   is the one injector with a filter, and that is why.
 - **Two pins may never share an answer** — ungradeable whichever the learner
   picks. `sanitizeDayQuestions` refuses those, and pins outside the canvas.
+- **Pins are sized to the drawing** (radius 3% of its width, 10-12 units):
+  a fixed r=10 / 10.5pt pin came out as an 8px numeral on a phone.
 - **A wrong pin is corrected in place**, not just reddened: the select is
   given the right answer and set to it. A wrong label left on screen teaches
   the wrong label twice.
@@ -1436,7 +1464,12 @@ queues a `sfwb-picwalk` card instead:
 - The picture is the question's drawing (made or on its way), else the
   lesson's when it covers the question, else "Draw it for me" in its place.
 - **Worked calculations keep the sideways board** - the balance is their
-  picture. So does a format with nothing to picture.
+  picture. A format with nothing to picture (match, matchpairs, sentence,
+  trace table) gets the same step walk with no picture (`kind:'text'`), and
+  every walk carries a "The answer" step (`correctAnswerText`) - the sentence
+  walkthrough used to go "What was asked", "Why" and never say the sentence.
+- **"In the picture" names the blue part** in the drawing's own words
+  ("Find "Valve" in the picture"), read off the SVG at paint time.
 - The walkthrough now reads the question from `currentCard.q` first. The
   labelling card builds its question after `currentQuestion` is set, so its
   walkthrough was explaining the PREVIOUS question.
@@ -1733,10 +1766,13 @@ that vanished with each session):
 bash .claude/skills/morning-check/scripts/run_all.sh /tmp/sf-morning
 ```
 
-17 checks on real page loads with `api/generate` mocked - parse, every card
+20 checks on real page loads with `api/generate` mocked - parse, every card
 type answered wrong, walkthroughs, the picture budget, the labelling card,
 plan-time drawing, board text sizes, and every diagram against an audited
-baseline. Proven to catch a syntax error and a broken picture budget. The
+baseline, plus `test_mix.js` (every subtopic's real prompt) and
+`test_visuals.js` (the visual pass of 2026-09-30: heading weight, one chip
+colour, paper under drawings in dark mode, the banner, the results list; it
+fails 12 ways on the code before it). Proven to catch a syntax error and a broken picture budget. The
 morning routine runs it daily (`.claude/skills/morning-check/SKILL.md`), and
 `LOG.md` beside it holds the visual backlog.
 
@@ -2101,6 +2137,23 @@ memory", which is a slogan; every question card uses that slot for the score.
 
 `main` is the live branch. Push to GitHub and Vercel rebuilds automatically —
 frontend and `api/*.js` together. There is no build step, so a push is the deploy.
+
+### The results screen
+
+- **The score is a ring on a plain card**, the same for 0% and 100%. It was
+  a full-width slab coloured green, blue or ORANGE by score - loudest on a
+  learner's worst day. Study tip and "Almost perfect" are one blue note
+  (`.r-note`); the streak line is monochrome.
+- **"What to study more" lists each QUESTION once**, marked "missed N×". A
+  miss plus a missed retry (or a pre-test miss of the same question) printed
+  it twice, and the heading counted 21 for eight questions.
+- **"Your answer" is what the learner answered.** Most self-grading cards
+  pass their Check button to `handleResult`, so it read "Your answer: Check
+  answers"; fill-ins passed nothing and read "—". `answerFromCard` reads the
+  card's own menus and inputs instead (the labelling card's picks before they
+  were corrected), and it is escaped - it is typed text.
+- **"Correct:" has an answer for every format** (`correctAnswerText`): pins,
+  pairs, an order, a sentence, an estimate - these all printed "—".
 
 ### The score and the banner must come from the same number
 
