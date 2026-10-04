@@ -703,7 +703,7 @@
     <h2 style="font-family:var(--serif);font-size:1.5rem;letter-spacing:-0.02em;margin-bottom:.4rem;">Join your class</h2>
     <p style="color:var(--muted);font-size:0.88rem;margin-bottom:1.4rem;line-height:1.6;">Enter your teacher's class code and your name to join.</p>
     <div style="text-align:left;display:flex;flex-direction:column;gap:.8rem;margin-bottom:1.2rem;">
-      <input id="modal-class-code" placeholder="Class code (SF-XXXX)" maxlength="7" oninput="this.value=this.value.toUpperCase()" style="padding:.85rem 1rem;border:1.5px solid var(--border);border-radius:12px;font-family:var(--sans);font-size:0.95rem;font-weight:700;letter-spacing:.06em;width:100%;box-sizing:border-box;transition:border-color .2s;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"/>
+      <input id="modal-class-code" placeholder="Class code (SF-XXXXXX)" maxlength="9" oninput="this.value=this.value.toUpperCase()" style="padding:.85rem 1rem;border:1.5px solid var(--border);border-radius:12px;font-family:var(--sans);font-size:0.95rem;font-weight:700;letter-spacing:.06em;width:100%;box-sizing:border-box;transition:border-color .2s;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"/>
       <input id="modal-student-name" placeholder="Your full name" style="padding:.85rem 1rem;border:1.5px solid var(--border);border-radius:12px;font-family:var(--sans);font-size:0.9rem;width:100%;box-sizing:border-box;transition:border-color .2s;" onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'"/>
     </div>
     <div id="join-class-modal-msg" style="display:none;font-size:0.82rem;font-weight:600;margin-bottom:.8rem;padding:.6rem .9rem;border-radius:10px;"></div>
@@ -868,6 +868,7 @@
   </main>
 </div>
 
+<script src="/sf-auth.js"></script>
 <script>
 
   /* ── PER-ACCOUNT STORAGE NAMESPACE ─────────────────────────────────────
@@ -1740,7 +1741,8 @@
     };
 
     // Firestore first (cross-device), localStorage fallback
-    fetch('api/class?classCode=' + user.classCode + '&type=assignment')
+    if (!window.SFAuth) { showBanner(JSON.parse(SFStore.getItem('studyflow_assignment_' + user.classCode) || 'null')); return; }
+    SFAuth.classFetch('api/class?classCode=' + encodeURIComponent(user.classCode) + '&type=assignment', {}, user.email)
       .then(function(r){ return r.json(); })
       .then(function(data) {
         if (data.assignment && data.assignment.topic) {
@@ -1785,14 +1787,10 @@
       msgEl.textContent = text;
     };
 
-    if (!/^SF-[A-Z0-9]{4}$/.test(code)) { showMsg('Class codes look like SF-AB12 — check with your teacher.', false); return; }
+    if (!/^SF-(?:[A-Z0-9]{4}|[A-Z0-9]{6})$/.test(code)) { showMsg('Class codes look like SF-AB12CD — check with your teacher.', false); return; }
     if (name.length < 2) { showMsg('Please enter your full name.', false); return; }
 
     var user = JSON.parse(SFStore.getItem('studyflow_user') || '{}');
-    user.classCode = code;
-    if (name) user.name = name;
-    SFStore.setItem('studyflow_user', JSON.stringify(user));
-
     var studentRecord = { 
       name: name || user.name || 'Student', 
       email: user.email, 
@@ -1804,25 +1802,26 @@
       timeStudied: 0,
       subject: ''
     };
-    var classData = JSON.parse(SFStore.getItem('studyflow_class_' + code) || '{"students":[]}');
-    if (!classData.students.find(function(s){ return s.email === user.email; })) {
-      classData.students.push(studentRecord);
-      SFStore.setItem('studyflow_class_' + code, JSON.stringify(classData));
-    }
 
+    /* Saved only once the server says yes - see the same note in app.html.
+       A network error used to report "Joined" too. */
     showMsg('Joining...', true);
-    fetch('api/class', {
+    if (!window.SFAuth) { showMsg('Couldn’t join right now. Reload the page and try again.', false); return; }
+    SFAuth.classFetch('api/class', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'join', classCode: code, studentData: studentRecord })
-    })
+    }, user.email)
     .then(function(r){ return r.json(); })
     .then(function(data) {
-      if (data.error === 'class_full') {
-        user.classCode = null;
-        SFStore.setItem('studyflow_user', JSON.stringify(user));
-        showMsg('This class is full (max 5 students on free plan). Ask your teacher to upgrade.', false);
-        return;
+      if (!data || !data.success) { showMsg(joinErrorText(data), false); return; }
+      user.classCode = code;
+      if (name) user.name = name;
+      SFStore.setItem('studyflow_user', JSON.stringify(user));
+      var classData = JSON.parse(SFStore.getItem('studyflow_class_' + code) || '{"students":[]}');
+      if (!classData.students.find(function(s){ return s.email === user.email; })) {
+        classData.students.push(studentRecord);
+        SFStore.setItem('studyflow_class_' + code, JSON.stringify(classData));
       }
       showMsg('Joined ' + code + '!', true);
       setTimeout(function(){
@@ -1833,12 +1832,18 @@
       }, 1200);
     })
     .catch(function() {
-      showMsg('Joined ' + code + '!', true);
-      setTimeout(function(){
-        document.getElementById('join-class-modal').style.display = 'none';
-        var jcs = document.getElementById('join-class-sidebar'); if (jcs) jcs.style.display = 'none';
-      }, 1200);
+      showMsg('Couldn’t reach StudyFlow. Check your connection and try again.', false);
     });
+  }
+
+  function joinErrorText(d) {
+    var e = d && d.error;
+    if (e === 'class_full') return 'This class is full (max 5 students on free plan). Ask your teacher to upgrade.';
+    if (e === 'no_such_class') return 'There’s no class with that code. Check it with your teacher.';
+    if (e === 'sign_in_required') return 'Sign in again to join your class.';
+    if (e === 'own_class') return 'That’s your own class code — students join with it.';
+    if (e === 'classroom_not_configured') return 'Classes aren’t switched on yet. Try again later.';
+    return 'Couldn’t join that class. Try again.';
   }
 
   checkAssignment();

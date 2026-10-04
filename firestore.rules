@@ -1,0 +1,19 @@
+rules_version = '2';
+
+// No browser reads or writes Firestore directly. Every page goes through
+// api/*.js, which signs in to Firestore as a service account, and a service
+// account is not bound by these rules.
+//
+// While the classroom used the public web API key, these rules had to let
+// anyone in, so api/class.js's checks could be skipped by calling Firestore
+// straight from a browser console with that key, which is printed in
+// login.html. Deny everything.
+//
+// Paste this into Firebase console -> Firestore Database -> Rules -> Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

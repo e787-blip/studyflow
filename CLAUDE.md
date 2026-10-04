@@ -31,6 +31,10 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `lesson.html` | ~590 KB | The session runtime. Card queue, all question renderers, the whiteboard |
 | `dashboard.html` | ~101 KB | Plan list and progress |
 | `sf-draw.js` | ~19 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
+| `sf-auth.js` | ~5 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html` — see "The classroom" |
+| `teacher-login.html` / `teacher.html` | ~21 / ~41 KB | Teacher sign-in (Firebase Auth) and the class dashboard |
+| `api/class.js` | ~20 KB | The classroom API. Checks a Firebase ID token on every call |
+| `firestore.rules` | | Deny-all. Paste into the Firebase console; only the service account reaches Firestore |
 
 `lesson.html` has **two `<script>` blocks**. Block 1 is the session runtime.
 Block 2 is the whiteboard module (`window.SFWhiteboard`). Both must stay
@@ -2040,10 +2044,12 @@ Firebase Auth is untouched; everything around it changed:
 - **After sign-in, plans are looked up under the SFStore namespace**
   (`sfu:<email>|studyflow_plans`). It read the bare key, so a returning learner
   with plans was sent to make a new one instead of to their dashboard.
-- **Class codes are `SF-` plus four characters** — what `teacher.html` mints
-  and `app.html` checks. The placeholder said `MS-7401`. `normaliseCode`
-  forgives case and the hyphen but never invents a code (it once turned
-  `MS-7401` into a valid-looking `SF-MS74`).
+- **Class codes are `SF-` plus six characters**, minted by `api/class.js`;
+  classes made before Oct 2026 have four and still work. Every join box
+  accepts both (`/^SF-(?:[A-Z0-9]{4}|[A-Z0-9]{6})$/`). The placeholder said
+  `MS-7401`. `normaliseCode` forgives case and the hyphen but never invents a
+  code: a typed prefix other than `SF` is left invalid, or with six-character
+  codes `MS-7401` would become a valid-looking `SF-MS7401`.
 - Joining a class at sign-up waits (≤5s) for `api/class`: the redirect on the
   next line used to cancel the request, so "class is full" was never seen.
 - The "I am a Teacher" toggle did nothing; it is a link to `teacher-login.html`.
@@ -2052,6 +2058,77 @@ Firebase Auth is untouched; everything around it changed:
   choose the starting screen. A device that signed in before starts on sign-in
   with the email filled. A student already signed in skips this page: the
   landing's buttons point straight at `app.html`.
+
+## The classroom (`teacher.html`, `api/class.js`)
+
+A teacher signs up on `teacher-login.html`, gets a class code, and sees each
+student's streak, score and activity; students join with the code and get the
+teacher's assigned notes as a banner on their dashboard. Max 5 students.
+
+**Until Oct 2026 it checked nothing, and most of it did not run.** What was
+wrong, so none of it comes back:
+
+- **`api/class` trusted the class code alone.** Anyone could read every
+  student's name and email, overwrite the assignment, or write a student
+  record. It now checks a **Firebase ID token** on every request
+  (`Authorization: Bearer`, verified with `accounts:lookup`):
+
+  | Who | May |
+  |---|---|
+  | the class's teacher (`classes/{code}.teacherUid`) | read the roster, set the assignment |
+  | a student in the class | read the assignment, `sync` **their own** record |
+  | any signed-in user | `join`, `teacher-setup` |
+
+  A student record is keyed on the token's uid and email, never on the body.
+  `sync` writes only whitelisted, clamped fields (`cleanStats`). `join` never
+  creates a class (it used to, for any well-formed code).
+- **Firestore is reached as a service account** (`FIREBASE_SERVICE_ACCOUNT`,
+  the JSON key, on Vercel), and `firestore.rules` denies all client access.
+  With the public web key the rules had to be open, so every check above
+  could be skipped from a browser console. **Missing service account = 503
+  `classroom_not_configured`, never a fallback to the open path.** No page
+  talks to Firestore directly; keep it that way or the rules break it.
+- **Teacher accounts were localStorage**, plain-text passwords included, so a
+  teacher on a new computer could never reach their class. They are Firebase
+  accounts now; `teachers/{uid}` holds the profile and class code.
+  `teacher-setup` claims a pre-2026 class with no owner (the code comes from
+  the old localStorage account, which is then deleted) so its students are
+  kept; an owned class can never be claimed.
+- **Every function in `teacher.html` was declared inside `init()`**, so the
+  tabs, Copy code, Share, Assign and Sign out all threw "is not defined" on the
+  live site. They are top-level now — the markup calls them by name.
+- **Student fields went into `innerHTML` raw** on the teacher dashboard. All
+  of them go through `esc()` now.
+- **`sessionStartTime` was a `var` inside `init()`** in `lesson.html`, so
+  `endSession` threw for every learner in a class: no progress had ever
+  reached a teacher. It is a block-1 global.
+- **The roster is one JSON string** in `classes/{code}.students`, so writes
+  use Firestore's `currentDocument.updateTime` precondition and retry
+  (`updateClass`). Without it, two syncs at once dropped one, and two joins
+  at once could both pass the cap.
+- Joins save `classCode` only after the server says yes. A wrong code, a
+  network error or a signed-out session used to report "Joined!".
+
+**`sf-auth.js`** gives the four pages that do not load the Firebase SDK a
+token: it reads the session the SDK already persisted (sessionStorage,
+localStorage, or IndexedDB `firebaseLocalStorageDb`) and refreshes an expired
+token over `securetoken.googleapis.com`. It never writes to the SDK's storage,
+and `idToken(email)` returns null when the session is a different account
+from `studyflow_user` (a teacher signed in on a student's laptop).
+`teacher.html` drops its cached `studyflow_teacher` before any redirect to
+sign-in: `teacher-login.html` sends a signed-in teacher with a cache straight
+back, so keeping it loops.
+
+Still open (Phase 2): the lesson sync only fires when the student's local
+`studyflow_class_<code>` copy exists (the device they joined on), and it
+sends totals rather than increments, so a second device resets
+`questionsAnswered` / `timeStudied`. "Topics students struggle with" is a
+hard-coded empty state, and the weekly chart only knows each student's last
+active day.
+
+**Setup on a new deployment:** Firebase console → Project settings → Service
+accounts → Generate new private key; paste the whole JSON into Vercel as
+`FIREBASE_SERVICE_ACCOUNT`; publish `firestore.rules` in Firestore → Rules.
 
 ## The teach-it-back card
 
