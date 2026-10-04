@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Drawing Lab — StudyFlow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* draw-lab.html - the same lessons drawn four ways, side by side.
+
+     Not part of the product: nothing links here, and it can be deleted with
+     api/draw-lab.js and lab/ when the comparison is done. Every AI drawing
+     goes through the app's REAL prompt (sf-draw.js) and the app's REAL
+     renderer (SFSceneKit + SFDiagramKit, read out of lesson.html at load), so
+     what this page shows is what a learner would see on the lesson card. */
+  :root {
+    --ink: #1a1d2e; --muted: #6b7280; --soft: #f4f6fb;
+    --blue: #4a7cf6; --blue-light: #dce8ff; --white: #fff; --border: #e8ecf4;
+    --bad: #b42318; --bad-bg: #fef3f2;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--soft); color: var(--ink);
+         font-family: 'DM Sans', system-ui, -apple-system, sans-serif; font-size: 15px; line-height: 1.5; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 28px 16px 60px; }
+  h1 { font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 40px;
+       line-height: 1.05; margin: 0 0 10px; letter-spacing: -.01em; }
+  .lede { max-width: 720px; color: #3b3f52; margin: 0 0 18px; }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+         background: var(--white); border: 1px solid var(--border); border-radius: 14px;
+         padding: 12px 14px; margin-bottom: 8px; position: sticky; top: 8px; z-index: 5; }
+  .bar .spacer { flex: 1 1 auto; }
+  .note { font-size: 13px; color: var(--muted); margin: 0 0 26px; }
+  button { font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 999px;
+           padding: 8px 16px; border: 1px solid var(--border); background: var(--white); color: var(--ink); }
+  button:hover { border-color: var(--blue); }
+  button:disabled { opacity: .5; cursor: default; border-color: var(--border); }
+  button.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+  button.small { font-size: 12.5px; padding: 5px 12px; }
+  label.effort { font-size: 13.5px; color: #3b3f52; display: inline-flex; gap: 6px; align-items: center; }
+  #lab-key { font: inherit; font-size: 13.5px; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); width: 150px; }
+  select { font: inherit; font-size: 13.5px; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--white); }
+  .spent { font-size: 13.5px; color: #3b3f52; white-space: nowrap; }
+  .spent b { color: var(--ink); }
+
+  .lesson { margin: 0 0 34px; }
+  .lesson-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 10px; }
+  .lesson-head h2 { font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: 28px; margin: 0; line-height: 1.1; }
+  .lesson-head .topic { font-size: 13px; color: var(--muted); flex: 1 1 260px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .cell { background: var(--white); border: 1px solid var(--border); border-radius: 14px; padding: 12px;
+          display: flex; flex-direction: column; min-width: 0; }
+  .cell:hover { border-color: var(--blue); }
+  .who { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .who b { font-size: 14px; }
+  .who span { font-size: 11.5px; color: var(--muted); text-align: right; }
+  /* The lesson card's own frame (#lesson-art in lesson.html), so a drawing
+     sits on the ground it would sit on for a learner. */
+  .frame { background: var(--soft); border-radius: 14px; padding: .75rem; text-align: center;
+           min-height: 170px; display: flex; align-items: center; justify-content: center; }
+  .frame > svg, .frame > img { width: 100%; height: auto; display: block; margin: 0 auto; }
+  .frame > img { max-height: 320px; object-fit: contain; }
+  .frame .empty { font-size: 13px; color: var(--muted); padding: 10px; }
+  .frame .err { font-size: 13px; color: var(--bad); background: var(--bad-bg); border-radius: 10px; padding: 8px 10px; }
+  .frame .wait { font-size: 13px; color: var(--muted); }
+  .meta { font-size: 12.5px; color: #3b3f52; margin-top: 8px; min-height: 18px; }
+  .meta .num { font-variant-numeric: tabular-nums; }
+  .meta .rule-miss { color: var(--bad); }
+  .actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+  details { margin-top: 8px; font-size: 12.5px; }
+  details summary { cursor: pointer; color: var(--muted); }
+  details pre { white-space: pre-wrap; word-break: break-all; max-height: 260px; overflow: auto;
+                background: var(--soft); border-radius: 8px; padding: 8px; font-size: 11px; margin: 6px 0 0; }
+  .prompt-box { margin: 0 0 10px; }
+  .banner { background: var(--bad-bg); color: var(--bad); border-radius: 12px; padding: 10px 14px; margin: 0 0 16px; display: none; }
+  footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 16px; }
+  footer a { color: inherit; }
+  @media (max-width: 520px) { h1 { font-size: 32px; } .bar { position: static; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Drawing lab</h1>
+  <p class="lede">The same biology lessons, drawn four ways. The three AI columns get the exact
+    prompt and renderer the app uses for a lesson's picture. Only the model changes. The last column
+    is a free illustration library, Servier Medical Art, drawn by medical illustrators.</p>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="bar">
+    <button class="primary" id="draw-all">Draw everything</button>
+    <label class="effort">Thinking for Sonnet and Opus
+      <select id="effort"><option value="medium">medium</option><option value="low">low</option></select>
+    </label>
+    <label class="effort">Lab key
+      <input type="password" id="lab-key" autocomplete="off" placeholder="DRAW_LAB_KEY">
+    </label>
+    <span class="spacer"></span>
+    <span class="spent">Spent this visit: <b id="spent">$0.00</b></span>
+    <button class="small" id="download">Download results</button>
+    <button class="small" id="clear">Forget saved drawings</button>
+  </div>
+  <p class="note">Drawings are made one at a time, because the server drops long calls run side by side.
+    Each one is saved in this browser, so reloading costs nothing. The real cost of each drawing shows
+    under it.</p>
+
+  <div id="lessons"></div>
+
+  <footer>
+    Servier column: illustrations by <a href="https://smart.servier.com/">Servier Medical Art</a>,
+    licensed under <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>, unmodified,
+    via <a href="https://bioicons.com">bioicons</a>. AI prices are Anthropic's list prices per million
+    tokens: Haiku 4.5 $1 in / $5 out, Sonnet 5.5 $2 / $10, Opus 5.5 $4 / $20.
+  </footer>
+</div>
+
+<script src="/sf-draw.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ── The lessons ─────────────────────────────────────────────────────────
+     Shaped like a real plan day (title, microTopic, content, steps,
+     keyTerms), because SFDraw.lessonPrompt reads exactly those fields.
+     Seven have a Servier drawing; photosynthesis deliberately does not, to
+     show what a fixed library cannot cover. */
+  var LESSONS = [
+    { id: 'heart', servier: 'heart-interior-1.svg', servierNote: 'No labels. In the app, our code would add them on top.',
+      day: { title: 'The Circulatory System', microTopic: 'Circulatory system › The heart › Blood flow through the four chambers',
+        content: 'The heart is a muscular pump with four chambers. The right atrium receives oxygen-poor blood from the body through the vena cava and passes it to the right ventricle, which pumps it to the lungs through the pulmonary artery. Oxygen-rich blood returns from the lungs through the pulmonary veins into the left atrium, and the left ventricle pumps it to the whole body through the aorta. Valves between the chambers stop blood flowing backwards. The left ventricle has the thickest wall because it pumps blood the farthest.',
+        steps: ['Oxygen-poor blood enters the right atrium from the vena cava', 'The right ventricle pumps it to the lungs through the pulmonary artery', 'Blood picks up oxygen in the lungs and returns through the pulmonary veins', 'The left atrium passes it to the left ventricle', 'The left ventricle pumps oxygen-rich blood to the body through the aorta'],
+        keyTerms: ['atrium', 'ventricle', 'valve', 'aorta', 'vena cava', 'pulmonary artery'] } },
+    { id: 'cell', servier: 'cell-complete.svg', servierNote: 'Comes with Servier’s own labels.',
+      day: { title: 'Cell Structure', microTopic: 'Cells › Animal cells › Organelles and their jobs',
+        content: 'Every animal cell is surrounded by a cell membrane that controls what enters and leaves. Inside, the cytoplasm holds the organelles. The nucleus contains the DNA and controls the cell. Mitochondria release energy from glucose during respiration. Ribosomes build proteins, many of them on the rough endoplasmic reticulum, and the Golgi apparatus packages proteins to be sent out of the cell. Lysosomes break down waste. Unlike plant cells, animal cells have no cell wall and no chloroplasts.',
+        steps: ['The cell membrane controls what enters and leaves', 'The nucleus holds the DNA and controls the cell', 'Mitochondria release energy from glucose', 'Ribosomes on the rough ER build proteins', 'The Golgi apparatus packages proteins to leave the cell'],
+        keyTerms: ['nucleus', 'mitochondria', 'ribosome', 'cell membrane', 'Golgi apparatus', 'lysosome'] } },
+    { id: 'mitosis', servier: 'mitosis.svg', servierNote: 'No labels. In the app, our code would add them on top.',
+      day: { title: 'Cell Division', microTopic: 'Cell division › Mitosis › The four phases',
+        content: 'Mitosis makes two identical cells from one. Before it starts, the cell copies its DNA, so each chromosome is two identical chromatids joined at a centromere. In prophase the chromosomes condense and become visible and the nuclear membrane breaks down. In metaphase the chromosomes line up across the middle of the cell, attached to spindle fibers. In anaphase the spindle pulls the chromatids apart to opposite ends. In telophase a nuclear membrane forms around each set, and cytokinesis splits the cell in two.',
+        steps: ['Prophase: chromosomes condense and the nuclear membrane breaks down', 'Metaphase: chromosomes line up across the middle', 'Anaphase: spindle fibers pull the chromatids apart', 'Telophase: a new nucleus forms around each set', 'Cytokinesis: the cell splits into two identical cells'],
+        keyTerms: ['chromosome', 'chromatid', 'centromere', 'spindle', 'cytokinesis'] } },
+    { id: 'digestion', servier: 'digestive-system-labeled.svg', servierNote: 'Comes with Servier’s own labels.',
+      day: { title: 'The Digestive System', microTopic: 'Human body › Digestion › The path food takes',
+        content: 'Digestion breaks food into molecules small enough to absorb. Chewing and saliva start it in the mouth. The esophagus pushes food down to the stomach with waves of muscle called peristalsis. The stomach churns food with acid and enzymes. Most digestion and absorption happen in the small intestine, helped by bile from the liver and enzymes from the pancreas, and its villi give it a huge surface area. The large intestine absorbs water, and what remains leaves through the rectum.',
+        steps: ['Teeth and saliva start digestion in the mouth', 'The esophagus pushes food to the stomach by peristalsis', 'The stomach churns food with acid and enzymes', 'The small intestine finishes digestion and absorbs nutrients', 'The large intestine absorbs water'],
+        keyTerms: ['esophagus', 'stomach', 'small intestine', 'villi', 'liver', 'pancreas'] } },
+    { id: 'lungs', servier: 'trachea-bronchi.svg', servierNote: 'No labels. In the app, our code would add them on top.',
+      day: { title: 'The Respiratory System', microTopic: 'Human body › Breathing › How air reaches the alveoli',
+        content: 'Air enters through the nose and mouth and travels down the trachea, a tube held open by rings of cartilage. The trachea splits into two bronchi, one to each lung. Inside the lungs the bronchi branch again and again into smaller bronchioles, which end in tiny air sacs called alveoli. Alveoli have thin walls and are wrapped in capillaries, so oxygen diffuses into the blood and carbon dioxide diffuses out. The diaphragm contracts and flattens to pull air in.',
+        steps: ['Air travels down the trachea', 'The trachea splits into two bronchi', 'Bronchi branch into smaller bronchioles', 'Bronchioles end in alveoli', 'Oxygen diffuses from the alveoli into the blood'],
+        keyTerms: ['trachea', 'bronchi', 'bronchioles', 'alveoli', 'diaphragm', 'diffusion'] } },
+    { id: 'eye', servier: 'eye-crosssection.svg', servierNote: 'No labels. In the app, our code would add them on top.',
+      day: { title: 'The Eye', microTopic: 'Senses › Vision › How the eye focuses light',
+        content: 'Light enters the eye through the cornea, a clear dome that does most of the bending of light. It passes through the pupil, the hole in the colored iris, which widens in dim light and narrows in bright light. The lens changes shape to fine-tune the focus, so a sharp image lands on the retina at the back of the eye. The retina’s rods and cones turn light into nerve signals, and the optic nerve carries them to the brain.',
+        steps: ['Light passes through the cornea, which bends it', 'It enters through the pupil in the iris', 'The lens fine-tunes the focus', 'A sharp image lands on the retina', 'The optic nerve carries the signal to the brain'],
+        keyTerms: ['cornea', 'iris', 'pupil', 'lens', 'retina', 'optic nerve'] } },
+    { id: 'dna', servier: 'dna-nucleotides.svg', servierNote: 'No labels. In the app, our code would add them on top.',
+      day: { title: 'DNA and Genes', microTopic: 'Genetics › DNA › The structure of the double helix',
+        content: 'DNA is a double helix: two strands twisted around each other, like a ladder twisted into a spiral. The sides of the ladder are a backbone of sugar and phosphate. The rungs are pairs of bases joined in the middle: adenine always pairs with thymine, and cytosine always pairs with guanine. The order of the bases along a strand is the genetic code. Because the pairs always match, each strand can be used as a template to copy the other.',
+        steps: ['Two strands twist into a double helix', 'Each side is a sugar-phosphate backbone', 'Bases pair across the middle: A with T, C with G', 'The order of bases is the genetic code'],
+        keyTerms: ['double helix', 'base pair', 'adenine', 'thymine', 'sugar-phosphate backbone', 'nucleotide'] } },
+    { id: 'photosynthesis', servier: null,
+      day: { title: 'Photosynthesis', microTopic: 'Plants › Photosynthesis › The light reactions in the chloroplast',
+        content: 'Photosynthesis happens in chloroplasts. In the light-dependent reactions, chlorophyll in the thylakoid membranes absorbs light energy. That energy splits water molecules, releasing oxygen as a waste product, and is used to make ATP and NADPH. In the Calvin cycle, which takes place in the stroma, the ATP and NADPH are used to turn carbon dioxide into glucose.',
+        steps: ['Chlorophyll in the thylakoid absorbs light', 'Light energy splits water and releases oxygen', 'The energy makes ATP and NADPH', 'The Calvin cycle in the stroma turns CO2 into glucose'],
+        keyTerms: ['chloroplast', 'thylakoid', 'stroma', 'chlorophyll', 'ATP', 'Calvin cycle'] } }
+  ];
+
+  var MODELS = [
+    { key: 'haiku',  name: 'Haiku 4.5',  tag: 'what the app uses today', price: [1, 5],  thinks: false },
+    { key: 'sonnet', name: 'Sonnet 5.5', tag: 'mid-size',                 price: [2, 10], thinks: true },
+    { key: 'opus',   name: 'Opus 5.5',   tag: 'largest',                  price: [4, 20], thinks: true }
+  ];
+  var KINDS = { rect: 1, circle: 1, ellipse: 1, line: 1, path: 1, poly: 1, text: 1 };
+  var CLIENT_TIMEOUT_MS = 62000;   // the server gives up at 55s and says so
+  var STORE_KEY = 'sf_drawlab_v1';
+
+  var kit = null;                   // { dk: SFDiagramKit, sk: SFSceneKit }
+  var saved = load();               // results saved in this browser, by cell key
+  var spentVisit = 0;
+  var queue = [], busy = false;
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function load() {
+    try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch (e) { return {}; }
+  }
+  function persist() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(saved)); } catch (e) { /* private window: still shown */ }
+  }
+  function effort() { return $('effort').value; }
+  function cellKey(lessonId, m) { return lessonId + '|' + m.key + (m.thinks ? '|' + effort() : ''); }
+  function money(d) { return d < 0.1 ? (d * 100).toFixed(1) + '¢' : '$' + d.toFixed(2); }
+  function costOf(m, usage) {
+    if (!usage) return 0;
+    return (usage.input_tokens || 0) * m.price[0] / 1e6 + (usage.output_tokens || 0) * m.price[1] / 1e6;
+  }
+  /* The endpoint is locked: it refuses every call without the DRAW_LAB_KEY set
+     in Vercel. The key is remembered in this browser only. */
+  var KEY_STORE = 'sf_drawlab_key';
+  function labKey() { return ($('lab-key').value || '').trim(); }
+  function banner(msg) { var b = $('banner'); b.textContent = msg; b.style.display = msg ? 'block' : 'none'; }
+
+  /* ── The app's own renderer, read out of lesson.html ─────────────────────
+     A copy would drift; this cannot. SFDiagramKit and SFSceneKit are two
+     self-contained IIFEs that sit next to each other in block 1. */
+  function loadKit() {
+    return fetch('lesson.html', { cache: 'no-cache' }).then(function (r) {
+      if (!r.ok) throw new Error('lesson.html: ' + r.status);
+      return r.text();
+    }).then(function (src) {
+      var a = src.indexOf('  var SFDiagramKit = (function () {');
+      var b = src.indexOf('  var SFSceneKit = (function () {');
+      var mark = '\n  })();';
+      var e = b < 0 ? -1 : src.indexOf(mark, b);
+      if (a < 0 || b < a || e < 0) throw new Error('could not find SFDiagramKit / SFSceneKit in lesson.html');
+      var code = src.slice(a, e + mark.length);
+      return (new Function(code + '\nreturn { dk: SFDiagramKit, sk: SFSceneKit };'))();
+    });
+  }
+
+  /* lesson.html's drawSpec (fromSpec, then polish), plus uniqIds: this page
+     holds two dozen drawings and every one names its arrowhead skArrow. */
+  function drawSpec(spec) {
+    var svg = null;
+    try { svg = kit.sk.fromSpec(spec); } catch (e) { svg = null; }
+    if (!svg) return null;
+    try { svg = kit.dk.polish(svg) || svg; } catch (e2) { /* unpolished is still valid */ }
+    try { svg = kit.dk.uniqIds(svg) || svg; } catch (e3) { /* ids only matter for arrowheads */ }
+    return svg;
+  }
+
+  /* SFDraw.request's reading of a reply, unchanged: the first {...} in the
+     text, a spec if it has shapes, otherwise the model said "nothing". */
+  function readReply(text) {
+    var m = String(text || '').match(/\{[\s\S]*\}/);
+    var spec = null;
+    if (m) { try { spec = JSON.parse(m[0]); } catch (e) { spec = null; } }
+    if (!spec || typeof spec !== 'object') return { nojson: true };
+    if (spec.shapes) return { spec: spec };
+    return { none: true };
+  }
+
+  function stats(spec) {
+    var n = 0, curved = 0, labels = 0, sh = spec && spec.shapes;
+    if (Object.prototype.toString.call(sh) !== '[object Array]') return null;
+    for (var i = 0; i < sh.length; i++) {
+      var k = sh[i] && String(sh[i].s || sh[i].kind || sh[i].type || '').toLowerCase();
+      if (!KINDS[k]) continue;
+      n++;
+      if (k === 'path' || k === 'poly') curved++;
+      if (k === 'text') labels++;
+    }
+    return { n: n, curved: curved, labels: labels };
+  }
+
+  /* ── Page ────────────────────────────────────────────────────────────── */
+  var cells = {};   // lessonId|modelKey -> { frame, meta, actions, details }
+
+  function build() {
+    var root = $('lessons');
+    LESSONS.forEach(function (L) {
+      var sec = el('section', 'lesson');
+      var head = el('div', 'lesson-head');
+      head.appendChild(el('h2', null, L.day.title));
+      head.appendChild(el('div', 'topic', L.day.microTopic.split(' › ').pop()));
+      var rowBtn = el('button', 'small', 'Draw this lesson');
+      rowBtn.onclick = function () { MODELS.forEach(function (m) { enqueue(L, m, false); }); };
+      head.appendChild(rowBtn);
+      sec.appendChild(head);
+
+      var pd = el('details', 'prompt-box');
+      pd.appendChild(el('summary', null, 'See the prompt every model gets'));
+      var pre = el('pre');
+      pre.textContent = window.SFDraw ? SFDraw.lessonPrompt(L.day) : 'sf-draw.js did not load';
+      pd.appendChild(pre);
+      sec.appendChild(pd);
+
+      var grid = el('div', 'grid');
+      MODELS.forEach(function (m) { grid.appendChild(aiCell(L, m)); });
+      grid.appendChild(servierCell(L));
+      sec.appendChild(grid);
+      root.appendChild(sec);
+    });
+  }
+
+  function aiCell(L, m) {
+    var c = el('div', 'cell');
+    var who = el('div', 'who');
+    who.appendChild(el('b', null, m.name));
+    who.appendChild(el('span', null, m.tag));
+    c.appendChild(who);
+    var frame = el('div', 'frame');
+    var meta = el('div', 'meta');
+    var actions = el('div', 'actions');
+    var details = el('details');
+    details.style.display = 'none';
+    c.appendChild(frame); c.appendChild(meta); c.appendChild(actions); c.appendChild(details);
+    cells[L.id + '|' + m.key] = { frame: frame, meta: meta, actions: actions, details: details, L: L, m: m };
+    paintCell(L, m);
+    return c;
+  }
+
+  function servierCell(L) {
+    var c = el('div', 'cell');
+    var who = el('div', 'who');
+    who.appendChild(el('b', null, 'Servier Medical Art'));
+    who.appendChild(el('span', null, 'free library · CC BY 3.0'));
+    c.appendChild(who);
+    var frame = el('div', 'frame');
+    var meta = el('div', 'meta');
+    if (L.servier) {
+      /* An <img>, never inline SVG: an image cannot run anything, whatever
+         the file contains. */
+      var img = el('img');
+      img.src = 'lab/servier/' + L.servier;
+      img.alt = 'Servier Medical Art illustration: ' + L.day.title;
+      img.loading = 'lazy';
+      frame.appendChild(img);
+      meta.textContent = 'Drawn by a medical illustrator. Costs nothing. ' + (L.servierNote || '');
+    } else {
+      frame.appendChild(el('div', 'empty', 'Not in the library.'));
+      meta.textContent = 'Servier’s free set has no chloroplast or leaf. A library only covers what is in it.';
+    }
+    c.appendChild(frame); c.appendChild(meta);
+    return c;
+  }
+
+  function paintCell(L, m) {
+    var c = cells[L.id + '|' + m.key];
+    if (!c) return;
+    var r = saved[cellKey(L.id, m)];
+    c.frame.innerHTML = ''; c.meta.innerHTML = ''; c.actions.innerHTML = '';
+    c.details.innerHTML = ''; c.details.style.display = 'none';
+
+    var drawBtn = el('button', 'small', r ? 'Draw again' : 'Draw');
+    drawBtn.onclick = function () { enqueue(L, m, true); };
+
+    if (c.pending) {
+      c.frame.appendChild(el('div', 'wait', c.started ? 'Drawing… ' + Math.round((Date.now() - c.started) / 1000) + 's' : 'Waiting its turn…'));
+      return;
+    }
+    if (!r) {
+      c.frame.appendChild(c.lastError ? el('div', 'err', c.lastError) : el('div', 'empty', 'Not drawn yet.'));
+      if (c.lastError) drawBtn.textContent = 'Try again';
+      c.actions.appendChild(drawBtn);
+      return;
+    }
+    /* "Draw again" failed: the drawing we already have stays, and says so. */
+    if (c.lastError) c.meta.appendChild(el('div', 'rule-miss', 'Drawing again failed: ' + c.lastError));
+
+    var info = [];
+    if (r.ms) info.push((r.ms / 1000).toFixed(1) + 's');
+    if (r.usage) info.push((r.usage.input_tokens + r.usage.output_tokens).toLocaleString() + ' tokens');
+    if (r.usage) info.push(money(costOf(m, r.usage)));
+    if (m.thinks && r.effort) info.push(r.effort + ' thinking');
+
+    if (r.error) {
+      c.frame.appendChild(el('div', 'err', r.error));
+    } else if (r.refused) {
+      c.frame.appendChild(el('div', 'err', 'The model declined' + (r.category ? ' (' + r.category + ')' : '') + '.'));
+    } else {
+      var read = readReply(r.result);
+      if (read.spec) {
+        var svg = kit ? drawSpec(read.spec) : null;
+        if (svg) {
+          c.frame.innerHTML = svg;      // SFSceneKit output: fixed shapes, escaped text
+        } else {
+          c.frame.appendChild(el('div', 'err', kit ? 'It drew something the app’s safety check refused, so a learner would see no drawing.' : 'Drawing kit not loaded.'));
+        }
+        var s = stats(read.spec);
+        if (s) {
+          var line = el('div', 'num');
+          line.appendChild(document.createTextNode(s.n + ' shapes · '));
+          /* The prompt's own rule: at least 6 paths or polys, or it is a
+             flowchart. Shown, because it is the clearest sign of boxes. */
+          var cv = el('span', s.curved < 6 ? 'rule-miss' : '', s.curved + ' curved');
+          line.appendChild(cv);
+          line.appendChild(document.createTextNode(' · ' + s.labels + ' labels'));
+          c.meta.appendChild(line);
+        }
+      } else if (read.none) {
+        c.frame.appendChild(el('div', 'empty', 'The model said there is nothing to draw.'));
+      } else {
+        c.frame.appendChild(el('div', 'err', 'It answered without a drawing.'));
+      }
+      c.details.style.display = '';
+      c.details.appendChild(el('summary', null, 'See what it sent'));
+      var pre = el('pre');
+      pre.textContent = String(r.result || '');
+      c.details.appendChild(pre);
+    }
+    c.meta.appendChild(el('div', 'num', info.join(' · ')));
+    c.actions.appendChild(drawBtn);
+  }
+
+  /* ── Drawing, one call at a time ─────────────────────────────────────── */
+  function enqueue(L, m, force) {
+    var c = cells[L.id + '|' + m.key];
+    if (!c || c.pending) return;
+    if (!force && saved[cellKey(L.id, m)]) return;     // already have it; Draw again forces
+    c.pending = true; c.started = 0; c.lastError = '';
+    queue.push({ L: L, m: m, effort: effort() });
+    paintCell(L, m);
+    pump();
+  }
+
+  function pump() {
+    if (busy || !queue.length) return;
+    busy = true;
+    var job = queue.shift();
+    var c = cells[job.L.id + '|' + job.m.key];
+    c.started = Date.now();
+    var tick = setInterval(function () { paintCell(job.L, job.m); }, 1000);
+    paintCell(job.L, job.m);
+
+    var prompt = window.SFDraw ? SFDraw.lessonPrompt(job.L.day) : '';
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var killer = setTimeout(function () { if (ctrl) ctrl.abort(); }, CLIENT_TIMEOUT_MS);
+    fetch('api/draw-lab', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-lab-key': labKey() },
+      body: JSON.stringify({ prompt: prompt, model: job.m.key, effort: job.effort }),
+      signal: ctrl ? ctrl.signal : undefined
+    }).then(function (r) {
+      return r.text().then(function (t) {
+        var data = null;
+        try { data = JSON.parse(t); } catch (e) { data = null; }
+        if (!data) return { error: 'The server answered ' + r.status + ' without JSON.' };
+        if (!r.ok || data.error) return { error: (data.error || ('Error ' + r.status)), ms: data.ms, usage: data.usage };
+        return data;
+      });
+    }).catch(function (e) {
+      return { error: e && e.name === 'AbortError' ? 'No answer after 62s.' : 'Could not reach the server.' };
+    }).then(function (res) {
+      clearTimeout(killer); clearInterval(tick);
+      res.effort = job.m.thinks ? job.effort : undefined;
+      res.when = new Date().toISOString();
+      spentVisit += costOf(job.m, res.usage);
+      $('spent').textContent = '$' + spentVisit.toFixed(2);
+      /* A failed call is shown but not kept, the same rule as the app: only
+         an answer is remembered. */
+      var key = job.L.id + '|' + job.m.key + (job.m.thinks ? '|' + job.effort : '');
+      if (!res.error) { saved[key] = res; persist(); }
+      c.pending = false;
+      c.lastError = res.error || '';
+      paintCell(job.L, job.m);
+      busy = false;
+      pump();
+    });
+  }
+
+  try { $('lab-key').value = localStorage.getItem(KEY_STORE) || ''; } catch (eK) { /* typed each visit instead */ }
+  $('lab-key').onchange = function () {
+    try { localStorage.setItem(KEY_STORE, labKey()); } catch (eK) { /* still used for this visit */ }
+    banner('');
+  };
+  $('draw-all').onclick = function () {
+    if (!labKey()) { banner('Type the lab key first - the DRAW_LAB_KEY you set in Vercel. Without it the server refuses every drawing.'); return; }
+    var todo = 0;
+    LESSONS.forEach(function (L) { MODELS.forEach(function (m) { if (!saved[cellKey(L.id, m)]) todo++; }); });
+    if (!todo) { banner(''); alert('Everything on the page is already drawn at this thinking level.'); return; }
+    if (!confirm('This makes ' + todo + ' AI drawing calls, one at a time (several minutes). The real cost shows under each drawing. Go?')) return;
+    LESSONS.forEach(function (L) { MODELS.forEach(function (m) { enqueue(L, m, false); }); });
+  };
+  $('effort').onchange = function () {
+    LESSONS.forEach(function (L) { MODELS.forEach(function (m) { if (m.thinks) paintCell(L, m); }); });
+  };
+  $('clear').onclick = function () {
+    if (!confirm('Forget every saved drawing in this browser? Drawing them again costs money.')) return;
+    saved = {}; persist();
+    LESSONS.forEach(function (L) { MODELS.forEach(function (m) { paintCell(L, m); }); });
+  };
+  $('download').onclick = function () {
+    var out = { page: 'draw-lab', saved: new Date().toISOString(), lessons: LESSONS.map(function (L) { return { id: L.id, day: L.day }; }), results: saved };
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }));
+    a.download = 'draw-lab-results.json';
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+
+  build();
+  if (!window.SFDraw) banner('sf-draw.js did not load, so there is no prompt to send.');
+  loadKit().then(function (k) {
+    kit = k;
+    LESSONS.forEach(function (L) { MODELS.forEach(function (m) { paintCell(L, m); }); });
+  }, function (e) {
+    banner('Could not load the app’s drawing kit: ' + (e && e.message ? e.message : e));
+  });
+})();
+</script>
+</body>
+</html>
