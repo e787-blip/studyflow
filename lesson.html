@@ -329,7 +329,9 @@
     align-items:center; justify-content:center; }
   .ld-sel { flex:1 1 auto; min-width:0; padding:.45rem .55rem; border:1.5px solid var(--border);
     border-radius:9px; font-family:inherit; font-size:.85rem; background:var(--white); color:var(--ink); }
-  body.dark .ld-fig { background:#1e2336; }
+  /* Light in dark mode too: the drawing is ink for paper. On #1e2336 its
+     title and every unhaloed line all but vanished. */
+  body.dark .ld-fig { background:#f4f6fb; }
 
   /* KEY TERMS */
   .terms-list { display:flex; flex-direction:column; gap:.55rem; }
@@ -697,6 +699,61 @@
     .pw-fig svg text, .pw-fig .ld-pin, .pw-pinlab, .pw-orig { transition:none; }
   }
   body.dark .sf-moment-fold summary { color:#8fb0ff; }
+
+  /* Pictures draw themselves (SFDrawOn, block 1). Every animation below is
+     applied inline by that module with fill-mode BACKWARDS only: an element
+     is hidden until its turn, and the moment its animation ends it is back
+     to exactly what the renderer made - so the walkthrough's lighting, the
+     pins' dimming and a label's own opacity all keep working. The implicit
+     final keyframe (no `to`) animates TO whatever the element already is.
+
+     sfdTrace draws a stroke along its own length. The gap is longer than the
+     dash and the start offset clears the path by a few units, or a round cap
+     draws a dot at the start of every line before it has begun. */
+  .sfd-hold { opacity:0; }
+  @keyframes sfdTrace {
+    from { stroke-dasharray:var(--sfd-l) var(--sfd-g); stroke-dashoffset:var(--sfd-o); }
+    to   { stroke-dasharray:var(--sfd-l) var(--sfd-g); stroke-dashoffset:0; }
+  }
+  @keyframes sfdWash  { from { fill-opacity:0; } }
+  @keyframes sfdShow  { from { opacity:0; } }
+  /* A label is written left to right. Negative insets on the other three
+     sides, so the halo behind the glyphs is never clipped. */
+  @keyframes sfdWrite {
+    from { clip-path:inset(-45% 100% -45% -12%); }
+    to   { clip-path:inset(-45% -12% -45% -12%); }
+  }
+  @keyframes sfdPin { 0% { opacity:0; transform:scale(.3); } 55% { transform:scale(1.16); } 80% { transform:scale(.95); } }
+  /* A soft bead of the arrow's own colour travelling along it, twice: the
+     direction things move. Drawn on a clone that is removed afterwards. */
+  @keyframes sfdFlow {
+    0%   { stroke-dashoffset:var(--sfd-a); opacity:0; }
+    14%  { opacity:1; }
+    82%  { opacity:1; }
+    100% { stroke-dashoffset:var(--sfd-b); opacity:0; }
+  }
+  /* "Draw it for me" draws the answer - its blue part - last, then rings it
+     once: a soft blue halo that widens and fades behind the shape. */
+  @keyframes sfdHalo {
+    from { stroke-width:var(--sfd-w0); stroke-opacity:.55; }
+    to   { stroke-width:var(--sfd-w1); stroke-opacity:0; }
+  }
+  /* Watch it again. Quiet until wanted: a small round chip in the picture's
+     corner, blue border on hover like every card here - no lift, no scale.
+     Fixed light colours, not the theme's: both places it sits (the lesson
+     picture, a moment panel) keep a light ground in dark mode, and the
+     themed chip was a dark disc on paper there. */
+  .sfd-replay {
+    position:absolute; top:.45rem; right:.45rem; width:30px; height:30px; padding:0;
+    border-radius:50%; border:1px solid #e8ecf4; background:#fff; color:#6b7280;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:0;
+    animation:sfdShow .35s ease backwards; transition:border-color .18s, color .18s, opacity .18s;
+  }
+  .sfd-replay:hover { border-color:#4a7cf6; color:#4a7cf6; }
+  .sfd-replay:focus-visible { outline:2px solid #4a7cf6; outline-offset:2px; }
+  .sfd-replay:disabled { opacity:.35; cursor:default; border-color:#e8ecf4; color:#6b7280; }
+  /* In a "Draw it for me" panel the chip rides at the end of the header row. */
+  .sfd-replay.is-inline { position:static; width:26px; height:26px; margin-left:auto; flex:0 0 auto; }
 
   /* Keyboard hint chip */
   .kbd-hint {
@@ -2971,6 +3028,624 @@
     return svg;
   }
 
+  /* ── PICTURES DRAW THEMSELVES ─────────────────────────────────────────────
+
+     A picture used to arrive whole: one fade, and every part of it at once.
+     Now it is drawn the way a teacher draws on a board, in the order it was
+     made:
+
+       1. the title is written first;
+       2. each shape is traced like a pen stroke along its own length, and its
+          colour washes in behind the line. Words that sit INSIDE a shape (a
+          flow chart's boxes, a hub's name) are written as soon as that shape
+          is drawn, so a chart builds box by box;
+       3. labels outside the drawing come last, left to right, each written
+          after its leader line has been drawn out to it;
+       4. a labelling card's numbered pins pop in: 1, 2, 3;
+       5. then every arrow sends a soft bead of its own colour along itself,
+          twice. In these drawings an arrow means movement - both drawing
+          prompts say so - and this is the direction things travel.
+
+     About two seconds for an ordinary drawing. The pulse after it is extra
+     and blocks nothing; the labelling card's menus work while it draws.
+
+     It runs on the PAGE, never on the SVG string. The kits, the diagram
+     baseline, the labelling card (which lifts names out of the markup) and
+     the audit all see exactly what they saw before. Everything it borrows -
+     inline styles, marker attributes - is handed back when the drawing ends,
+     so the DOM finishes identical to what was inserted. There is a test.
+
+     Rules:
+       - ONCE per picture per session. The lesson's picture draws itself on
+         the lesson card; when it comes back under a question it is simply
+         there. Keyed on the picture's words and part count, not its markup,
+         because uniqIds renames every id each time a picture is shown.
+       - Only when it can be SEEN. Below the fold it waits, hidden, until it
+         scrolls in; inside a closed fold it is shown still when opened.
+       - prefers-reduced-motion: nothing moves and nothing waits.
+
+     One MutationObserver on the containers pictures go into (PICTURE_SEL),
+     so no renderer had to change. Its callback is a microtask, so it runs
+     before the browser paints - which is why nothing flashes up whole and
+     then vanishes to be drawn. */
+  var SFDrawOn = (function () {
+    'use strict';
+
+    /* Direct children only: every one of these containers holds its picture
+       at the top level, and anything deeper - the replay chip's own icon -
+       is not a picture. */
+    var PICTURE_SEL = '#lesson-art > svg, .sf-moment-art > svg, .sf-recall > svg, .pw-art > svg, .ld-fig > svg';
+    /* computed colours of SFSceneKit's blue, blueFill and blueInk: in a
+       "Draw it for me" picture, the answer (sf-draw.js's momentPrompt) */
+    var BLUE = { 'rgb(74, 124, 246)': 1, 'rgb(234, 241, 255)': 1, 'rgb(30, 64, 175)': 1 };
+    var SKIP = { defs: 1, marker: 1, clippath: 1, mask: 1, pattern: 1, symbol: 1, lineargradient: 1,
+                 radialgradient: 1, filter: 1, title: 1, desc: 1, style: 1, script: 1,
+                 foreignobject: 1, metadata: 1 };
+    var SHAPE = { path: 1, line: 1, polyline: 1, polygon: 1, rect: 1, circle: 1, ellipse: 1 };
+    var CLOSED = { rect: 1, circle: 1, ellipse: 1, polygon: 1 };
+    var MARKERS = ['marker-start', 'marker-mid', 'marker-end'];
+    var PEN = 'cubic-bezier(.45,.05,.25,1)';      // a hand: starts slow, glides, settles
+    var OUT = 'cubic-bezier(.22,.61,.36,1)';
+    var drawn = {};
+    var io = null;
+
+    function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+    function sec(t) { return (Math.round(t * 1000) / 1000) + 's'; }
+    function lc(el) { return String(el.localName || el.nodeName || '').toLowerCase(); }
+    function hasClass(el, c) {
+      var k = el.getAttribute && el.getAttribute('class');
+      return !!k && (' ' + k + ' ').indexOf(' ' + c + ' ') >= 0;
+    }
+    function reduced() {
+      try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+      catch (e) { return false; }
+    }
+    function rectOf(el) { try { return el.getBoundingClientRect(); } catch (e) { return null; } }
+
+    /* The drawable parts, in the order they were made. A pin is one thing to
+       the learner, so it is kept whole. The walkthrough's own pin names
+       (.pw-pinlab) are left to the walkthrough, which shows them a step at a
+       time. */
+    function collect(node, out) {
+      var kids = node.childNodes, i;
+      for (i = 0; i < kids.length; i++) {
+        var c = kids[i];
+        if (c.nodeType !== 1) continue;
+        var tag = lc(c);
+        if (SKIP[tag]) continue;
+        if (hasClass(c, 'sfd-flow') || hasClass(c, 'sfd-halo')) continue;   // our own passing effects
+        if (tag === 'g' && hasClass(c, 'ld-pin')) { out.pins.push(c); continue; }
+        if (tag === 'text') { if (!hasClass(c, 'pw-pinlab')) out.texts.push(c); continue; }
+        if (tag === 'g' || tag === 'a' || tag === 'switch') { collect(c, out); continue; }
+        if (SHAPE[tag] || tag === 'image' || tag === 'use' || tag === 'svg') out.items.push(c);
+      }
+      return out;
+    }
+
+    function keyOf(svg) {
+      var o = collect(svg, { items: [], texts: [], pins: [] }), words = [], i;
+      for (i = 0; i < o.texts.length; i++) words.push(o.texts[i].textContent || '');
+      return (svg.getAttribute('viewBox') || '') + '|' + o.items.length + '|' +
+        words.join(' ').replace(/\s+/g, ' ').slice(0, 400);
+    }
+
+    /* Distance from a point to a box, 0 inside it. Screen pixels throughout:
+       getBoundingClientRect and getScreenCTM agree with each other through
+       every nested transform, and user units of different groups do not. */
+    function toBox(x, y, r) {
+      var dx = Math.max(r.left - x, 0, x - r.right), dy = Math.max(r.top - y, 0, y - r.bottom);
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    function lineEnds(el) {
+      try {
+        var m = el.getScreenCTM(), root = el.ownerSVGElement;
+        if (!m || !root) return null;
+        var p = root.createSVGPoint(), a, b;
+        p.x = parseFloat(el.getAttribute('x1')) || 0; p.y = parseFloat(el.getAttribute('y1')) || 0;
+        a = p.matrixTransform(m);
+        p.x = parseFloat(el.getAttribute('x2')) || 0; p.y = parseFloat(el.getAttribute('y2')) || 0;
+        b = p.matrixTransform(m);
+        return [a, b];
+      } catch (e) { return null; }
+    }
+
+    function putMarkers(E) {
+      var R = E.sfdRec, i;
+      if (!R || !R.markers) return;
+      for (i = 0; i < MARKERS.length; i++) E.style.removeProperty(MARKERS[i]);
+      R.markers = null;
+    }
+
+    /* Hand everything back: the element's own style attribute exactly as it
+       was (or none), its arrowheads, no listeners. */
+    function finish(list) {
+      for (var i = 0; i < list.length; i++) {
+        var E = list[i], R = E.sfdRec;
+        if (!R) continue;
+        putMarkers(E);
+        if (R.onEnd) E.removeEventListener('animationend', R.onEnd);
+        /* Read it before removing it. Chrome writes inline style back to the
+           attribute lazily, and an attribute removed while that write is
+           still owed comes back as style="" the next time the element is
+           serialised - every part of a drawing ended with an empty style. */
+        E.getAttribute('style');
+        if (R.style == null) E.removeAttribute('style'); else E.setAttribute('style', R.style);
+        E.sfdRec = null;
+      }
+    }
+
+    /* The spark along an arrow: a soft glow of the arrow's own colour with a
+       bright core inside it, travelling tail to head. The glow alone was a
+       barely-visible thickening of a red line on a red-tinted tube; the core
+       is what makes it read as something moving. Clones, so the arrow itself
+       is never touched again once drawn; they remove themselves. */
+    function flow(it, s, ks) {
+      var el = it.el, len = it.len, par = el.parentNode;
+      if (!par || !(len > 30)) return s;            // a stub says nothing about direction
+      var seg = clamp(len * 0.2, 10, 36), d = clamp(0.55 + len / 320, 0.7, 1.4);
+      var drop = ['id', 'class', 'style', 'marker-start', 'marker-mid', 'marker-end',
+                  'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'filter', 'mask'];
+      /* lead: how far the dash starts inside the glow, so the core rides in
+         the middle of it */
+      function bead(dash, lead, width, colour, alpha) {
+        var c = el.cloneNode(false), i, a0 = seg + 10 - lead, b0 = -(len + 10) - lead;
+        for (i = 0; i < drop.length; i++) c.removeAttribute(drop[i]);
+        c.setAttribute('fill', 'none');
+        c.setAttribute('stroke', colour);
+        c.setAttribute('stroke-width', width.toFixed(2));
+        c.setAttribute('stroke-opacity', alpha);
+        c.setAttribute('stroke-linecap', 'round');
+        c.setAttribute('stroke-dasharray', dash.toFixed(1) + ' ' + (len + seg + 40).toFixed(1));
+        c.setAttribute('stroke-dashoffset', a0.toFixed(1));            // parked before the start
+        c.setAttribute('pointer-events', 'none');
+        c.setAttribute('aria-hidden', 'true');
+        c.setAttribute('class', 'sfd-flow');
+        c.style.setProperty('--sfd-a', a0.toFixed(1) + 'px');
+        c.style.setProperty('--sfd-b', b0.toFixed(1) + 'px');
+        c.style.animation = 'sfdFlow ' + sec(d * ks) + ' cubic-bezier(.45,.05,.55,.95) ' + sec(s * ks) + ' 2 both';
+        par.insertBefore(c, el.nextSibling);
+        function gone() { if (c.parentNode) c.parentNode.removeChild(c); }
+        c.addEventListener('animationend', gone);
+        setTimeout(gone, ((s + 2 * d) * ks + 0.6) * 1000);
+        return c;
+      }
+      /* Each bead goes in straight after the arrow, so the one made first
+         ends up on top: the core, then the glow beneath it. */
+      bead(seg * 0.5, seg * 0.25, Math.max(1.1, it.sw * 0.5), '#ffffff', '0.95');
+      bead(seg, 0, it.sw + 4.5, it.color || '#1a1d2e', '0.38');
+      return s + 2 * d;
+    }
+
+    /* The answer's ring: a blue copy of its outline behind it, widening and
+       fading once. Behind, so the shape itself stays exactly as drawn. */
+    function halo(it, s, ks) {
+      var el = it.el, par = el.parentNode;
+      if (!par) return s;
+      var c = el.cloneNode(false), i, d = 0.9, w0 = it.sw + 1, w1 = it.sw + 14;
+      var drop = ['id', 'class', 'style', 'marker-start', 'marker-mid', 'marker-end',
+                  'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'filter', 'mask'];
+      for (i = 0; i < drop.length; i++) c.removeAttribute(drop[i]);
+      c.setAttribute('fill', 'none');
+      c.setAttribute('stroke', '#4a7cf6');
+      c.setAttribute('stroke-width', w0.toFixed(1));
+      c.setAttribute('stroke-opacity', '0');
+      c.setAttribute('stroke-linejoin', 'round');
+      c.setAttribute('stroke-linecap', 'round');
+      c.setAttribute('pointer-events', 'none');
+      c.setAttribute('aria-hidden', 'true');
+      c.setAttribute('class', 'sfd-halo');
+      c.style.setProperty('--sfd-w0', w0.toFixed(1) + 'px');
+      c.style.setProperty('--sfd-w1', w1.toFixed(1) + 'px');
+      /* forwards, NOT both: `both` holds the FIRST keyframe through the
+         delay, and the ring's first keyframe is its brightest - so the answer
+         sat outlined in blue from the moment the picture appeared, two
+         seconds before anything had been drawn. Before its turn the clone is
+         its own attribute, stroke-opacity 0. */
+      c.style.animation = 'sfdHalo ' + sec(d * ks) + ' cubic-bezier(.22,.61,.36,1) ' + sec(s * ks) + ' 1 forwards';
+      par.insertBefore(c, el);
+      function gone() { if (c.parentNode) c.parentNode.removeChild(c); }
+      c.addEventListener('animationend', gone);
+      setTimeout(gone, ((s + d) * ks + 0.6) * 1000);
+      return s + d;
+    }
+
+    /* Draw one picture now. speed > 1 is quicker. opts.answer: the blue part
+       is the answer - draw it last and ring it; opts.onDone: called when
+       everything, sparks included, has finished. Returns the seconds it
+       takes, or false when there is nothing worth drawing (the picture is
+       then simply shown). */
+    function play(svg, speed, opts) {
+      opts = opts || {};
+      var o = collect(svg, { items: [], texts: [], pins: [] });
+      if (o.items.length + o.texts.length + o.pins.length < 2) return false;
+      var box = rectOf(svg);
+      if (!box || !box.width || !box.height) return false;
+      var ks = 1 / (speed || 1), area = box.width * box.height;
+      var recs = [], arrows = [], items = [], texts = [], outside = [], end = 0, i, j, cs, r;
+
+      /* Measure everything first, so nothing is laid out twice. */
+      for (i = 0; i < o.items.length; i++) {
+        var el = o.items[i], tag = lc(el);
+        r = rectOf(el);
+        if (!r || (!r.width && !r.height)) continue;
+        try { cs = window.getComputedStyle(el); } catch (e) { cs = null; }
+        if (!cs || cs.display === 'none' || cs.visibility === 'hidden') continue;
+        var sw = parseFloat(cs.strokeWidth) || 0;
+        var stroked = !!cs.stroke && cs.stroke !== 'none' && sw > 0 && parseFloat(cs.strokeOpacity) !== 0;
+        var dashed = !!cs.strokeDasharray && cs.strokeDasharray !== 'none';
+        var len = 0;
+        if (SHAPE[tag] && stroked && !dashed) {
+          var pl = parseFloat(el.getAttribute('pathLength'));
+          try { len = pl > 0 ? pl : el.getTotalLength(); } catch (e2) { len = 0; }
+          if (!(len > 0) || !isFinite(len)) len = 0;
+        }
+        var marker = false;
+        for (j = 0; j < MARKERS.length; j++) if (el.getAttribute(MARKERS[j])) marker = true;
+        items.push({ el: el, tag: tag, r: r, sw: sw, stroked: stroked, len: len, marker: marker,
+                     filled: !!cs.fill && cs.fill !== 'none' && parseFloat(cs.fillOpacity) !== 0,
+                     color: cs.stroke, a: r.width * r.height, inner: [], after: [],
+                     bg: r.width * r.height > area * 0.55,
+                     blue: !!opts.answer && !!(BLUE[cs.stroke] || BLUE[cs.fill]) });
+      }
+      for (i = 0; i < o.texts.length; i++) {
+        r = rectOf(o.texts[i]);
+        if (!r || !(r.width || r.height)) continue;
+        var tb = false;
+        if (opts.answer) { try { tb = !!BLUE[window.getComputedStyle(o.texts[i]).fill]; } catch (eB) { tb = false; } }
+        texts.push({ el: o.texts[i], r: r, leaders: [], blue: tb });
+      }
+
+      /* The title: the first words, centred across the top. */
+      var title = null;
+      if (texts.length > 1) {
+        var t0 = texts[0].r, mid = (t0.left + t0.right) / 2 - box.left;
+        if (t0.top - box.top < box.height * 0.16 && Math.abs(mid - box.width / 2) < box.width * 0.2) title = texts.shift();
+      }
+
+      /* Words wholly inside a modest closed shape belong to it. Big shapes -
+         a leaf blade, the ground - are not containers: words over them are
+         labels, and labels come last. */
+      for (i = 0; i < texts.length; i++) {
+        var t = texts[i], best = null;
+        for (j = 0; j < items.length; j++) {
+          var it = items[j], rr = it.r;
+          if (it.bg || it.a > area * 0.18) continue;
+          if (!(CLOSED[it.tag] || (it.tag === 'path' && it.filled))) continue;
+          if (t.r.left >= rr.left - 2 && t.r.right <= rr.right + 2 &&
+              t.r.top >= rr.top - 2 && t.r.bottom <= rr.bottom + 2 && (!best || it.a < best.a)) best = it;
+        }
+        if (best) best.inner.push(t); else outside.push(t);
+      }
+
+      /* A thin line with no arrowhead, one end at a label, is that label's
+         leader: it is drawn out to the label just before the label is
+         written, instead of with the drawing. */
+      for (j = 0; j < items.length; j++) {
+        var ln = items[j];
+        if (ln.tag !== 'line' || ln.marker || !ln.stroked || ln.sw > 1.4) continue;
+        var ends = lineEnds(ln.el), near = null, nd = 14, dd;
+        if (!ends) continue;
+        for (i = 0; i < outside.length; i++) {
+          dd = Math.min(toBox(ends[0].x, ends[0].y, outside[i].r), toBox(ends[1].x, ends[1].y, outside[i].r));
+          if (dd < nd) { nd = dd; near = outside[i]; }
+        }
+        if (near) { near.leaders.push(ln); ln.leader = true; }
+      }
+
+      /* An arrow that LEAVES a box is drawn straight after that box, so a
+         chart reads box, arrow, box, arrow - the kit writes every connector
+         before every node, and drawn in that order a cycle was four arrows
+         joining nothing. An arrow that starts in the open (light falling on
+         a leaf, blood moving up a vein) is movement, and is drawn after the
+         structure it moves through. "Leaves" = its tail sits on or near the
+         box (the kit starts its arcs ~26px clear of the box they leave), not
+         deep inside it, and its head is not pointing back into that box. */
+      var late = [];
+      function isNode(n) {
+        return !n.bg && !n.marker && !n.leader && n.a <= area * 0.18 &&
+          (CLOSED[n.tag] || (n.tag === 'path' && n.filled));
+      }
+      for (j = 0; j < items.length; j++) {
+        var ar = items[j];
+        if (!ar.marker || ar.leader || ar.bg) continue;
+        var tp = null, hp = null, host = null, hd = 30;
+        try {
+          var cm = ar.el.getScreenCTM(), sv = ar.el.ownerSVGElement, q0, q1;
+          if (cm && sv) {
+            tp = sv.createSVGPoint(); hp = sv.createSVGPoint();
+            if (ar.tag === 'line') {
+              tp.x = parseFloat(ar.el.getAttribute('x1')) || 0; tp.y = parseFloat(ar.el.getAttribute('y1')) || 0;
+              hp.x = parseFloat(ar.el.getAttribute('x2')) || 0; hp.y = parseFloat(ar.el.getAttribute('y2')) || 0;
+            } else {
+              q0 = ar.el.getPointAtLength(0); q1 = ar.el.getPointAtLength(ar.el.getTotalLength());
+              tp.x = q0.x; tp.y = q0.y; hp.x = q1.x; hp.y = q1.y;
+            }
+            tp = tp.matrixTransform(cm); hp = hp.matrixTransform(cm);
+          }
+        } catch (eT) { tp = null; }
+        if (tp && hp) {
+          for (i = 0; i < items.length; i++) {
+            var nb = items[i], nr = nb.r;
+            if (!isNode(nb)) continue;
+            var inside = tp.x > nr.left && tp.x < nr.right && tp.y > nr.top && tp.y < nr.bottom;
+            if (inside && Math.min(tp.x - nr.left, nr.right - tp.x, tp.y - nr.top, nr.bottom - tp.y) > 3) continue;
+            dd = inside ? 0 : toBox(tp.x, tp.y, nr);
+            if (toBox(hp.x, hp.y, nr) <= dd) continue;     // it points INTO this one
+            if (dd < hd) { hd = dd; host = nb; }
+          }
+        }
+        if (host) host.after.push(ar); else late.push(ar);
+      }
+
+      function rec(E) {
+        if (!E.sfdRec) { E.sfdRec = { style: E.getAttribute('style'), anims: [], props: null, markers: null, onEnd: null, pin: false }; recs.push(E); }
+        return E.sfdRec;
+      }
+      /* sfdShow rides along with every trace for one reason: a browser that
+         cannot resolve var() inside @keyframes still keeps the part hidden
+         until its turn, instead of showing everything at once. */
+      function trace(it, s, dur) {
+        var R = rec(it.el), d = dur || clamp(0.26 + it.len / 600, 0.3, 0.8), stop = s + d;
+        R.anims.push('sfdTrace ' + sec(d * ks) + ' ' + PEN + ' ' + sec(s * ks) + ' 1 backwards');
+        R.anims.push('sfdShow ' + sec(0.05 * ks) + ' linear ' + sec(s * ks) + ' 1 backwards');
+        R.props = { '--sfd-l': it.len, '--sfd-g': it.len + 12 + it.sw * 2, '--sfd-o': it.len + 6 + it.sw };
+        if (it.filled) {
+          R.anims.push('sfdWash ' + sec(0.45 * ks) + ' ' + OUT + ' ' + sec((s + d * 0.5) * ks) + ' 1 backwards');
+          stop = Math.max(stop, s + d * 0.5 + 0.45);
+        }
+        if (it.marker) {
+          /* The arrowhead would sit at the far end, waiting, while its line
+             crawled towards it. It lands when the line arrives instead -
+             hidden by an inline `marker-*: none`, which outranks the
+             attribute, so the attribute itself is never touched. */
+          R.markers = true;
+          arrows.push(it);
+        }
+        return stop;
+      }
+      function show(it, s, dur) {
+        var d = dur || 0.4;
+        rec(it.el).anims.push('sfdShow ' + sec(d * ks) + ' ' + OUT + ' ' + sec(s * ks) + ' 1 backwards');
+        return s + d;
+      }
+      function drawIt(it, s, dur) { return it.len > 0 ? trace(it, s, dur) : show(it, s, dur); }
+      function durOf(it) { return it.len > 0 ? clamp(0.26 + it.len / 600, 0.3, 0.8) : 0.4; }
+      function write(tx, s) {
+        var R = rec(tx.el), n = (tx.el.textContent || '').length, d = clamp(0.2 + n * 0.017, 0.26, 0.6);
+        R.anims.push('sfdWrite ' + sec(d * ks) + ' cubic-bezier(.3,.55,.35,1) ' + sec(s * ks) + ' 1 backwards');
+        R.anims.push('sfdShow ' + sec(0.08 * ks) + ' linear ' + sec(s * ks) + ' 1 backwards');
+        return s + d;
+      }
+
+      /* The timetable, in seconds before `speed`. */
+      var d0 = opts.delay || 0, at = 0.05 + d0;   // delay: let a sliding panel land first
+      if (title) { end = Math.max(end, write(title, at)); at += 0.16; }
+      var seq = [];
+      for (i = 0; i < items.length; i++) {
+        if (items[i].leader) continue;
+        if (items[i].bg) { end = Math.max(end, drawIt(items[i], d0)); continue; }  // the ground goes down first
+        if (items[i].marker) continue;                                             // placed below
+        seq.push(items[i]);
+        for (j = 0; j < items[i].after.length; j++) seq.push(items[i].after[j]);
+      }
+      seq = seq.concat(late);
+      /* The answer last. Everything else is the setting; the blue part is
+         what the learner missed, so it arrives once the setting is there to
+         make sense of it - and its label is the last word written. */
+      if (opts.answer) {
+        var rest = [], ans = [];
+        for (i = 0; i < seq.length; i++) (seq[i].blue ? ans : rest).push(seq[i]);
+        seq = rest.concat(ans);
+        rest = []; ans = [];
+        for (i = 0; i < outside.length; i++) (outside[i].blue ? ans : rest).push(outside[i]);
+        outside = rest.concat(ans);
+      }
+      var n = seq.length, gap = n ? clamp(1.1 / n, 0.03, 0.13) : 0;   // a small chart is dealt out slowly enough to follow
+      if (n > 34) gap = Math.max(0.012, 1.05 / n);          // a busy drawing still finishes in time
+      for (i = 0; i < n; i++) {
+        var s0 = at + i * gap, cur = seq[i];
+        end = Math.max(end, drawIt(cur, s0));
+        for (j = 0; j < cur.inner.length; j++) end = Math.max(end, write(cur.inner[j], s0 + durOf(cur) * 0.55 + j * 0.05));
+      }
+      var ls = at + n * gap * 0.85 + 0.08, nl = outside.length, lg = nl ? clamp(0.8 / nl, 0.07, 0.16) : 0;
+      for (i = 0; i < nl; i++) {
+        var la = ls + i * lg, lead = outside[i].leaders;
+        for (j = 0; j < lead.length; j++) end = Math.max(end, drawIt(lead[j], la, 0.22));
+        end = Math.max(end, write(outside[i], la + (lead.length ? 0.1 : 0)));
+      }
+      var ps = Math.max(0.2, end - 0.05);
+      for (i = 0; i < o.pins.length; i++) {
+        var P = rec(o.pins[i]);
+        P.pin = true;
+        P.anims.push('sfdPin ' + sec(0.46 * ks) + ' ' + OUT + ' ' + sec((ps + i * 0.11) * ks) + ' 1 backwards');
+        end = Math.max(end, ps + i * 0.11 + 0.46);
+      }
+
+      /* Apply it all in one go, inside this same task: nothing is painted
+         between the first part being hidden and the last. */
+      for (i = 0; i < recs.length; i++) {
+        var E = recs[i], R = E.sfdRec, p;
+        if (R.props) for (p in R.props) E.style.setProperty(p, R.props[p].toFixed(1) + 'px');
+        if (R.pin) { E.style.setProperty('transform-box', 'fill-box'); E.style.setProperty('transform-origin', 'center'); }
+        E.style.animation = R.anims.join(', ');
+        if (R.markers) {
+          for (j = 0; j < MARKERS.length; j++) E.style.setProperty(MARKERS[j], 'none');
+          R.onEnd = (function (X) {
+            return function (ev) { if (!ev || ev.animationName === 'sfdTrace') putMarkers(X); };
+          })(E);
+          E.addEventListener('animationend', R.onEnd);
+        }
+      }
+      setTimeout(function () { finish(recs); }, (end * ks + 0.3) * 1000);
+      var last = end, fx = end + 0.25, rung = 0;
+      if (opts.answer) {
+        for (i = 0; i < items.length && rung < 6; i++) {
+          if (!items[i].blue || items[i].bg || items[i].leader) continue;
+          last = Math.max(last, halo(items[i], end + 0.05, ks));
+          rung++;
+        }
+        if (rung) fx = end + 0.6;                 // the ring first, then things move
+      }
+      if (arrows.length && arrows.length <= 12) {
+        for (i = 0; i < arrows.length; i++) last = Math.max(last, flow(arrows[i], fx + i * 0.14, ks));
+      }
+      if (opts.onDone) setTimeout(opts.onDone, (last * ks + 0.35) * 1000);
+      return last * ks;
+    }
+
+    function inClass(el, name) {
+      var k = (el && el.getAttribute && el.getAttribute('class')) || '';
+      return (' ' + k + ' ').indexOf(' ' + name + ' ') >= 0;
+    }
+
+    /* Quicker where the learner has met the picture already, or is here to
+       work on it: the labelling card is the lesson's own drawing again. */
+    function speedFor(svg) {
+      var p = svg.parentNode;
+      if (inClass(p, 'ld-fig')) return 1.35;
+      if (inClass(p, 'sf-recall') || inClass(p, 'pw-art')) return 1.2;
+      return 1;
+    }
+
+    var REPLAY_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" ' +
+      'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 3.5v5h5"/></svg>';
+
+    /* "Draw it again": on the lesson's picture and on a picture drawn for a
+       question - the two a learner has a reason to watch twice. On the
+       lesson card it sits in the frame's corner; on a "Draw it for me"
+       panel it goes in the panel's own header row, because those drawings
+       use their corners (the lever's "Small push" is up there). */
+    function replayHost(svg) {
+      var p = svg.parentNode;
+      if (!p || reduced()) return null;
+      if (p.id === 'lesson-art') return p;
+      if (inClass(p, 'sf-moment-art')) {
+        var head = p.parentNode && p.parentNode.querySelector('.sf-moment-head');
+        return head || null;
+      }
+      return null;
+    }
+    function offerReplay(svg) {
+      var host = replayHost(svg), i;
+      if (!host || !svg.parentNode) return;
+      for (i = 0; i < host.childNodes.length; i++) if (inClass(host.childNodes[i], 'sfd-replay')) return;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'sfd-replay' + (host.id === 'lesson-art' ? '' : ' is-inline');
+      b.setAttribute('aria-label', 'Draw it again');
+      b.title = 'Draw it again';
+      b.innerHTML = REPLAY_ICON;
+      b.onclick = function () {
+        if (b.disabled || !svg.parentNode) return;
+        b.disabled = true;
+        var t = play(svg, speedFor(svg), { answer: inClass(svg.parentNode, 'sf-moment-art'),
+                                           onDone: function () { b.disabled = false; } });
+        if (t === false) b.disabled = false;
+      };
+      if (host.id === 'lesson-art') {
+        try { if (window.getComputedStyle(host).position === 'static') host.style.position = 'relative'; } catch (eP) { /* the chip still works */ }
+      }
+      host.appendChild(b);
+    }
+
+    function run(svg) {
+      drawn[keyOf(svg)] = 1;
+      var t = play(svg, speedFor(svg), { answer: inClass(svg.parentNode, 'sf-moment-art'),
+                                         onDone: function () { offerReplay(svg); } });
+      if (t === false) offerReplay(svg);
+    }
+
+    function unhold(svg) {
+      svg.classList.remove('sfd-hold');
+      if (!svg.getAttribute('class')) svg.removeAttribute('class');   // leave no trace
+    }
+
+    function release(svg) {
+      if (!svg.classList || !svg.classList.contains('sfd-hold')) return;
+      if (io) io.unobserve(svg);
+      unhold(svg);
+      offerReplay(svg);
+    }
+
+    function seen(entries) {
+      for (var i = 0; i < entries.length; i++) {
+        if (!entries[i].isIntersecting) continue;
+        var svg = entries[i].target, was = drawn[keyOf(svg)];
+        io.unobserve(svg);
+        if (!svg.classList.contains('sfd-hold')) continue;
+        if (!was) run(svg);                      // hide every part first...
+        else offerReplay(svg);
+        unhold(svg);                             // ...then let the picture show
+      }
+    }
+
+    function consider(svg) {
+      if (!svg || svg.sfdSeen || svg.ownerSVGElement) return;   // a drawing inside a drawing goes with its parent
+      svg.sfdSeen = 1;
+      if (reduced()) return;
+      if (drawn[keyOf(svg)]) { offerReplay(svg); return; }     // shown already this session: simply there
+      var r = rectOf(svg);
+      if (!r || !r.width || !r.height) return;   // in a closed fold: still when opened
+      var vh = window.innerHeight || document.documentElement.clientHeight || 0;
+      if (r.bottom > 0 && r.top < vh * 0.94) { run(svg); return; }
+      if (!window.IntersectionObserver || !svg.classList) return;
+      /* Below the fold: hidden until it scrolls in, so it is drawn where it
+         can be watched. Released after 15s whatever happens - a picture
+         must never stay hidden because an observer did not fire. */
+      if (!io) io = new IntersectionObserver(seen, { threshold: 0.2 });
+      svg.classList.add('sfd-hold');
+      io.observe(svg);
+      setTimeout(function () { release(svg); }, 15000);
+    }
+
+    /* A worked-example step's own picture (block 2's Scene.worked), drawn as
+       its panel arrives. Called by the board, not by the observer: the
+       board is one SVG with every panel in it from the start, so nothing is
+       ever "inserted" when a step comes round. Once per picture element - a
+       panel walked back to is simply there. */
+    function drawStep(svg, tries) {
+      if (!svg || svg.sfdStep || reduced()) return false;
+      /* The board paints its first panel BEFORE it is mounted (render()
+         appends to a mount that is itself put on the page afterwards), and
+         a picture that is not laid out has nothing to measure. Wait for it,
+         a frame at a time: the panel's own bloom keeps it at opacity 0 for
+         its first 80ms, so the wait is never seen. */
+      var r = rectOf(svg);
+      if (!document.documentElement.contains(svg) || !r || !r.width) {
+        tries = tries || 0;
+        if (tries < 30 && window.requestAnimationFrame) {
+          window.requestAnimationFrame(function () { drawStep(svg, tries + 1); });
+        }
+        return false;
+      }
+      svg.sfdStep = 1;
+      return play(svg, 1.4, { delay: 0.18 });
+    }
+
+    function scan(node) {
+      if (!node || node.nodeType !== 1) return;
+      if (node.matches && node.matches(PICTURE_SEL)) consider(node);
+      if (!node.querySelectorAll) return;
+      var list = node.querySelectorAll(PICTURE_SEL);
+      for (var i = 0; i < list.length; i++) consider(list[i]);
+    }
+
+    function start() {
+      if (!window.MutationObserver || !document.body) return;
+      new MutationObserver(function (records) {
+        for (var i = 0; i < records.length; i++) {
+          var added = records[i].addedNodes;
+          for (var j = 0; j < added.length; j++) scan(added[j]);
+        }
+      }).observe(document.body, { childList: true, subtree: true });
+    }
+    if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+
+    return { play: play, consider: consider, keyOf: keyOf, drawStep: drawStep,
+             forget: function () { for (var k in drawn) delete drawn[k]; } };
+  })();
+
 
   /* The prompts live in sf-draw.js now - the drawing skill both pages load -
      so the plan page can ask for the same picture without a second copy.
@@ -3571,7 +4246,9 @@
     var c = diagramCaption(svg, caption);
     return c ? '<div' + (style ? ' style="' + style + '"' : '') + '>' + escHtml(c) + '</div>' : '';
   }
-  var CAPTION_STYLE = 'font-size:0.68rem;color:var(--muted);margin-top:.4rem;' +
+  /* Fixed grey, like the frame it sits in: the theme's --muted is a pale
+     slate in dark mode and read at about 3:1 on paper. */
+  var CAPTION_STYLE = 'font-size:0.68rem;color:#6b7280;margin-top:.4rem;' +
     'text-transform:uppercase;letter-spacing:.06em;font-weight:600;';
 
   /* Swap the drawing in wherever the lesson card is showing its picture.
@@ -3588,7 +4265,7 @@
     if (sfLesson && sfLesson.panes && sfLesson.panes.length) {
       sfLesson.panes[0].html = sfLesson.panes[0].html.replace(
         /<div id="lesson-art"[^>]*>[\s\S]*?<\/div>\s*(?=<div class="content-text")/,
-        '<div id="lesson-art" style="text-align:center;padding:.75rem;background:var(--soft);border-radius:14px;">' + inner + '</div>');
+        '<div id="lesson-art" style="text-align:center;padding:.75rem;background:#f4f6fb;border-radius:14px;">' + inner + '</div>');
     }
     var host = document.getElementById('lesson-art');
     if (host) {
@@ -4672,7 +5349,10 @@
       /* Drawn locally, from this day's own material, so the card is whole
          the moment it opens. If the illustration requested on entry has
          already landed it is used instead; if it lands later,
-         applyLessonArt swaps it into #lesson-art in place. */
+         applyLessonArt swaps it into #lesson-art in place.
+         The frame is a fixed paper colour, not var(--soft): --soft is
+         near-black in dark mode, and every drawing is ink for paper, so the
+         title and the thin lines vanished into it. */
       var dgm = diagramForDay(day);
       var dgmHtml = '';
       var artSvg = null;
@@ -4680,7 +5360,7 @@
         artSvg = drawSpec(lessonArt.spec);
       }
       if (artSvg || (dgm && dgm.svg)) {
-        dgmHtml = '<div id="lesson-art" style="text-align:center;padding:.75rem;background:var(--soft);border-radius:14px;">' +
+        dgmHtml = '<div id="lesson-art" style="text-align:center;padding:.75rem;background:#f4f6fb;border-radius:14px;">' +
           (artSvg || dgm.svg) +
           diagramCaptionHtml(artSvg || dgm.svg,
             artSvg ? (fmStr(lessonArt.spec.title) || fmStr(day.title)) : dgm.caption, CAPTION_STYLE) +
@@ -16394,6 +17074,12 @@ var SFBoard = (function () {
          expressed as a per-beat class: it depends on WHICH beat, rather than
          merely on whether a beat has been reached. */
       onPaint: function (wrapEl, at) {
+        function drawStepPic(panel) {
+          var pic = panel && panel.querySelector('.sfb-wvis svg');
+          if (pic && window.SFDrawOn && window.SFDrawOn.drawStep) {
+            try { window.SFDrawOn.drawStep(pic); } catch (eS) { /* the picture is simply there */ }
+          }
+        }
         var idx = Math.max(1, Math.min(n, at)) - 1;
         var tr = wrapEl.querySelector('[data-sfb-track]');
         if (tr) {
@@ -16417,8 +17103,21 @@ var SFBoard = (function () {
             if (cls.indexOf('is-told') === -1) {
               panel.setAttribute('data-sfb-cls', cls + ' is-told');
               panel.setAttribute('class', (panel.getAttribute('class') || '') + ' is-told');
+              /* A withheld closing line's picture was hidden with it; it
+                 draws itself now that the learner has asked to check. */
+              if (cls.indexOf('has-pred') !== -1) drawStepPic(panel);
             }
           });
+        }
+
+        /* The step's picture draws itself as its panel arrives (SFDrawOn in
+           block 1) - the jump along the line, the beam of the balance - once
+           per panel. Not while its line is withheld: the picture is the
+           answer there, and it is hidden with it until the tap above. */
+        var nowP = wrapEl.querySelector('.sfb-wp[data-beat="' + at + '"]');
+        if (nowP) {
+          var nc = nowP.getAttribute('data-sfb-cls') || '';
+          if (nc.indexOf('has-pred') === -1 || nc.indexOf('is-told') !== -1) drawStepPic(nowP);
         }
 
         /* Anything the learner has moved past tells itself. The prompt is an

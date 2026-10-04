@@ -57,6 +57,7 @@ check walk_model   "no page errors"        node "$HERE/walk_model.js"
 check board_sizes  "no page errors"        node "$HERE/board_sizes2.js"
 check slide        "no errors"             node "$HERE/slide_check.js"
 check review_change "REVIEW CHANGE OK"     node "$HERE/test_review_change.js"
+check draw_on      "DRAWON OK"             node "$HERE/test_drawon.js"
 # 3. The picture budget: at most 30% of question cards, never the same picture twice.
 FX="$HERE/bigday" timeout 300 node "$HERE/census.js" 0 >"$OUT/census.log" 2>&1
 PCT=$(grep -oE "\(([0-9]+)%\)" "$OUT/census.log" | tr -dc 0-9); REP=$(grep -oE "repeated pictures: [0-9]+" "$OUT/census.log" | tr -dc 0-9)
