@@ -58,7 +58,18 @@ async function afterDrawing(page) {
   const endAll = Math.max(...t.filter(x => x.name !== 'sfdFlow').map(x => x.end));
   assert(endAll <= 3000, 'the whole drawing takes at most 3s: ' + Math.round(endAll) + 'ms');
   assert(r.markersNow === r.markersBefore - 1, 'the solid arrow\'s head waits for its line (' + r.markersBefore + ' -> ' + r.markersNow + '); the dashed one keeps its head');
-  await wait(Math.max(0, endAll - 400));
+  // The pen: a bead of ink on the tip of each long line while it is drawn - it moves, and goes.
+  const pen = await env.page.evaluate(async () => {
+    const at = () => [...document.querySelectorAll('#lesson-art svg .sfd-nib')].map(g => {
+      const m = g.firstChild, t = getComputedStyle(m).transform, o = +getComputedStyle(m).opacity; return { t, o }; });
+    const n0 = at();
+    await new Promise(r => setTimeout(r, 650));
+    const n1 = at();
+    return { count: n0.length, moved: n0.filter((x, i) => n1[i] && n1[i].t !== x.t).length, shown: n1.filter(x => x.o > 0.5).length };
+  });
+  assert(pen.count >= 3 && pen.count <= 14, 'a pen rides the long lines: ' + pen.count + ' beads (cap 14)');
+  assert(pen.moved >= 2 && pen.shown >= 1, 'the pens move along their lines (' + pen.moved + ' moved, ' + pen.shown + ' showing)');
+  await wait(Math.max(0, endAll - 1050));
   const mid = await env.page.evaluate(() => document.querySelectorAll('#lesson-art svg .sfd-flow').length);
   await wait(900);
   const mid2 = await env.page.evaluate(() => document.querySelectorAll('#lesson-art svg .sfd-flow').length);
@@ -67,6 +78,7 @@ async function afterDrawing(page) {
   let a = await afterDrawing(env.page);
   assert(a.same, 'afterwards the picture is byte-identical to what was inserted');
   assert(a.left === 0 && a.flows === 0 && a.running === 0, 'nothing left behind: styles ' + a.left + ', pulses ' + a.flows + ', running ' + a.running);
+  assert(await env.page.evaluate(() => document.querySelectorAll('#lesson-art .sfd-nib').length) === 0, 'no pen left on the picture');
   assert(a.markers === a.markersBefore, 'every arrowhead is back: ' + a.markers + '/' + a.markersBefore);
 
   // 1b. "Draw it again": a chip appears once everything has stopped, replays the drawing,

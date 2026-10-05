@@ -13,7 +13,7 @@ caller falls back to whatever it had.
 {"type":"drawing","title":"short caption","w":400,"h":300,"shapes":[ ... ]}
 ```
 
-Seven shape kinds. Anything else is dropped silently, so a typo'd `s` is an
+Eight shape kinds. Anything else is dropped silently, so a typo'd `s` is an
 invisible missing shape.
 
 | `s` | Fields | Notes |
@@ -25,6 +25,7 @@ invisible missing shape.
 | `path` | `d` | `M L H V Q C A Z` + numbers only, ≤900 chars, must start with `M` |
 | `poly` | `points` | `"x y x y …"`, digits/space/comma/dot/minus only, ≤500 chars |
 | `text` | `x y t size anchor weight` | `t` ≤80 chars, `size` 7–26 (default 11), `anchor` start/middle/end |
+| `icon` | `name x y size color` | a ready-drawn object from `sf-icons.js`, centred on x,y; `size` 14 to 60% of the shorter side; `color` a hue name. For things AROUND the subject - the sun over a leaf - never instead of drawing it |
 
 Every shape also takes `fill`, `stroke`, `sw` (0.5–6, default 1.8) and
 `opacity` (0–1).

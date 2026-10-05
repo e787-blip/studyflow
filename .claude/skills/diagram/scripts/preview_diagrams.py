@@ -115,7 +115,18 @@ def audit_src():
         return fh.read()
 
 
-def build_page(script_src, specs, audit_js):
+def icons_src(lesson_path):
+    """sf-icons.js sits beside lesson.html and the page loads it before block 1.
+    Without it the kit still draws, but every node is a plain disc - which is
+    not what a learner sees."""
+    path = os.path.join(os.path.dirname(os.path.abspath(lesson_path)), "sf-icons.js")
+    if not os.path.exists(path):
+        return ""
+    with open(path, encoding="utf-8") as fh:
+        return fh.read()
+
+
+def build_page(script_src, specs, audit_js, icons_js=""):
     """The kit runs against a live DOM, so the page executes block 1 and then
     draws each spec. Block 1 also defers init() to DOMContentLoaded, and init()
     opens with an auth guard that *navigates* - with no signed-in user it sent
@@ -166,6 +177,7 @@ def build_page(script_src, specs, audit_js):
   };
 })();
 </script>
+<script>%s</script>
 <script>%s</script>
 <script>%s</script>
 <script>
@@ -232,7 +244,7 @@ if (document.fonts && document.fonts.ready) {
   runAudit();
 }
 </script>
-""" % (audit_js, script_src, payload)
+""" % (icons_js, audit_js, script_src, payload)
 
 
 def main():
@@ -263,7 +275,7 @@ def main():
     for s in specs:
         s["name"] = html.escape(s["name"])
 
-    page = build_page(first_script_block(args.lesson), specs, audit_src())
+    page = build_page(first_script_block(args.lesson), specs, audit_src(), icons_src(args.lesson))
     with open(args.out, "w", encoding="utf-8") as fh:
         fh.write(page)
 

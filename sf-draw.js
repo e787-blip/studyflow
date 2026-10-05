@@ -31,6 +31,19 @@
 
   function fmStr(v) { return v == null ? '' : String(v); }
 
+  /* Ready-drawn objects (sf-icons.js), when that file is on the page. They
+     are props: a model that cannot draw a sun draws a circle, and a picture
+     of the light reactions with a real sun over it reads as a picture. The
+     rule that matters is in the first line - around the subject, never
+     instead of it - or a drawing becomes a page of clip art. Without
+     sf-icons.js the line is left out entirely and nothing asks for an icon
+     the page cannot draw. */
+  var ICONS_DOC = (w.SFIcons && w.SFIcons.names) ?
+    '  {"s":"icon","name":"cloud","x":,"y":,"size":36,"color":"blue"}  a ready-drawn object\n' +
+    '    centred on x,y. Use one for things AROUND your subject - the sun over a leaf, a\n' +
+    '    person at a lever, a cloud over a mountain - never INSTEAD of drawing the subject.\n' +
+    '    size 24 to 60. color: a hue name. Names: ' + w.SFIcons.names().join(' ') + '\n' : '';
+
   /* SFSceneKit's shape vocabulary, as the model is shown it. One copy, read
      by both prompts: a shape the model is shown and the kit does not know is
      a shape the kit silently drops. */
@@ -42,7 +55,8 @@
     '  {"s":"line","x1":,"y1":,"x2":,"y2":,"stroke":"ink","sw":2,"arrow":true,"dash":true}\n' +
     '  {"s":"path","d":"M10 10 Q60 0 110 10","stroke":"ink","fill":"none","arrow":true}\n' +
     '  {"s":"poly","points":"10,90 60,20 110,90","fill":"faint","stroke":"ink"}\n' +
-    '  {"s":"text","x":,"y":,"t":"label","size":11,"anchor":"middle|start|end","fill":"ink"}\n';
+    '  {"s":"text","x":,"y":,"t":"label","size":11,"anchor":"middle|start|end","fill":"ink"}\n' +
+    ICONS_DOC;
 
   function lessonPrompt(d) {
     function pick(arr, keys, n) {
@@ -127,28 +141,48 @@
       '    or more. A size-9 label on a 440-wide canvas is 7px - unreadable.\n' +
       'If this lesson is purely abstract and there is genuinely nothing to draw,\n' +
       'return {"type":"none"} rather than inventing a picture.\n\n' +
+      /* The example was redrawn (Oct 2026). The first leaf was a green slab
+         with three rods, three circles and labels well clear of the things
+         they named - and the model copies the example, so that was the
+         ceiling. This one has the real layers in order (cuticle, palisade,
+         spongy cells with air between them, a vein split into xylem and
+         phloem, a stoma between two guard cells), shows that ONE path can
+         hold a whole row of cells, puts every label on a leader line that
+         touches its part, and places a sun icon as a prop - around the
+         subject, never instead of it. Rendered and audited clean before it
+         was pasted in: .claude/skills/diagram/references/exemplar-leaf.json. */
       'This is the LEVEL of drawing expected - a leaf in cross-section. Note the\n' +
-      'curved outline, the real internal structures, and every label sitting\n' +
-      'outside on a leader line. Match this for YOUR topic, whatever it is:\n' +
+      'real layers in their real order, a whole row of cells drawn as ONE path (one\n' +
+      '"M...Z" per cell), every label outside on a thin line that touches its part,\n' +
+      'and the sun as an icon BESIDE the leaf. Match this for YOUR topic:\n' +
       '{"type":"drawing","title":"A leaf in cross-section","w":400,"h":250,"shapes":[\n' +
-      ' {"s":"path","d":"M60 70 Q220 52 380 70 L380 168 Q220 186 60 168 Z","fill":"greenFill","stroke":"green","sw":2},\n' +
-      ' {"s":"path","d":"M60 70 Q220 52 380 70","stroke":"ink","sw":2.5,"fill":"none"},\n' +
-      ' {"s":"path","d":"M92 78 Q96 74 100 78 L100 112 Q96 116 92 112 Z","fill":"paper","stroke":"green"},\n' +
-      ' {"s":"path","d":"M112 78 Q116 74 120 78 L120 112 Q116 116 112 112 Z","fill":"paper","stroke":"green"},\n' +
-      ' {"s":"path","d":"M132 78 Q136 74 140 78 L140 112 Q136 116 132 112 Z","fill":"paper","stroke":"green"},\n' +
-      ' {"s":"circle","x":110,"y":132,"r":11,"fill":"paper","stroke":"green"},\n' +
-      ' {"s":"circle","x":140,"y":143,"r":9,"fill":"paper","stroke":"green"},\n' +
-      ' {"s":"circle","x":168,"y":130,"r":10,"fill":"paper","stroke":"green"},\n' +
-      ' {"s":"path","d":"M236 120 Q252 108 268 120 Q252 132 236 120 Z","fill":"blueFill","stroke":"blue"},\n' +
-      ' {"s":"path","d":"M236 136 Q252 126 268 136 Q252 146 236 136 Z","fill":"redFill","stroke":"red"},\n' +
-      ' {"s":"path","d":"M300 168 Q308 156 316 168","stroke":"green","sw":2.5,"fill":"none"},\n' +
-      ' {"s":"path","d":"M324 168 Q332 156 340 168","stroke":"green","sw":2.5,"fill":"none"},\n' +
-      ' {"s":"line","x1":118,"y1":74,"x2":118,"y2":48,"stroke":"rule","sw":1},\n' +
-      ' {"s":"text","x":118,"y":42,"t":"Palisade cells","size":12,"fill":"ink"},\n' +
-      ' {"s":"line","x1":150,"y1":150,"x2":150,"y2":196,"stroke":"rule","sw":1},\n' +
-      ' {"s":"text","x":150,"y":208,"t":"Spongy mesophyll","size":12,"fill":"ink"},\n' +
-      ' {"s":"line","x1":320,"y1":172,"x2":320,"y2":200,"stroke":"rule","sw":1},\n' +
-      ' {"s":"text","x":322,"y":212,"t":"Stoma and guard cells","size":12,"fill":"ink"}]}\n\n' +
+      ' {"s":"icon","name":"sun","x":30,"y":36,"size":36,"color":"amber"},\n' +
+      ' {"s":"line","x1":52,"y1":44,"x2":84,"y2":70,"stroke":"amber","sw":2,"arrow":true},\n' +
+      ' {"s":"line","x1":56,"y1":30,"x2":120,"y2":70,"stroke":"amber","sw":2,"arrow":true},\n' +
+      ' {"s":"path","d":"M22 74 Q150 62 278 74 L278 186 Q150 198 22 186 Z","fill":"greenFill","stroke":"green","sw":2},\n' +
+      ' {"s":"path","d":"M22 74 Q150 62 278 74","fill":"none","stroke":"greenInk","sw":3},\n' +
+      ' {"s":"path","d":"M30 82 Q39 76 48 82 V116 Q39 122 30 116 Z M52 82 Q61 76 70 82 V116 Q61 122 52 116 Z M74 82 Q83 76 92 82 V116 Q83 122 74 116 Z M96 82 Q105 76 114 82 V116 Q105 122 96 116 Z M118 82 Q127 76 136 82 V116 Q127 122 118 116 Z M140 82 Q149 76 158 82 V116 Q149 122 140 116 Z M162 82 Q171 76 180 82 V116 Q171 122 162 116 Z M184 82 Q193 76 202 82 V116 Q193 122 184 116 Z M206 82 Q215 76 224 82 V116 Q215 122 206 116 Z M228 82 Q237 76 246 82 V116 Q237 122 228 116 Z M250 82 Q259 76 268 82 V116 Q259 122 250 116 Z","fill":"paper","stroke":"green","sw":1.4},\n' +
+      ' {"s":"path","d":"M34 130 Q48 122 60 132 Q66 146 50 150 Q32 148 34 130 Z M74 140 Q88 128 102 138 Q106 154 88 158 Q72 154 74 140 Z M196 132 Q212 124 224 134 Q228 150 210 152 Q194 148 196 132 Z M238 140 Q252 130 266 140 Q268 156 250 158 Q236 154 238 140 Z M152 140 Q162 132 172 140 Q174 152 162 154 Q150 152 152 140 Z","fill":"paper","stroke":"green","sw":1.4},\n' +
+      ' {"s":"circle","x":130,"y":146,"r":18,"fill":"paper","stroke":"green","sw":1.6},\n' +
+      ' {"s":"path","d":"M114 140 A17 17 0 0 1 146 140 Z","fill":"blueFill","stroke":"blue","sw":1.4},\n' +
+      ' {"s":"path","d":"M114 152 A17 17 0 0 0 146 152 Z","fill":"violetFill","stroke":"violet","sw":1.4},\n' +
+      ' {"s":"path","d":"M170 186 Q180 172 190 186 Q180 194 170 186 Z","fill":"greenFill","stroke":"greenInk","sw":1.6},\n' +
+      ' {"s":"path","d":"M196 186 Q206 172 216 186 Q206 194 196 186 Z","fill":"greenFill","stroke":"greenInk","sw":1.6},\n' +
+      ' {"s":"path","d":"M186 228 Q190 210 193 192","fill":"none","stroke":"blue","sw":2,"arrow":true},\n' +
+      ' {"s":"path","d":"M199 192 Q204 210 212 226","fill":"none","stroke":"teal","sw":2,"arrow":true,"dash":true},\n' +
+      ' {"s":"text","x":178,"y":240,"t":"CO2 in","size":11,"anchor":"end","fill":"blueInk"},\n' +
+      ' {"s":"text","x":218,"y":240,"t":"O2 out","size":11,"anchor":"start","fill":"tealInk"},\n' +
+      ' {"s":"line","x1":272,"y1":72,"x2":292,"y2":60,"stroke":"rule","sw":1},\n' +
+      ' {"s":"text","x":296,"y":64,"t":"Waxy cuticle","size":11,"anchor":"start"},\n' +
+      ' {"s":"line","x1":262,"y1":100,"x2":292,"y2":100,"stroke":"rule","sw":1},\n' +
+      ' {"s":"text","x":296,"y":104,"t":"Palisade cells","size":11,"anchor":"start"},\n' +
+      ' {"s":"line","x1":264,"y1":148,"x2":292,"y2":138,"stroke":"rule","sw":1},\n' +
+      ' {"s":"text","x":296,"y":142,"t":"Spongy layer","size":11,"anchor":"start"},\n' +
+      ' {"s":"line","x1":216,"y1":188,"x2":292,"y2":176,"stroke":"rule","sw":1},\n' +
+      ' {"s":"text","x":296,"y":180,"t":"Stoma","size":11,"anchor":"start"},\n' +
+      ' {"s":"line","x1":130,"y1":164,"x2":130,"y2":208,"stroke":"rule","sw":1},\n' +
+      ' {"s":"text","x":130,"y":220,"t":"Vein","size":11,"anchor":"middle"},\n' +
+      ' {"s":"text","x":92,"y":30,"t":"Sunlight","size":11,"anchor":"start","fill":"amberInk"}]}\n\n' +
       'Now draw YOUR lesson to that standard. Return exactly:\n' +
       '{"type":"drawing","title":"short caption","w":400,"h":250,"shapes":[...]}';
   }
@@ -227,7 +261,7 @@
       '{"type":"drawing","title":"short caption","w":400,"h":240,"shapes":[...]}';
   }
 
-  var KINDS = { rect: 1, circle: 1, ellipse: 1, line: 1, path: 1, poly: 1, text: 1 };
+  var KINDS = { rect: 1, circle: 1, ellipse: 1, line: 1, path: 1, poly: 1, text: 1, icon: 1 };
 
   /* Enough shapes, at least one label, only known kinds counted. Not a
      security check - see the header. */
