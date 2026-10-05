@@ -12807,31 +12807,51 @@
            it regular. */
         o += '<path d="M221 46 C288 44 348 82 350 142 C352 202 292 240 221 240 C152 240 92 204 92 143 C92 82 156 48 221 46 Z" ' +
              'fill="#fef2f8" stroke="#db2777" stroke-width="2.6"/>';
-        o += '<ellipse cx="206" cy="132" rx="50" ry="42" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>';
-        o += '<circle cx="206" cy="132" r="14" fill="#7c3aed" opacity=".5"/>';
-        /* "nucleus" is labelled from OUTSIDE like everything else. It was
-           printed inside, over the nucleolus - purple on purple at 1.9:1, and
-           the one organelle every cell lesson names first. */
+        /* Redrawn (Oct 2026). The first version had one "ribosome" drawn
+           INSIDE the nucleus and its leader line ending on the nucleus's
+           edge - on a labelling card that pin would have taught the wrong
+           place - and no Golgi body, which every textbook animal cell shows.
+           Now: a nucleus with its double envelope and nucleolus, rough ER as
+           sheets wrapping it with ribosomes ON them, a Golgi stack with its
+           vesicles, two mitochondria, and free ribosomes out in the
+           cytoplasm where their leader actually ends. */
+        o += '<ellipse cx="196" cy="128" rx="46" ry="38" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>';
+        o += '<ellipse cx="196" cy="128" rx="41" ry="33" fill="none" stroke="#7c3aed" stroke-width="1" opacity=".55"/>';
+        o += '<circle cx="188" cy="124" r="12" fill="#7c3aed" opacity=".5"/>';
+        /* Rough ER: three sheets curving round the nucleus's right side,
+           ribosome dots on their outer faces. */
+        o += '<g fill="none" stroke="#0891b2" stroke-width="2.2" stroke-linecap="round">' +
+             '<path d="M248 100 Q270 128 248 160"/><path d="M258 96 Q284 128 258 166"/><path d="M268 94 Q296 128 268 172"/></g>';
+        o += '<g fill="#0e7490">' +
+             '<circle cx="283" cy="112" r="2.3"/><circle cx="287" cy="130" r="2.3"/><circle cx="283" cy="150" r="2.3"/>' +
+             '<circle cx="272" cy="113" r="2.3"/><circle cx="272" cy="147" r="2.3"/></g>';
+        /* Golgi body: a stack of flattened sacs, with vesicles budding off. */
+        o += '<g fill="none" stroke="#c2410c" stroke-width="3.4" stroke-linecap="round">' +
+             '<path d="M232 186 Q264 174 296 186"/><path d="M236 194 Q264 183 292 194"/>' +
+             '<path d="M240 202 Q264 192 288 202"/><path d="M244 210 Q264 201 284 210"/></g>';
+        o += '<g fill="#ffedd5" stroke="#c2410c" stroke-width="1.2">' +
+             '<circle cx="304" cy="180" r="3.6"/><circle cx="302" cy="198" r="3.6"/><circle cx="226" cy="204" r="3.2"/></g>';
         /* Two mitochondria, each with its folded inner membrane. */
         o += '<g>';
-        o += '<ellipse cx="292" cy="192" rx="30" ry="15" fill="#ffe4e6" stroke="#e11d48" stroke-width="1.8" transform="rotate(-18 292 192)"/>';
-        o += '<path d="M272 196 q8 -10 16 0 q8 10 16 -2" fill="none" stroke="#e11d48" stroke-width="1.4" transform="rotate(-18 292 192)"/>';
-        o += '<ellipse cx="146" cy="196" rx="26" ry="13" fill="#ffe4e6" stroke="#e11d48" stroke-width="1.8" transform="rotate(14 146 196)"/>';
-        o += '<path d="M130 199 q7 -9 14 0 q7 9 14 -2" fill="none" stroke="#e11d48" stroke-width="1.4" transform="rotate(14 146 196)"/>';
+        o += '<ellipse cx="200" cy="208" rx="26" ry="12" fill="#ffe4e6" stroke="#e11d48" stroke-width="1.8" transform="rotate(-8 200 208)"/>';
+        o += '<path d="M182 210 q7 -9 14 0 q7 9 14 -2" fill="none" stroke="#e11d48" stroke-width="1.4" transform="rotate(-8 200 208)"/>';
+        o += '<ellipse cx="140" cy="194" rx="26" ry="13" fill="#ffe4e6" stroke="#e11d48" stroke-width="1.8" transform="rotate(14 140 194)"/>';
+        o += '<path d="M124 197 q7 -9 14 0 q7 9 14 -2" fill="none" stroke="#e11d48" stroke-width="1.4" transform="rotate(14 140 194)"/>';
         o += '</g>';
-        /* Rough ER: folded sheets with ribosomes on them. */
-        o += '<path d="M262 86 q22 10 4 22 q-20 12 2 22" fill="none" stroke="#0891b2" stroke-width="1.8"/>';
-        o += '<g fill="#0e7490">' +
-             '<circle cx="268" cy="88" r="2.2"/><circle cx="276" cy="96" r="2.2"/>' +
-             '<circle cx="266" cy="108" r="2.2"/><circle cx="274" cy="120" r="2.2"/>' +
-             '<circle cx="160" cy="104" r="2.2"/><circle cx="150" cy="118" r="2.2"/>' +
-             '<circle cx="168" cy="142" r="2.2"/></g>';
-        o += lead(350, 142, 372, 130) + oR(376, 133, 'cell membrane');
-        o += lead(316, 186, 372, 178) + oR(376, 181, 'mitochondrion');
-        o += lead(276, 92, 372, 66) + oR(376, 69, 'rough ER');
-        o += lead(158, 140, 84, 112) + oL(80, 115, 'ribosomes');
-        o += lead(172, 152, 84, 164) + oL(80, 167, 'nucleus');
-        o += lead(140, 202, 84, 218) + oL(80, 221, 'cytoplasm');
+        /* Free ribosomes in the cytoplasm - outside the nucleus. */
+        o += '<g fill="#0e7490"><circle cx="126" cy="116" r="2.3"/><circle cx="117" cy="133" r="2.3"/>' +
+             '<circle cx="133" cy="150" r="2.3"/><circle cx="318" cy="210" r="2.3"/></g>';
+        o += lead(345, 104, 372, 92) + oR(376, 95, 'cell membrane');
+        o += lead(288, 130, 372, 130) + oR(376, 133, 'rough ER');
+        o += lead(297, 186, 372, 172) + oR(376, 175, 'Golgi body');
+        o += lead(160, 116, 84, 92) + oL(80, 95, 'nucleus');
+        o += lead(126, 116, 84, 130) + oL(80, 133, 'ribosomes');
+        /* "mitochondrion" on the RIGHT, its leader passing under the Golgi
+           stack: on the left the long word ran past the canvas edge, polish()
+           widened the viewBox to keep it, and every label on the card shrank
+           below the phone floor. */
+        o += lead(222, 214, 372, 226) + oR(376, 229, 'mitochondrion');
+        o += lead(112, 160, 84, 178) + oL(80, 181, 'cytoplasm');
         o += '<text x="221" y="272" style="' + LT + '" fill="#475569" text-anchor="middle">' +
              'An animal cell: no wall, so it holds a soft, rounded shape</text>';
       }
@@ -13637,20 +13657,25 @@
         '<text x="180" y="157" style="' + LP + '" fill="#3730a3" text-anchor="middle">mass m</text>' +
         // Weight, straight down, below the block into the ground band
         '<line x1="180" y1="176" x2="180" y2="222" stroke="#ef4444" stroke-width="2.5" marker-end="url(#fbR)"/>' +
-        '<text x="186" y="212" style="' + LP + '" fill="#b91c1c">W = mg</text>' +
-        '<text x="186" y="224" style="' + LT + '" fill="#dc2626">pull of gravity</text>' +
+        /* Labels sit 16 units right of the arrows, not 6. The heads are
+           markers scaled by the stroke width - 8 x 2.5 = 20 units long - and
+           at 6 units "N" and "W = mg" were printed on their own arrowheads. */
+        '<text x="196" y="208" style="' + LP + '" fill="#b91c1c">W = mg</text>' +
+        '<text x="196" y="221" style="' + LT + '" fill="#dc2626">pull of gravity</text>' +
         // Normal force, straight up from the top of the block
         '<line x1="180" y1="128" x2="180" y2="62" stroke="#3b82f6" stroke-width="2.5" marker-end="url(#fbB)"/>' +
-        '<text x="186" y="74" style="' + LP + '" fill="#1d4ed8">N</text>' +
-        '<text x="186" y="86" style="' + LT + '" fill="#2563eb">surface pushes back</text>' +
+        '<text x="196" y="74" style="' + LP + '" fill="#1d4ed8">N</text>' +
+        '<text x="196" y="87" style="' + LT + '" fill="#2563eb">surface pushes back</text>' +
         // Applied force, right
         '<line x1="220" y1="152" x2="300" y2="152" stroke="#16a34a" stroke-width="2.5" marker-end="url(#fbG)"/>' +
         '<text x="262" y="144" style="' + LP + '" fill="#15803d" text-anchor="middle">F</text>' +
         '<text x="262" y="168" style="' + LT + '" fill="#16a34a" text-anchor="middle">applied</text>' +
         // Friction, left, opposing
         '<line x1="140" y1="170" x2="72" y2="170" stroke="#d97706" stroke-width="2.5" marker-end="url(#fbO)"/>' +
-        '<text x="106" y="163" style="' + LP + '" fill="#b45309" text-anchor="middle">f</text>' +
-        '<text x="106" y="186" style="' + LT + '" fill="#d97706" text-anchor="middle">friction</text>' +
+        /* Both above the line: "friction" under it sat on the ground's
+           hatching. */
+        '<text x="106" y="148" style="' + LP + '" fill="#b45309" text-anchor="middle">f</text>' +
+        '<text x="106" y="161" style="' + LT + '" fill="#d97706" text-anchor="middle">friction</text>' +
         // The rule, in the headroom above the canvas
         '<rect x="86" y="6" width="188" height="20" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>' +
         '<text x="180" y="20" style="' + LP + '" fill="#334155" text-anchor="middle">Net force = ma  •  balanced → no acceleration</text>' +
