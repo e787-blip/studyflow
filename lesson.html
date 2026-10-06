@@ -281,6 +281,11 @@
     transform-style:preserve-3d; transition:transform .52s cubic-bezier(.22,.68,.3,1);
   }
   .fc-card.is-flipped { transform:rotateY(180deg); }
+  /* A term card with a picture of the thing (sf-icons.js): the faces are
+     absolute, so the card itself must be tall enough for it. */
+  .fc-card.has-ico { min-height:214px; }
+  .fc-ico { margin-bottom:.45rem; line-height:0; }
+  .fc-ico-bg { fill:#eef3ff; }
   .fc-face {
     position:absolute; inset:0; backface-visibility:hidden;
     -webkit-backface-visibility:hidden;
@@ -742,6 +747,65 @@
   }
   body.dark .sf-moment-fold summary { color:#8fb0ff; }
 
+  /* Pictures draw themselves (SFDrawOn, block 1). Every animation below is
+     applied inline by that module with fill-mode BACKWARDS only: an element
+     is hidden until its turn, and the moment its animation ends it is back
+     to exactly what the renderer made - so the walkthrough's lighting, the
+     pins' dimming and a label's own opacity all keep working. The implicit
+     final keyframe (no `to`) animates TO whatever the element already is.
+
+     sfdTrace draws a stroke along its own length. The gap is longer than the
+     dash and the start offset clears the path by a few units, or a round cap
+     draws a dot at the start of every line before it has begun. */
+  .sfd-hold { opacity:0; }
+  @keyframes sfdTrace {
+    from { stroke-dasharray:var(--sfd-l) var(--sfd-g); stroke-dashoffset:var(--sfd-o); }
+    to   { stroke-dasharray:var(--sfd-l) var(--sfd-g); stroke-dashoffset:0; }
+  }
+  @keyframes sfdWash  { from { fill-opacity:0; } }
+  @keyframes sfdShow  { from { opacity:0; } }
+  /* A label is written left to right. Negative insets on the other three
+     sides, so the halo behind the glyphs is never clipped. */
+  @keyframes sfdWrite {
+    from { clip-path:inset(-45% 100% -45% -12%); }
+    to   { clip-path:inset(-45% -12% -45% -12%); }
+  }
+  @keyframes sfdPin { 0% { opacity:0; transform:scale(.3); } 55% { transform:scale(1.16); } 80% { transform:scale(.95); } }
+  /* A ready-drawn object (sf-icons.js) arrives whole, with a small settle:
+     placed, not traced - its outline is a filled shape, and tracing that
+     draws its edge twice. */
+  @keyframes sfdPop { 0% { opacity:0; transform:scale(.5); } 60% { opacity:1; transform:scale(1.07); } }
+  /* A soft bead of the arrow's own colour travelling along it, twice: the
+     direction things move. Drawn on a clone that is removed afterwards. */
+  @keyframes sfdFlow {
+    0%   { stroke-dashoffset:var(--sfd-a); opacity:0; }
+    14%  { opacity:1; }
+    82%  { opacity:1; }
+    100% { stroke-dashoffset:var(--sfd-b); opacity:0; }
+  }
+  /* "Draw it for me" draws the answer - its blue part - last, then rings it
+     once: a soft blue halo that widens and fades behind the shape. */
+  @keyframes sfdHalo {
+    from { stroke-width:var(--sfd-w0); stroke-opacity:.55; }
+    to   { stroke-width:var(--sfd-w1); stroke-opacity:0; }
+  }
+  /* Watch it again. Quiet until wanted: a small round chip in the picture's
+     corner, blue border on hover like every card here - no lift, no scale.
+     Fixed light colours, not the theme's: both places it sits (the lesson
+     picture, a moment panel) keep a light ground in dark mode, and the
+     themed chip was a dark disc on paper there. */
+  .sfd-replay {
+    position:absolute; top:.45rem; right:.45rem; width:30px; height:30px; padding:0;
+    border-radius:50%; border:1px solid #e8ecf4; background:#fff; color:#6b7280;
+    display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:0;
+    animation:sfdShow .35s ease backwards; transition:border-color .18s, color .18s, opacity .18s;
+  }
+  .sfd-replay:hover { border-color:#4a7cf6; color:#4a7cf6; }
+  .sfd-replay:focus-visible { outline:2px solid #4a7cf6; outline-offset:2px; }
+  .sfd-replay:disabled { opacity:.35; cursor:default; border-color:#e8ecf4; color:#6b7280; }
+  /* In a "Draw it for me" panel the chip rides at the end of the header row. */
+  .sfd-replay.is-inline { position:static; width:26px; height:26px; margin-left:auto; flex:0 0 auto; }
+
   /* Keyboard hint chip */
   .kbd-hint {
     display:inline-flex; align-items:center; gap:.2rem;
@@ -874,6 +938,8 @@
   body.dark .fc-face { background:#1e2336; border-color:#222840;
     box-shadow:0 6px 20px rgba(0,0,0,.35); }
   body.dark .fc-card.is-trap .fc-face { background:#2a2417; border-color:#6b5320; }
+  body.dark .fc-ico-bg { fill:#26304a; }
+  body.dark .fc-ico .sf-ico path { fill:#9db8ff; }
   body.dark .fc-card.is-trap .fc-kind { color:#e0b877; }
   body.dark .fc-myth { color:#e0b877; text-decoration-color:rgba(224,184,119,.45); }
   body.dark .fc-arrow, body.dark .fc-pip { background:#1e2336; border-color:#222840; }
@@ -1278,6 +1344,7 @@
      window.Whiteboard exists by the time a lesson card renders. It is
      optional: lesson.html falls back to the static lesson body if this
      file fails to load. -->
+<script src="/sf-icons.js"></script>
 <script src="/sf-draw.js"></script>
 <script src="/whiteboard.js"></script>
 <script>
@@ -3037,6 +3104,701 @@
     return svg;
   }
 
+  /* ── PICTURES DRAW THEMSELVES ─────────────────────────────────────────────
+
+     A picture used to arrive whole: one fade, and every part of it at once.
+     Now it is drawn the way a teacher draws on a board, in the order it was
+     made:
+
+       1. the title is written first;
+       2. each shape is traced like a pen stroke along its own length, and its
+          colour washes in behind the line. Words that sit INSIDE a shape (a
+          flow chart's boxes, a hub's name) are written as soon as that shape
+          is drawn, so a chart builds box by box;
+       3. labels outside the drawing come last, left to right, each written
+          after its leader line has been drawn out to it;
+       4. a labelling card's numbered pins pop in: 1, 2, 3;
+       5. then every arrow sends a soft bead of its own colour along itself,
+          twice. In these drawings an arrow means movement - both drawing
+          prompts say so - and this is the direction things travel.
+
+     About two seconds for an ordinary drawing. The pulse after it is extra
+     and blocks nothing; the labelling card's menus work while it draws.
+
+     It runs on the PAGE, never on the SVG string. The kits, the diagram
+     baseline, the labelling card (which lifts names out of the markup) and
+     the audit all see exactly what they saw before. Everything it borrows -
+     inline styles, marker attributes - is handed back when the drawing ends,
+     so the DOM finishes identical to what was inserted. There is a test.
+
+     Rules:
+       - ONCE per picture per session. The lesson's picture draws itself on
+         the lesson card; when it comes back under a question it is simply
+         there. Keyed on the picture's words and part count, not its markup,
+         because uniqIds renames every id each time a picture is shown.
+       - Only when it can be SEEN. Below the fold it waits, hidden, until it
+         scrolls in; inside a closed fold it is shown still when opened.
+       - prefers-reduced-motion: nothing moves and nothing waits.
+
+     One MutationObserver on the containers pictures go into (PICTURE_SEL),
+     so no renderer had to change. Its callback is a microtask, so it runs
+     before the browser paints - which is why nothing flashes up whole and
+     then vanishes to be drawn. */
+  var SFDrawOn = (function () {
+    'use strict';
+
+    /* Direct children only: every one of these containers holds its picture
+       at the top level, and anything deeper - the replay chip's own icon -
+       is not a picture. */
+    var PICTURE_SEL = '#lesson-art > svg, .sf-moment-art > svg, .sf-recall > svg, .pw-art > svg, .ld-fig > svg';
+    /* computed colours of SFSceneKit's blue, blueFill and blueInk: in a
+       "Draw it for me" picture, the answer (sf-draw.js's momentPrompt) */
+    var BLUE = { 'rgb(74, 124, 246)': 1, 'rgb(234, 241, 255)': 1, 'rgb(30, 64, 175)': 1 };
+    var SKIP = { defs: 1, marker: 1, clippath: 1, mask: 1, pattern: 1, symbol: 1, lineargradient: 1,
+                 radialgradient: 1, filter: 1, title: 1, desc: 1, style: 1, script: 1,
+                 foreignobject: 1, metadata: 1 };
+    var SHAPE = { path: 1, line: 1, polyline: 1, polygon: 1, rect: 1, circle: 1, ellipse: 1 };
+    var CLOSED = { rect: 1, circle: 1, ellipse: 1, polygon: 1 };
+    var MARKERS = ['marker-start', 'marker-mid', 'marker-end'];
+    var PEN = 'cubic-bezier(.45,.05,.25,1)';      // a hand: starts slow, glides, settles
+    var OUT = 'cubic-bezier(.22,.61,.36,1)';
+    var drawn = {};
+    var io = null;
+
+    function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+    function sec(t) { return (Math.round(t * 1000) / 1000) + 's'; }
+    function lc(el) { return String(el.localName || el.nodeName || '').toLowerCase(); }
+    function hasClass(el, c) {
+      var k = el.getAttribute && el.getAttribute('class');
+      return !!k && (' ' + k + ' ').indexOf(' ' + c + ' ') >= 0;
+    }
+    function reduced() {
+      try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+      catch (e) { return false; }
+    }
+    function rectOf(el) { try { return el.getBoundingClientRect(); } catch (e) { return null; } }
+
+    /* The drawable parts, in the order they were made. A pin is one thing to
+       the learner, so it is kept whole. The walkthrough's own pin names
+       (.pw-pinlab) are left to the walkthrough, which shows them a step at a
+       time. */
+    function collect(node, out) {
+      var kids = node.childNodes, i;
+      for (i = 0; i < kids.length; i++) {
+        var c = kids[i];
+        if (c.nodeType !== 1) continue;
+        var tag = lc(c);
+        if (SKIP[tag]) continue;
+        if (hasClass(c, 'sfd-flow') || hasClass(c, 'sfd-halo') || hasClass(c, 'sfd-nib')) continue;   // our own passing effects
+        if (tag === 'g' && hasClass(c, 'ld-pin')) { out.pins.push(c); continue; }
+        if (tag === 'g' && hasClass(c, 'sf-ico')) { if (out.icons) out.icons.push(c); continue; }
+        if (tag === 'text') { if (!hasClass(c, 'pw-pinlab')) out.texts.push(c); continue; }
+        if (tag === 'g' || tag === 'a' || tag === 'switch') { collect(c, out); continue; }
+        if (SHAPE[tag] || tag === 'image' || tag === 'use' || tag === 'svg') out.items.push(c);
+      }
+      return out;
+    }
+
+    function keyOf(svg) {
+      var o = collect(svg, { items: [], texts: [], pins: [] }), words = [], i;
+      for (i = 0; i < o.texts.length; i++) words.push(o.texts[i].textContent || '');
+      return (svg.getAttribute('viewBox') || '') + '|' + o.items.length + '|' +
+        words.join(' ').replace(/\s+/g, ' ').slice(0, 400);
+    }
+
+    /* Distance from a point to a box, 0 inside it. Screen pixels throughout:
+       getBoundingClientRect and getScreenCTM agree with each other through
+       every nested transform, and user units of different groups do not. */
+    function toBox(x, y, r) {
+      var dx = Math.max(r.left - x, 0, x - r.right), dy = Math.max(r.top - y, 0, y - r.bottom);
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    function lineEnds(el) {
+      try {
+        var m = el.getScreenCTM(), root = el.ownerSVGElement;
+        if (!m || !root) return null;
+        var p = root.createSVGPoint(), a, b;
+        p.x = parseFloat(el.getAttribute('x1')) || 0; p.y = parseFloat(el.getAttribute('y1')) || 0;
+        a = p.matrixTransform(m);
+        p.x = parseFloat(el.getAttribute('x2')) || 0; p.y = parseFloat(el.getAttribute('y2')) || 0;
+        b = p.matrixTransform(m);
+        return [a, b];
+      } catch (e) { return null; }
+    }
+
+    function putMarkers(E) {
+      var R = E.sfdRec, i;
+      if (!R || !R.markers) return;
+      for (i = 0; i < MARKERS.length; i++) E.style.removeProperty(MARKERS[i]);
+      R.markers = null;
+    }
+
+    /* Hand everything back: the element's own style attribute exactly as it
+       was (or none), its arrowheads, no listeners. */
+    function finish(list) {
+      for (var i = 0; i < list.length; i++) {
+        var E = list[i], R = E.sfdRec;
+        if (!R) continue;
+        putMarkers(E);
+        if (R.onEnd) E.removeEventListener('animationend', R.onEnd);
+        /* Read it before removing it. Chrome writes inline style back to the
+           attribute lazily, and an attribute removed while that write is
+           still owed comes back as style="" the next time the element is
+           serialised - every part of a drawing ended with an empty style. */
+        E.getAttribute('style');
+        if (R.style == null) E.removeAttribute('style'); else E.setAttribute('style', R.style);
+        E.sfdRec = null;
+      }
+    }
+
+    /* The spark along an arrow: a soft glow of the arrow's own colour with a
+       bright core inside it, travelling tail to head. The glow alone was a
+       barely-visible thickening of a red line on a red-tinted tube; the core
+       is what makes it read as something moving. Clones, so the arrow itself
+       is never touched again once drawn; they remove themselves. */
+    function flow(it, s, ks) {
+      var el = it.el, len = it.len, par = el.parentNode;
+      if (!par || !(len > 30)) return s;            // a stub says nothing about direction
+      var seg = clamp(len * 0.2, 10, 36), d = clamp(0.55 + len / 320, 0.7, 1.4);
+      var drop = ['id', 'class', 'style', 'marker-start', 'marker-mid', 'marker-end',
+                  'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'filter', 'mask'];
+      /* lead: how far the dash starts inside the glow, so the core rides in
+         the middle of it */
+      function bead(dash, lead, width, colour, alpha) {
+        var c = el.cloneNode(false), i, a0 = seg + 10 - lead, b0 = -(len + 10) - lead;
+        for (i = 0; i < drop.length; i++) c.removeAttribute(drop[i]);
+        c.setAttribute('fill', 'none');
+        c.setAttribute('stroke', colour);
+        c.setAttribute('stroke-width', width.toFixed(2));
+        c.setAttribute('stroke-opacity', alpha);
+        c.setAttribute('stroke-linecap', 'round');
+        c.setAttribute('stroke-dasharray', dash.toFixed(1) + ' ' + (len + seg + 40).toFixed(1));
+        c.setAttribute('stroke-dashoffset', a0.toFixed(1));            // parked before the start
+        c.setAttribute('pointer-events', 'none');
+        c.setAttribute('aria-hidden', 'true');
+        c.setAttribute('class', 'sfd-flow');
+        c.style.setProperty('--sfd-a', a0.toFixed(1) + 'px');
+        c.style.setProperty('--sfd-b', b0.toFixed(1) + 'px');
+        c.style.animation = 'sfdFlow ' + sec(d * ks) + ' cubic-bezier(.45,.05,.55,.95) ' + sec(s * ks) + ' 2 both';
+        par.insertBefore(c, el.nextSibling);
+        function gone() { if (c.parentNode) c.parentNode.removeChild(c); }
+        c.addEventListener('animationend', gone);
+        setTimeout(gone, ((s + 2 * d) * ks + 0.6) * 1000);
+        return c;
+      }
+      /* Each bead goes in straight after the arrow, so the one made first
+         ends up on top: the core, then the glow beneath it. */
+      bead(seg * 0.5, seg * 0.25, Math.max(1.1, it.sw * 0.5), '#ffffff', '0.95');
+      bead(seg, 0, it.sw + 4.5, it.color || '#1a1d2e', '0.38');
+      return s + 2 * d;
+    }
+
+    /* The answer's ring: a blue copy of its outline behind it, widening and
+       fading once. Behind, so the shape itself stays exactly as drawn. */
+    function halo(it, s, ks) {
+      var el = it.el, par = el.parentNode;
+      if (!par) return s;
+      var c = el.cloneNode(false), i, d = 0.9, w0 = it.sw + 1, w1 = it.sw + 14;
+      var drop = ['id', 'class', 'style', 'marker-start', 'marker-mid', 'marker-end',
+                  'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'filter', 'mask'];
+      for (i = 0; i < drop.length; i++) c.removeAttribute(drop[i]);
+      c.setAttribute('fill', 'none');
+      c.setAttribute('stroke', '#4a7cf6');
+      c.setAttribute('stroke-width', w0.toFixed(1));
+      c.setAttribute('stroke-opacity', '0');
+      c.setAttribute('stroke-linejoin', 'round');
+      c.setAttribute('stroke-linecap', 'round');
+      c.setAttribute('pointer-events', 'none');
+      c.setAttribute('aria-hidden', 'true');
+      c.setAttribute('class', 'sfd-halo');
+      c.style.setProperty('--sfd-w0', w0.toFixed(1) + 'px');
+      c.style.setProperty('--sfd-w1', w1.toFixed(1) + 'px');
+      /* forwards, NOT both: `both` holds the FIRST keyframe through the
+         delay, and the ring's first keyframe is its brightest - so the answer
+         sat outlined in blue from the moment the picture appeared, two
+         seconds before anything had been drawn. Before its turn the clone is
+         its own attribute, stroke-opacity 0. */
+      c.style.animation = 'sfdHalo ' + sec(d * ks) + ' cubic-bezier(.22,.61,.36,1) ' + sec(s * ks) + ' 1 forwards';
+      par.insertBefore(c, el);
+      function gone() { if (c.parentNode) c.parentNode.removeChild(c); }
+      c.addEventListener('animationend', gone);
+      setTimeout(gone, ((s + d) * ks + 0.6) * 1000);
+      return s + d;
+    }
+
+    /* The pen. A bead of ink rides the end of each long line while it is
+       being drawn, so a stroke reads as something being DRAWN rather than a
+       line uncovering itself. It moves with the same eased progress as the
+       trace - one easing over the whole run, keyframes evenly spaced along
+       the length - so it stays on the tip. Our own element, beside the
+       line, removed when it is done; the line is never touched. A group
+       copies the line's own transform and an inner group does the moving,
+       because a CSS transform on the outer one would replace that
+       attribute. */
+    var NIB_MAX = 14;
+    function nib(it, s, d, ks) {
+      var el = it.el, par = el.parentNode, NS = 'http://www.w3.org/2000/svg', k, pts = [], N = 18;
+      if (!par || typeof el.getPointAtLength !== 'function' || typeof el.animate !== 'function') return;
+      try { for (k = 0; k <= N; k++) pts.push(el.getPointAtLength(it.len * k / N)); } catch (e) { return; }
+      var g = document.createElementNS(NS, 'g'), m = document.createElementNS(NS, 'g');
+      var glow = document.createElementNS(NS, 'circle'), tip = document.createElementNS(NS, 'circle');
+      var w = Math.max(1.4, it.sw), col = it.color || '#1a1d2e', tf = el.getAttribute('transform');
+      if (tf) g.setAttribute('transform', tf);
+      g.setAttribute('class', 'sfd-nib');
+      g.setAttribute('aria-hidden', 'true');
+      g.setAttribute('pointer-events', 'none');
+      glow.setAttribute('r', (w * 1.9 + 1.5).toFixed(2));
+      glow.setAttribute('fill', col);
+      glow.setAttribute('fill-opacity', '0.22');
+      tip.setAttribute('r', (w * 0.85 + 0.6).toFixed(2));
+      tip.setAttribute('fill', col);
+      m.appendChild(glow); m.appendChild(tip); g.appendChild(m);
+      par.insertBefore(g, el.nextSibling);
+      var frames = [];
+      for (k = 0; k <= N; k++) {
+        frames.push({ transform: 'translate(' + pts[k].x.toFixed(1) + 'px,' + pts[k].y.toFixed(1) + 'px)',
+                      opacity: (k === 0 || k === N) ? 0 : 1, offset: k / N });
+      }
+      function gone() { if (g.parentNode) g.parentNode.removeChild(g); }
+      try {
+        var a = m.animate(frames, { duration: d * ks * 1000, delay: s * ks * 1000, easing: PEN, fill: 'both' });
+        a.onfinish = gone;
+      } catch (eA) { gone(); return; }
+      setTimeout(gone, ((s + d) * ks + 0.5) * 1000);
+    }
+
+    /* Draw one picture now. speed > 1 is quicker. opts.answer: the blue part
+       is the answer - draw it last and ring it; opts.onDone: called when
+       everything, sparks included, has finished. Returns the seconds it
+       takes, or false when there is nothing worth drawing (the picture is
+       then simply shown). */
+    function play(svg, speed, opts) {
+      opts = opts || {};
+      var o = collect(svg, { items: [], texts: [], pins: [], icons: [] });
+      if (o.items.length + o.texts.length + o.pins.length + o.icons.length < 2) return false;
+      var box = rectOf(svg);
+      if (!box || !box.width || !box.height) return false;
+      var ks = 1 / (speed || 1), area = box.width * box.height;
+      var recs = [], arrows = [], items = [], texts = [], outside = [], nibs = [], end = 0, i, j, cs, r;
+
+      /* Measure everything first, so nothing is laid out twice. */
+      for (i = 0; i < o.items.length; i++) {
+        var el = o.items[i], tag = lc(el);
+        r = rectOf(el);
+        if (!r || (!r.width && !r.height)) continue;
+        try { cs = window.getComputedStyle(el); } catch (e) { cs = null; }
+        if (!cs || cs.display === 'none' || cs.visibility === 'hidden') continue;
+        var sw = parseFloat(cs.strokeWidth) || 0;
+        var stroked = !!cs.stroke && cs.stroke !== 'none' && sw > 0 && parseFloat(cs.strokeOpacity) !== 0;
+        var dashed = !!cs.strokeDasharray && cs.strokeDasharray !== 'none';
+        var len = 0;
+        if (SHAPE[tag] && stroked && !dashed) {
+          var pl = parseFloat(el.getAttribute('pathLength'));
+          try { len = pl > 0 ? pl : el.getTotalLength(); } catch (e2) { len = 0; }
+          if (!(len > 0) || !isFinite(len)) len = 0;
+        }
+        var marker = false;
+        for (j = 0; j < MARKERS.length; j++) if (el.getAttribute(MARKERS[j])) marker = true;
+        items.push({ el: el, tag: tag, r: r, sw: sw, stroked: stroked, len: len, marker: marker,
+                     filled: !!cs.fill && cs.fill !== 'none' && parseFloat(cs.fillOpacity) !== 0,
+                     color: cs.stroke, a: r.width * r.height, inner: [], after: [],
+                     bg: r.width * r.height > area * 0.55,
+                     blue: !!opts.answer && !!(BLUE[cs.stroke] || BLUE[cs.fill]) });
+      }
+      for (i = 0; i < o.texts.length; i++) {
+        r = rectOf(o.texts[i]);
+        if (!r || !(r.width || r.height)) continue;
+        var tb = false;
+        if (opts.answer) { try { tb = !!BLUE[window.getComputedStyle(o.texts[i]).fill]; } catch (eB) { tb = false; } }
+        texts.push({ el: o.texts[i], r: r, leaders: [], blue: tb });
+      }
+
+      var icons = [];
+      for (i = 0; i < o.icons.length; i++) {
+        r = rectOf(o.icons[i]);
+        if (r && (r.width || r.height)) icons.push({ el: o.icons[i], r: r, ico: true, a: r.width * r.height, inner: [], after: [] });
+      }
+
+      /* The title: the first words, centred across the top. */
+      var title = null;
+      if (texts.length > 1) {
+        var t0 = texts[0].r, mid = (t0.left + t0.right) / 2 - box.left;
+        if (t0.top - box.top < box.height * 0.16 && Math.abs(mid - box.width / 2) < box.width * 0.2) title = texts.shift();
+      }
+
+      /* Words wholly inside a modest closed shape belong to it. Big shapes -
+         a leaf blade, the ground - are not containers: words over them are
+         labels, and labels come last. */
+      for (i = 0; i < texts.length; i++) {
+        var t = texts[i], best = null;
+        for (j = 0; j < items.length; j++) {
+          var it = items[j], rr = it.r;
+          if (it.bg || it.a > area * 0.18) continue;
+          if (!(CLOSED[it.tag] || (it.tag === 'path' && it.filled))) continue;
+          if (t.r.left >= rr.left - 2 && t.r.right <= rr.right + 2 &&
+              t.r.top >= rr.top - 2 && t.r.bottom <= rr.bottom + 2 && (!best || it.a < best.a)) best = it;
+        }
+        if (best) best.inner.push(t); else outside.push(t);
+      }
+      /* An icon in a disc is part of that disc, as a word in a box is; one
+         standing free - the sun over a leaf - is part of the drawing, and
+         arrives with it. */
+      var freeIcons = [];
+      for (i = 0; i < icons.length; i++) {
+        var ik = icons[i], ib = null;
+        for (j = 0; j < items.length; j++) {
+          var ci = items[j], cr = ci.r;
+          if (ci.bg || ci.a > area * 0.18) continue;
+          if (!(CLOSED[ci.tag] || (ci.tag === 'path' && ci.filled))) continue;
+          if (ik.r.left >= cr.left - 2 && ik.r.right <= cr.right + 2 &&
+              ik.r.top >= cr.top - 2 && ik.r.bottom <= cr.bottom + 2 && (!ib || ci.a < ib.a)) ib = ci;
+        }
+        if (ib) (ib.icons = ib.icons || []).push(ik); else freeIcons.push(ik);
+      }
+
+      /* A thin line with no arrowhead, one end at a label, is that label's
+         leader: it is drawn out to the label just before the label is
+         written, instead of with the drawing. */
+      for (j = 0; j < items.length; j++) {
+        var ln = items[j];
+        if (ln.tag !== 'line' || ln.marker || !ln.stroked || ln.sw > 1.4) continue;
+        var ends = lineEnds(ln.el), near = null, nd = 14, dd;
+        if (!ends) continue;
+        for (i = 0; i < outside.length; i++) {
+          dd = Math.min(toBox(ends[0].x, ends[0].y, outside[i].r), toBox(ends[1].x, ends[1].y, outside[i].r));
+          if (dd < nd) { nd = dd; near = outside[i]; }
+        }
+        if (near) { near.leaders.push(ln); ln.leader = true; }
+      }
+
+      /* An arrow that LEAVES a box is drawn straight after that box, so a
+         chart reads box, arrow, box, arrow - the kit writes every connector
+         before every node, and drawn in that order a cycle was four arrows
+         joining nothing. An arrow that starts in the open (light falling on
+         a leaf, blood moving up a vein) is movement, and is drawn after the
+         structure it moves through. "Leaves" = its tail sits on or near the
+         box (the kit starts its arcs ~26px clear of the box they leave), not
+         deep inside it, and its head is not pointing back into that box. */
+      var late = [];
+      function isNode(n) {
+        return !n.bg && !n.marker && !n.leader && n.a <= area * 0.18 &&
+          (CLOSED[n.tag] || (n.tag === 'path' && n.filled));
+      }
+      for (j = 0; j < items.length; j++) {
+        var ar = items[j];
+        if (!ar.marker || ar.leader || ar.bg) continue;
+        var tp = null, hp = null, host = null, hd = 30;
+        try {
+          var cm = ar.el.getScreenCTM(), sv = ar.el.ownerSVGElement, q0, q1;
+          if (cm && sv) {
+            tp = sv.createSVGPoint(); hp = sv.createSVGPoint();
+            if (ar.tag === 'line') {
+              tp.x = parseFloat(ar.el.getAttribute('x1')) || 0; tp.y = parseFloat(ar.el.getAttribute('y1')) || 0;
+              hp.x = parseFloat(ar.el.getAttribute('x2')) || 0; hp.y = parseFloat(ar.el.getAttribute('y2')) || 0;
+            } else {
+              q0 = ar.el.getPointAtLength(0); q1 = ar.el.getPointAtLength(ar.el.getTotalLength());
+              tp.x = q0.x; tp.y = q0.y; hp.x = q1.x; hp.y = q1.y;
+            }
+            tp = tp.matrixTransform(cm); hp = hp.matrixTransform(cm);
+          }
+        } catch (eT) { tp = null; }
+        if (tp && hp) {
+          for (i = 0; i < items.length; i++) {
+            var nb = items[i], nr = nb.r;
+            if (!isNode(nb)) continue;
+            var inside = tp.x > nr.left && tp.x < nr.right && tp.y > nr.top && tp.y < nr.bottom;
+            if (inside && Math.min(tp.x - nr.left, nr.right - tp.x, tp.y - nr.top, nr.bottom - tp.y) > 3) continue;
+            dd = inside ? 0 : toBox(tp.x, tp.y, nr);
+            if (toBox(hp.x, hp.y, nr) <= dd) continue;     // it points INTO this one
+            if (dd < hd) { hd = dd; host = nb; }
+          }
+        }
+        if (host) host.after.push(ar); else late.push(ar);
+      }
+
+      function rec(E) {
+        if (!E.sfdRec) { E.sfdRec = { style: E.getAttribute('style'), anims: [], props: null, markers: null, onEnd: null, pin: false }; recs.push(E); }
+        return E.sfdRec;
+      }
+      /* sfdShow rides along with every trace for one reason: a browser that
+         cannot resolve var() inside @keyframes still keeps the part hidden
+         until its turn, instead of showing everything at once. */
+      function trace(it, s, dur) {
+        var R = rec(it.el), d = dur || clamp(0.26 + it.len / 600, 0.3, 0.8), stop = s + d;
+        if (it.len > 40 && !it.leader && !it.bg) nibs.push({ it: it, s: s, d: d });
+        R.anims.push('sfdTrace ' + sec(d * ks) + ' ' + PEN + ' ' + sec(s * ks) + ' 1 backwards');
+        R.anims.push('sfdShow ' + sec(0.05 * ks) + ' linear ' + sec(s * ks) + ' 1 backwards');
+        R.props = { '--sfd-l': it.len, '--sfd-g': it.len + 12 + it.sw * 2, '--sfd-o': it.len + 6 + it.sw };
+        if (it.filled) {
+          R.anims.push('sfdWash ' + sec(0.45 * ks) + ' ' + OUT + ' ' + sec((s + d * 0.5) * ks) + ' 1 backwards');
+          stop = Math.max(stop, s + d * 0.5 + 0.45);
+        }
+        if (it.marker) {
+          /* The arrowhead would sit at the far end, waiting, while its line
+             crawled towards it. It lands when the line arrives instead -
+             hidden by an inline `marker-*: none`, which outranks the
+             attribute, so the attribute itself is never touched. */
+          R.markers = true;
+          arrows.push(it);
+        }
+        return stop;
+      }
+      function show(it, s, dur) {
+        var d = dur || 0.4;
+        rec(it.el).anims.push('sfdShow ' + sec(d * ks) + ' ' + OUT + ' ' + sec(s * ks) + ' 1 backwards');
+        return s + d;
+      }
+      function pop(ic, s) {
+        var R = rec(ic.el);
+        R.pin = true;
+        R.anims.push('sfdPop ' + sec(0.42 * ks) + ' ' + OUT + ' ' + sec(s * ks) + ' 1 backwards');
+        return s + 0.42;
+      }
+      function drawIt(it, s, dur) {
+        if (it.ico) return pop(it, s);
+        return it.len > 0 ? trace(it, s, dur) : show(it, s, dur);
+      }
+      function durOf(it) { return it.ico ? 0.42 : (it.len > 0 ? clamp(0.26 + it.len / 600, 0.3, 0.8) : 0.4); }
+      function write(tx, s) {
+        var R = rec(tx.el), n = (tx.el.textContent || '').length, d = clamp(0.2 + n * 0.017, 0.26, 0.6);
+        R.anims.push('sfdWrite ' + sec(d * ks) + ' cubic-bezier(.3,.55,.35,1) ' + sec(s * ks) + ' 1 backwards');
+        R.anims.push('sfdShow ' + sec(0.08 * ks) + ' linear ' + sec(s * ks) + ' 1 backwards');
+        return s + d;
+      }
+
+      /* The timetable, in seconds before `speed`. */
+      var d0 = opts.delay || 0, at = 0.05 + d0;   // delay: let a sliding panel land first
+      if (title) { end = Math.max(end, write(title, at)); at += 0.16; }
+      var seq = [];
+      for (i = 0; i < items.length; i++) {
+        if (items[i].leader) continue;
+        if (items[i].bg) { end = Math.max(end, drawIt(items[i], d0)); continue; }  // the ground goes down first
+        if (items[i].marker) continue;                                             // placed below
+        seq.push(items[i]);
+        for (j = 0; j < items[i].after.length; j++) seq.push(items[i].after[j]);
+      }
+      seq = seq.concat(freeIcons).concat(late);
+      /* The answer last. Everything else is the setting; the blue part is
+         what the learner missed, so it arrives once the setting is there to
+         make sense of it - and its label is the last word written. */
+      if (opts.answer) {
+        var rest = [], ans = [];
+        for (i = 0; i < seq.length; i++) (seq[i].blue ? ans : rest).push(seq[i]);
+        seq = rest.concat(ans);
+        rest = []; ans = [];
+        for (i = 0; i < outside.length; i++) (outside[i].blue ? ans : rest).push(outside[i]);
+        outside = rest.concat(ans);
+      }
+      var n = seq.length, gap = n ? clamp(1.1 / n, 0.03, 0.13) : 0;   // a small chart is dealt out slowly enough to follow
+      if (n > 34) gap = Math.max(0.012, 1.05 / n);          // a busy drawing still finishes in time
+      for (i = 0; i < n; i++) {
+        var s0 = at + i * gap, cur = seq[i];
+        end = Math.max(end, drawIt(cur, s0));
+        for (j = 0; j < cur.inner.length; j++) end = Math.max(end, write(cur.inner[j], s0 + durOf(cur) * 0.55 + j * 0.05));
+        if (cur.icons) for (j = 0; j < cur.icons.length; j++) end = Math.max(end, pop(cur.icons[j], s0 + durOf(cur) * 0.5 + j * 0.05));
+      }
+      var ls = at + n * gap * 0.85 + 0.08, nl = outside.length, lg = nl ? clamp(0.8 / nl, 0.07, 0.16) : 0;
+      for (i = 0; i < nl; i++) {
+        var la = ls + i * lg, lead = outside[i].leaders;
+        for (j = 0; j < lead.length; j++) end = Math.max(end, drawIt(lead[j], la, 0.22));
+        end = Math.max(end, write(outside[i], la + (lead.length ? 0.1 : 0)));
+      }
+      var ps = Math.max(0.2, end - 0.05);
+      for (i = 0; i < o.pins.length; i++) {
+        var P = rec(o.pins[i]);
+        P.pin = true;
+        P.anims.push('sfdPin ' + sec(0.46 * ks) + ' ' + OUT + ' ' + sec((ps + i * 0.11) * ks) + ' 1 backwards');
+        end = Math.max(end, ps + i * 0.11 + 0.46);
+      }
+
+      /* Apply it all in one go, inside this same task: nothing is painted
+         between the first part being hidden and the last. */
+      for (i = 0; i < recs.length; i++) {
+        var E = recs[i], R = E.sfdRec, p;
+        if (R.props) for (p in R.props) E.style.setProperty(p, R.props[p].toFixed(1) + 'px');
+        if (R.pin) { E.style.setProperty('transform-box', 'fill-box'); E.style.setProperty('transform-origin', 'center'); }
+        E.style.animation = R.anims.join(', ');
+        if (R.markers) {
+          for (j = 0; j < MARKERS.length; j++) E.style.setProperty(MARKERS[j], 'none');
+          R.onEnd = (function (X) {
+            return function (ev) { if (!ev || ev.animationName === 'sfdTrace') putMarkers(X); };
+          })(E);
+          E.addEventListener('animationend', R.onEnd);
+        }
+      }
+      /* The longest lines get a pen; a busy drawing does not get thirty. */
+      nibs.sort(function (a, b) { return b.it.len - a.it.len; });
+      for (i = 0; i < nibs.length && i < NIB_MAX; i++) nib(nibs[i].it, nibs[i].s, nibs[i].d, ks);
+      setTimeout(function () { finish(recs); }, (end * ks + 0.3) * 1000);
+      var last = end, fx = end + 0.25, rung = 0;
+      if (opts.answer) {
+        for (i = 0; i < items.length && rung < 6; i++) {
+          if (!items[i].blue || items[i].bg || items[i].leader) continue;
+          last = Math.max(last, halo(items[i], end + 0.05, ks));
+          rung++;
+        }
+        if (rung) fx = end + 0.6;                 // the ring first, then things move
+      }
+      if (arrows.length && arrows.length <= 12) {
+        for (i = 0; i < arrows.length; i++) last = Math.max(last, flow(arrows[i], fx + i * 0.14, ks));
+      }
+      if (opts.onDone) setTimeout(opts.onDone, (last * ks + 0.35) * 1000);
+      return last * ks;
+    }
+
+    function inClass(el, name) {
+      var k = (el && el.getAttribute && el.getAttribute('class')) || '';
+      return (' ' + k + ' ').indexOf(' ' + name + ' ') >= 0;
+    }
+
+    /* Quicker where the learner has met the picture already, or is here to
+       work on it: the labelling card is the lesson's own drawing again. */
+    function speedFor(svg) {
+      var p = svg.parentNode;
+      if (inClass(p, 'ld-fig')) return 1.35;
+      if (inClass(p, 'sf-recall') || inClass(p, 'pw-art')) return 1.2;
+      return 1;
+    }
+
+    var REPLAY_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" ' +
+      'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 3.5v5h5"/></svg>';
+
+    /* "Draw it again": on the lesson's picture and on a picture drawn for a
+       question - the two a learner has a reason to watch twice. On the
+       lesson card it sits in the frame's corner; on a "Draw it for me"
+       panel it goes in the panel's own header row, because those drawings
+       use their corners (the lever's "Small push" is up there). */
+    function replayHost(svg) {
+      var p = svg.parentNode;
+      if (!p || reduced()) return null;
+      if (p.id === 'lesson-art') return p;
+      if (inClass(p, 'sf-moment-art')) {
+        var head = p.parentNode && p.parentNode.querySelector('.sf-moment-head');
+        return head || null;
+      }
+      return null;
+    }
+    function offerReplay(svg) {
+      var host = replayHost(svg), i;
+      if (!host || !svg.parentNode) return;
+      for (i = 0; i < host.childNodes.length; i++) if (inClass(host.childNodes[i], 'sfd-replay')) return;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'sfd-replay' + (host.id === 'lesson-art' ? '' : ' is-inline');
+      b.setAttribute('aria-label', 'Draw it again');
+      b.title = 'Draw it again';
+      b.innerHTML = REPLAY_ICON;
+      b.onclick = function () {
+        if (b.disabled || !svg.parentNode) return;
+        b.disabled = true;
+        var t = play(svg, speedFor(svg), { answer: inClass(svg.parentNode, 'sf-moment-art'),
+                                           onDone: function () { b.disabled = false; } });
+        if (t === false) b.disabled = false;
+      };
+      if (host.id === 'lesson-art') {
+        try { if (window.getComputedStyle(host).position === 'static') host.style.position = 'relative'; } catch (eP) { /* the chip still works */ }
+      }
+      host.appendChild(b);
+    }
+
+    function run(svg) {
+      drawn[keyOf(svg)] = 1;
+      var t = play(svg, speedFor(svg), { answer: inClass(svg.parentNode, 'sf-moment-art'),
+                                         onDone: function () { offerReplay(svg); } });
+      if (t === false) offerReplay(svg);
+    }
+
+    function unhold(svg) {
+      svg.classList.remove('sfd-hold');
+      if (!svg.getAttribute('class')) svg.removeAttribute('class');   // leave no trace
+    }
+
+    function release(svg) {
+      if (!svg.classList || !svg.classList.contains('sfd-hold')) return;
+      if (io) io.unobserve(svg);
+      unhold(svg);
+      offerReplay(svg);
+    }
+
+    function seen(entries) {
+      for (var i = 0; i < entries.length; i++) {
+        if (!entries[i].isIntersecting) continue;
+        var svg = entries[i].target, was = drawn[keyOf(svg)];
+        io.unobserve(svg);
+        if (!svg.classList.contains('sfd-hold')) continue;
+        if (!was) run(svg);                      // hide every part first...
+        else offerReplay(svg);
+        unhold(svg);                             // ...then let the picture show
+      }
+    }
+
+    function consider(svg) {
+      if (!svg || svg.sfdSeen || svg.ownerSVGElement) return;   // a drawing inside a drawing goes with its parent
+      svg.sfdSeen = 1;
+      if (reduced()) return;
+      if (drawn[keyOf(svg)]) { offerReplay(svg); return; }     // shown already this session: simply there
+      var r = rectOf(svg);
+      if (!r || !r.width || !r.height) return;   // in a closed fold: still when opened
+      var vh = window.innerHeight || document.documentElement.clientHeight || 0;
+      if (r.bottom > 0 && r.top < vh * 0.94) { run(svg); return; }
+      if (!window.IntersectionObserver || !svg.classList) return;
+      /* Below the fold: hidden until it scrolls in, so it is drawn where it
+         can be watched. Released after 15s whatever happens - a picture
+         must never stay hidden because an observer did not fire. */
+      if (!io) io = new IntersectionObserver(seen, { threshold: 0.2 });
+      svg.classList.add('sfd-hold');
+      io.observe(svg);
+      setTimeout(function () { release(svg); }, 15000);
+    }
+
+    /* A worked-example step's own picture (block 2's Scene.worked), drawn as
+       its panel arrives. Called by the board, not by the observer: the
+       board is one SVG with every panel in it from the start, so nothing is
+       ever "inserted" when a step comes round. Once per picture element - a
+       panel walked back to is simply there. */
+    function drawStep(svg, tries) {
+      if (!svg || svg.sfdStep || reduced()) return false;
+      /* The board paints its first panel BEFORE it is mounted (render()
+         appends to a mount that is itself put on the page afterwards), and
+         a picture that is not laid out has nothing to measure. Wait for it,
+         a frame at a time: the panel's own bloom keeps it at opacity 0 for
+         its first 80ms, so the wait is never seen. */
+      var r = rectOf(svg);
+      if (!document.documentElement.contains(svg) || !r || !r.width) {
+        tries = tries || 0;
+        if (tries < 30 && window.requestAnimationFrame) {
+          window.requestAnimationFrame(function () { drawStep(svg, tries + 1); });
+        }
+        return false;
+      }
+      svg.sfdStep = 1;
+      return play(svg, 1.4, { delay: 0.18 });
+    }
+
+    function scan(node) {
+      if (!node || node.nodeType !== 1) return;
+      if (node.matches && node.matches(PICTURE_SEL)) consider(node);
+      if (!node.querySelectorAll) return;
+      var list = node.querySelectorAll(PICTURE_SEL);
+      for (var i = 0; i < list.length; i++) consider(list[i]);
+    }
+
+    function start() {
+      if (!window.MutationObserver || !document.body) return;
+      new MutationObserver(function (records) {
+        for (var i = 0; i < records.length; i++) {
+          var added = records[i].addedNodes;
+          for (var j = 0; j < added.length; j++) scan(added[j]);
+        }
+      }).observe(document.body, { childList: true, subtree: true });
+    }
+    if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+
+    return { play: play, consider: consider, keyOf: keyOf, drawStep: drawStep,
+             forget: function () { for (var k in drawn) delete drawn[k]; } };
+  })();
+
 
   /* The prompts live in sf-draw.js now - the drawing skill both pages load -
      so the plan page can ask for the same picture without a second copy.
@@ -3045,13 +3807,36 @@
     return (window.SFDraw && SFDraw.lessonPrompt) ? SFDraw.lessonPrompt(d) : '';
   }
 
+  /* A model drawing that is really a flowchart - boxes and circles with the
+     words in them, two lines between - is not shown over the lesson's own
+     diagram. The kit draws THAT shape from the lesson's own steps, with a
+     picture on each one (sf-icons.js), and draws it better: the real runs
+     that came back as three boxes with nouns, or "PSII" and "ATP" in
+     circles, were the drawings learners complained about. A real drawing has
+     drawn parts: paths and polygons, not counting arrows, and a ready-drawn
+     object counts half. Judged when the drawing is USED, never when it is
+     stored - the spec stays in the plan, so the rule can change without
+     asking the model again. */
+  function artWorthShowing(spec) {
+    var sh = spec && (spec.shapes || spec.items || spec.draw), drawn = 0, boxes = 0, i, k;
+    if (!sh || !sh.length) return false;
+    for (i = 0; i < sh.length && i < 80; i++) {
+      if (!sh[i] || typeof sh[i] !== 'object') continue;
+      k = String(sh[i].s || sh[i].kind || sh[i].type || '').toLowerCase();
+      if ((k === 'path' && !sh[i].arrow) || k === 'poly') drawn += 1;
+      else if (k === 'icon') drawn += 0.5;
+      else if (k === 'rect' || k === 'circle' || k === 'ellipse') boxes += 1;
+    }
+    return drawn >= 3 || boxes < 2;
+  }
+
   function requestLessonArt(d) {
     if (!d || lessonArt.state === 'loading') return;
     /* Already drawn for this day - on a previous visit, while the plan was
        being made (app.html), or in the background during yesterday's lesson
        (predrawNextDay). */
     if (d.generatedArt) {
-      lessonArt.spec = d.generatedArt; lessonArt.state = 'done';
+      lessonArt.spec = artWorthShowing(d.generatedArt) ? d.generatedArt : null; lessonArt.state = 'done';
       applyLessonArt();
       predrawNextDay();
       return;
@@ -3070,9 +3855,9 @@
         try { svg = SFSceneKit.fromSpec(res.spec); } catch (e) { svg = null; }
       }
       lessonArt.state = 'done';
-      lessonArt.spec = svg ? res.spec : null;
+      lessonArt.spec = svg && artWorthShowing(res.spec) ? res.spec : null;
       cacheLessonArt(svg ? res.spec : null);
-      if (svg) applyLessonArt();
+      if (lessonArt.spec) applyLessonArt();
       try { sfLabelWaitCheck(false); } catch (e3) { /* never cost the lesson */ }
       predrawNextDay();
     }, function () {
@@ -3637,7 +4422,9 @@
     var c = diagramCaption(svg, caption);
     return c ? '<div' + (style ? ' style="' + style + '"' : '') + '>' + escHtml(c) + '</div>' : '';
   }
-  var CAPTION_STYLE = 'font-size:0.68rem;color:var(--muted);margin-top:.4rem;' +
+  /* Fixed grey, like the frame it sits in: the theme's --muted is a pale
+     slate in dark mode and read at about 3:1 on paper. */
+  var CAPTION_STYLE = 'font-size:0.68rem;color:#6b7280;margin-top:.4rem;' +
     'text-transform:uppercase;letter-spacing:.06em;font-weight:600;';
 
   /* Swap the drawing in wherever the lesson card is showing its picture.
@@ -4455,11 +5242,29 @@
     return false;
   }
 
+  /* A picture of the thing, beside its name - a word learnt with an image
+     of what it names is remembered better than the word alone (dual
+     coding). Only when the picture IS the thing (SFIcons.depicts): "Heart"
+     gets a heart. A picture of what a term is merely ABOUT is not used here
+     - it gave "Artery" a heart and "Chlorophyll" a leaf, and a picture
+     above one word is read as what that word looks like. Never on a trap
+     card - that card is a sentence someone believes, not a thing. */
+  function deckIcon(it) {
+    var I = window.SFIcons;
+    if (!I || !I.depicts || it.kind === 'trap') return '';
+    var name = '';
+    try { name = I.depicts(it.front); } catch (e) { name = ''; }
+    if (!name) return '';
+    return '<div class="fc-ico" aria-hidden="true"><svg viewBox="0 0 64 64" width="54" height="54">' +
+      '<circle class="fc-ico-bg" cx="32" cy="32" r="31"/>' +
+      I.markup(name, 32, 32, 36, '#1e40af', '#4a7cf6', 0.3) + '</svg></div>';
+  }
+
   function deckCardHtml(it) {
-    var isTrap = it.kind === 'trap';
-    return '<div class="fc-card ' + (isTrap ? 'is-trap' : 'is-term') + '" id="fc-card" ' +
+    var isTrap = it.kind === 'trap', ico = deckIcon(it);
+    return '<div class="fc-card ' + (isTrap ? 'is-trap' : 'is-term') + (ico ? ' has-ico' : '') + '" id="fc-card" ' +
         'onclick="sfDeckFlip()">' +
-      '<div class="fc-face fc-front">' +
+      '<div class="fc-face fc-front">' + ico +
         '<div class="fc-kind">' + (isTrap ? 'People often think' : 'Key term') + '</div>' +
         '<div class="' + (isTrap ? 'fc-myth' : 'fc-term') + '">' + esc(it.front) + '</div>' +
         '<div class="fc-hint">Tap to turn</div>' +
@@ -4767,7 +5572,10 @@
       /* Drawn locally, from this day's own material, so the card is whole
          the moment it opens. If the illustration requested on entry has
          already landed it is used instead; if it lands later,
-         applyLessonArt swaps it into #lesson-art in place. */
+         applyLessonArt swaps it into #lesson-art in place.
+         The frame is a fixed paper colour, not var(--soft): --soft is
+         near-black in dark mode, and every drawing is ink for paper, so the
+         title and the thin lines vanished into it. */
       var dgm = diagramForDay(day);
       var dgmHtml = '';
       var artSvg = null;
@@ -10713,242 +11521,242 @@
       var n = items.length, i;
       if (n < 2 || !outcome) return null;
       if (n > 5) { items = items.slice(0, 5); n = 5; }
-
-      var CW = 150, OW = 150, GAP = 62, padX = 12;
-      var causes = [], lines, h;
-      var stackH = 0, VGAP = 12;
+      /* Each cause is a row with its own picture, the outcome one solid block
+         they all point at. It was the same pale boxes as everything else. */
+      var W = MAX_W - 20, OW = 112, GAP = 42, R = 16, LS = NODE_SIZE + 0.5, lh = LS * 1.28;
+      var CW = W - MARGIN * 2 - OW - GAP, TX = MARGIN + 2 * R + 16, TW = CW - (TX - MARGIN) - 10;
+      var ic = iconsFor(items), oIcon = iconOne(outcome);
+      var rows = [], stackH = 0, VG = 10;
       for (i = 0; i < n; i++) {
-        lines = wrap(items[i], CW - padX * 2, NODE_SIZE, 700, 3);
-        h = Math.max(34, 14 + lines.length * NODE_SIZE * 1.32);
-        causes.push({ lines: lines, h: h });
-        stackH += h + (i < n - 1 ? VGAP : 0);
+        var lines = wrap(items[i], TW, LS, 600, 3);
+        var h = Math.max(2 * R + 12, lines.length * lh + 16);
+        rows.push({ lines: lines, h: h });
+        stackH += h + (i < n - 1 ? VG : 0);
       }
-
-      var oLines = wrap(outcome, OW - padX * 2, NODE_SIZE + 0.5, 700, 3);
-      var oH = Math.max(46, 18 + oLines.length * (NODE_SIZE + 0.5) * 1.32);
-
-      var w = MARGIN * 2 + CW + GAP + OW;
-      var tb = titleBlock(title, w);
-      var top = tb.h + 8;
-      var bodyH = Math.max(stackH, oH);
-      var hgt = top + bodyH + MARGIN;
-
-      var svg = open(w, hgt) + tb.svg;
-      var x0 = MARGIN, x1 = MARGIN + CW + GAP;
-      var y = top + (bodyH - stackH) / 2;
-      var oY = top + (bodyH - oH) / 2;
-      var oCx = x1 + OW / 2, oCy = oY + oH / 2;
-
+      var OS = LS + 0.5, oLines = wrap(outcome, OW - 20, OS, 700, 3);
+      var oH = Math.max(58, oLines.length * OS * 1.3 + (oIcon ? 50 : 24));
+      var tb = titleBlock(title, W), top = tb.h + 8, bodyH = Math.max(stackH, oH);
+      var svg = open(W, top + bodyH + MARGIN) + tb.svg;
+      var x1 = MARGIN + CW + GAP, oY = top + (bodyH - oH) / 2, oCy = oY + oH / 2, y = top + (bodyH - stackH) / 2;
       for (i = 0; i < n; i++) {
-        /* Causes share one tint: their order does not matter, so the colour
-           must not suggest one. */
-        var c = pal();
-        svg += roundRect(x0, y, CW, causes[i].h, 9, c);
-        svg += multiT(x0 + CW / 2, y + causes[i].h / 2, causes[i].lines,
-                      { size: NODE_SIZE, weight: 700, fill: c.t });
+        var cy = y + rows[i].h / 2;
+        svg += '<rect x="' + r1(MARGIN) + '" y="' + r1(y) + '" width="' + r1(CW) + '" height="' + r1(rows[i].h) +
+          '" rx="12" fill="#f6f8fe" stroke="#e1e8fa" stroke-width="1"/>';
+        svg += nodeDisc(MARGIN + R + 8, cy, R, ic && ic[i], '.');
+        svg += multiT(TX, cy, rows[i].lines, { size: LS, weight: 600, fill: INK, anchor: 'start' });
         /* Every arrow lands on the outcome's left edge rather than its
            centre, so five of them do not converge into one illegible knot
            of arrowheads on top of the label. */
         var ty = oCy + (i - (n - 1) / 2) * Math.min(14, oH / (n + 1));
-        svg += arrow(x0 + CW + 5, y + causes[i].h / 2, x1 - 6, ty);
-        y += causes[i].h + VGAP;
+        svg += arrow(MARGIN + CW + 5, cy, x1 - 6, ty);
+        y += rows[i].h + VG;
       }
-
       /* The outcome is what the diagram is ABOUT - the one focal node. */
-      var oc = FOCAL;
-      svg += roundRect(x1, oY, OW, oH, 12, oc, 0);
-      svg += multiT(oCx, oCy, oLines, { size: NODE_SIZE + 0.5, weight: 700, fill: oc.t });
+      svg += '<rect x="' + r1(x1) + '" y="' + r1(oY) + '" width="' + OW + '" height="' + r1(oH) + '" rx="14" fill="' + FOCAL.f + '"/>';
+      var tY = oCy;
+      if (oIcon && typeof window !== 'undefined' && window.SFIcons) {
+        svg += window.SFIcons.markup(oIcon, x1 + OW / 2, oY + 26, 30, '#ffffff', '#ffffff', 0.35);
+        tY = oY + 46 + (oH - 46) / 2 - 4;
+      }
+      svg += multiT(x1 + OW / 2, tY, oLines, { size: OS, weight: 700, fill: FOCAL.t });
       return svg + '</svg>';
     }
 
-    function buildFlow(title, items) {
-      var n = items.length, i;
-      var padX = 12, minW = 70, maxNodeW = 150;
-      var boxes = [], lines, tw, bw;
-      for (i = 0; i < n; i++) {
-        lines = wrap(items[i], maxNodeW - padX * 2, NODE_SIZE, 700, 3);
-        tw = widestLine(lines, NODE_SIZE, 700);
-        bw = Math.max(minW, Math.min(maxNodeW, tw + padX * 2));
-        boxes.push({ lines: lines, w: bw });
-      }
+    /* ── Nodes that show what they are ─────────────────────────────────────
 
-      var gap = 30, total = 0;
-      for (i = 0; i < n; i++) total += boxes[i].w;
-      total += gap * (n - 1);
+       Every layout below used to be rounded boxes with the words inside, and
+       they looked it: a list with extra steps, its type shrunk to fit a ring.
+       Now a step or an idea is a disc, and the disc carries the picture its
+       own words name (sf-icons.js) - "condenses into clouds" gets a cloud,
+       "the Stamp Act taxes printed paper" gets coins. Where the words name
+       nothing the disc carries the step's number, or nothing, never a guess.
 
-      /* Horizontal only when it fits the phone-safe width. At the old 620
-         cap a four-step row drew at 0.55 scale on a phone and its 11pt
-         labels landed at 6px. */
-      var horizontal = (n <= 4) && (total + MARGIN * 2 <= MAX_W);
-
-      if (horizontal) {
-        var maxLines = 1;
-        for (i = 0; i < n; i++) maxLines = Math.max(maxLines, boxes[i].lines.length);
-        var bh = Math.max(42, 18 + maxLines * NODE_SIZE * 1.32);
-        var w = total + MARGIN * 2;
-        var tb = titleBlock(title, w);
-        var top = tb.h + 6;
-        var h = top + bh + MARGIN;
-        var svg = open(w, h) + tb.svg;
-        var x = MARGIN;
-        for (i = 0; i < n; i++) {
-          /* Tint deepens along the chain: the colour says "later". */
-          var c = pal(i, n);
-          svg += roundRect(x, top, boxes[i].w, bh, 9, c);
-          svg += multiT(x + boxes[i].w / 2, top + bh / 2, boxes[i].lines,
-            { size: NODE_SIZE, weight: 700, fill: c.t });
-          if (i < n - 1) svg += arrow(x + boxes[i].w + 5, top + bh / 2, x + boxes[i].w + gap - 5, top + bh / 2);
-          x += boxes[i].w + gap;
-        }
-        return svg + '</svg>';
+       All or nothing per diagram: pictures on at least half the nodes, and
+       at least half of them different, or none. Three steps that are all
+       "the heart" are one picture repeated, which says nothing a number
+       would not. */
+    var ICON_INK = '#1e40af', ICON_TINT = '#4a7cf6', DISC = { s: '#a9c0f8', f: '#eef3ff' };
+    /* The subject of the diagram being built, set by fromSpec: "memory" is a
+       brain in psychology and a chip in computer science. */
+    var CUR_SUBJ = '';
+    function iconsFor(items) {
+      var I = typeof window !== 'undefined' ? window.SFIcons : null;
+      if (!I || !items || !items.length) return null;
+      var got, hit = 0, nd = 0, seen = {}, k;
+      try { got = I.pick(items, CUR_SUBJ); } catch (e) { return null; }
+      for (k = 0; k < got.length; k++) {
+        if (!got[k]) continue;
+        hit++;
+        if (!seen[got[k]]) { seen[got[k]] = 1; nd++; }
       }
-
-      /* Vertical stack — always fits, reads well on a phone. */
-      var bwv = 0;
-      for (i = 0; i < n; i++) bwv = Math.max(bwv, boxes[i].w);
-      bwv = Math.max(bwv, 170);
-      /* Let a long heading widen the card rather than spill past its edge. */
-      if (title) bwv = Math.max(bwv, Math.min(320, measure(title, TITLE_SIZE, 700) / 2 + 40));
-      /* And let a long STEP widen it too. The stack sat at 170 units while
-         the card had 343px to give, so a step written as a sentence - "Choose
-         a clear position you can defend with evidence" - was cut to "defend
-         with..." with most of the width empty either side. Grow in steps
-         until every step fits its three lines whole, up to 320: past that the
-         board scales down on a phone and the type shrinks with it. */
-      var fitsAt = function (wid) {
-        for (var k = 0; k < n; k++) {
-          var full = String(items[k] == null ? '' : items[k]).replace(/\s+/g, ' ').trim();
-          if (wrap(full, wid - 28, NODE_SIZE, 700, 3).join(' ') !== full) return false;
-        }
-        return true;
-      };
-      while (bwv < 320 && !fitsAt(bwv)) bwv = Math.min(320, bwv + 20);
-      var wv = bwv + MARGIN * 2;
-      var tbv = titleBlock(title, wv);
-      var vgap = 26, y = tbv.h + 6;
-      var hs = [];
-      for (i = 0; i < n; i++) {
-        var ln = wrap(items[i], bwv - 28, NODE_SIZE, 700, 3);
-        boxes[i].lines = ln;
-        hs.push(Math.max(36, 16 + ln.length * NODE_SIZE * 1.32));
+      if (hit * 2 < items.length || nd * 2 < items.length) return null;
+      return got;
+    }
+    function iconOne(text) {
+      var I = typeof window !== 'undefined' ? window.SFIcons : null;
+      if (!I) return '';
+      try { return I.match(text, CUR_SUBJ) || ''; } catch (e) { return ''; }
+    }
+    function nodeDisc(cx, cy, r, icon, mark, focal) {
+      var c = focal ? FOCAL : DISC;
+      var out = '<circle cx="' + r1(cx) + '" cy="' + r1(cy) + '" r="' + r1(r) + '" fill="' + c.f +
+        '" stroke="' + c.s + '" stroke-width="1.5"/>';
+      if (icon && typeof window !== 'undefined' && window.SFIcons) {
+        out += window.SFIcons.markup(icon, cx, cy, r * 1.22, focal ? '#ffffff' : ICON_INK,
+                                     focal ? '#ffffff' : ICON_TINT, focal ? 0.35 : 0.3);
+      } else if (mark === '.') {
+        /* A stage the words name no picture for, among stages that have one:
+           a dot, so the disc reads as a node and not as a hole. */
+        out += '<circle cx="' + r1(cx) + '" cy="' + r1(cy) + '" r="' + r1(Math.max(3.5, r * 0.22)) + '" fill="' + BRAND + '"/>';
+      } else if (mark) {
+        var ms = Math.max(SUB_SIZE + 1, Math.round(r * 0.72));
+        out += T(cx, cy + ms * 0.36, mark, { size: ms, weight: 700, fill: focal ? '#ffffff' : TONE.t });
       }
-      var hv = y;
-      for (i = 0; i < n; i++) hv += hs[i] + (i < n - 1 ? vgap : 0);
-      hv += MARGIN;
-      var out = open(wv, hv) + tbv.svg;
-      for (i = 0; i < n; i++) {
-        var cc = pal(i, n);
-        out += roundRect(MARGIN, y, bwv, hs[i], 9, cc);
-        out += multiT(MARGIN + bwv / 2, y + hs[i] / 2, boxes[i].lines,
-          { size: NODE_SIZE, weight: 700, fill: cc.t });
-        if (i < n - 1) out += arrow(wv / 2, y + hs[i] + 4, wv / 2, y + hs[i] + vgap - 4);
-        y += hs[i] + vgap;
-      }
-      return out + '</svg>';
+      return out;
+    }
+    /* Whether wrap() kept every word: it cuts with an ellipsis rather than
+       drop words silently, and a layout that can choose another shape should
+       choose it rather than show the cut. */
+    function whole(lines, text) {
+      return lines.join(' ') === String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
     }
 
-    /* Repeating loop: nodes on a ring, arrows curving between them. */
+    /* Ordered steps, down the card: a disc per step on a rail of arrows, and
+       the step itself in full beside it, at a size a phone can read. The
+       boxes this replaced held the words at 12pt in a column 170 units wide
+       and wrapped them into fragments; the words now get the width of the
+       card. `loop` sends an arrow from the last step back round to the first,
+       which is how a cycle of sentences is drawn - see buildCycle. */
+    function stackRows(title, items, loop) {
+      var n = items.length, i, ic = iconsFor(items);
+      var W = MAX_W - 20, R = 20, LS = NODE_SIZE + 1, lh = LS * 1.3;
+      var lane = MARGIN + 4;                        // where a loop's return arrow runs
+      var DX = (loop ? lane + 14 : MARGIN) + R + 2, TX = DX + R + 14, TW = W - TX - MARGIN;
+      var tb = titleBlock(title, W), y = tb.h + 6, rows = [];
+      for (i = 0; i < n; i++) {
+        var ln = wrap(items[i], TW - 18, LS, 600, 3);
+        var hR = Math.max(2 * R + 12, ln.length * lh + 20);
+        rows.push({ lines: ln, y: y, h: hR, cy: y + hR / 2 });
+        y += hR + 12;
+      }
+      var H = y - 12 + MARGIN;
+      var svg = open(W, H) + tb.svg;
+      for (i = 0; i < n; i++) {
+        var rw = rows[i];
+        svg += '<rect x="' + r1(TX - 8) + '" y="' + r1(rw.y) + '" width="' + r1(W - MARGIN - TX + 8) +
+          '" height="' + r1(rw.h) + '" rx="12" fill="#f6f8fe" stroke="#e1e8fa" stroke-width="1"/>';
+        svg += multiT(TX + 4, rw.cy, rw.lines, { size: LS, weight: 600, fill: INK, anchor: 'start' });
+        svg += nodeDisc(DX, rw.cy, R, ic && ic[i], ic && ic[i] ? '' : (loop ? '' : String(i + 1)));
+        if (i < n - 1) svg += arrow(DX, rw.cy + R + 4, DX, rows[i + 1].cy - R - 5);
+      }
+      if (loop && n > 1) {
+        var y0 = rows[0].cy, y1 = rows[n - 1].cy, xs = DX - R - 3, k = 9;
+        svg += '<path d="M' + r1(xs) + ' ' + r1(y1) + ' H' + r1(lane + k) + ' Q' + r1(lane) + ' ' + r1(y1) +
+          ' ' + r1(lane) + ' ' + r1(y1 - k) + ' V' + r1(y0 + k) + ' Q' + r1(lane) + ' ' + r1(y0) + ' ' +
+          r1(lane + k) + ' ' + r1(y0) + ' H' + r1(xs - 3) + '" fill="none" stroke="' + LINK +
+          '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#' + AID + ')"/>';
+      }
+      return svg + '</svg>';
+    }
+
+    /* Sequential process: across for two or three short steps - a row reads
+       faster than a column - and down the card otherwise. Across only when
+       every step fits its slot whole. */
+    function buildFlow(title, items) {
+      var n = items.length, i;
+      if (n <= 3) {
+        var W = MAX_W - 20, LS = NODE_SIZE + 0.5, lh = LS * 1.3;
+        var slot = (W - MARGIN * 2) / n, rowsA = [], fits = true, maxL = 1;
+        for (i = 0; i < n; i++) {
+          var lnA = wrap(items[i], slot - 18, LS, 650, 3);
+          if (!whole(lnA, items[i])) fits = false;
+          rowsA.push(lnA);
+          maxL = Math.max(maxL, lnA.length);
+        }
+        if (fits) {
+          var ic = iconsFor(items), R = 25;
+          var tbA = titleBlock(title, W), cyA = tbA.h + 8 + R;
+          var hA = cyA + R + 14 + maxL * lh + MARGIN - 6;
+          var svgA = open(W, hA) + tbA.svg;
+          for (i = 0; i < n; i++) {
+            var xA = MARGIN + slot * (i + 0.5);
+            svgA += nodeDisc(xA, cyA, R, ic && ic[i], ic && ic[i] ? '' : String(i + 1));
+            if (i < n - 1) svgA += arrow(xA + R + 6, cyA, xA + slot - R - 8, cyA);
+            svgA += multiT(xA, cyA + R + 12 + (rowsA[i].length - 1) * lh / 2 + LS * 0.35, rowsA[i],
+              { size: LS, weight: 650, fill: INK });
+          }
+          return svgA + '</svg>';
+        }
+      }
+      return stackRows(title, items, false);
+    }
+
+    /* Repeating loop. A RING when the labels are short enough to sit round it
+       whole - "Evaporation, Condensation, Precipitation, Collection" - with
+       the stages on it and the arrows running along it. Steps written as
+       sentences never fit a ring at a size a phone can read (the old ring
+       drew them in 128-unit boxes on a 400-unit circle, at 6px on a phone),
+       so those are stacked like a flow with one arrow running from the last
+       back round to the first: still a loop, and every word whole. */
     function buildCycle(title, items) {
       var n = items.length, i;
-      if (n < 3) return buildFlow(title, items);   // a ring of two is just an arrow
-      var padX = 11, maxNodeW = 128;
-      var boxes = [], sum = 0;
-      for (i = 0; i < n; i++) {
-        /* Three lines, as a flow node has. At two, a step written as a
-           sentence could not fit a ring node however it was worded, and the
-           wrap cut it mid-word. */
-        var ln = wrap(items[i], maxNodeW - padX * 2, NODE_SIZE, 700, 3);
-        var bw = Math.max(58, Math.min(maxNodeW, widestLine(ln, NODE_SIZE, 700) + padX * 2));
-        var bh = Math.max(30, 12 + ln.length * NODE_SIZE * 1.32);
-        boxes.push({ lines: ln, w: bw, h: bh });
-        sum += bw;
+      if (n < 3) return buildFlow(title, items);
+      if (n > 6) return stackRows(title, items, true);
+      var ic = iconsFor(items);
+      /* Discs big enough for a picture when there are pictures; otherwise a
+         small solid node, rather than a ring of empty circles. */
+      var W = MAX_W, RR = n <= 4 ? 74 : 84, r = ic ? 22 : 10, LS = NODE_SIZE + 0.5, lh = LS * 1.28;
+      var nodes = [], ok = true;
+      for (i = 0; i < n && ok; i++) {
+        /* An even ring is turned half a step, so no stage sits alone at the
+           top - a cycle has no first stage. */
+        var a = -Math.PI / 2 + i * 2 * Math.PI / n + (n % 2 === 0 ? Math.PI / n : 0);
+        var c = Math.cos(a), s = Math.sin(a), side = Math.abs(c) >= 0.3;
+        var lw = side ? W / 2 - RR * Math.abs(c) - r - 12 - MARGIN : 150;
+        var ln = wrap(items[i], lw, LS, 650, 2);
+        if (lw < 64 || !whole(ln, items[i])) ok = false;
+        nodes.push({ a: a, c: c, s: s, side: side, lines: ln, x: RR * c, y: RR * s });
       }
-      var maxW = 0, maxH = 0;
-      for (i = 0; i < n; i++) { maxW = Math.max(maxW, boxes[i].w); maxH = Math.max(maxH, boxes[i].h); }
-
-      /* Ring big enough that no two boxes can touch. Two constraints matter:
-         the whole circumference must hold every box, and the chord between two
-         neighbours must exceed the widest box (the binding case at the bottom
-         of the ring, where neighbours sit side by side). */
-      var chordNeed = Math.max(maxW, maxH) + 26;
-      var sinStep = Math.sin(Math.PI / Math.max(2, n));
-      var cosHalf = Math.max(0.25, Math.cos(Math.PI / Math.max(2, n)));
-      var ARC_CLEAR = 34;   // room the connector arc needs inside the ring
-      var R = Math.max(
-        88,
-        (sum + n * 28) / (2 * Math.PI),
-        chordNeed / (2 * Math.max(0.18, sinStep)),
-        (ARC_CLEAR + maxH / 2 + 14) / cosHalf
-      );
-      /* Lay the ring out around (0,0) first, measure what it actually occupies,
-         then size the canvas to that — a square based on R alone would leave a
-         band of dead space above and below, where the boxes are narrowest. */
-      var minX = 0, minY = 0, maxX = 0, maxY = 0, ang;
+      if (!ok) return stackRows(title, items, true);
+      /* Lay it out around (0,0), measure what it occupies, then size the
+         canvas to that rather than to a square on the ring. */
+      var minY = -RR - r, maxY = RR + r;
       for (i = 0; i < n; i++) {
-        ang = -Math.PI / 2 + i * 2 * Math.PI / n;
-        var px = R * Math.cos(ang), py = R * Math.sin(ang);
-        minX = Math.min(minX, px - boxes[i].w / 2); maxX = Math.max(maxX, px + boxes[i].w / 2);
-        minY = Math.min(minY, py - boxes[i].h / 2); maxY = Math.max(maxY, py + boxes[i].h / 2);
+        var q = nodes[i], th = q.lines.length * lh;
+        if (q.side) { q.ly = q.y - (q.lines.length - 1) * lh / 2; minY = Math.min(minY, q.y - th / 2 - 4); maxY = Math.max(maxY, q.y + th / 2 + 4); }
+        else if (q.s < 0) { q.ly = q.y - r - 10 - (q.lines.length - 1) * lh; minY = Math.min(minY, q.ly - LS); }
+        else { q.ly = q.y + r + 8 + LS * 0.8; maxY = Math.max(maxY, q.ly + (q.lines.length - 1) * lh + 6); }
       }
-      var wC = (maxX - minX) + MARGIN * 2;
-      var tb = titleBlock(title, wC);
-      var cx = -minX + MARGIN, cy = tb.h + (-minY) + MARGIN;
-      var h = tb.h + (maxY - minY) + MARGIN * 2;
-      var svg = open(wC, h) + tb.svg;
-
-      var pts = [], a;
+      var tb = titleBlock(title, W), cx = W / 2, cy = tb.h + 8 - minY;
+      var H = cy + maxY + MARGIN;
+      var svg = open(W, H) + tb.svg;
+      /* The track first, faint: the loop is the shape of the idea. */
+      svg += '<circle cx="' + r1(cx) + '" cy="' + r1(cy) + '" r="' + RR + '" fill="none" stroke="' + TINTS[2] +
+        '" stroke-width="9"/>';
+      var mid = iconOne(title) || 'repeat';
+      var hole = RR - Math.max(r, 16) - 14;
+      svg += '<circle cx="' + r1(cx) + '" cy="' + r1(cy) + '" r="' + r1(hole) + '" fill="' + TINTS[0] + '"/>';
+      if (typeof window !== 'undefined' && window.SFIcons) {
+        svg += window.SFIcons.markup(mid, cx, cy, Math.min(48, hole * 1.25), TONE.s, TONE.s, 0.25);
+      }
+      var pad = Math.asin(Math.min(0.95, (r + 7) / RR));
       for (i = 0; i < n; i++) {
-        a = -Math.PI / 2 + i * 2 * Math.PI / n;
-        pts.push({ a: a, x: cx + R * Math.cos(a), y: cy + R * Math.sin(a) });
+        var p = nodes[i], nx = nodes[(i + 1) % n];
+        if (ic) svg += nodeDisc(cx + p.x, cy + p.y, r, ic[i], '.');
+        else svg += '<circle cx="' + r1(cx + p.x) + '" cy="' + r1(cy + p.y) + '" r="' + r + '" fill="' + BRAND +
+          '" stroke="#ffffff" stroke-width="3"/>';
+        var a0 = p.a + pad, a1 = nx.a - pad;
+        if (a1 < a0) a1 += 2 * Math.PI;
+        svg += '<path d="M' + r1(cx + RR * Math.cos(a0)) + ' ' + r1(cy + RR * Math.sin(a0)) + ' A' + RR + ' ' + RR +
+          ' 0 0 1 ' + r1(cx + RR * Math.cos(a1)) + ' ' + r1(cy + RR * Math.sin(a1)) + '" fill="none" stroke="' +
+          LINK + '" stroke-width="2" stroke-linecap="round" marker-end="url(#' + AID + ')"/>';
       }
-      /* Connectors run along the node ring itself, through the gap between one
-         box and the next.
-
-         They used to be drawn on a much smaller ring:
-           Rin = R * cos(pi/n) - maxH/2 - 14
-         which for four nodes put the arcs at roughly a third of the node
-         radius. The result was four short arrows floating near the middle of
-         the diagram, touching nothing - the ring read as four labels with some
-         marks between them rather than as a cycle.
-
-         Each end is set back by the angle that box subtends at the centre, so
-         the arrow starts and finishes clear of the boxes instead of under
-         them. R already guarantees a gap: chordNeed keeps neighbouring boxes
-         at least maxW + 26 apart. */
-      if (n > 1) {
-        var Rarc = R;
-        var halfAng = [];
-        for (i = 0; i < n; i++) {
-          var reach = Math.sqrt(boxes[i].w * boxes[i].w + boxes[i].h * boxes[i].h) / 2 + 7;
-          halfAng.push(Math.atan2(Math.min(reach, R * 0.92), R));
+      for (i = 0; i < n; i++) {
+        var L = nodes[i], anchor = !L.side ? 'middle' : (L.c > 0 ? 'start' : 'end');
+        var lx = cx + L.x + (!L.side ? 0 : (L.c > 0 ? r + 10 : -r - 10));
+        for (var j = 0; j < L.lines.length; j++) {
+          svg += T(lx, cy + L.ly + j * lh + (L.side ? LS * 0.35 : 0), L.lines[j], { size: LS, weight: 650, fill: INK, anchor: anchor });
         }
-        var stepA = 2 * Math.PI / n;
-        for (i = 0; i < n; i++) {
-          var j = (i + 1) % n;
-          var pad0 = halfAng[i], pad1 = halfAng[j];
-          /* Keep a drawable arc even when the boxes are wide: give back the
-             padding proportionally rather than dropping the arrow. */
-          var span = stepA - pad0 - pad1;
-          if (span < 0.16) {
-            var give = (0.16 - span) / 2;
-            pad0 = Math.max(0.04, pad0 - give);
-            pad1 = Math.max(0.04, pad1 - give);
-          }
-          var a0 = pts[i].a + pad0, a1 = pts[j].a - pad1;
-          if (a1 < a0) a1 += 2 * Math.PI;
-          if (a1 - a0 < 0.06) continue;
-          var sx = cx + Rarc * Math.cos(a0), sy = cy + Rarc * Math.sin(a0);
-          var ex = cx + Rarc * Math.cos(a1), ey = cy + Rarc * Math.sin(a1);
-          svg += '<path d="M' + r1(sx) + ' ' + r1(sy) + ' A' + r1(Rarc) + ' ' + r1(Rarc) +
-            ' 0 0 1 ' + r1(ex) + ' ' + r1(ey) + '" fill="none" stroke="' + LINK +
-            '" stroke-width="1.8" stroke-linecap="round" marker-end="url(#' + AID + ')"/>';
-        }
-      }
-      for (i = 0; i < n; i++) {
-        /* One tint: a cycle has no first step, so nothing may look first. */
-        var c = pal(), b = boxes[i];
-        svg += roundRect(pts[i].x - b.w / 2, pts[i].y - b.h / 2, b.w, b.h, 9, c);
-        svg += multiT(pts[i].x, pts[i].y, b.lines, { size: NODE_SIZE, weight: 700, fill: c.t });
       }
       return svg + '</svg>';
     }
@@ -11076,7 +11884,12 @@
       }
       var useDates = dated * 2 >= n;
 
-      var SZ = SUB_SIZE + 1, DSZ = NODE_SIZE + 0.5, i2;
+      var SZ = SUB_SIZE + 1.5, DSZ = NODE_SIZE + 1, i2;
+      /* Each event gets the picture its words name - a war, a tax, a treaty -
+         on the rail where the plain dot was. */
+      var evText = [];
+      for (i = 0; i < n; i++) evText.push(rows[i].text);
+      var tic = iconsFor(evText);
 
       /* Across, when it fits. */
       if (n <= 3) {
@@ -11090,7 +11903,8 @@
             hMax = Math.max(hMax, lnA.length);
           }
           var axisY = tbA.h + 14 + (useDates ? DSZ + 12 : 6);
-          var hA = axisY + 16 + hMax * SZ * 1.3 + MARGIN;
+          if (tic) axisY += 12;
+          var hA = axisY + (tic ? 28 : 16) + hMax * SZ * 1.3 + MARGIN;
           var svgA = open(wA, hA) + tbA.svg;
           svgA += '<line x1="' + MARGIN + '" y1="' + r1(axisY) + '" x2="' + r1(wA - MARGIN) + '" y2="' + r1(axisY) +
             '" stroke="' + TINTS[4] + '" stroke-width="3" stroke-linecap="round"/>';
@@ -11099,10 +11913,11 @@
             if (useDates && rows[i].date) {
               svgA += T(xA, axisY - 13, rows[i].date, { size: DSZ, weight: 700, fill: FOCAL.s });
             }
-            svgA += '<circle cx="' + r1(xA) + '" cy="' + r1(axisY) + '" r="5.5" fill="#ffffff" stroke="' +
+            if (tic) svgA += nodeDisc(xA, axisY, 17, tic[i], '.');
+            else svgA += '<circle cx="' + r1(xA) + '" cy="' + r1(axisY) + '" r="5.5" fill="#ffffff" stroke="' +
               BRAND + '" stroke-width="2.6"/>';
             for (i2 = 0; i2 < mk[i].length; i2++) {
-              svgA += T(xA, axisY + 22 + i2 * SZ * 1.3, mk[i][i2], { size: SZ, weight: 600, fill: INK });
+              svgA += T(xA, axisY + (tic ? 34 : 22) + i2 * SZ * 1.3, mk[i][i2], { size: SZ, weight: 600, fill: INK });
             }
           }
           return svgA + '</svg>';
@@ -11110,7 +11925,7 @@
       }
 
       /* Down. */
-      var railX = MARGIN + 7, dateX = railX + 16, dateW = 0;
+      var railX = MARGIN + (tic ? 17 : 7), dateX = railX + (tic ? 28 : 16), dateW = 0;
       if (useDates) {
         for (i = 0; i < n; i++) dateW = Math.max(dateW, measure(rows[i].date, DSZ, 700));
         dateW += 12;
@@ -11148,7 +11963,7 @@
       var y = tb.h + 12, ys = [];
       for (i = 0; i < n; i++) {
         ys.push(y);
-        var need = Math.max(30, laid[i].length * lh + 14);
+        var need = Math.max(tic ? 40 : 30, laid[i].length * lh + 14);
         var extra = 6;
         if (timed && i < n - 1) extra = 36 * Math.sqrt((years[i + 1] - years[i]) / maxDiff);
         y += need + extra;
@@ -11160,7 +11975,8 @@
         '" stroke="' + TINTS[4] + '" stroke-width="3" stroke-linecap="round"/>';
       for (i = 0; i < n; i++) {
         var base = ys[i] + SZ * 0.8;
-        svg += '<circle cx="' + r1(railX) + '" cy="' + r1(ys[i] + SZ * 0.45) + '" r="5.5" fill="#ffffff" stroke="' +
+        if (tic) svg += nodeDisc(railX, ys[i] + SZ * 0.45 + 4, 15, tic[i], '.');
+        else svg += '<circle cx="' + r1(railX) + '" cy="' + r1(ys[i] + SZ * 0.45) + '" r="5.5" fill="#ffffff" stroke="' +
           BRAND + '" stroke-width="2.6"/>';
         if (useDates && rows[i].date) {
           svg += T(dateX, base, rows[i].date, { size: DSZ, weight: 700, fill: FOCAL.s, anchor: 'start' });
@@ -11172,117 +11988,127 @@
       return svg + '</svg>';
     }
 
-    /* A whole and its named components. */
-    function buildParts(title, center, items) {
-      /* Labels on LEADER LINES, the way a textbook labels a drawing.
+    /* A topic and the ideas around it, or a whole and its parts. The topic is
+       the one solid mark, in the middle; each idea is a disc on a spoke with
+       its picture, and its name under it in type a phone can read.
 
-         Each part used to sit in its own coloured pill, joined to a grey
-         ellipse by a dashed line in the pill's colour - four hues and four
-         boxes around a blob. It read as a mind map, not as a thing with parts.
-         Now the whole is the one tinted shape on the card and each part is a
-         name with a thin line running INTO it, ending on a dot. */
-      var n = items.length, i;
-      var LSZ = SUB_SIZE + 1, lh = LSZ * 1.25, colW = 100, gapX = 20;
-      var perSide = Math.ceil(n / 2);
-      var labs = [];
-      for (i = 0; i < n; i++) labs.push(wrap(items[i], colW, LSZ, 700, 2));
-      var cl = wrap(center, 124, NODE_SIZE + 1, 700, 3);
-      var rx = Math.max(62, widestLine(cl, NODE_SIZE + 1, 700) / 2 + 22);
-      var rowH = 40;
-      var bodyH = Math.max(112, perSide * rowH + 16);
-      var ry = Math.max(46, bodyH / 2 - 6);
-      var w = MARGIN * 2 + colW * 2 + gapX * 2 + rx * 2;
-      var tb = titleBlock(title, w);
-      var top = tb.h + 4;
-      var h = top + bodyH + 6;
-      var cx = w / 2, cy = top + bodyH / 2;
-      var svg = open(w, h) + tb.svg;
-
-      svg += '<ellipse cx="' + r1(cx) + '" cy="' + r1(cy) + '" rx="' + r1(rx) + '" ry="' + r1(ry) +
-        '" fill="' + TINTS[2] + '" stroke="' + BRAND + '" stroke-width="1.6"/>';
-      svg += multiT(cx, cy, cl, { size: NODE_SIZE + 1, weight: 700, fill: TONE.t });
-
-      for (i = 0; i < n; i++) {
-        var isLeft = i % 2 === 0;
-        var idx = Math.floor(i / 2);
-        var count = isLeft ? perSide : n - perSide;
-        var ty = cy - (count - 1) * rowH / 2 + idx * rowH;
-        var lines = labs[i];
-        var lx = isLeft ? MARGIN + colW : w - MARGIN - colW;
-        svg += multiT(lx, ty, lines, { size: LSZ, weight: 700, fill: INK, anchor: isLeft ? 'end' : 'start' });
-
-        /* The line ends INSIDE the whole, on a dot, pointing at the part -
-           not on the outline, which would name the edge. Aimed at the point
-           of the ellipse level with the label so the leaders fan out. */
-        var dyN = Math.max(-0.85, Math.min(0.85, (ty - cy) / ry));
-        var ex = cx + (isLeft ? -1 : 1) * rx * Math.sqrt(1 - dyN * dyN) * 0.8;
-        var ey = cy + dyN * ry * 0.8;
-        var sx = isLeft ? lx + 7 : lx - 7;
-        svg += '<line x1="' + r1(sx) + '" y1="' + r1(ty) + '" x2="' + r1(ex) + '" y2="' + r1(ey) +
-          '" stroke="' + INK + '" stroke-opacity=".55" stroke-width="1.1"/>';
-        svg += '<circle cx="' + r1(ex) + '" cy="' + r1(ey) + '" r="2.8" fill="' + INK + '"/>';
-      }
-      return svg + '</svg>';
-    }
-
-    /* A central idea with related ideas at the ends of its spokes. */
-    function buildConcept(title, center, items) {
-      /* The hub is the one focal mark - solid blue, white type - and the
-         related ideas sit at the ends of the spokes as plain labels beside a
-         dot. They were coloured pills in rotating hues, which made the five
-         things around a topic look like five different kinds of thing.
-
-         The hub may take three lines: at two, "Causes of the French
-         Revolution" was cut to "Causes of the / French", and nothing said so. */
-      var n = items.length, i;
-      var LSZ = SUB_SIZE + 1, lh = LSZ * 1.25;
-      var cl = wrap(center, 122, NODE_SIZE + 1, 700, 3);
-      var crx = Math.max(54, widestLine(cl, NODE_SIZE + 1, 700) / 2 + 18);
-      var cry = Math.max(30, cl.length * (NODE_SIZE + 1) * 1.3 / 2 + 13);
-
-      function layout(R, LW) {
-        var L = [], mnX = -crx, mxX = crx, mnY = -cry, mxY = cry, k;
-        for (k = 0; k < n; k++) {
-          var a = -Math.PI / 2 + k * 2 * Math.PI / n;
-          var dx = Math.cos(a), dy = Math.sin(a);
-          var px = R * dx, py = R * 0.8 * dy;
-          var ln = wrap(items[k], LW, LSZ, 700, 2);
-          var tw = widestLine(ln, LSZ, 700), th = ln.length * lh;
-          var anchor, tx, ty;
-          if (dx > 0.3) { anchor = 'start'; tx = px + 9; ty = py; }
-          else if (dx < -0.3) { anchor = 'end'; tx = px - 9; ty = py; }
-          else { anchor = 'middle'; tx = px; ty = dy < 0 ? py - 10 - th / 2 : py + 10 + th / 2; }
-          var x0 = anchor === 'start' ? tx : (anchor === 'end' ? tx - tw : tx - tw / 2);
-          mnX = Math.min(mnX, x0, px - 5); mxX = Math.max(mxX, x0 + tw, px + 5);
-          mnY = Math.min(mnY, ty - th / 2 - 2, py - 5); mxY = Math.max(mxY, ty + th / 2 + 2, py + 5);
-          L.push({ a: a, px: px, py: py, lines: ln, anchor: anchor, tx: tx, ty: ty });
+       It used to be a blue ellipse with dots at the ends of its spokes and the
+       names in small type beside the dots - on a phone, a blob with a few
+       words round it (a lesson on the parts of a cell got four 9px words and
+       the word "Organelles"). Parts used to be labels on leader lines into an
+       ellipse; a leader line says WHERE a part is, and an ellipse has no
+       where, so both are drawn the same honest way now. */
+    function buildHub(title, center, items) {
+      var n = Math.min(items.length, 6), i, k;
+      items = items.slice(0, n);
+      var ic = iconsFor(items), hubIcon = iconOne(center);
+      /* Discs for pictures; small solid nodes when no idea names one. An
+         initial letter in each disc was tried and read as a row of avatars -
+         and "Petal, Stamen, Pistil, Sepal" came out P, S, S, P. */
+      var W = MAX_W - 20, r = ic ? 23 : 10, LS = NODE_SIZE + 0.5, lh = LS * 1.28;
+      var LW = n >= 5 ? 104 : 116, labs = [];
+      for (i = 0; i < n; i++) labs.push(wrap(items[i], LW, LS, 650, 3));
+      var HS = NODE_SIZE + 1, cl = wrap(center, 150, HS, 700, 2);
+      var pw = Math.max(92, Math.min(W - MARGIN * 2, widestLine(cl, HS, 700) + 34 + (hubIcon ? 30 : 0)));
+      var ph = Math.max(42, cl.length * HS * 1.3 + 20);
+      var RX = Math.min(W / 2 - MARGIN - LW / 2, Math.max(pw / 2 + r + 26, 116));
+      var RY = n <= 4 ? 90 : 100, pos, tries;
+      function place(ry) {
+        var P = [], j;
+        for (j = 0; j < n; j++) {
+          var a = n === 2 ? (j === 0 ? Math.PI : 0) : -Math.PI / 2 + j * 2 * Math.PI / n;
+          var x = RX * Math.cos(a), y = ry * Math.sin(a), th = labs[j].length * lh;
+          /* Names of the ideas above the hub go above their disc: the spoke
+             runs up from the hub into the disc's underside, and a name hung
+             below it was struck through. */
+          var up = Math.sin(a) < -0.3;
+          /* Two ideas sit either side of the topic in one row, their names
+             on the outside: "la cocina - Food and the kitchen - el pan".
+             Hung underneath, they left the card half empty. */
+          if (n === 2) { P.push({ a: a, x: x, y: y, side: true, top: -th / 2, bot: th / 2 }); continue; }
+          P.push({ a: a, x: x, y: y, up: up,
+                   top: up ? y - r - 8 - th : y + r + 4, bot: up ? y - r - 4 : y + r + 8 + th });
         }
-        return { L: L, minX: mnX, maxX: mxX, minY: mnY, maxY: mxY };
+        return P;
       }
-      /* Narrower label columns until the whole web fits the phone-safe width. */
-      var tries = [[100, 104], [92, 94], [86, 84], [80, 76]], lay = null, t;
-      for (t = 0; t < tries.length; t++) {
-        lay = layout(Math.max(tries[t][0], crx + 34), tries[t][1]);
-        if (lay.maxX - lay.minX + MARGIN * 2 <= MAX_W) break;
+      /* Push the ring taller until no name lands on another disc, another
+         name or the hub. */
+      for (tries = 0; tries < 8; tries++) {
+        pos = place(RY);
+        var clash = false;
+        for (i = 0; i < n && !clash; i++) {
+          var A = pos[i];
+          if (Math.abs(A.x) < LW / 2 + pw / 2 && A.bot > -ph / 2 - 4 && A.top < ph / 2 + 4) clash = true;
+          for (k = 0; k < n && !clash; k++) {
+            if (i === k) continue;
+            var B = pos[k];
+            if (Math.abs(A.x - B.x) < LW / 2 + r + 2 && A.bot > B.y - r - 4 && A.top < B.y + r + 4) clash = true;
+            if (Math.abs(A.x - B.x) < LW + 4 && A.bot > B.top && A.top < B.bot) clash = true;
+          }
+        }
+        if (!clash) break;
+        RY += 12;
       }
-      var w = lay.maxX - lay.minX + MARGIN * 2;
-      var tb = titleBlock(title, w);
-      var ox = MARGIN - lay.minX, oy = tb.h + 8 - lay.minY;
-      var h = oy + lay.maxY + MARGIN;
-      var svg = open(w, h) + tb.svg;
+      /* The canvas is the content's own size: two ideas either side of a
+         topic are a short row, and a full-width card round them left empty
+         bands at both ends. */
+      var minY = -ph / 2, maxY = ph / 2, minX = -pw / 2, maxX = pw / 2;
       for (i = 0; i < n; i++) {
-        var q = lay.L[i];
-        var hx = ox + crx * Math.cos(q.a), hy = oy + cry * Math.sin(q.a);
-        svg += '<line x1="' + r1(hx) + '" y1="' + r1(hy) + '" x2="' + r1(ox + q.px) + '" y2="' + r1(oy + q.py) +
-          '" stroke="' + LINK + '" stroke-width="1.5"/>';
-        svg += '<circle cx="' + r1(ox + q.px) + '" cy="' + r1(oy + q.py) + '" r="4" fill="' + BRAND + '"/>';
-        svg += multiT(ox + q.tx, oy + q.ty, q.lines, { size: LSZ, weight: 700, fill: INK, anchor: q.anchor });
+        var lwI = widestLine(labs[i], LS, 650), half = Math.max(r, lwI / 2);
+        if (pos[i].side) {
+          var outer = r + 8 + lwI;
+          minX = Math.min(minX, pos[i].x < 0 ? pos[i].x - outer : pos[i].x - r);
+          maxX = Math.max(maxX, pos[i].x > 0 ? pos[i].x + outer : pos[i].x + r);
+          minY = Math.min(minY, pos[i].top - 2, -r); maxY = Math.max(maxY, pos[i].bot, r);
+          continue;
+        }
+        minX = Math.min(minX, pos[i].x - half); maxX = Math.max(maxX, pos[i].x + half);
+        minY = Math.min(minY, pos[i].y - r, pos[i].top); maxY = Math.max(maxY, pos[i].bot, pos[i].y + r);
       }
-      svg += '<ellipse cx="' + r1(ox) + '" cy="' + r1(oy) + '" rx="' + r1(crx) + '" ry="' + r1(cry) +
-        '" fill="' + FOCAL.f + '"/>';
-      svg += multiT(ox, oy, cl, { size: NODE_SIZE + 1, weight: 700, fill: FOCAL.t });
+      var Wc = Math.min(W, Math.ceil(maxX - minX + MARGIN * 2));
+      var tb = titleBlock(title, Wc), cx = Wc < W ? MARGIN - minX : W / 2;
+      var cy = tb.h + (title ? 10 : 4) - minY, H = cy + maxY + (n === 2 ? 6 : MARGIN - 4);
+      W = Wc;
+      var svg = open(W, H) + tb.svg;
+
+      /* The hub first, then each idea: spoke, disc, name - so a picture that
+         draws itself grows outward from the topic. */
+      svg += '<rect x="' + r1(cx - pw / 2) + '" y="' + r1(cy - ph / 2) + '" width="' + r1(pw) + '" height="' + r1(ph) +
+        '" rx="' + r1(Math.min(ph / 2, 22)) + '" fill="' + FOCAL.f + '"/>';
+      var tcx = cx;
+      if (hubIcon && typeof window !== 'undefined' && window.SFIcons) {
+        var iw = 24, tw = widestLine(cl, HS, 700), left = cx - (iw + 8 + tw) / 2;
+        svg += window.SFIcons.markup(hubIcon, left + iw / 2, cy, iw, '#ffffff', '#ffffff', 0.35);
+        tcx = left + iw + 8 + tw / 2;
+      }
+      svg += multiT(tcx, cy, cl, { size: HS, weight: 700, fill: FOCAL.t });
+      for (i = 0; i < n; i++) {
+        var q = pos[i], dx = Math.cos(q.a), dy = Math.sin(q.a);
+        var ux = q.x, uy = q.y, len = Math.sqrt(ux * ux + uy * uy) || 1;
+        var t0 = Math.min(Math.abs(dx) > 1e-6 ? (pw / 2) / Math.abs(ux / len) : 1e9,
+                          Math.abs(dy) > 1e-6 ? (ph / 2) / Math.abs(uy / len) : 1e9);
+        var sx = cx + ux / len * (t0 + 3), sy = cy + uy / len * (t0 + 3);
+        var ex = cx + ux - ux / len * (r + 3), ey = cy + uy - uy / len * (r + 3);
+        if (len - (r + 3) > t0 + 6) {
+          svg += '<line x1="' + r1(sx) + '" y1="' + r1(sy) + '" x2="' + r1(ex) + '" y2="' + r1(ey) +
+            '" stroke="' + LINK + '" stroke-width="1.6" stroke-linecap="round"/>';
+        }
+        if (ic) svg += nodeDisc(cx + q.x, cy + q.y, r, ic[i], '.');
+        else svg += '<circle cx="' + r1(cx + q.x) + '" cy="' + r1(cy + q.y) + '" r="' + r + '" fill="' + BRAND +
+          '" stroke="#ffffff" stroke-width="3"/>';
+        for (k = 0; k < labs[i].length; k++) {
+          if (q.side) {
+            svg += T(cx + q.x + (q.x < 0 ? -(r + 8) : r + 8), cy + q.top + LS * 0.95 + k * lh - 2, labs[i][k],
+              { size: LS, weight: 650, fill: INK, anchor: q.x < 0 ? 'end' : 'start' });
+          } else {
+            svg += T(cx + q.x, cy + q.top + (q.up ? LS * 0.85 : LS * 0.95) + k * lh, labs[i][k], { size: LS, weight: 650, fill: INK });
+          }
+        }
+      }
       return svg + '</svg>';
     }
+    function buildParts(title, center, items) { return buildHub(title, center, items); }
+    function buildConcept(title, center, items) { return buildHub(title, center, items); }
 
     /* A number pulled off the end of a label: "Oxygen: 21", "Nitrogen 78%". */
     function valueOf(item) {
@@ -11646,6 +12472,7 @@
      */
     function fromSpec(spec) {
       if (!spec || typeof spec !== 'object') return null;
+      CUR_SUBJ = String(spec.subject || '').toLowerCase();
       var layout = String(spec.layout || spec.type || '').toLowerCase();
       var title = clean(spec.title || spec.label || '');
       var items = [], i;
@@ -11736,6 +12563,7 @@
      * Returns null when there isn't enough structure to draw something honest.
      */
     function forTopic(desc) {
+      CUR_SUBJ = '';
       var items = extractItems(desc);
       var title = topicOf(desc);
       if (items.length < 2) return null;
@@ -11876,7 +12704,18 @@
       return t;
     }
 
-    var KINDS = { rect: 1, circle: 1, ellipse: 1, line: 1, path: 1, poly: 1, text: 1 };
+    var KINDS = { rect: 1, circle: 1, ellipse: 1, line: 1, path: 1, poly: 1, text: 1, icon: 1 };
+
+    /* An icon's colour is one of the hues; it is drawn with that hue's dark
+       ink for the outline and the hue itself, pale, inside. Neutral names
+       (ink, muted) draw in ink and grey. */
+    var ICON_HUES = { blue: 1, green: 1, red: 1, violet: 1, teal: 1, amber: 1, pink: 1 };
+    function iconColours(v) {
+      var k = String(v == null ? '' : v).trim().replace(/(?:Fill|Ink)$/, '');
+      if (ICON_HUES[k]) return { ink: PAINT[k + 'Ink'], tint: PAINT[k] };
+      if (k === 'ink' || k === 'muted') return { ink: PAINT.ink, tint: PAINT.muted };
+      return { ink: PAINT.blueInk, tint: PAINT.blue };
+    }
 
     /**
      * spec -> svg string, or null.
@@ -11948,6 +12787,21 @@
           if (!/^[0-9 ,.\-]+$/.test(pts) || pts.length > 500) continue;
           body += '<polygon points="' + pts + '" fill="' + fill + '" stroke="' + stroke +
             '" stroke-width="' + r1(sw) + '" stroke-linejoin="round"' + opAttr + '/>';
+          drew++;
+        } else if (kind === 'icon') {
+          /* A ready-drawn object from sf-icons.js - the sun over a leaf, a
+             person at a lever. The model names it; the markup is ours, so
+             nothing the model wrote reaches the SVG but a name checked
+             against the list and three clamped numbers. */
+          var IC = typeof window !== 'undefined' ? window.SFIcons : null;
+          var iname = String(sh.name == null ? (sh.icon == null ? '' : sh.icon) : sh.name).trim().toLowerCase();
+          if (!IC || !/^[a-z-]{2,24}$/.test(iname) || !IC.has(iname)) continue;
+          var isz = num(sh.size || sh.r * 2, 14, Math.min(W, H) * 0.6, 36);
+          var icc = iconColours(sh.color || sh.colour || sh.fill || sh.stroke);
+          var imk = IC.markup(iname, num(sh.x, isz / 2, W - isz / 2, W / 2), num(sh.y, isz / 2, H - isz / 2, H / 2),
+                              isz, icc.ink, icc.tint, 0.3);
+          if (!imk) continue;
+          body += op < 1 ? '<g opacity="' + r1(op) + '">' + imk + '</g>' : imk;
           drew++;
         } else if (kind === 'text') {
           var t = String(sh.t == null ? (sh.text == null ? '' : sh.text) : sh.t)
@@ -12135,31 +12989,51 @@
            it regular. */
         o += '<path d="M221 46 C288 44 348 82 350 142 C352 202 292 240 221 240 C152 240 92 204 92 143 C92 82 156 48 221 46 Z" ' +
              'fill="#fef2f8" stroke="#db2777" stroke-width="2.6"/>';
-        o += '<ellipse cx="206" cy="132" rx="50" ry="42" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>';
-        o += '<circle cx="206" cy="132" r="14" fill="#7c3aed" opacity=".5"/>';
-        /* "nucleus" is labelled from OUTSIDE like everything else. It was
-           printed inside, over the nucleolus - purple on purple at 1.9:1, and
-           the one organelle every cell lesson names first. */
+        /* Redrawn (Oct 2026). The first version had one "ribosome" drawn
+           INSIDE the nucleus and its leader line ending on the nucleus's
+           edge - on a labelling card that pin would have taught the wrong
+           place - and no Golgi body, which every textbook animal cell shows.
+           Now: a nucleus with its double envelope and nucleolus, rough ER as
+           sheets wrapping it with ribosomes ON them, a Golgi stack with its
+           vesicles, two mitochondria, and free ribosomes out in the
+           cytoplasm where their leader actually ends. */
+        o += '<ellipse cx="196" cy="128" rx="46" ry="38" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>';
+        o += '<ellipse cx="196" cy="128" rx="41" ry="33" fill="none" stroke="#7c3aed" stroke-width="1" opacity=".55"/>';
+        o += '<circle cx="188" cy="124" r="12" fill="#7c3aed" opacity=".5"/>';
+        /* Rough ER: three sheets curving round the nucleus's right side,
+           ribosome dots on their outer faces. */
+        o += '<g fill="none" stroke="#0891b2" stroke-width="2.2" stroke-linecap="round">' +
+             '<path d="M248 100 Q270 128 248 160"/><path d="M258 96 Q284 128 258 166"/><path d="M268 94 Q296 128 268 172"/></g>';
+        o += '<g fill="#0e7490">' +
+             '<circle cx="283" cy="112" r="2.3"/><circle cx="287" cy="130" r="2.3"/><circle cx="283" cy="150" r="2.3"/>' +
+             '<circle cx="272" cy="113" r="2.3"/><circle cx="272" cy="147" r="2.3"/></g>';
+        /* Golgi body: a stack of flattened sacs, with vesicles budding off. */
+        o += '<g fill="none" stroke="#c2410c" stroke-width="3.4" stroke-linecap="round">' +
+             '<path d="M232 186 Q264 174 296 186"/><path d="M236 194 Q264 183 292 194"/>' +
+             '<path d="M240 202 Q264 192 288 202"/><path d="M244 210 Q264 201 284 210"/></g>';
+        o += '<g fill="#ffedd5" stroke="#c2410c" stroke-width="1.2">' +
+             '<circle cx="304" cy="180" r="3.6"/><circle cx="302" cy="198" r="3.6"/><circle cx="226" cy="204" r="3.2"/></g>';
         /* Two mitochondria, each with its folded inner membrane. */
         o += '<g>';
-        o += '<ellipse cx="292" cy="192" rx="30" ry="15" fill="#ffe4e6" stroke="#e11d48" stroke-width="1.8" transform="rotate(-18 292 192)"/>';
-        o += '<path d="M272 196 q8 -10 16 0 q8 10 16 -2" fill="none" stroke="#e11d48" stroke-width="1.4" transform="rotate(-18 292 192)"/>';
-        o += '<ellipse cx="146" cy="196" rx="26" ry="13" fill="#ffe4e6" stroke="#e11d48" stroke-width="1.8" transform="rotate(14 146 196)"/>';
-        o += '<path d="M130 199 q7 -9 14 0 q7 9 14 -2" fill="none" stroke="#e11d48" stroke-width="1.4" transform="rotate(14 146 196)"/>';
+        o += '<ellipse cx="200" cy="208" rx="26" ry="12" fill="#ffe4e6" stroke="#e11d48" stroke-width="1.8" transform="rotate(-8 200 208)"/>';
+        o += '<path d="M182 210 q7 -9 14 0 q7 9 14 -2" fill="none" stroke="#e11d48" stroke-width="1.4" transform="rotate(-8 200 208)"/>';
+        o += '<ellipse cx="140" cy="194" rx="26" ry="13" fill="#ffe4e6" stroke="#e11d48" stroke-width="1.8" transform="rotate(14 140 194)"/>';
+        o += '<path d="M124 197 q7 -9 14 0 q7 9 14 -2" fill="none" stroke="#e11d48" stroke-width="1.4" transform="rotate(14 140 194)"/>';
         o += '</g>';
-        /* Rough ER: folded sheets with ribosomes on them. */
-        o += '<path d="M262 86 q22 10 4 22 q-20 12 2 22" fill="none" stroke="#0891b2" stroke-width="1.8"/>';
-        o += '<g fill="#0e7490">' +
-             '<circle cx="268" cy="88" r="2.2"/><circle cx="276" cy="96" r="2.2"/>' +
-             '<circle cx="266" cy="108" r="2.2"/><circle cx="274" cy="120" r="2.2"/>' +
-             '<circle cx="160" cy="104" r="2.2"/><circle cx="150" cy="118" r="2.2"/>' +
-             '<circle cx="168" cy="142" r="2.2"/></g>';
-        o += lead(350, 142, 372, 130) + oR(376, 133, 'cell membrane');
-        o += lead(316, 186, 372, 178) + oR(376, 181, 'mitochondrion');
-        o += lead(276, 92, 372, 66) + oR(376, 69, 'rough ER');
-        o += lead(158, 140, 84, 112) + oL(80, 115, 'ribosomes');
-        o += lead(172, 152, 84, 164) + oL(80, 167, 'nucleus');
-        o += lead(140, 202, 84, 218) + oL(80, 221, 'cytoplasm');
+        /* Free ribosomes in the cytoplasm - outside the nucleus. */
+        o += '<g fill="#0e7490"><circle cx="126" cy="116" r="2.3"/><circle cx="117" cy="133" r="2.3"/>' +
+             '<circle cx="133" cy="150" r="2.3"/><circle cx="318" cy="210" r="2.3"/></g>';
+        o += lead(345, 104, 372, 92) + oR(376, 95, 'cell membrane');
+        o += lead(288, 130, 372, 130) + oR(376, 133, 'rough ER');
+        o += lead(297, 186, 372, 172) + oR(376, 175, 'Golgi body');
+        o += lead(160, 116, 84, 92) + oL(80, 95, 'nucleus');
+        o += lead(126, 116, 84, 130) + oL(80, 133, 'ribosomes');
+        /* "mitochondrion" on the RIGHT, its leader passing under the Golgi
+           stack: on the left the long word ran past the canvas edge, polish()
+           widened the viewBox to keep it, and every label on the card shrank
+           below the phone floor. */
+        o += lead(222, 214, 372, 226) + oR(376, 229, 'mitochondrion');
+        o += lead(112, 160, 84, 178) + oL(80, 181, 'cytoplasm');
         o += '<text x="221" y="272" style="' + LT + '" fill="#475569" text-anchor="middle">' +
              'An animal cell: no wall, so it holds a soft, rounded shape</text>';
       }
@@ -12965,20 +13839,25 @@
         '<text x="180" y="157" style="' + LP + '" fill="#3730a3" text-anchor="middle">mass m</text>' +
         // Weight, straight down, below the block into the ground band
         '<line x1="180" y1="176" x2="180" y2="222" stroke="#ef4444" stroke-width="2.5" marker-end="url(#fbR)"/>' +
-        '<text x="186" y="212" style="' + LP + '" fill="#b91c1c">W = mg</text>' +
-        '<text x="186" y="224" style="' + LT + '" fill="#dc2626">pull of gravity</text>' +
+        /* Labels sit 16 units right of the arrows, not 6. The heads are
+           markers scaled by the stroke width - 8 x 2.5 = 20 units long - and
+           at 6 units "N" and "W = mg" were printed on their own arrowheads. */
+        '<text x="196" y="208" style="' + LP + '" fill="#b91c1c">W = mg</text>' +
+        '<text x="196" y="221" style="' + LT + '" fill="#dc2626">pull of gravity</text>' +
         // Normal force, straight up from the top of the block
         '<line x1="180" y1="128" x2="180" y2="62" stroke="#3b82f6" stroke-width="2.5" marker-end="url(#fbB)"/>' +
-        '<text x="186" y="74" style="' + LP + '" fill="#1d4ed8">N</text>' +
-        '<text x="186" y="86" style="' + LT + '" fill="#2563eb">surface pushes back</text>' +
+        '<text x="196" y="74" style="' + LP + '" fill="#1d4ed8">N</text>' +
+        '<text x="196" y="87" style="' + LT + '" fill="#2563eb">surface pushes back</text>' +
         // Applied force, right
         '<line x1="220" y1="152" x2="300" y2="152" stroke="#16a34a" stroke-width="2.5" marker-end="url(#fbG)"/>' +
         '<text x="262" y="144" style="' + LP + '" fill="#15803d" text-anchor="middle">F</text>' +
         '<text x="262" y="168" style="' + LT + '" fill="#16a34a" text-anchor="middle">applied</text>' +
         // Friction, left, opposing
         '<line x1="140" y1="170" x2="72" y2="170" stroke="#d97706" stroke-width="2.5" marker-end="url(#fbO)"/>' +
-        '<text x="106" y="163" style="' + LP + '" fill="#b45309" text-anchor="middle">f</text>' +
-        '<text x="106" y="186" style="' + LT + '" fill="#d97706" text-anchor="middle">friction</text>' +
+        /* Both above the line: "friction" under it sat on the ground's
+           hatching. */
+        '<text x="106" y="148" style="' + LP + '" fill="#b45309" text-anchor="middle">f</text>' +
+        '<text x="106" y="161" style="' + LT + '" fill="#d97706" text-anchor="middle">friction</text>' +
         // The rule, in the headroom above the canvas
         '<rect x="86" y="6" width="188" height="20" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>' +
         '<text x="180" y="20" style="' + LP + '" fill="#334155" text-anchor="middle">Net force = ma  •  balanced → no acceleration</text>' +
@@ -13433,7 +14312,11 @@
          clause is words. "Nitrogen: 78" is a label AND its value, and cutting
          at the colon threw the 78 away, which left buildBars with nothing to
          measure and silently demoted every chart to a row of plain boxes. */
-      v = v.replace(/([.;:]|\s[—–-])\s(.*)$/, function (full, sep, rest) {
+      /* Nor when what comes BEFORE the separator is only a date: "1763: The
+         French and Indian War ends" was cut to "1763", and a timeline of
+         four bare years taught nothing. */
+      v = v.replace(/([.;:]|\s[—–-])\s(.*)$/, function (full, sep, rest, at, whole) {
+        if (!/[A-Za-z]/.test(whole.slice(0, at).replace(/\b(?:c|ca|BCE?|CE|AD)\b\.?/gi, ''))) return full;
         return /[A-Za-z]/.test(rest) ? '' : full;
       });
       /* SHORTER AT THE SOURCE, NOT CUT AT THE EDGE.
@@ -13529,7 +14412,14 @@
         dgNamesQuantities(d)) return 'graph';
     if (/\bpercent|\b\d+\s*%|how much|\bfigures?\b|\bdata\b|\bstatistics?\b|compare the (?:size|amount|number)/.test(t)) return 'bars';
 
-    if (/\bcycle\b|\bloop\b|repeating|recurring|feedback|circulat|\bseasons\b|\brotation\b|renew/.test(t)) return 'cycle';
+    /* A loop only when the lesson IS one. The title and micro-topic are what
+       the lesson is about; the prose is not - "the Calvin cycle then uses
+       them" in a lesson on the light reactions drew that lesson's four steps
+       as a loop, which they are not. In the prose only an explicit statement
+       that the process comes round again counts. */
+    var head = (dgClean(d && d.title) + ' ' + dgClean(d && d.microTopic)).toLowerCase();
+    if (/\bcycle\b|\bloop\b|repeating|recurring|feedback|circulat|\bseasons\b|\brotation\b|renew/.test(head) ||
+        /\b(?:is|forms?|makes?|completes?) (?:a|the) (?:cycle|loop)\b|over and over|(?:starts?|begins?) (?:all )?(?:over )?again|back to the (?:start|beginning)|repeats? (?:itself|endlessly|forever|continuously)/.test(t)) return 'cycle';
     if (/\b1[0-9]{3}\b|\b20[0-9]{2}\b|timeline|chronolog|\bcentury\b|\bera\b|\bdynasty\b|\bperiod\b/.test(t)) return 'timeline';
     if (/parts of|structure of|anatomy|components|made up of|consists? of|layers of|\borganelles?\b|\bregions?\b/.test(t)) return 'parts';
     if (/hierarch|\bpyramid\b|\btiers?\b|ranked|classification|taxonom|trophic/.test(t)) return 'hierarchy';
@@ -13642,6 +14532,19 @@
    * The diagram for a lesson card, or null when the day carries nothing.
    * Always prefers the most specific source available.
    */
+  /* The subjects the 23 curated templates were drawn for. */
+  var DG_CURATED_SUBJECTS = { science: 1, psychology: 1, economics: 1, geography: 1, math: 1 };
+
+  /* Which subject a day belongs to, for the kit's pictures: "memory" is a
+     brain in psychology and a chip in computer science. */
+  function dgSubjectOf(d) {
+    if (d && d.subject) return String(d.subject);
+    try {
+      if (typeof resolveSubjectType === 'function' && typeof plan !== 'undefined' && plan) return resolveSubjectType(plan, d) || '';
+    } catch (e) { /* no subject is a fine answer */ }
+    return '';
+  }
+
   function diagramForDay(d) {
     if (!d) return null;
     var svg = null, title = dgClean(d.title);
@@ -13694,7 +14597,34 @@
           reach for when nothing bespoke can be built, which is what it is
           now - last. */
     var ds = specFromDayStructure(d);
+    /* 3a. ...EXCEPT where all it can build is a web of related ideas.
+
+          A hub with three or four names round it is the weakest picture the
+          kit draws, and on a lesson called "Supply and demand" or "Parts of a
+          cell" it was standing in for a hand-drawn graph or a hand-drawn
+          cell that already exist. So when the lesson's TITLE names one of the
+          curated pictures, the subject is one they were drawn for, and the
+          alternative is a hub, the drawing wins. The same for a named cycle
+          that has a drawing - the water cycle is a landscape, not a list.
+
+          Ordered material is not overruled: a lesson's own steps in its own
+          words are specific in a way stock art is not, which is the whole
+          argument of the paragraph above. Title only, never the prose, and
+          never on a subject the templates were not drawn for - the patterns
+          are loose ("market" is supply and demand), and "The Market
+          Revolution" is a history lesson. */
+    if (ds && DG_CURATED_SUBJECTS[dgSubjectOf(d)] &&
+        (ds.layout === 'concept' || ds.layout === 'parts' ||
+         (ds.layout === 'cycle' && /water cycle|hydrologic|rock cycle/i.test(dgClean(d.title))))) {
+      var cTitle = dgClean(d.title), cSvg = null;
+      try { cSvg = curatedDiagramSVG(cTitle); } catch (eC) { cSvg = null; }
+      if (cSvg) {
+        try { cSvg = SFDiagramKit.uniqIds(SFDiagramKit.polish(SFDiagramKit.legible(cSvg), { name: cTitle })); } catch (eC2) { /* keep raw */ }
+        return { svg: cSvg, caption: title };
+      }
+    }
     if (ds) {
+      ds.subject = dgSubjectOf(d);
       try { svg = generateDiagramSVG(ds); } catch (e) { svg = null; }
       if (svg) return { svg: svg, caption: ds.title || title };
     }
@@ -16580,6 +17510,12 @@ var SFBoard = (function () {
          expressed as a per-beat class: it depends on WHICH beat, rather than
          merely on whether a beat has been reached. */
       onPaint: function (wrapEl, at) {
+        function drawStepPic(panel) {
+          var pic = panel && panel.querySelector('.sfb-wvis svg');
+          if (pic && window.SFDrawOn && window.SFDrawOn.drawStep) {
+            try { window.SFDrawOn.drawStep(pic); } catch (eS) { /* the picture is simply there */ }
+          }
+        }
         var idx = Math.max(1, Math.min(n, at)) - 1;
         var tr = wrapEl.querySelector('[data-sfb-track]');
         if (tr) {
@@ -16603,8 +17539,21 @@ var SFBoard = (function () {
             if (cls.indexOf('is-told') === -1) {
               panel.setAttribute('data-sfb-cls', cls + ' is-told');
               panel.setAttribute('class', (panel.getAttribute('class') || '') + ' is-told');
+              /* A withheld closing line's picture was hidden with it; it
+                 draws itself now that the learner has asked to check. */
+              if (cls.indexOf('has-pred') !== -1) drawStepPic(panel);
             }
           });
+        }
+
+        /* The step's picture draws itself as its panel arrives (SFDrawOn in
+           block 1) - the jump along the line, the beam of the balance - once
+           per panel. Not while its line is withheld: the picture is the
+           answer there, and it is hidden with it until the tap above. */
+        var nowP = wrapEl.querySelector('.sfb-wp[data-beat="' + at + '"]');
+        if (nowP) {
+          var nc = nowP.getAttribute('data-sfb-cls') || '';
+          if (nc.indexOf('has-pred') === -1 || nc.indexOf('is-told') !== -1) drawStepPic(nowP);
         }
 
         /* Anything the learner has moved past tells itself. The prompt is an

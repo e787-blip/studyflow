@@ -19,6 +19,16 @@ diagramForDay(day)                 // {svg, caption} for a lesson card, or null
 `day.visual`, then a spec built from the day's own `steps` / `concepts` /
 `keyTerms` / `pillars`, then the curated matcher on the topic.
 
+**Nodes carry pictures** (`sf-icons.js`, loaded before the page's scripts).
+`flow`, `cycle`, `concept`, `parts`, `timeline` and `converge` draw each item
+as a disc holding the icon its own words name - `SFIcons.pick(items, subject)`,
+via the kit's `iconsFor`, all or nothing per diagram. Pass `subject` on the
+spec when you know it: `memory` is a chip in `cs` and a brain elsewhere. A
+label that names nothing gets a dot, never a guess. Read "Pictures in the
+diagrams" in CLAUDE.md before adding a keyword: a picture of what a sentence
+is ABOUT is fine on a node, and wrong on a card that names one thing
+(`SFIcons.depicts`).
+
 ## The 11 custom layouts
 
 Pass `{ type: 'custom', layout: '<name>', title, ... }`.

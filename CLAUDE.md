@@ -30,7 +30,8 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `app.html` | ~292 KB | Plan builder: the lesson upload, one question per screen, then generation. Subject detection, AI prompt, question schemas, validators |
 | `lesson.html` | ~590 KB | The session runtime. Card queue, all question renderers, the whiteboard |
 | `dashboard.html` | ~101 KB | Plan list and progress |
-| `sf-draw.js` | ~19 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
+| `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
+| `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
 
 `lesson.html` has **two `<script>` blocks**. Block 1 is the session runtime.
 Block 2 is the whiteboard module (`window.SFWhiteboard`). Both must stay
@@ -655,6 +656,14 @@ order of how specific they are:
    with the layout chosen from the day's own words (cycle / timeline / parts /
    hierarchy / flow / concept). This is the workhorse: it is drawn from *this*
    lesson's material, so two lessons never get the same picture.
+   **Except (3a) where all it can build is a hub** - a web of three or four
+   names round the topic, the weakest thing the kit draws. Then a curated
+   picture the lesson's TITLE names wins, on the subjects the templates were
+   drawn for (`DG_CURATED_SUBJECTS`): "Supply and demand" gets the graph,
+   "Parts of a cell" the cell. Same for a named cycle that has a drawing (the
+   water cycle, the rock cycle). Ordered steps are never overruled - a
+   lesson's own steps are specific in a way stock art is not - and a history
+   lesson called "The Market Revolution" never gets supply and demand.
 4. the curated matcher, against the topic text
 
 ### Who owns the lesson card
@@ -795,6 +804,23 @@ in. Three checkable rules sit beside it:
 
 If drawings go back to being boxes, check the example first. It is the part
 the model actually obeys.
+
+**The leaf itself was redrawn (Oct 2026).** The first one was a green slab
+with three rods, three circles and labels well clear of what they named - and
+since the model copies the example, that was the ceiling. The new one
+(`.claude/skills/diagram/references/exemplar-leaf.json`, audited clean) has
+the real layers in order - cuticle, a row of palisade cells drawn as ONE path
+with a subpath per cell, spongy cells with air between them, a vein split into
+xylem and phloem, a stoma between guard cells - with sunlight coming from a
+sun ICON beside the leaf and CO2 in / O2 out at the stoma. Ten drawn parts.
+
+**And a drawing that is still a flowchart is not shown** (`artWorthShowing`,
+next to `requestLessonArt`). Fewer than 3 drawn parts (paths and polygons that
+are not arrows; an icon counts half) and 2+ rects or circles = boxes with words
+in them, and the lesson's own diagram - which draws that shape better, with a
+picture per step - is shown instead. Judged when the drawing is USED, never
+when stored: the spec stays in the plan, so the rule can change without asking
+the model again.
 
 **The DAY prompt in `app.html` still showed boxes until Sept 2026.** This file
 said both prompts carried the leaf; only `artPromptFor` did. `app.html`'s
@@ -973,8 +999,18 @@ fills in at generation time.
 ```json
 {"type":"drawing","title":"","w":440,"h":250,"shapes":[
   {"s":"rect","x":,"y":,"w":,"h":,"r":8,"fill":"blueFill","stroke":"blue"},
-  {"s":"circle"|"ellipse"|"line"|"path"|"poly"|"text", ...}]}
+  {"s":"circle"|"ellipse"|"line"|"path"|"poly"|"text", ...},
+  {"s":"icon","name":"sun","x":,"y":,"size":36,"color":"amber"}]}
 ```
+
+`icon` is a ready-drawn object from `sf-icons.js`, for things AROUND the
+subject - the sun over a leaf, a person at a lever - never instead of drawing
+it. The guard is the same as everything else here: the name is checked
+against the list (`^[a-z-]{2,24}$` and `SFIcons.has`), x/y/size are clamped,
+the colour is a hue name resolved to that hue's ink and pale fill, and the
+markup comes from our file - nothing the model wrote reaches the SVG but a
+name. Tested with `<script>`, an `onload` smuggled into the name, `__proto__`,
+`constructor` and `url(#evil)` as a colour.
 
 **It is deliberately not raw SVG.** Raw SVG from a model is unbounded — script
 elements, external references, arbitrary colour, text off the canvas — and none
@@ -1277,6 +1313,15 @@ else `diagramForDay`, the same precedence as the lesson card):
 - The panel keeps a light ground in dark mode: every diagram is drawn in ink
   for paper.
 
+**Every place a drawing sits keeps a paper ground in dark mode** - the recall
+and moment panels, the walkthrough's figure, and (since Oct 2026) the lesson
+card's `#lesson-art` frame and the labelling card's `.ld-fig`. Those two were
+`var(--soft)` and `#1e2336`, both near-black in dark mode, so a drawing's
+title and its thin black lines (a vein's walls) vanished into the card. Use a
+fixed colour (`#f4f6fb`), never a theme token: the tokens are what flip.
+Anything drawn on top of a picture - the "Draw it again" chip, the caption -
+takes fixed colours for the same reason.
+
 Tested on a real page load with a seeded cell day: the ribosome question got
 the button, the three questions whose answers are labels did not, true/false
 did not, an unrelated question got nothing before or after a miss, a wrong
@@ -1438,8 +1483,10 @@ The user's words: "not every question is a drawing, maybe 20-30 percent".
 
 Measured with a 16-question science day, every answer wrong: **24% of
 question cards with a picture, 0 repeated** (was 44%, with the same drawings
-five times each). `sfRecallOnMiss` and `sfMomentOnMiss` both ask
-`picChoice()`, decided once per showing of a card; `picCount` runs from
+five times each). The session order is shuffled per run, so the census reads
+24% or 27% depending on it - under a seeded `Math.random` two versions match
+card for card; compare that way before calling a change.
+`sfRecallOnMiss` and `sfMomentOnMiss` both ask `picChoice()`, decided once per showing of a card; `picCount` runs from
 `sfRecallAttach` on every render.
 
 ### The walkthrough of a picture — `sfPicWalkFor`, `sfPicWalkRender`
@@ -1498,6 +1545,164 @@ card, `applyLessonArt`, `lessonPicture`, the moment panel). NOT on the
 model's own `labeldiagram` questions - their pins are the model's
 coordinates. Tested on a volcano with "Magma rises" printed over "Conduit":
 `label-overlap` fail before, gone after.
+
+### Pictures draw themselves — `SFDrawOn` (block 1, right after `drawSpec`)
+
+A picture used to arrive whole, in one fade. Now the first time it is shown
+it is drawn the way a teacher draws on a board, in about two seconds:
+
+1. the title is written first (left to right, `sfdWrite` - a `clip-path`
+   inset sweep);
+2. each shape is traced along its own length (`sfdTrace`, stroke-dash) and
+   its colour washes in behind the line (`sfdWash`, fill-opacity). Words
+   wholly inside a modest closed shape are written as soon as that shape is
+   drawn, so a chart builds box by box;
+3. **an arrow that leaves a box is drawn right after that box** - box, arrow,
+   box, arrow. The kit writes every connector before every node, and drawn
+   in document order a cycle was four arrows joining nothing. An arrow that
+   starts in the open (blood moving up a vein, light on a leaf) is movement
+   and comes after the structure. Its arrowhead lands when the line arrives;
+4. labels outside the drawing are written last, each after its leader line
+   has been drawn out to it;
+5. a labelling card's pins pop in, 1, 2, 3 (`sfdPin`);
+6. then every arrow sends a spark along itself twice (`sfdFlow`): a glow of
+   its own colour with a white core, on clones that remove themselves. The
+   glow alone was invisible on a red arrow in a red-tinted vein.
+
+**A pen rides each long line while it is drawn** (`nib`): a bead of ink on
+the tip, moved by the Web Animations API with the trace's own easing over
+keyframes evenly spaced along the path, so it stays on the tip. Our own
+element beside the line, never the line; the 14 longest lines get one, so a
+busy drawing does not get thirty. It is what makes a line read as being DRAWN
+rather than uncovered.
+
+Three more, added after the first round was looked at:
+
+- **"Draw it for me" draws the answer last.** In a moment picture the blue
+  part IS the answer (`momentPrompt`'s one rule), so `opts.answer` holds every
+  blue part (`BLUE`: computed blue / blueFill / blueInk) to the end of the
+  shape run, writes its label as the last word, then rings it once
+  (`sfdHalo`, a blue clone behind it that widens and fades) before the
+  sparks. **The ring's fill-mode is `forwards`, not `both`**: `both` held its
+  first, brightest keyframe through the delay, and the answer sat outlined in
+  blue from the moment the picture appeared. Seen in a frame capture, not by
+  any assertion - there is one now.
+- **The worked example's step pictures draw themselves** as their panel
+  arrives (`SFDrawOn.drawStep`, called from `Scene.worked`'s `onPaint`),
+  once per picture, quicker (speed 1.4, 0.18s in so the slide lands first). A
+  withheld closing line keeps its picture back too and draws on the tap. The
+  board paints panel 1 BEFORE it is mounted, so `drawStep` waits a frame at a
+  time until the picture is laid out - marking it done on that first paint is
+  how panel 1 never drew.
+- **"Draw it again"** (`.sfd-replay`): a quiet round chip, offered once the
+  drawing - sparks included - has stopped, and on every later showing. In the
+  lesson picture's corner; in a moment panel's header row instead, because
+  those drawings use their corners. Not under reduced motion.
+
+`PICTURE_SEL` matches **direct children only** (`#lesson-art > svg`): the
+chip's own icon is an `<svg>` inside the same container.
+
+Measured with the CPU throttled 6x: frames hold 17ms (60fps) through the
+drawing, none over 50ms; opening the card costs ~35ms more than without it
+(three runs each; `play()`'s own measuring is 9ms for a 31-part drawing).
+
+Where: anything in `#lesson-art`, `.sf-moment-art`, `.sf-recall`, `.pw-art`,
+`.ld-fig` (`PICTURE_SEL`), caught by ONE MutationObserver on `document.body`
+- no renderer was changed. Its callback is a microtask, so it runs before the
+paint: nothing flashes up whole and then vanishes to be drawn.
+
+Rules that keep it out of the way, all tested (`test_drawon.js`):
+
+- **Once per picture per session.** When the lesson's picture comes back
+  under a question it is simply there. The key is the viewBox, the part count
+  and the words - NOT the markup, because `uniqIds` renames every id each
+  time a picture is shown.
+- **Only when it can be seen.** Below the fold it is held (`.sfd-hold`,
+  opacity 0) until an IntersectionObserver sees it, and released after 15s
+  regardless; in a closed fold it is shown still. `prefers-reduced-motion`:
+  nothing moves, nothing waits.
+- **It never touches the SVG string**, only the live DOM, so the diagram
+  baseline, the audit and the labelling card (which lifts names out of the
+  markup) see exactly what they saw before. **And it hands the DOM back
+  byte-identical** when the drawing ends - asserted with `outerHTML`.
+- **Fill-mode `backwards` only, and no `to` keyframe on opacity.** A part is
+  hidden until its turn and is exactly the renderer's afterwards, and the
+  implicit end keyframe animates TO whatever the element already is - so the
+  walkthrough's dimming, a pin's `is-dim` and a label's own opacity still
+  work during and after. `both` would freeze the end value over all of them.
+- **No `transform` in any keyframe except the pin's** (a `<g>` the pin code
+  owns): a CSS transform replaces a rotated label's `transform` attribute
+  for as long as it runs.
+- **Arrowheads are hidden with inline `marker-*: none`**, never by removing
+  the attribute: re-adding an attribute moves it to the end of the list and
+  the markup no longer matches.
+- **Read `style` before removing it.** Chrome writes inline style back to the
+  attribute lazily; an attribute removed while that write is still owed comes
+  back as `style=""` when the element is next serialised. Every part of every
+  drawing ended with an empty style until `finish()` read it first.
+
+To look at it frame by frame: pause `document.getAnimations()` and seek every
+one to the same `currentTime` - each frame is then exactly what a learner sees
+t ms in. Hold the page's `setTimeout`s back while you do, or `finish()` hands
+the DOM back mid-capture.
+
+### Pictures in the diagrams — `sf-icons.js`
+
+The kit's layouts were rounded boxes with the words inside and looked it - the
+user's words: "it looks really bad". Every step, stage, idea and event is now
+a disc, and the disc carries the picture its own words name.
+
+- **The library**: 120 Phosphor duotone icons (MIT - the notice is in the
+  file's header) plus three drawn to match (`cell`, `lungs`, `volcano`). Every
+  icon is two paths in a 256 box, a pale layer and an outline - no ids, nothing
+  that can collide with another picture. Coordinates are rounded to 0.1 of 256
+  by a tokenizer that keeps a separator wherever two numbers would merge
+  (`-3` then `.1` is `-3.1`); every icon was checked against its source.
+- **Truth first.** `SFIcons.match(text, subject)` answers only when a word in
+  the label names the picture - whole words, or stems marked `*`. Priority
+  picks between two matches ("condenses into clouds" is the cloud, not the
+  water). Words that mean two things are left out: `nucleus`, `current`,
+  `power`, nationality words. `memory` is a chip in CS and a brain elsewhere.
+- **`SFIcons.depicts(term)` is stricter**, for a card naming ONE thing: only a
+  picture OF that thing. The rules above say what a sentence is ABOUT - a
+  heart beside "blood returns to the right atrium" is right - but a heart above
+  the word "Artery" says that is what an artery looks like.
+- **All or nothing per diagram** (`iconsFor` in the kit): pictures on at least
+  half the nodes and at least half of them different, or none. A stage the
+  words name nothing for gets a dot, never a guess; a diagram with no pictures
+  uses small solid nodes, not empty circles.
+
+The layouts, redrawn around it:
+
+| Layout | Now |
+|---|---|
+| `flow` | 2-3 short steps across as discs; otherwise `stackRows` - a disc per step on a rail of arrows, the whole sentence beside it in a card at 13pt |
+| `cycle` | a RING when every label fits whole beside it (the stage on the ring, an arrow along it, the title's picture in the hole); sentences are stacked like a flow with one arrow from the last back to the first |
+| `concept` / `parts` | `buildHub`: the topic as a solid pill, each idea a disc on a spoke, its name under it - ABOVE it for ideas above the hub, or the spoke strikes the name. Two ideas sit in one row with names outside. The canvas is the content's own size |
+| `timeline` | each event's picture on the rail (a war, a tax, a treaty) |
+| `converge` | each cause a row with its picture, the outcome a solid block with its own |
+
+Three bugs found while looking at real days, all fixed:
+
+- **A dated step lost its event.** `dgLabels` cuts a label at its first
+  clause, and "1763: The French and Indian War ends..." became "1763" - a
+  timeline of four bare years. It no longer cuts when the part before the
+  separator is only a date.
+- **"cycle" anywhere in the prose made a loop.** "...the Calvin cycle then
+  uses them" drew the light reactions as a cycle. `dgLayoutFor` now takes a
+  loop from the title and micro-topic, or from prose that says the process
+  comes round again - never from a named thing in passing.
+- **The curated pictures lost to hubs** - see 3a under "Diagrams".
+
+**The flashcards carry the picture too** (`deckIcon`), above the term, when
+`depicts` says the picture is of that very thing - "Heart", "Volcanoes",
+"The lungs". Dual coding: a word learnt with an image of what it names is
+remembered better. Never on a trap card.
+
+**Icons arrive whole** in `SFDrawOn`: `g.sf-ico` is popped (`sfdPop`) as one
+piece, straight after the disc it sits in - its outline is a filled shape, and
+tracing that draws its edge twice. One standing free (the sun over a leaf)
+arrives with the structure, before the arrows that start from it.
 
 ### The flashcard deck — `deckItems`, `sfDeckGo`, `sfDeckFlip`
 
@@ -1766,9 +1971,10 @@ that vanished with each session):
 bash .claude/skills/morning-check/scripts/run_all.sh /tmp/sf-morning
 ```
 
-20 checks on real page loads with `api/generate` mocked - parse, every card
+22 checks on real page loads with `api/generate` mocked - parse, every card
 type answered wrong, walkthroughs, the picture budget, the labelling card,
-plan-time drawing, board text sizes, and every diagram against an audited
+plan-time drawing, board text sizes, pictures drawing themselves, the icons
+and the layouts built on them, and every diagram against an audited
 baseline, plus `test_mix.js` (every subtopic's real prompt) and
 `test_visuals.js` (the visual pass of 2026-09-30: heading weight, one chip
 colour, paper under drawings in dark mode, the banner, the results list; it
@@ -1862,6 +2068,32 @@ What to check after any `buildQueue` or renderer change:
     `null`, and moves on after `LABEL_WAIT_MS`. Mock `api/generate` with a hostile
     spec and assert no `script`/`img`/`foreignObject` and no `on*` attribute
     reaches the DOM.
+18e. **Pictures draw themselves** (`test_drawon.js`): the lesson picture is
+    traced, washed and written with the title first and labels last, within
+    3s; a kit chart is dealt box, arrow, box, arrow; pins pop 1, 2, 3 after the
+    drawing; the arrow sparks after it; the same picture shown again is NOT
+    redrawn; a picture below the fold waits hidden and draws when scrolled
+    to; reduced motion animates nothing; and afterwards every picture's
+    `outerHTML` is identical to what was inserted, with no styles, sparks or
+    classes left behind. Also: "Draw it again" replays and hands back
+    identical; a moment picture's blue answer is drawn after everything else,
+    its label last, its ring invisible until then; every worked-example step
+    picture (panel 1 included) draws on arrival, a withheld one does not, and
+    walking back does not redraw. In dark mode the lesson picture, the
+    labelling card and both "Draw it again" chips are light (luminance
+    over 0.85). A pen rides the long lines (3-14 beads) and is gone after.
+18f. **Pictures in the diagrams** (`test_icons.js`): every icon draws a real
+    shape and carries no id; the water cycle's steps get sun, cloud, rain,
+    waves and memory's eye, hourglass, repeat, search; "nucleus" and "French"
+    get nothing; "Artery" gets no heart on a flashcard and "Heart" does; the
+    model's `icon` shape survives `<script>`, `onload`, `__proto__` and
+    `url(#evil)` with nothing reaching the DOM; the light reactions are a
+    sequence, not a loop; "1763: The French and Indian War..." keeps its
+    event; "Supply and demand" gets the graph and "The Market Revolution"
+    does not; ten layouts audit with no failures and no spoke strikes a
+    label; a boxes-with-nouns drawing is gated; the prompt's leaf audits
+    clean; icons pop in whole and the diagram is handed back identical.
+    Proven to catch a hub label hung under its spoke and the date cut.
 
 **And a second suite that belongs to `app.html`**, not the session — load
 `app.html`, inject `appsuite.js`, call `SFRunAppSuite()`:
