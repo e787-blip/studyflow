@@ -495,6 +495,42 @@
      button align-self:flex-start, which left it stranded under the input and
      visually detached from the thing it submits. */
   .fill-wrap { position:relative; display:block; }
+  /* Listen and type. */
+  .dict-player { display:flex; gap:.5rem; margin:.5rem 0 .8rem; }
+  .dict-play { display:inline-flex; align-items:center; gap:.4rem; padding:.6rem 1.1rem; border:none; border-radius:999px;
+    background:var(--blue); color:#fff; font-family:var(--sans); font-size:0.92rem; font-weight:700; cursor:pointer; }
+  .dict-slow { padding:.55rem .95rem; border:1.5px solid var(--border); border-radius:999px; background:none; color:var(--ink);
+    font-family:var(--sans); font-size:0.85rem; font-weight:600; cursor:pointer; }
+  .dict-slow:hover { border-color:var(--blue); color:var(--blue); }
+  .dict-novoice { font-size:0.8rem; color:var(--muted); background:var(--soft); border-radius:10px; padding:.55rem .8rem; margin:.5rem 0 .8rem; }
+  .dict-text { font-size:1.15rem; line-height:1.9; margin:.2rem 0 .9rem; color:var(--ink); }
+  .dict-gap { display:inline-block; min-width:70px; height:1.05em; border-bottom:2px solid var(--blue); margin:0 3px; vertical-align:-.12em; }
+  /* Sentence builder: a line you build, a bank you take from. */
+  .sb-meaning { background:var(--soft); border-radius:10px; padding:.55rem .85rem; margin:.5rem 0 .8rem; font-size:0.85rem; color:var(--muted); font-style:italic; }
+  .sb-line { min-height:54px; display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; padding:.55rem .6rem;
+    border-bottom:2px solid var(--blue); margin-bottom:.9rem; }
+  .sb-empty { color:var(--muted); font-size:0.82rem; }
+  .sb-bank { display:flex; flex-wrap:wrap; gap:.45rem; min-height:44px; margin-bottom:.4rem; }
+  .sb-word { padding:.5rem .8rem; border:1.5px solid var(--border); border-radius:10px; background:var(--white); color:var(--ink);
+    font-family:var(--sans); font-size:0.98rem; font-weight:600; cursor:pointer; transition:border-color .15s; min-height:42px; }
+  .sb-word:hover:not(:disabled) { border-color:var(--blue); }
+  .sb-word.in-line { background:#eef3ff; border-color:#cfdcfb; }
+  .sb-word.is-right { background:#eef3ff; border-color:var(--blue); color:#1e40af; }
+  .sb-word.is-wrong { border-color:#fca5a5; background:#fef6f6; }
+  .sb-word:disabled { cursor:default; opacity:1; }
+  body.dark .sb-word.in-line, body.dark .sb-word.is-right { background:rgba(74,124,246,.16); color:#c7d7ff; }
+  body.dark .sb-word.is-wrong { background:rgba(239,68,68,.12); color:#fecaca; }
+  .sb-actions { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin-top:.8rem; }
+  .hear-btn { display:inline-flex; align-items:center; gap:.4rem; padding:.55rem .85rem; border:1.5px solid var(--border);
+    border-radius:10px; background:none; color:var(--blue); font-family:var(--sans); font-size:0.85rem; font-weight:600; cursor:pointer; }
+  .hear-btn:hover { border-color:var(--blue); }
+  /* Letters a school keyboard cannot type, under a language answer box. */
+  .accent-bar { display:flex; flex-wrap:wrap; gap:.35rem; margin:.55rem 0 .2rem; }
+  .accent-key { min-width:38px; height:38px; padding:0 .5rem; border:1.5px solid var(--border); border-radius:9px;
+    background:var(--white); color:var(--ink); font-family:var(--sans); font-size:1rem; font-weight:600; cursor:pointer;
+    transition:border-color .15s, color .15s; }
+  .accent-key:hover { border-color:var(--blue); color:var(--blue); }
+  .accent-key:focus-visible { outline:2px solid var(--blue); outline-offset:1px; }
   .fill-input {
     width:100%; padding:.85rem 6.4rem .85rem 1.1rem;
     border:1.5px solid var(--border); border-radius:12px;
@@ -1829,7 +1865,7 @@
                  'twopart', 'corroborate', 'highlight', 'matchpairs', 'write', 'match', 'labeldiagram'],
     english:    ['passage', 'readingset', 'mcq', 'truefalse', 'write', 'fill',
                  'twopart', 'corroborate', 'highlight', 'matchpairs', 'match', 'labeldiagram'],
-    language:   ['sentence', 'mcq', 'truefalse', 'fill', 'twopart', 'highlight',
+    language:   ['sentence', 'dictation', 'mcq', 'truefalse', 'fill', 'twopart', 'highlight',
                  'matchpairs', 'write', 'match', 'labeldiagram'],
     general:    ['mcq', 'truefalse', 'fill', 'write', 'twopart', 'highlight',
                  'matchpairs', 'estimate', 'match', 'labeldiagram']
@@ -1931,7 +1967,7 @@
     // every other type has its own dedicated renderer and must be excluded here.
     /* Kept in sync with SPECIAL_TYPES below - a sequence question drawn into
        the pre-test would still be spliced in later by its own injector. */
-    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1, labeldiagram:1 };
+    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1, labeldiagram:1, dictation:1 };
     var simpleQuestions = questions.filter(function(q){ return !SPECIAL_TYPES_PRETEST[q.type]; });
     var shuffled = simpleQuestions.slice().sort(function(){ return Math.random() - 0.5; });
 
@@ -2015,7 +2051,7 @@
        main loop queued it once and the injector spliced the very same question
        in again - every history and geography day showed its "order these
        events" question twice. Every type with its own injector belongs here. */
-    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1, labeldiagram:1 };
+    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1, labeldiagram:1, dictation:1 };
     var fillQuestions = questions.filter(function(q){ return q.type === 'fill'; });
     var regularQuestions = questions.filter(function(q){ return !SPECIAL_TYPES[q.type]; });
     var shuffled = regularQuestions.slice().sort(function(){ return Math.random() - 0.5; });
@@ -2332,7 +2368,7 @@
        and none of them is gated on subject, because a question of type X
        exists only because a schema asked for one. */
     [['twopart', 0], ['corroborate', 1], ['highlight', 1],
-     ['tracetable', 0], ['matchpairs', 2], ['estimate', 0]].forEach(function (pair) {
+     ['tracetable', 0], ['matchpairs', 2], ['estimate', 0], ['dictation', 1]].forEach(function (pair) {
       var t = pair[0];
       var qs = (day.questions || []).filter(function (q) { return q.type === t; });
       qs.forEach(function (q, i) {
@@ -2565,7 +2601,7 @@
       match: 1, classify: 1, graph: 1, passage: 1, write: 1, scenario: 1,
       fill: 1,
       twopart: 1, corroborate: 1, highlight: 1, tracetable: 1, matchpairs: 1,
-      estimate: 1, readingset: 1
+      estimate: 1, readingset: 1, dictation: 1
     };
     if (DIRECT[t]) {
       /* A fill question that is really a calculation belongs on the equation
@@ -2849,7 +2885,7 @@
     /* The visible check/submit control on the current card, whatever type it is. */
     var ids = ['fill-btn', 'seq-check-btn', 'classify-check-btn', 'write-submit',
                'graph-check-btn', 'match-check-btn',
-               'mp-check-btn', 'tt-check-btn', 'est-check-btn', 'ld-check-btn'];
+               'mp-check-btn', 'tt-check-btn', 'est-check-btn', 'ld-check-btn', 'sb-check-btn'];
     var i, el;
     for (i = 0; i < ids.length; i++) {
       el = document.getElementById(ids[i]);
@@ -2925,6 +2961,7 @@
     if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
     currentAnswered = false;
     fillAttempts = 0;
+    accentRetryUsed = false;
     var sbn = document.getElementById('struggling-banner');
     if (sbn) sbn.classList.remove('show');
 
@@ -3957,7 +3994,7 @@
     parts: 1, same: 1, other: 1, both: 1, shown: 1, down: 1, back: 1, over: 1
   };
   var RECALL_WHOLE = { sequence: 1, classify: 1, matchpairs: 1, match: 1,
-                       errorspot: 1, tracetable: 1, sentence: 1 };
+                       errorspot: 1, tracetable: 1, sentence: 1, dictation: 1 };
   var RECALL_NEVER = { write: 1, labeldiagram: 1, graph: 1, readingset: 1, match: 1 };
 
   function recallWords(s) {
@@ -4502,7 +4539,7 @@
      or would be a picture of words (a sentence, a translation, a trace table,
      a teach-it-back, a list of pairs). */
   var MOMENT_NEVER = { write: 1, labeldiagram: 1, graph: 1, bigequation: 1, sentence: 1,
-                       tracetable: 1, match: 1, matchpairs: 1, readingset: 1 };
+                       tracetable: 1, match: 1, matchpairs: 1, readingset: 1, dictation: 1 };
 
   function momentStr(v, n) {
     return fmStr(v).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ')
@@ -5780,6 +5817,7 @@
       if (card.q) html = renderLabelDiagram(card.q);
     }
     else if (card.type === 'estimate')    { html = renderEstimate(card.q); }
+    else if (card.type === 'dictation')   { html = renderDictation(card.q); }
     else if (card.type === 'done') {
       html = buildCard('Session Complete', 'Great work today!', false,
         '<p class="content-text" style="text-align:center;">You\'ve finished all the cards for this session. Tap below to see your results.</p>',
@@ -6053,11 +6091,12 @@
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       sciDiagram +
       '<div class="q-text" style="line-height:2.2;">' + questionText + '</div>' +
-      '<div style="font-size:0.75rem;color:var(--muted);margin:.6rem 0 .75rem;">Type the missing word, number, or formula</div>' +
+      '<div style="font-size:0.75rem;color:var(--muted);margin:.6rem 0 .75rem;">' + (targetLang() ? 'Type the missing word' : 'Type the missing word, number, or formula') + '</div>' +
       '<div class="fill-wrap">' +
       '<input class="fill-input" id="fill-input" type="text" placeholder="Your answer..." autocomplete="off" autocorrect="off" autocapitalize="off" autocomplete="off" />' +
       '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
       '</div>' +
+      accentBarHtml('fill-input') +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Think carefully about the key concepts.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
@@ -6098,6 +6137,65 @@
 
   var fillAttempts = 0;
   var MAX_FILL_TRIES = 3;
+
+  /* ── THE LANGUAGE BEING LEARNED ─────────────────────────────────────────
+     Read off the plan's subject and the day's title. Only on a language day:
+     "Causes of the French Revolution" is not French. `speech` is the BCP-47
+     tag the browser's voices use; '' where browsers rarely have a voice. */
+  var LANG_TABLE = [
+    [/spanish|espa[nñ]ol/, 'es', 'es-ES'], [/french|fran[cç]ais/, 'fr', 'fr-FR'],
+    [/german|deutsch/, 'de', 'de-DE'], [/italian|italiano/, 'it', 'it-IT'],
+    [/portuguese|portugu[eê]s/, 'pt', 'pt-BR'], [/\blatin\b/, 'la', ''],
+    [/japanese|nihongo/, 'ja', 'ja-JP'], [/chinese|mandarin/, 'zh', 'zh-CN'],
+    [/korean/, 'ko', 'ko-KR'], [/arabic/, 'ar', 'ar-SA'], [/russian/, 'ru', 'ru-RU'],
+    [/hawaiian|[ʻ']?ōlelo/, 'haw', '']
+  ];
+  /* The letters a school keyboard cannot type. Hawaiian's ʻokina is a
+     letter, not punctuation. */
+  var ACCENT_KEYS = {
+    es: 'á é í ó ú ñ ü ¿ ¡', fr: 'é è ê ë à â ç î ï ô û ù œ', de: 'ä ö ü ß',
+    it: 'à è é ì ò ù', pt: 'á â ã à ç é ê í ó ô õ ú', haw: 'ā ē ī ō ū ʻ'
+  };
+  function targetLang() {
+    try { if (resolveSubjectType(plan, day) !== 'language') return null; } catch (e) { return null; }
+    var t = (fmStr(plan && plan.subject) + ' ' + fmStr(day && day.title) + ' ' + fmStr(day && day.microTopic)).toLowerCase(), i;
+    for (i = 0; i < LANG_TABLE.length; i++) {
+      if (LANG_TABLE[i][0].test(t)) return { code: LANG_TABLE[i][1], speech: LANG_TABLE[i][2] };
+    }
+    return { code: '', speech: '' };
+  }
+  /* The same word with its marks taken off: "habló" -> "hablo", "niño" -> "nino". */
+  function stripMarks(s) {
+    s = String(s || '');
+    if (s.normalize) s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return s.replace(/ß/g, 'ss').replace(/œ/g, 'oe').replace(/[ʻ‘’']/g, '');
+  }
+  /* Punctuation a language answer carries that is not the answer. */
+  function langTrim(s) {
+    return String(s || '').replace(/^[\s¿¡"“«]+/, '').replace(/[\s.!?,;:"”»]+$/, '');
+  }
+  /* A row of letter keys under an input. mousedown is cancelled so the input
+     keeps focus and its caret; the letter goes in at the caret. */
+  function accentBarHtml(targetId) {
+    var L = targetLang(), keys = L && ACCENT_KEYS[L.code];
+    if (!keys) return '';
+    return '<div class="accent-bar" role="group" aria-label="Special letters">' +
+      keys.split(' ').map(function (k) {
+        return '<button type="button" class="accent-key" data-t="' + targetId + '" onmousedown="event.preventDefault()" ' +
+          'onclick="insertAccent(this)">' + k + '</button>';
+      }).join('') + '</div>';
+  }
+  function insertAccent(btn) {
+    var el = document.getElementById(btn.getAttribute('data-t'));
+    if (!el || el.disabled) return;
+    var ch = btn.textContent, a = el.selectionStart, b = el.selectionEnd;
+    if (typeof a !== 'number') { el.value += ch; }
+    else { el.value = el.value.slice(0, a) + ch + el.value.slice(b); el.selectionStart = el.selectionEnd = a + ch.length; }
+    try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+    try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (e2) { /* old browsers */ }
+  }
+  /* One "look at the accents" per card - a prompt, not the answer. */
+  var accentRetryUsed = false;
 
   function answerFillBtn() {
     var btn = document.getElementById('fill-btn');
@@ -7657,44 +7755,161 @@
     return ''; // no diagram for this topic
   }
   // q: { question, words: [...correct word order], translation, hint, explanation, difficulty }
+  /* ── SENTENCE BUILDER ────────────────────────────────────────────────────
+     Tap words from the bank into the sentence line; tap a placed word to send
+     it back. It used to be the ORDERING card - a vertical numbered list
+     dragged up and down, which reads as "put these events in order", not
+     "build this sentence", and HTML drag-and-drop barely works on a phone.
+
+     A miss is answered the way a teacher prompts rather than corrects: the
+     first wrong check marks which words already sit in the right place and
+     hands the line back (self-repair beats being told - Lyster & Ranta 1997);
+     the second shows the sentence. Afterwards "Hear it" reads it aloud in the
+     target language, where the device has a voice for it. */
   function renderSentence(q) {
     // Defense in depth — sanitizeDayQuestions should already guarantee this, but guard anyway
     if (!q || !Array.isArray(q.words) || q.words.length < 3) {
       return renderFill(q || {});
     }
-    var shuffled = q.words.slice().sort(function(){ return Math.random() - 0.5; });
-    // Guard against an accidental already-correct shuffle on short sentences
-    if (q.words.length > 2 && JSON.stringify(shuffled) === JSON.stringify(q.words)) {
-      shuffled.reverse();
-    }
-    window._seqState = { correctOrder: q.words.slice(), current: shuffled, explanation: q.explanation };
-
-    var itemsHtml = shuffled.map(function(word, i) {
-      return '<div class="seq-item" draggable="true" data-text="' + esc(word) + '" id="seq-item-' + i + '">' +
-        '<span class="seq-num">' + (i+1) + '</span>' +
-        '<svg class="seq-drag-handle" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>' +
-        '<span class="seq-text">' + word + '</span></div>';
-    }).join('');
+    var words = q.words.map(fmStr), order = words.map(function (w, i) { return i; });
+    order.sort(function () { return Math.random() - 0.5; });
+    // Guard against an accidental already-correct shuffle
+    if (order.every(function (v, i) { return v === i; })) order.reverse();
+    window._sentState = { q: q, words: words, bank: order, line: [], tries: 0 };
 
     var body = '<div class="q-meta"><span class="q-type-label">Sentence Builder</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
       '<div class="q-text">' + qText(q) + '</div>' +
-      (q.translation ? '<div style="background:var(--soft);border-radius:10px;padding:.6rem .85rem;margin:.5rem 0 .75rem;font-size:0.82rem;color:var(--muted);font-style:italic;">"' + q.translation + '"</div>' : '') +
-      '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:.7rem;">Drag the words into the correct order</div>' +
-      '<div class="seq-wrap" id="seq-wrap">' + itemsHtml + '</div>' +
+      (q.translation ? '<div class="sb-meaning">“' + escHtml(q.translation) + '”</div>' : '') +
+      '<div class="sb-line" id="sb-line" aria-label="Your sentence"></div>' +
+      '<div class="sb-bank" id="sb-bank" aria-label="Words to use"></div>' +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
-      '<div class="hint-box" id="hint-box">' + (q.hint || 'Think about correct word order and grammar in this language.') + '</div></div>' +
+      '<div class="hint-box" id="hint-box">' + (q.hint || 'Find the verb first, then build around it.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>' +
-      '<button class="fill-submit" id="seq-check-btn" onclick="checkSequence()" style="margin-top:.8rem;">Check sentence →</button>';
+      '<div class="sb-actions"><button class="fill-submit" id="sb-check-btn" onclick="checkSentence()" disabled>Check sentence →</button>' +
+      '<span id="sb-hear"></span></div>';
 
-    setTimeout(initSeqDrag, 50);
-
+    setTimeout(sbPaint, 0);
     var streak = correctCount + '/' + totalAnswered;
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Sentence Builder</div><h2>' + (day.title||'Practice') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">✦ Sentence Builder</div><h2>' + escHtml(day.title||'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function sbPaint(marks) {
+    var st = window._sentState, line = document.getElementById('sb-line'), bank = document.getElementById('sb-bank');
+    if (!st || !line || !bank) return;
+    var done = !!st.done;
+    line.innerHTML = st.line.length ? st.line.map(function (wi, pos) {
+      var m = marks ? (marks[pos] ? ' is-right' : ' is-wrong') : '';
+      return '<button type="button" class="sb-word in-line' + m + '" ' + (done ? 'disabled ' : '') +
+        'onclick="sbMove(' + pos + ',0)">' + escHtml(st.words[wi]) + '</button>';
+    }).join('') : '<span class="sb-empty">Tap the words in order</span>';
+    bank.innerHTML = st.bank.map(function (wi, pos) {
+      return '<button type="button" class="sb-word" ' + (done ? 'disabled ' : '') +
+        'onclick="sbMove(' + pos + ',1)">' + escHtml(st.words[wi]) + '</button>';
+    }).join('');
+    var cb = document.getElementById('sb-check-btn');
+    if (cb) cb.disabled = done || st.bank.length > 0;
+  }
+
+  /* fromBank 1: a bank word goes on the end of the line; 0: a line word goes back. */
+  function sbMove(pos, fromBank) {
+    var st = window._sentState;
+    if (!st || st.done) return;
+    if (fromBank) st.line.push(st.bank.splice(pos, 1)[0]);
+    else st.bank.push(st.line.splice(pos, 1)[0]);
+    sbPaint();
+  }
+
+  function sbSame(a, b) {
+    function k(x) { return langTrim(String(x || '').toLowerCase()); }
+    return k(a) === k(b);
+  }
+
+  function checkSentence() {
+    var st = window._sentState;
+    if (!st || st.done || currentAnswered || st.bank.length) return;
+    var built = st.line.map(function (wi) { return st.words[wi]; });
+    /* Compared word by word on the WORD, not the tile, so a repeated word
+       ("que ... que") placed either way round still counts. */
+    var marks = built.map(function (w, i) { return sbSame(w, st.words[i]); });
+    var ok = marks.every(Boolean);
+    var fb = document.getElementById('feedback-box');
+    st.tries++;
+
+    if (!ok && st.tries === 1) {
+      sbPaint(marks);
+      var right = marks.filter(Boolean).length;
+      fb.className = 'feedback-box show info-fb';
+      fb.innerHTML = '<div class="feedback-label">Not yet — ' + right + ' of ' + marks.length + ' in place</div>' +
+        '<div class="feedback-text">The words in blue are where they belong. Tap the others back and try again.</div>';
+      return;
+    }
+
+    st.done = true;
+    currentAnswered = true;
+    totalAnswered++;
+    sbPaint(marks);
+    var sentence = st.words.join(' ');
+    if (ok) {
+      correctCount++; currentStreak++;
+      fb.className = 'feedback-box show correct-fb';
+      fb.innerHTML = '<div class="feedback-label">✓ That’s the sentence</div><div class="feedback-text">' +
+        escHtml(sentence) + (st.q.explanation ? ' — ' + st.q.explanation : '') + '</div>';
+      spawnConfetti();
+      flashCard(true);
+    } else {
+      currentStreak = 0;
+      fb.className = 'feedback-box show wrong-fb';
+      fb.innerHTML = '<div class="feedback-label">✗ Here it is</div><div class="feedback-text"><strong>' +
+        escHtml(sentence) + '</strong>' + (st.q.explanation ? '<br>' + st.q.explanation : '') + '</div>';
+      recordMiss(built.join(' ').slice(0, 80), st.q.explanation);
+      flashCard(false);
+    }
+    var hear = document.getElementById('sb-hear');
+    if (hear) hear.innerHTML = hearButtonHtml(sentence);
+    enableNext();
+    updateStats();
+    updateStreak();
+  }
+
+  /* ── HEARING IT ──────────────────────────────────────────────────────────
+     The browser's own speech: no key, no cost, no backend. Only with a voice
+     for the language - an English voice reading Spanish teaches the wrong
+     sounds, which is worse than no sound. Voices load late on some browsers. */
+  function langVoice(tag) {
+    if (!tag || !window.speechSynthesis || !window.SpeechSynthesisUtterance) return null;
+    var vs = window.speechSynthesis.getVoices() || [], base = tag.split('-')[0].toLowerCase(), i, best = null;
+    for (i = 0; i < vs.length; i++) {
+      var l = String(vs[i].lang || '').toLowerCase().replace('_', '-');
+      if (l === tag.toLowerCase()) return vs[i];
+      if (!best && l.split('-')[0] === base) best = vs[i];
+    }
+    return best;
+  }
+  function canSpeak() { var L = targetLang(); return !!(L && langVoice(L.speech)); }
+  function speakText(text, slow) {
+    var L = targetLang(), v = L && langVoice(L.speech);
+    if (!v) return false;
+    try {
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(String(text || ''));
+      u.voice = v; u.lang = v.lang; u.rate = slow ? 0.62 : 0.9;
+      window.speechSynthesis.speak(u);
+      return true;
+    } catch (e) { return false; }
+  }
+  if (window.speechSynthesis && window.speechSynthesis.getVoices) {
+    try { window.speechSynthesis.getVoices(); } catch (eV) { /* warm the list */ }
+  }
+  function hearButtonHtml(text) {
+    if (!canSpeak()) return '';
+    return '<button type="button" class="hear-btn" onclick="speakText(' + escHtml(JSON.stringify(String(text))) + ')">' +
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>' +
+      'Hear it</button>';
   }
 
   function renderSequence(q) {
@@ -8072,6 +8287,8 @@
        seconds are there in one day?". */
     if (type === 'estimate')    return 'How to estimate: ' + trim(stem, 70);
     if (type === 'readingset')  return 'How to find the main idea and the evidence for it in a text';
+    /* The concept is the sentence's meaning, never the word that was blanked. */
+    if (type === 'dictation')   return q.translation ? 'How to say "' + trim(q.translation, 60) + '", word by word' : 'What this sentence means, word by word';
     /* A labelling stem is an instruction - "Label each numbered part" - so
        the concept is the thing that was labelled. Invariant 4. */
     if (type === 'labeldiagram') {
@@ -8803,6 +9020,76 @@
   /* ESTIMATE — a number, judged inside a tolerance band. Reasoning to the
      right order of magnitude is a different skill from computing an exact
      value, and marking 47 wrong because the key says 50 tests neither. */
+  /* ── LISTEN AND TYPE (partial dictation) ────────────────────────────────
+     The sentence is on screen with one word missing; the learner plays it and
+     types what they hear. Partial dictation - a transcript with gaps, heard
+     while read - beat full dictation and dictogloss for listening gains, and
+     reading-while-listening beat listening alone. It was the one skill this
+     app had no card for.
+
+     The voice is the browser's own (speakText), in the target language only.
+     With no voice for it, the card says so and stays answerable as a reading
+     gap-fill: the sentence is already on screen. Grading is the fill card's,
+     so the accent keys and the accent prompt come with it. */
+  function dictationGap(text, blank) {
+    var toks = String(text || '').split(/(\s+)/), want = langTrim(String(blank || '').toLowerCase()), i, done = false;
+    for (i = 0; i < toks.length; i++) {
+      if (!done && /\S/.test(toks[i]) && langTrim(toks[i].toLowerCase()) === want) {
+        var lead = (/^[¿¡"“«(]+/.exec(toks[i]) || [''])[0], tail = (/[.!?,;:"”»)]+$/.exec(toks[i]) || [''])[0];
+        toks[i] = escHtml(lead) + '<span class="dict-gap" aria-label="missing word"></span>' + escHtml(tail);
+        done = true;
+      } else toks[i] = escHtml(toks[i]);
+    }
+    return done ? toks.join('') : '';
+  }
+
+  function renderDictation(q) {
+    var gapped = dictationGap(q.text, q.blank);
+    if (!gapped) return renderFill({ question: q.question || 'Type the missing word.', answer: q.blank, explanation: q.explanation, hint: q.hint, difficulty: q.difficulty });
+    var voice = canSpeak();
+    window._dictState = { q: q, plays: 0 };
+    var player = voice
+      ? '<div class="dict-player"><button type="button" class="dict-play" onclick="dictPlay(false)">' +
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Play</button>' +
+        '<button type="button" class="dict-slow" onclick="dictPlay(true)">Slower</button></div>'
+      : '<div class="dict-novoice">This device has no voice for this language, so read it instead - the missing word is still the one to type.</div>';
+    var body = '<div class="q-meta"><span class="q-type-label">Listen and type</span>' +
+      '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
+      '<div class="q-text">' + (voice ? 'Play it, then type the missing word.' : 'Type the missing word.') + '</div>' +
+      player +
+      '<div class="dict-text" lang="' + escHtml((targetLang() || {}).code || '') + '">' + gapped + '</div>' +
+      '<div class="fill-wrap">' +
+      '<input class="fill-input" id="fill-input" type="text" placeholder="The missing word" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />' +
+      '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
+      '</div>' +
+      accentBarHtml('fill-input') +
+      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + escHtml(q.hint || (voice ? 'Play it on Slower and listen for the gap.' : 'Which word makes the sentence complete?')) + '</div></div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+    /* After the answer, the whole sentence and what it means - and the voice
+       again, so the learner hears the word they just wrote. */
+    var expl = '“' + escHtml(fmStr(q.text)) + '”' + (q.translation ? ' — ' + escHtml(fmStr(q.translation)) : '') +
+      (q.explanation ? '. ' + q.explanation : '');
+    setTimeout(function () {
+      var btn = document.getElementById('fill-btn'), inp = document.getElementById('fill-input');
+      if (btn) { btn.dataset.answer = fmStr(q.blank); btn.dataset.explanation = expl; }
+      if (inp) inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); answerFillBtn(); } });
+    }, 60);
+    var streak = correctCount + '/' + totalAnswered;
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Listen and type</div><h2>' + escHtml(day.title||'Practice') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function dictPlay(slow) {
+    var st = window._dictState;
+    if (!st) return;
+    st.plays++;
+    speakText(st.q.text, slow);
+  }
+
   function renderEstimate(q) {
     window._estimateState = { q: q };
     var unit = q.unit ? '<span style="font-size:.9rem;color:var(--muted);margin-left:.45rem;">' + esc(q.unit) + '</span>' : '';
@@ -9031,6 +9318,33 @@
           lengthOk && !hasExtraNegation) {
         var allMatch = corWords.every(function(w){ return valWords.includes(w); });
         if (allMatch) isCorrect = true;
+      }
+    }
+
+    /* LANGUAGE: right word, wrong accents. Telling them the answer (a recast)
+       is what classrooms mostly do and what learners least often act on;
+       prompting them to fix it themselves gets the repair (Lyster & Ranta
+       1997). So: one try back, the answer withheld, the accent keys right
+       there. The accent stays part of the answer - "hablo" and "habló" are
+       different words. Leading ¿/¡ and closing punctuation never count. */
+    var LNG = targetLang();
+    if (!isCorrect && LNG) {
+      var vT = langTrim(valN), cT = langTrim(corN);
+      if (vT === cT) isCorrect = true;
+      else if (!accentRetryUsed && vT && stripMarks(vT) === stripMarks(cT)) {
+        accentRetryUsed = true;
+        var fbA = document.getElementById('feedback-box');
+        if (fbA) {
+          fbA.className = 'feedback-box show info-fb';
+          fbA.innerHTML = '<div class="feedback-label">Almost — look at the accents</div>' +
+            '<div class="feedback-text">The letters are right. One or more marks are not - ' +
+            'fix them and check again.' + (ACCENT_KEYS[LNG.code] ? ' The keys under the box type them.' : '') + '</div>';
+        }
+        setTimeout(function () {
+          if (document.getElementById('fill-input') !== input) return;
+          try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); }
+        }, 60);
+        return;
       }
     }
 
@@ -9806,6 +10120,7 @@
     if (t === 'matchpairs') return pick(q.pairs, function (p) { return p && p.left ? p.left + ' → ' + p.right : ''; }).join('; ');
     if (t === 'sequence') return pick(q.items, fmStr).join(' → ');
     if (t === 'sentence') return pick(q.words, fmStr).join(' ');
+    if (t === 'dictation') return fmStr(q.blank);
     if (t === 'estimate' && q.answer !== undefined) return 'about ' + q.answer + (q.unit ? ' ' + q.unit : '');
     return fmStr(q.answer); // fill, bigequation, wordproblem all use .answer
   }

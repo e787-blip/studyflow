@@ -270,6 +270,51 @@ output is an argument from evidence.
   comes from the literature; the only thing measured here is what the
   palettes currently contain.
 
+## 8. Language cards: listening, self-repair, and the keyboard (Oct 2026)
+
+Language was the one subject whose cards ignored how language is learned.
+Three findings, and what each changed.
+
+**Prompting a learner to fix an error beats telling them the right form.**
+Lyster and Ranta's classroom study (four immersion classes, 18 hours) found
+recasts - repeating the learner's sentence corrected - were 55% of all
+feedback and the *least* likely to be taken up, while prompts that withhold
+the correct form (elicitation, metalinguistic clues) were the most likely to
+end in the learner repairing it themselves. So:
+
+- **A fill-in answer that is right except for its accents gets one prompt,
+  not the answer**: "Almost - look at the accents". The accent still counts:
+  *hablo* (I speak) and *habló* (he spoke) are different words, which is the
+  whole point of a preterite lesson. A second accent-only miss is graded wrong
+  and shows the answer.
+- **The sentence builder's first wrong check marks which words are already in
+  place** and hands the line back; only the second shows the sentence.
+
+**A learner without the keys cannot produce the form.** A school Chromebook
+has no ñ. So every language answer box carries the letters for that language
+(Spanish á é í ó ú ñ ü ¿ ¡, French, German, Italian, Portuguese and Hawaiian
+sets), typed at the caret. Leading ¿/¡ and closing punctuation never count.
+
+**Listening had no card at all, and partial dictation is the cheap, measured
+way in.** Dictation studies with school learners found listening gains over
+controls; partial dictation (a transcript with gaps, heard while read)
+slightly outperformed dictogloss, and reading-while-listening dictation beat
+listening alone. That is the new `dictation` card: the sentence on screen with
+one word missing, read aloud by the browser's own voice at normal or slower
+speed, the learner types the word. Only a voice FOR that language is used -
+an English voice reading Spanish teaches the wrong sounds - and with none the
+card says so and stays answerable as a reading gap-fill.
+
+**The mixes.** Every language subtopic traded its true/false (a coin flip on a
+sentence, and recognition) for a dictation; conversation, the subtopic most
+about hearing, asks for two. The sentence builder became a real word bank:
+the old card was the ordering list - "put these events in order" - and HTML
+drag-and-drop barely works on a phone.
+
+**Not established:** that the gains above transfer to a 9-question app
+session; the dictation studies ran for weeks. Translation direction (L1->L2
+vs L2->L1) has no consensus in the literature, so the mixes keep both.
+
 ## What none of this establishes
 
 - **The specific counts.** That reading comprehension gets four passage
@@ -279,6 +324,13 @@ output is an argument from evidence.
 - **That interleaving transfers** to history or English at this age. See §3.
 
 ## Sources
+- [Lyster & Ranta (1997), corrective feedback and learner uptake](https://escholarship.mcgill.ca/downloads/3r074z95m)
+- [Prompts and recasts in immersion classrooms (McGill eScholarship)](https://escholarship.mcgill.ca/downloads/3f462923r?locale=en)
+- [Dictation and listening comprehension (Kindai University repository)](https://kindai.repo.nii.ac.jp/records/14254)
+- [Frequent dictation and EFL listening (TESL Canada Journal)](https://teslcanadajournal.ca/index.php/tesl/article/download/938/757/965)
+- [Reading-listening integrated dictation (Chinese Journal of Applied Linguistics)](https://www.degruyterbrill.com/document/doi/10.1515/CJAL-2021-0026/html)
+- [Partial dictation vs dictogloss](https://research.vit.ac.in/publication/partial-dictation-vs-dictogloss-effect-on-listening-comprehension)
+- [L1->L2 vs L2->L1 retrieval direction, review (HSJ Filología)](https://revista-hsj-filologia.unavarra.es/hsj-Filologia/en/article/view/2663)
 
 - [Retrieval Practice in Classroom Settings: A Review of Applied Research](https://www.frontiersin.org/journals/education/articles/10.3389/feduc.2019.00005/full)
 - [It matters how to recall – task differences in retrieval practice](https://link.springer.com/article/10.1007/s11251-020-09526-1)

@@ -139,7 +139,7 @@ Keep the two lists identical.
 
 ### Subject → question type matrix
 
-10 subject types, **18 question types**. Schemas live in `app.html`.
+10 subject types, **19 question types**. Schemas live in `app.html`.
 
 The original 12 are `mcq`, `truefalse`, `fill`, `write`, `classify`, `sequence`,
 `sentence`, `passage`, `errorspot`, `scenario`, `wordproblem`, `bigequation`.
@@ -158,6 +158,9 @@ Six more were added for formats those could not express — see
 | english | passage ×3, mcq ×2, truefalse, write, fill ×2 |
 | language | sentence ×2, mcq ×3, truefalse, fill ×3 |
 | general | mcq ×3, truefalse ×2, fill ×2, write |
+
+`dictation` (listen and type) is the 19th, language only - see "The
+language cards" below.
 
 Math carries no MCQ on purpose — see invariant 1. Science's `sequence` replaced a
 third MCQ when the synthetic key-terms ordering card was removed (invariant 6).
@@ -379,6 +382,33 @@ production at all. The research and the measurement are in
 `cs/algorithms` still has no prose writing. That is deliberate — it produces
 through `tracetable` and `estimate`, and every session already ends with two
 Feynman write cards.
+
+### The language cards (Oct 2026) — `targetLang`, accents, sentence, dictation
+
+Evidence and sources: [docs/question-design.md §8](docs/question-design.md).
+
+- **`targetLang()`** reads the language off the plan's subject and the day's
+  title, and ONLY on a `language` day - "Causes of the French Revolution" is
+  not French. It gives a code (accent keys) and a BCP-47 tag (speech).
+- **Accent keys** (`accentBarHtml`, `ACCENT_KEYS`) under every language
+  answer box, typed at the caret. A school keyboard has no ñ.
+- **Accents are part of the answer, and an accent-only miss is a prompt.**
+  `answerFill` gives ONE "Almost - look at the accents" (answer withheld,
+  `accentRetryUsed`, reset per card); the second is graded. hablo ≠ habló.
+  Leading ¿/¡ and closing punctuation never count (`langTrim`).
+- **`sentence` is a word bank**, tap to place, tap to send back
+  (`renderSentence`, `sbPaint`, `checkSentence`). It was the ordering list.
+  The first wrong check marks the words in place and hands the line back;
+  the second reveals. Grades by word, so a repeated word placed either way
+  round is fine. "Hear it" afterwards when the device has a voice.
+- **`dictation`** - `{text, blank, translation}`: the sentence on screen with
+  one gap, played by `speechSynthesis` at 0.9 or 0.62 rate, the learner types
+  the gap. It reuses the fill grader (accents included). **Only a voice for
+  that language** (`langVoice`) - none, and the card says so and becomes a
+  reading gap-fill. The validator drops a blank that is not one whole word of
+  the sentence. Never in `MOMENT_NEVER`'s drawings or the recall picture.
+- Every language mix traded its true/false for a dictation; conversation
+  has two. `test_language.js` covers all of it, and fails on the code before.
 
 ### `labeldiagram` — the learner acts on the picture
 
@@ -1971,7 +2001,7 @@ that vanished with each session):
 bash .claude/skills/morning-check/scripts/run_all.sh /tmp/sf-morning
 ```
 
-22 checks on real page loads with `api/generate` mocked - parse, every card
+23 checks on real page loads with `api/generate` mocked - parse, every card
 type answered wrong, walkthroughs, the picture budget, the labelling card,
 plan-time drawing, board text sizes, pictures drawing themselves, the icons
 and the layouts built on them, and every diagram against an audited

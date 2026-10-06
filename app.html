@@ -2624,6 +2624,8 @@
     if (type === 'tracetable')  return '{"type":"tracetable","question":"","setup":"","columns":["Step","Value"],"rows":[["1",""],["2",""],["3",""]],"blankCol":1,' + tail;
     if (type === 'matchpairs')  return '{"type":"matchpairs","question":"Match each item to its pair.","pairs":[{"left":"","right":""},{"left":"","right":""},{"left":"","right":""},{"left":"","right":""}],' + tail;
     if (type === 'estimate')    return '{"type":"estimate","question":"","answer":0,"tolerance":0,"unit":"",' + tail;
+    /* Partial dictation: the learner HEARS text and types the one word in "blank". */
+    if (type === 'dictation')   return '{"type":"dictation","question":"Listen and type the missing word.","text":"","blank":"","translation":"",' + tail;
     /* One passage, several questions against it - the shape reading
        comprehension is actually practised in. buildQueue expands this into a
        passage card followed by its questions. */
@@ -2646,7 +2648,7 @@
                      passage:'Passage', errorspot:'Errorspot', scenario:'Scenario',
                      wordproblem:'Wordproblem', twopart:'Two-part', corroborate:'Corroborate',
                      highlight:'Find-the-evidence', tracetable:'Trace table',
-                     matchpairs:'Match pairs', estimate:'Estimate',
+                     matchpairs:'Match pairs', estimate:'Estimate', dictation:'Listen and type',
                      readingset:'Reading set (passage + 3 questions)',
                      labeldiagram:'Label the diagram' };
 
@@ -2839,12 +2841,16 @@
         /* Explicit instruction beats implicit, and explicit explanation with
            guided production beats exposure alone - so the matchpairs becomes
            a write, where the learner states the rule in their own words. */
-        types:['write','sentence','sentence','highlight','fill','fill','mcq','twopart','truefalse'],
+        /* Oct 2026: every language mix trades its true/false (recognition - a
+           coin flip on a sentence) for "dictation", partial dictation heard
+           in the browser's own voice. Listening was the one skill no card
+           asked for; conversation now asks for it twice. */
+        types:['write','sentence','sentence','dictation','highlight','fill','fill','mcq','twopart'],
         guide:'ASK: produce or correct a real sentence - conjugate it, fix it, reorder it. AVOID: asking about grammar terminology in the abstract.',
         visual:'compare two forms, or a 2x2 matrix for a conjugation pattern.' },
       { key:'reading', label:'Reading and conversation',
         terms:['reading','conversation','dialogue','listening','comprehension','phrase','greeting','culture','speaking','travel','ordering','directions'],
-        types:['readingset','highlight','sentence','matchpairs','mcq','fill','truefalse','write'],
+        types:['readingset','dictation','dictation','highlight','sentence','matchpairs','fill','write','mcq'],
         guide:'ASK: what a short passage or exchange actually says, and how to respond in the language. AVOID: translating isolated words with no context.',
         visual:'compare two ways of saying the same thing.' },
       { key:'vocab', label:'Vocabulary',
@@ -2854,7 +2860,7 @@
            on. Productive retrieval builds productive knowledge; recall beats
            recognition for producing a word. One matchpairs and one mcq become
            a second sentence and a write. */
-        types:['matchpairs','fill','fill','sentence','sentence','write','mcq','twopart','truefalse'],
+        types:['matchpairs','fill','fill','sentence','sentence','dictation','write','mcq','twopart'],
         guide:'ASK: the word used inside a sentence that fixes its meaning. AVOID: bare word-to-word pairs with no context.',
         visual:'a concept hub grouping words by theme.' }
     ],
@@ -3387,6 +3393,19 @@
           if (pins.length < 2) return false;
           q.pins = pins.slice(0, 6);
           q.options = (q.options || []).filter(function (o) { return String(o || '').trim(); });
+          return true;
+        }
+        /* The blank must be ONE whole word of the sentence, or the gap cannot be
+           drawn and the card has no answer. */
+        if (q.type === 'dictation') {
+          var dt = String(q.text || '').replace(/\s+/g, ' ').trim();
+          var db = String(q.blank || '').replace(/^[\s¿¡"“«]+|[\s.!?,;:"”»]+$/g, '');
+          if (dt.length < 8 || dt.length > 140 || !db || /\s/.test(db)) return false;
+          var dWords = dt.split(' ').map(function (w) { return w.replace(/^[¿¡"“«(]+|[.!?,;:"”»)]+$/g, '').toLowerCase(); });
+          if (dWords.indexOf(db.toLowerCase()) === -1) return false;
+          q.text = dt; q.blank = db;
+          q.translation = String(q.translation || '').trim().slice(0, 160);
+          if (!String(q.question || '').trim()) q.question = 'Listen and type the missing word.';
           return true;
         }
         if (q.type === 'estimate') {
@@ -3976,6 +3995,11 @@
         '  first, so every question must be answerable from the passage alone, and no two\n' +
         '  questions in a set may test the same thing. Do not write three mini-passages -\n' +
         '  write one passage worth reading, then question it from three angles.\n' +
+        'dictation: "text" is ONE short sentence (5-14 words) IN THE LANGUAGE BEING LEARNED,\n' +
+        '  using the notes\' vocabulary and grammar; "blank" is ONE word copied exactly from it\n' +
+        '  (accents included) - the word the day is practising, never "the" or "a";\n' +
+        '  "translation" is the sentence in English. The learner HEARS the sentence and types\n' +
+        '  the blank, so write it the way a person would say it.\n' +
         'estimate: "answer" is a number from the notes and "tolerance" is how far off is\n' +
         '  still fine (about 10%). Use it where reasoning to the right ballpark is the skill.\n' +
         '\nVISUAL (field "visual") - pick the ONE diagram type that genuinely fits this topic and fill it with REAL content from the notes. Never invent filler labels. Use exactly one of:\n' +
