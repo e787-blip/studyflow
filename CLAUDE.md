@@ -410,6 +410,29 @@ Evidence and sources: [docs/question-design.md §8](docs/question-design.md).
 - Every language mix traded its true/false for a dictation; conversation
   has two. `test_language.js` covers all of it, and fails on the code before.
 
+### The history cards (Oct 2026) — claim, change, perspective
+
+Evidence and sources: [docs/question-design.md §9](docs/question-design.md).
+No new question TYPE - three variants of existing ones, so the eight-place
+list does not apply, but each variant has a template in `qtpl`, a line of
+guidance in the prompt, and a renderer branch.
+
+- **`write:claim` - "Make your case"** (`"mode":"claim"`, optional `source`,
+  `modelAnswer`). `renderWrite` hands it to `renderClaim`: the question, the
+  source, and three boxes - claim, evidence, why it proves it. `submitClaim`
+  sends them through `submitWrite(model, question, {kind:'claim'})`, whose
+  rubric grades the argument, not agreement. Not in the percentage.
+  **It is never a teach-it-back pass**: `applyFeynmanOrder` leaves claim
+  cards where they are, and moves one that landed just before the closing
+  pass to mid-practice (two long writing cards in a row was the finish).
+  The validator drops the mode when there is no `modelAnswer` and clears any
+  unknown mode - a bad mode is just a teach-it-back card.
+- **`classify:change` - "Then and now"**: Changed / Stayed the same.
+- **`passage:perspective`**: a source from the time, why THEY saw it so;
+  one option is always the presentist reading, named in the explanation.
+- **True/false is out of all three history mixes.** `test_history.js`
+  covers the cards, the queue, the escaping and the prompt.
+
 ### `labeldiagram` — the learner acts on the picture
 
 A drawing with numbered pins and a menu per pin. It is the only format in
@@ -2001,7 +2024,7 @@ that vanished with each session):
 bash .claude/skills/morning-check/scripts/run_all.sh /tmp/sf-morning
 ```
 
-23 checks on real page loads with `api/generate` mocked - parse, every card
+24 checks on real page loads with `api/generate` mocked - parse, every card
 type answered wrong, walkthroughs, the picture budget, the labelling card,
 plan-time drawing, board text sizes, pictures drawing themselves, the icons
 and the layouts built on them, and every diagram against an audited

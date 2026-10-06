@@ -60,6 +60,7 @@ check review_change "REVIEW CHANGE OK"     node "$HERE/test_review_change.js"
 check mix          "MIX OK"                node "$HERE/test_mix.js"
 check visuals      "VISUALS OK"            node "$HERE/test_visuals.js"
 check language     "LANGUAGE OK"           node "$HERE/test_language.js"
+check history      "HISTORY OK"            node "$HERE/test_history.js"
 check draw_on      "DRAWON OK"             node "$HERE/test_drawon.js"
 check icons        "ICONS OK"              node "$HERE/test_icons.js"
 # 3. The picture budget: at most 30% of question cards, never the same picture twice.

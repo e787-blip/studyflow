@@ -315,6 +315,50 @@ drag-and-drop barely works on a phone.
 session; the dictation studies ran for weeks. Translation direction (L1->L2
 vs L2->L1) has no consensus in the literature, so the mixes keep both.
 
+## 9. History cards: the skills nothing asked for (Oct 2026)
+
+The history mixes already covered Reading Like a Historian's four reading
+skills - sourcing, contextualization, corroboration, close reading - and that
+programme is the strongest evidence in the subject: six months of
+document-based lessons in five urban high schools beat control classrooms on
+historical thinking, transfer, factual knowledge AND general reading
+comprehension (Reisman 2012). Mapped against Seixas's six historical thinking
+concepts, three were missing entirely.
+
+**Continuity and change.** Nothing asked what changed and what did not. The
+sorting card now has a variant, `classify:change`: three things that really
+changed across the period and three that really continued ("Then and now").
+
+**Historical perspectives.** The passage card had a "Historical Perspective"
+label that no mix ever asked for. `passage:perspective` is a source written at
+the time and the question is why its author saw or acted as they did, given
+what they knew. Students judge the past by present standards - "presentism" -
+and Lee and Ashby frame perspective-taking as understanding a belief without
+sharing it. So one wrong option is always the presentist reading, and the
+explanation names the trap.
+
+**Argument from evidence, and significance.** History writing was "explain a
+cause in a sentence". A historian argues: claim, evidence, and why the evidence
+supports the claim. De La Paz's cognitive-apprenticeship work moved
+middle-school students' argument writing with exactly that structure. The new
+**Make your case** card (`write` with `"mode":"claim"`) asks a question that can
+be answered either way - was it a turning point, which cause mattered most - and
+gives three boxes. The tutor grades the ARGUMENT (claim 3, evidence 4, reasoning
+3), never agreement with the model answer, and flags presentism kindly. Like
+teach-it-back it is not in the percentage.
+
+**True/false is out of every history mix.** Think-aloud studies of short
+history assessments found multiple-choice items drew more "construct-
+irrelevant" thinking - recall, recognition and test-taking - than short
+written ones (Smith, Breakstone & Wineburg). A true/false is the thinnest
+multiple-choice item there is. Its slot went to the perspective card.
+
+**Not established:** the Reisman and De La Paz gains came from months of
+teacher-led lessons, not a 10-card session; the cards borrow the TASKS those
+studies used, not their dose. The ethical dimension, Seixas's sixth concept,
+is deliberately not a card - it has no answer key, and a tutor grading a
+child's ethics is not a line this app should cross.
+
 ## What none of this establishes
 
 - **The specific counts.** That reading comprehension gets four passage
@@ -324,6 +368,13 @@ vs L2->L1) has no consensus in the literature, so the mixes keep both.
 - **That interleaving transfers** to history or English at this age. See §3.
 
 ## Sources
+- [Reisman (2012), Reading Like a Historian, Stanford dissertation](https://purl.stanford.edu/by786ht6640) and [summary](https://historynewsnetwork.org/article/147039)
+- [Seixas & Morton, The Big Six historical thinking concepts](https://www.thenhier.ca/en/content/seixas-peter-and-tom-morton-big-six-historical-thinking-concepts-2012.html)
+- [Historical thinking concepts (Canadian Encyclopedia)](https://www.thecanadianencyclopedia.ca/en/article/historical-thinking-concepts)
+- [Lee & Ashby, empathy, perspective taking and rational understanding](https://www.thenhier.ca/en/content/lee-p-and-r-ashby-“empathy-perspective-taking-and-rational-understanding”-2001.html)
+- [Smith, Breakstone & Wineburg, History Assessments of Thinking: a validity study](https://purl.stanford.edu/tj409fm6721)
+- [Can multiple-choice items tap historical thinking? (Inquiry Group)](https://inquirygroup.org/node/341)
+- [De La Paz et al., disciplinary writing instruction in social studies (IES)](https://ies.ed.gov/use-work/awards/disciplinary-writing-instruction-social-studies-classroom-path-adolescent-literacy)
 - [Lyster & Ranta (1997), corrective feedback and learner uptake](https://escholarship.mcgill.ca/downloads/3r074z95m)
 - [Prompts and recasts in immersion classrooms (McGill eScholarship)](https://escholarship.mcgill.ca/downloads/3f462923r?locale=en)
 - [Dictation and listening comprehension (Kindai University repository)](https://kindai.repo.nii.ac.jp/records/14254)

@@ -2600,7 +2600,17 @@
     if (type === 'scenario')  return '{"type":"scenario","question":"","options":["","","",""],"correctIndex":' + idx + ',' + tail;
     if (type === 'truefalse') return '{"type":"truefalse","question":"","correct":"' + (i % 2 ? 'False' : 'True') + '",' + tail;
     if (type === 'fill')      return '{"type":"fill","question":"","answer":"",' + tail;
+    /* write:claim is a historical ARGUMENT - a question that can be answered
+       either way, a claim, evidence, and why the evidence proves it (De La
+       Paz's argument-writing work). Without the mode a write card becomes the
+       "teach it back" explanation. */
+    if (type === 'write' && variant === 'claim')
+      return '{"type":"write","mode":"claim","question":"","source":"","modelAnswer":"",' + tail;
     if (type === 'write')     return '{"type":"write","question":"","modelAnswer":"",' + tail;
+    /* classify:change is continuity and change - one of Seixas's six
+       historical thinking concepts that nothing here asked for. */
+    if (type === 'classify' && variant === 'change')
+      return '{"type":"classify","question":"What changed, and what stayed the same?","categoryA":"Changed","categoryB":"Stayed the same","itemsA":["","",""],"itemsB":["","",""],' + tail;
     if (type === 'classify')  return '{"type":"classify","question":"Sort:","categoryA":"","categoryB":"","itemsA":["","",""],"itemsB":["","",""],' + tail;
     /* A Parsons problem: reorder given lines of code into a working program.
        Same pre-to-post gains as writing the equivalent code, faster and at
@@ -2744,12 +2754,18 @@
     history: [
       { key:'civics', label:'Civics and government',
         terms:['civics','government','constitution','congress','senate','parliament','bill','law','court','supreme','amendment','voting','election','democracy','citizen','branch','federal','judicial','legislat','executive','rights'],
-        types:['twopart','sequence:process','highlight','write','scenario','passage:sourcing','mcq','fill','truefalse'],
+        /* Oct 2026: true/false out of all three history mixes. Think-alouds
+           found multiple-choice history items reward recall and test-taking
+           more than historical thinking (Smith, Breakstone & Wineburg), and a
+           true/false is the thinnest of them. In: an argument from evidence,
+           continuity and change, and historical perspective - three of
+           Seixas's six concepts nothing asked for. */
+        types:['twopart','sequence:process','highlight','write:claim','scenario','passage:sourcing','mcq','fill','passage:perspective'],
         guide:'ASK: how a process actually moves - who acts, in what order, and what stops it. Apply a rule to a short concrete case. AVOID: counting seats or naming office-holders as trivia.',
         visual:'a flow for how a process moves, hierarchy for who answers to whom.' },
       { key:'social', label:'Social and economic history',
         terms:['industrial','immigration','migration','labor','labour','slavery','civil rights','women','social','economic','trade','agricultur','urban','class','reform','movement','protest','population'],
-        types:['corroborate','twopart','passage:cause-effect','classify','mcq','write','fill','highlight','truefalse'],
+        types:['corroborate','twopart','passage:cause-effect','classify:change','mcq','write:claim','fill','highlight','passage:perspective'],
         guide:'ASK: what changed for ordinary people and why, and which groups experienced it differently. AVOID: a single national story with no one in it.',
         visual:'compare before and after, or a bar chart when the notes carry real figures.' },
       { key:'era', label:'Events and eras',
@@ -2757,7 +2773,7 @@
         /* passage:context is the fourth Reading Like a Historian skill -
            contextualization - and it was the one this app did not ask for.
            Sourcing, corroboration and close reading were all covered. */
-        types:['corroborate','passage:sourcing','passage:context','sequence:chronology','twopart','mcq','write','fill','classify','truefalse'],
+        types:['corroborate','passage:sourcing','passage:context','sequence:chronology','twopart','mcq','write:claim','fill','classify:change','passage:perspective'],
         guide:'ASK: causes, consequences, motives and order. Tie an event to what it produced. AVOID: bare date recall unless the notes stress the chronology.',
         visual:'a timeline for anything dated, flow for a causal chain.' }
     ],
@@ -3435,7 +3451,16 @@
              point of the format is several questions against one text. */
           return q.questions.length >= 2;
         }
-        if (q.type === 'write') return !!(qText && qText.length > 3);
+        if (q.type === 'write') {
+          if (!(qText && qText.length > 3)) return false;
+          /* An argument needs a question worth arguing and a model case to
+             compare against; without one it is a teach-it-back card. */
+          if (q.mode === 'claim') {
+            if (!String(q.modelAnswer || '').trim()) q.mode = '';
+            q.source = String(q.source || '').trim().slice(0, 600);
+          } else if (q.mode) q.mode = '';
+          return true;
+        }
         /* A passage card is the passage. Without one the learner gets an empty
            quote block above four options about a text they were never shown -
            and nothing else validated this, because passage fell through to the
@@ -3995,6 +4020,16 @@
         '  first, so every question must be answerable from the passage alone, and no two\n' +
         '  questions in a set may test the same thing. Do not write three mini-passages -\n' +
         '  write one passage worth reading, then question it from three angles.\n' +
+        'write with "mode":"claim": a question about this material that a historian could\n' +
+        '  answer EITHER way (was it a turning point? which cause mattered most? how much\n' +
+        '  did life change, and for whom?). "source" is an optional 2-4 sentence excerpt to\n' +
+        '  argue from; "modelAnswer" is ONE defensible claim with two pieces of evidence\n' +
+        '  from the notes. Never a question with only one right answer.\n' +
+        'classify "What changed, and what stayed the same?": three things that really\n' +
+        '  changed across the period in the notes and three that really continued.\n' +
+        'passage "perspective": an excerpt written AT THE TIME; ask why its author or people\n' +
+        '  then saw or acted as they did, given what they knew and believed. One wrong option\n' +
+        '  must judge them by today\'s values instead - name that trap in the explanation.\n' +
         'dictation: "text" is ONE short sentence (5-14 words) IN THE LANGUAGE BEING LEARNED,\n' +
         '  using the notes\' vocabulary and grammar; "blank" is ONE word copied exactly from it\n' +
         '  (accents included) - the word the day is practising, never "the" or "a";\n' +

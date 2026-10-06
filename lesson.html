@@ -495,6 +495,15 @@
      button align-self:flex-start, which left it stranded under the input and
      visually detached from the thing it submits. */
   .fill-wrap { position:relative; display:block; }
+  /* Make your case. */
+  .q-text.cl-question { font-family:var(--serif); font-weight:400; font-size:1.35rem; line-height:1.25; margin-bottom:.6rem; }
+  .cl-source { background:var(--soft); border-left:3px solid #3563e9; border-radius:0 10px 10px 0; padding:.7rem .9rem; margin:.4rem 0 .7rem;
+    font-size:0.86rem; line-height:1.7; color:var(--ink); font-style:italic; }
+  .cl-source-k { font-style:normal; font-size:0.65rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#3563e9; margin-bottom:.25rem; }
+  .cl-note { font-size:0.78rem; color:var(--muted); margin:.2rem 0 .7rem; }
+  .cl-label { display:block; font-size:0.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink); margin:.7rem 0 .3rem; }
+  .write-area.cl-box { min-height:0; }
+  body.dark .cl-catB { color:#a3b1c6 !important; }
   /* Listen and type. */
   .dict-player { display:flex; gap:.5rem; margin:.5rem 0 .8rem; }
   .dict-play { display:inline-flex; align-items:center; gap:.4rem; padding:.6rem 1.1rem; border:none; border-radius:999px;
@@ -1596,7 +1605,9 @@
     /* Anything already an explain card gets pulled out; we place them. */
     var writes = [], rest = [], i;
     for (i = 0; i < cards.length; i++) {
-      if (cards[i] && cards[i].type === 'write') writes.push(cards[i]);
+      /* A "make your case" card is a question, not an explanation pass: it
+         stays where the practice run put it. */
+      if (cards[i] && cards[i].type === 'write' && !(cards[i].q && cards[i].q.mode === 'claim')) writes.push(cards[i]);
       else rest.push(cards[i]);
     }
 
@@ -1657,6 +1668,16 @@
     /* Any further explain cards the day supplied sit inside the practice run
        rather than being dropped. */
     while (writes.length) out.splice(Math.max(firstPractice + 2, out.length - 2), 0, writes.shift());
+    /* A "make your case" card that the later injectors pushed to the end sat
+       right before the closing teach-it-back: two long writing cards in a
+       row to finish. It goes to the middle of the practice run instead. */
+    for (i = out.length - 2; i >= 0 && i >= out.length - 3; i--) {
+      if (out[i] && out[i].type === 'write' && out[i].q && out[i].q.mode === 'claim') {
+        var cl = out.splice(i, 1)[0];
+        out.splice(Math.max(firstPractice + 2, Math.floor((firstPractice + out.length) / 2)), 0, cl);
+        break;
+      }
+    }
     return out;
   }
 
@@ -8393,7 +8414,64 @@
   }
   window.autoGrowWrite = autoGrowWrite;
 
+  /* ── MAKE YOUR CASE (write mode "claim") ─────────────────────────────────
+     A historical argument: a question a historian could answer either way,
+     then a claim, the evidence, and why that evidence proves it - three
+     boxes, because the commonest failure in student history writing is a
+     claim with no evidence, or evidence that is never tied back to the claim.
+     Explicit argument-writing instruction is what moved middle-school history
+     writing in De La Paz's studies. Graded by the tutor on the ARGUMENT, not
+     on agreeing with the model answer, and like teach-it-back it is not in
+     the percentage. Never queued as a teach-it-back pass. */
+  function renderClaim(q) {
+    var src = fmStr(q.source);
+    var box = function (id, label, hint, rows) {
+      return '<label class="cl-label" for="' + id + '">' + label + '</label>' +
+        '<textarea class="write-area cl-box" id="' + id + '" rows="' + rows + '" oninput="autoGrowWrite(this)" placeholder="' + escHtml(hint) + '"></textarea>';
+    };
+    var body = '<div class="q-meta"><span class="q-type-label">Make your case</span><span class="q-chip-plain">Not scored</span></div>' +
+      '<div class="q-text cl-question">' + escHtml(fmStr(q.question)) + '</div>' +
+      (src ? '<div class="cl-source"><div class="cl-source-k">Source</div>' + escHtml(src) + '</div>' : '') +
+      '<div class="cl-note">There is more than one good answer. What counts is how well you back yours up.</div>' +
+      box('cl-claim', 'Your claim', 'One sentence that answers the question.', 2) +
+      box('cl-evidence', 'Your evidence', 'Two facts from your notes or the source - names, dates, events.', 3) +
+      box('cl-because', 'Why it proves your claim', 'This shows ... because ...', 2) +
+      '<div style="display:flex;align-items:center;gap:.75rem;margin-top:.65rem;">' +
+      '<button class="write-submit" onclick="submitClaim()">Get feedback →</button>' +
+      '<div class="write-analyzing" id="write-analyzing"><div class="mini-spinner"></div><span>Reading your argument...</span></div>' +
+      '</div>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+    window._claimState = { q: q };
+    return '<div class="session-card">' +
+      '<div class="card-header"><div class="card-badge">✦ Make your case</div><h2>Argue it like a historian</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">Claim · evidence · why</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+
+  function submitClaim() {
+    var st = window._claimState;
+    if (!st) return;
+    var get = function (id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    var claim = get('cl-claim'), ev = get('cl-evidence'), why = get('cl-because');
+    /* Claim and evidence are the two that must be there; an empty one is
+       shaken and focused, never an alert. */
+    var missing = !claim ? 'cl-claim' : (!ev ? 'cl-evidence' : '');
+    if (missing) {
+      var ta = document.getElementById(missing);
+      void ta.offsetWidth; ta.style.animation = 'sfShake .42s ease'; ta.focus();
+      setTimeout(function () { ta.style.animation = ''; }, 450);
+      return;
+    }
+    submitWrite(fmStr(st.q.modelAnswer), fmStr(st.q.question), {
+      kind: 'claim',
+      answer: 'CLAIM: ' + claim + '\nEVIDENCE: ' + ev + '\nWHY IT PROVES IT: ' + (why || '(left blank)'),
+      source: fmStr(st.q.source)
+    });
+  }
+
   function renderWrite(q) {
+    if (q && q.mode === 'claim') return renderClaim(q);
     var concept = feynmanConcept(q);
     var body = '<div class="q-meta"><span class="q-type-label write">Feynman Technique</span><span class="q-chip-plain">Not scored</span></div>' +
       '<div class="q-text">Explain this concept <strong>in your own words</strong>, as if teaching it to a friend:</div>' +
@@ -8444,14 +8522,17 @@
       '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#4a7cf6;margin-bottom:.4rem;">' + (q.categoryA||'Category A') + '</div>' +
       '<div id="classify-a-items" style="display:flex;flex-wrap:wrap;gap:.3rem;min-height:36px;"></div></div>' +
       '<div id="classify-bucketB" onclick="classifyDrop(\'B\')" style="min-height:80px;border:2px dashed #94a3b8;border-radius:14px;padding:.6rem;background:rgba(100,116,139,.05);cursor:pointer;transition:background .2s;">' +
-      '<div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#475569;margin-bottom:.4rem;">' + (q.categoryB||'Category B') + '</div>' +
+      '<div class="cl-catB" style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#475569;margin-bottom:.4rem;">' + (q.categoryB||'Category B') + '</div>' +
       '<div id="classify-b-items" style="display:flex;flex-wrap:wrap;gap:.3rem;min-height:36px;"></div></div>' +
       '</div>' +
       '<button onclick="checkClassify()" id="classify-check-btn" style="margin-top:.9rem;background:var(--blue);color:#fff;border:none;border-radius:10px;padding:.7rem 1.4rem;font-family:var(--sans);font-size:0.88rem;font-weight:700;cursor:pointer;">Check →</button>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Classify</div><h2>Sort into categories</h2></div>' +
+      /* Continuity and change gets its own name; it is a different question
+         from "which group does this belong to". */
+      '<div class="card-header"><div class="card-badge">✦ Classify</div><h2>' +
+        (/^changed$/i.test(fmStr(q.categoryA)) ? 'Then and now' : 'Sort into categories') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -9618,8 +9699,10 @@
   }
 
   /* ── WRITING ── */
-  function submitWrite(modelAnswer, question) {
-    var answer = document.getElementById('write-input').value.trim();
+  function submitWrite(modelAnswer, question, opts) {
+    opts = opts || {};
+    var wIn = document.getElementById('write-input');
+    var answer = opts.answer || (wIn ? wIn.value.trim() : '');
     if (!answer) {
       /* Same reasoning as the sorting nudge: a modal alert halts the session
          and does not belong in the flow. Shake the field and say it inline. */
@@ -9649,7 +9732,18 @@
     document.getElementById('write-analyzing').classList.add('show');
 
     // TIER 3: Feynman technique — AI identifies knowledge gaps specifically
-    var prompt = 'You are a tutor grading a student explanation using the Feynman Technique. Be specific, honest, and encouraging.\n\nCONCEPT: ' + question + '\nCORRECT EXPLANATION: ' + modelAnswer + '\nSTUDENT WROTE: ' + answer + '\n\nRespond in this exact format:\n SCORE: X/10\n WHAT YOU NAILED: [1-2 specific things they got right, reference their exact words]\n KNOWLEDGE GAPS: [specific concepts they missed or got wrong — be precise]\n ADVICE: [one concrete tip to fill the biggest gap]\n\nBe specific — reference actual content from their answer. Never be generic.';
+    var prompt = opts.kind === 'claim'
+      ? 'You are a history teacher grading a short historical argument. The question can be answered more than one way: ' +
+        'do NOT mark the student down for disagreeing with the model answer - grade the argument.\n\n' +
+        'QUESTION: ' + question + '\n' + (opts.source ? 'SOURCE: ' + opts.source + '\n' : '') +
+        'ONE STRONG ANSWER (for reference only): ' + modelAnswer + '\nSTUDENT WROTE:\n' + answer + '\n\n' +
+        'Score out of 10: claim answers the question clearly (3), evidence is specific and accurate (4), ' +
+        'the student explains HOW the evidence supports the claim (3). If the student judges people in the past ' +
+        'only by today\'s values, say so kindly in KNOWLEDGE GAPS.\n\n' +
+        'Respond in this exact format:\n SCORE: X/10\n WHAT YOU NAILED: [1-2 specific things, quoting their words]\n' +
+        ' KNOWLEDGE GAPS: [name which part is weakest - claim, evidence or reasoning - and why]\n' +
+        ' ADVICE: [one concrete change that would make the argument stronger]\n\nNever be generic.'
+      : 'You are a tutor grading a student explanation using the Feynman Technique. Be specific, honest, and encouraging.\n\nCONCEPT: ' + question + '\nCORRECT EXPLANATION: ' + modelAnswer + '\nSTUDENT WROTE: ' + answer + '\n\nRespond in this exact format:\n SCORE: X/10\n WHAT YOU NAILED: [1-2 specific things they got right, reference their exact words]\n KNOWLEDGE GAPS: [specific concepts they missed or got wrong — be precise]\n ADVICE: [one concrete tip to fill the biggest gap]\n\nBe specific — reference actual content from their answer. Never be generic.';
 
     fetch('api/generate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -9679,11 +9773,11 @@
 
       var fb = document.getElementById('feedback-box');
       fb.className = 'feedback-box info-fb show';
-      fb.innerHTML = '<div class="feedback-label"> Feynman Analysis</div>' +
+      fb.innerHTML = '<div class="feedback-label">' + (opts.kind === 'claim' ? 'Your argument' : ' Feynman Analysis') + '</div>' +
         scoreHtml +
         '<div class="feedback-text">' + formatted + '</div>' +
         '<div style="margin-top:1rem;padding:.75rem;background:var(--soft);border-radius:10px;font-size:0.82rem;color:var(--muted);">' +
-        '<strong>Model answer:</strong> ' + modelAnswer + '</div>';
+        '<strong>' + (opts.kind === 'claim' ? 'One strong answer:' : 'Model answer:') + '</strong> ' + modelAnswer + '</div>';
       enableNext();
 
       // Save Feynman score for analytics
