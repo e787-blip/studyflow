@@ -364,74 +364,126 @@
 
 </div>
 
+<script src="/sf-auth.js"></script>
 <script>
-  // Auth guard
-  if (!localStorage.getItem('studyflow_teacher')) {
-    window.location.href = 'teacher-login.html';
+  /* Every function here used to be declared INSIDE init(), so none of them
+     was global: the tabs, Copy code, Share, Assign and Sign out buttons all
+     threw "is not defined" on the live site, and the call to
+     loadActiveAssignment() at the bottom of the script threw on every load.
+     The roster only appeared because it is the default tab. They are all at
+     the top level now; keep them there - the markup calls them by name. */
+
+  /* The cache from teacher-login.html. Only a record with a uid came from a
+     real sign-in; the old localStorage accounts (password in plain text, no
+     uid) are sent back to sign in, where their class code is claimed. */
+  var teacher = {};
+  try { teacher = JSON.parse(localStorage.getItem('studyflow_teacher') || '{}') || {}; } catch (e) {}
+  if (!teacher.uid || !window.SFAuth) window.location.replace('teacher-login.html');
+
+  var classData = { students: [] };
+  var currentSort = 'streak';
+
+  /* Every student field arrives from a student's browser: names, emails and
+     subjects went into innerHTML raw, so a student named
+     <img src=x onerror=...> ran script on the teacher's dashboard. */
+  function esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  var teacher = JSON.parse(localStorage.getItem('studyflow_teacher') || '{}');
-  var classData = JSON.parse(localStorage.getItem('studyflow_class_' + teacher.classCode) || '{"students":[]}');
+  /* Back to sign-in, dropping the cache first: teacher-login.html sends a
+     signed-in teacher with a cached record straight back here, so leaving it
+     would bounce between the two pages forever. */
+  function toSignIn() {
+    try { localStorage.removeItem('studyflow_teacher'); } catch (e) {}
+    window.location.replace('teacher-login.html');
+  }
+
+  function api(url, opts) {
+    return SFAuth.classFetch(url, opts, teacher.email).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (r.status === 401) { toSignIn(); throw new Error('signed out'); }
+        d._status = r.status;
+        return d;
+      });
+    });
+  }
+
+  function showCode() {
+    document.getElementById('class-code').textContent = teacher.classCode || '…';
+  }
 
   function init() {
-    if (!teacher.classCode) {
-      var code = 'SF-' + Math.random().toString(36).substring(2,6).toUpperCase();
-      teacher.classCode = code;
-      localStorage.setItem('studyflow_teacher', JSON.stringify(teacher));
-      classData = { students: [] };
-      // Init class in Firestore
-      fetch('api/class', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'init', classCode: code })
-      }).catch(function(){});
-    }
+    // The session must be this teacher's, not whoever last signed in here.
+    SFAuth.user().then(function (u) {
+      if (!u || u.uid !== teacher.uid) window.location.replace('teacher-login.html');
+    });
 
-    document.getElementById('class-code').textContent = teacher.classCode;
+    showCode();
     document.getElementById('teacher-avatar').textContent = (teacher.name || 'T')[0].toUpperCase();
-    // Set greeting time
     var h = new Date().getHours();
-    var greet = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
-    document.getElementById('greeting-time').textContent = greet;
-    // Set teacher name in heading
+    document.getElementById('greeting-time').textContent = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
     var firstName = teacher.name ? teacher.name.split(' ')[0] : 'Teacher';
     document.getElementById('teacher-name-heading').textContent = firstName;
     document.getElementById('teacher-welcome').textContent = 'Here\'s how your class is doing today, ' + (teacher.name || 'Teacher') + '.';
 
-    // Load from Firestore for cross-device data, fall back to localStorage
-    function loadFromFirestore() {
-      fetch('api/class?classCode=' + teacher.classCode)
-        .then(function(r){ return r.json(); })
-        .then(function(data) {
-          console.log('[TEACHER] Firestore response:', JSON.stringify(data).substring(0, 300));
-          if (data.students && Array.isArray(data.students)) {
-            classData = data;
-            var localData = JSON.parse(localStorage.getItem('studyflow_class_' + teacher.classCode) || '{"students":[]}');
-            if (localData.students && localData.students.length > 0) {
-              localData.students.forEach(function(ls) {
-                var fs = classData.students.find(function(s){ return s.email === ls.email; });
-                if (!fs) classData.students.push(ls);
-              });
-            }
-            localStorage.setItem('studyflow_class_' + teacher.classCode, JSON.stringify(classData));
-          } else {
-            console.log('[TEACHER] No students array in response, using localStorage');
-          }
-          renderStats();
-          renderRoster();
-          renderInsights();
-          renderLeaderboard();
-        })
-        .catch(function(err) {
-          console.log('[TEACHER] Firestore error:', err);
-          renderStats();
-          renderRoster();
-          renderInsights();
-          renderLeaderboard();
-        });
-    }
-    window.loadFromFirestore = loadFromFirestore;
+    /* The server's profile is the truth (the class is the same on every
+       device); the cache only paints the first frame. */
+    api('api/class?type=teacher').then(function (d) {
+      if (d.teacher && d.teacher.classCode) {
+        teacher.name = d.teacher.name || teacher.name;
+        teacher.school = d.teacher.school || teacher.school;
+        if (d.teacher.classCode !== teacher.classCode) {
+          teacher.classCode = d.teacher.classCode;
+          showCode();
+          loadFromFirestore();
+          loadActiveAssignment();
+        }
+        try { localStorage.setItem('studyflow_teacher', JSON.stringify(teacher)); } catch (e) {}
+      } else if (d._status === 200) {
+        // Signed in, but no classroom on the server: finish setting it up.
+        toSignIn();
+      }
+    }).catch(function () {});
+
+    renderAll();
     loadFromFirestore();
+    loadActiveAssignment();
+  }
+
+  function renderAll() {
+    renderStats();
+    renderRoster();
+    renderInsights();
+    renderLeaderboard();
+  }
+
+  function rosterMessage(title, text) {
+    document.getElementById('student-tbody').innerHTML =
+      '<tr><td colspan="6"><div class="empty-state"><h4>' + esc(title) + '</h4><p>' + esc(text) + '</p></div></td></tr>';
+  }
+
+  /* The roster comes from the server only. It used to be merged with a copy
+     in this browser's localStorage, which on a teacher's computer is either
+     empty or stale, and was one more place a forged record could come from. */
+  function loadFromFirestore() {
+    if (!teacher.classCode) return;
+    api('api/class?classCode=' + encodeURIComponent(teacher.classCode)).then(function (data) {
+      if (data.students && Array.isArray(data.students)) {
+        classData = data;
+        renderAll();
+      } else if (data.error === 'classroom_not_configured') {
+        rosterMessage('Classrooms are switching on', 'The roster will appear here as soon as the server is set up.');
+      } else if (data._status === 403 || data._status === 404) {
+        rosterMessage('Can’t open this class', 'Sign out and back in. If it keeps happening, contact us.');
+      } else {
+        rosterMessage('Couldn’t load your roster', 'Check your connection and tap Refresh.');
+      }
+    }).catch(function () {
+      rosterMessage('Couldn’t load your roster', 'Check your connection and tap Refresh.');
+    });
+  }
 
   function renderStats() {
     var students = classData.students || [];
@@ -449,22 +501,26 @@
   function renderRoster(filter) {
     var students = classData.students || [];
     if (students.length === 0) {
-      document.getElementById('student-tbody').innerHTML = '<tr><td colspan="6"><div class="empty-state"><h4>No students yet</h4><p>Share your class code and students will appear here when they join.</p></div></td></tr>';
+      rosterMessage('No students yet', 'Share your class code and students will appear here when they join.');
       return;
     }
-    if (filter) students = students.filter(function(s){ return s.name.toLowerCase().includes(filter.toLowerCase()) || s.email.toLowerCase().includes(filter.toLowerCase()); });
+    if (filter) {
+      var f = filter.toLowerCase();
+      students = students.filter(function(s){ return String(s.name || '').toLowerCase().indexOf(f) >= 0 || String(s.email || '').toLowerCase().indexOf(f) >= 0; });
+    }
     var html = '';
     students.forEach(function(s) {
-      var scoreClass = !s.avgScore ? 'none' : (s.avgScore >= 80 ? 'high' : (s.avgScore >= 60 ? 'mid' : 'low'));
-      var scoreLabel = s.avgScore ? s.avgScore + '%' : 'No data';
+      var score = Number(s.avgScore) || 0;
+      var scoreClass = !score ? 'none' : (score >= 80 ? 'high' : (score >= 60 ? 'mid' : 'low'));
+      var scoreLabel = score ? score + '%' : 'No data';
       var isActive = s.lastActive === new Date().toDateString();
       html += '<tr>' +
-        '<td><div class="student-name">' + s.name + '</div><div class="student-email">' + s.email + '</div></td>' +
+        '<td><div class="student-name">' + esc(s.name || 'Student') + '</div><div class="student-email">' + esc(s.email) + '</div></td>' +
         '<td><span class="status-dot ' + (isActive?'active':'inactive') + '"></span>' + (isActive?'Active today':'Inactive') + '</td>' +
-        '<td>' + (s.subject || '—') + '</td>' +
+        '<td>' + esc(s.subject || '—') + '</td>' +
         '<td><span class="score-pill ' + scoreClass + '">' + scoreLabel + '</span></td>' +
-        '<td><span class="streak-badge">' + (s.streak || 0) + ' days</span></td>' +
-        '<td>' + (s.lastActive || 'Never') + '</td>' +
+        '<td><span class="streak-badge">' + (Number(s.streak) || 0) + ' days</span></td>' +
+        '<td>' + esc(s.lastActive || 'Never') + '</td>' +
         '</tr>';
     });
     document.getElementById('student-tbody').innerHTML = html;
@@ -491,7 +547,7 @@
         { label: 'Not started', count: none, color: 'var(--border)' }
       ].forEach(function(item) {
         var pct = Math.round((item.count / total) * 100);
-        scoreDistHtml += '<div class="topic-bar"><div class="topic-bar-label"><span>' + item.label + '</span><span>' + item.count + '</span></div>' +
+        scoreDistHtml += '<div class="topic-bar"><div class="topic-bar-label"><span>' + esc(item.label) + '</span><span>' + item.count + '</span></div>' +
           '<div class="topic-bar-track"><div class="topic-bar-fill" style="width:' + pct + '%;background:' + item.color + '"></div></div></div>';
       });
     } else {
@@ -506,8 +562,8 @@
       topHtml = sorted.slice(0,5).map(function(s,i){
         return '<div style="display:flex;align-items:center;gap:.75rem;padding:.5rem 0;border-bottom:1px solid var(--border);">' +
           '<div style="font-size:0.8rem;font-weight:700;color:var(--muted);width:20px;">' + (i+1) + '</div>' +
-          '<div style="flex:1;font-size:0.88rem;font-weight:600;">' + s.name + '</div>' +
-          '<div style="font-size:0.85rem;font-weight:700;color:var(--blue);">' + (s.avgScore ? s.avgScore + '%' : '—') + '</div>' +
+          '<div style="flex:1;font-size:0.88rem;font-weight:600;">' + esc(s.name || 'Student') + '</div>' +
+          '<div style="font-size:0.85rem;font-weight:700;color:var(--blue);">' + (s.avgScore ? (Number(s.avgScore) || 0) + '%' : '—') + '</div>' +
           '</div>';
       }).join('');
     } else {
@@ -533,10 +589,6 @@
     document.getElementById('struggle-topics').innerHTML = '<div class="empty-state"><p>Struggle data appears after students complete sessions.</p></div>';
   }
 
-  var currentSort = 'streak';
-
-  // No demo students — show real data or empty state
-
   function sortLeaderboard(by, btn) {
     currentSort = by;
     document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); });
@@ -559,23 +611,25 @@
       var rankClass = i < 3 ? rankClasses[i] : 'other';
       var rankLabel = i === 0 ? '1st' : (i === 1 ? '2nd' : (i === 2 ? '3rd' : (i+1)+'th'));
       var isActiveToday = s.lastActive === new Date().toDateString();
+      var name = String(s.name || 'Student');
+      var streak = Number(s.streak) || 0;
       html += '<div class="lb-row">' +
         '<div class="lb-rank ' + rankClass + '">' + rankLabel + '</div>' +
-        '<div class="lb-avatar">' + s.name[0].toUpperCase() + '</div>' +
+        '<div class="lb-avatar">' + esc(name[0].toUpperCase()) + '</div>' +
         '<div class="lb-info">' +
-          '<div class="lb-name">' + s.name + (i === 0 ? ' <span class="lb-badge top">Top student</span>' : '') + '</div>' +
-          '<div class="lb-sub">' + (isActiveToday ? 'Active today' : 'Last active ' + (s.lastActive || 'never')) + '</div>' +
+          '<div class="lb-name">' + esc(name) + (i === 0 ? ' <span class="lb-badge top">Top student</span>' : '') + '</div>' +
+          '<div class="lb-sub">' + (isActiveToday ? 'Active today' : 'Last active ' + esc(s.lastActive || 'never')) + '</div>' +
         '</div>' +
         '<div class="lb-stats">' +
-          '<div class="lb-stat"><div class="lb-stat-val">' + (s.streak||0) + 'd</div><div class="lb-stat-label">Streak</div></div>' +
-          '<div class="lb-stat"><div class="lb-stat-val">' + (s.avgScore ? s.avgScore+'%' : '—') + '</div><div class="lb-stat-label">Accuracy</div></div>' +
-          '<div class="lb-stat"><div class="lb-stat-val">' + (s.questionsAnswered||0) + '</div><div class="lb-stat-label">Questions</div></div>' +
-          '<div class="lb-stat"><div class="lb-stat-val">' + (s.timeStudied ? Math.round(s.timeStudied/60)+'m' : '—') + '</div><div class="lb-stat-label">Time</div></div>' +
-          (s.streak >= 7 ? '<span class="lb-badge streak"><svg width="11" height="11" viewBox="0 0 24 24" fill="#d97706" stroke="none" style="display:inline-block;vertical-align:-1px;margin-right:2px"><path d="M12 2C12 2 8 7 8 11c0 2.21 1.79 4 4 4s4-1.79 4-4c0-1.5-.8-2.8-2-3.5.5 1 .5 2 0 2.5C13.5 9 12 8 12 7c0 0-1 1.5-1 2.5 0 .55.45 1 1 1s1-.45 1-1V8c1.5 1 2.5 2.5 2.5 4.5C15.5 15 13.93 16.5 12 16.5S8.5 15 8.5 12.5C8.5 8.5 12 2 12 2Z"/></svg>On fire</span>' : '') +
+          '<div class="lb-stat"><div class="lb-stat-val">' + streak + 'd</div><div class="lb-stat-label">Streak</div></div>' +
+          '<div class="lb-stat"><div class="lb-stat-val">' + (s.avgScore ? (Number(s.avgScore) || 0) + '%' : '—') + '</div><div class="lb-stat-label">Accuracy</div></div>' +
+          '<div class="lb-stat"><div class="lb-stat-val">' + (Number(s.questionsAnswered) || 0) + '</div><div class="lb-stat-label">Questions</div></div>' +
+          '<div class="lb-stat"><div class="lb-stat-val">' + (s.timeStudied ? Math.round((Number(s.timeStudied) || 0)/60)+'m' : '—') + '</div><div class="lb-stat-label">Time</div></div>' +
+          (streak >= 7 ? '<span class="lb-badge streak"><svg width="11" height="11" viewBox="0 0 24 24" fill="#d97706" stroke="none" style="display:inline-block;vertical-align:-1px;margin-right:2px"><path d="M12 2C12 2 8 7 8 11c0 2.21 1.79 4 4 4s4-1.79 4-4c0-1.5-.8-2.8-2-3.5.5 1 .5 2 0 2.5C13.5 9 12 8 12 7c0 0-1 1.5-1 2.5 0 .55.45 1 1 1s1-.45 1-1V8c1.5 1 2.5 2.5 2.5 4.5C15.5 15 13.93 16.5 12 16.5S8.5 15 8.5 12.5C8.5 8.5 12 2 12 2Z"/></svg>On fire</span>' : '') +
         '</div>' +
         '</div>';
     });
-    document.getElementById('leaderboard-list').innerHTML = html || '<div class="empty-state"><div style="font-size:2rem;margin-bottom:.75rem;opacity:.4"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><h4>No students yet</h4><p>Share your class code <strong>' + teacher.classCode + '</strong> and students will appear here when they join.</p></div>';
+    document.getElementById('leaderboard-list').innerHTML = html || '<div class="empty-state"><div style="font-size:2rem;margin-bottom:.75rem;opacity:.4"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><h4>No students yet</h4><p>Share your class code <strong>' + esc(teacher.classCode) + '</strong> and students will appear here when they join.</p></div>';
   }
 
   function switchTab(tab, btn) {
@@ -596,12 +650,16 @@
     /* The link carries the code: login.html opens sign-up with it filled in. */
     var text = 'Join my StudyFlow class! Use code: ' + teacher.classCode + '\nSign up free at https://studyflow-ten-vert.vercel.app/login.html?class=' + teacher.classCode;
     if (navigator.share) {
-      navigator.share({ title: 'Join my StudyFlow class', text: text });
+      navigator.share({ title: 'Join my StudyFlow class', text: text }).catch(function(){});
     } else {
       navigator.clipboard.writeText(text).then(function(){ alert('Share message copied!'); });
     }
   }
 
+  /* "Assigned!" used to show whether or not the server took it - the
+     assignment was saved in this browser and the request was fire-and-forget,
+     so a failed save looked exactly like a successful one, and students never
+     saw it. It now waits for the answer. */
   function assignNotes() {
     var topic = document.getElementById('assign-topic').value.trim();
     var date = document.getElementById('assign-date').value;
@@ -609,27 +667,34 @@
     if (!topic) { alert('Please enter a topic name.'); return; }
     if (!notes) { alert('Please paste your lesson notes.'); return; }
     if (!date) { alert('Please set an exam date.'); return; }
-    var assignment = { topic: topic, date: date, notes: notes, assignedAt: new Date().toISOString(), classCode: teacher.classCode, teacherName: teacher.name };
-    localStorage.setItem('studyflow_assignment_' + teacher.classCode, JSON.stringify(assignment));
-    showActiveAssignment(assignment);
+    var btn = document.querySelector('.btn-assign');
+    btn.disabled = true;
+    btn.textContent = 'Assigning…';
+    var reset = function () { btn.disabled = false; btn.textContent = 'Assign to class →'; btn.style.background = 'var(--blue)'; };
 
-    // Sync assignment to Firestore
-    fetch('api/class', {
+    api('api/class', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'assign', classCode: teacher.classCode, assignment: assignment })
-    }).catch(function(){});
-    // Show success state
-    var btn = document.querySelector('.btn-assign');
-    btn.textContent = 'Assigned!';
-    btn.style.background = 'var(--green)';
-    setTimeout(function(){
-      btn.textContent = 'Assign to class →';
-      btn.style.background = 'var(--blue)';
-      document.getElementById('assign-topic').value = '';
-      document.getElementById('assign-date').value = '';
-      document.getElementById('assign-notes').value = '';
-    }, 2000);
+      body: JSON.stringify({ action: 'assign', classCode: teacher.classCode, assignment: { topic: topic, date: date, notes: notes } })
+    }).then(function (d) {
+      if (!d.success) {
+        reset();
+        alert(d.error === 'classroom_not_configured' ? 'Classrooms aren’t switched on yet. Try again later.' : (d.message || 'That didn’t save. Try again.'));
+        return;
+      }
+      showActiveAssignment(d.assignment);
+      btn.textContent = 'Assigned!';
+      btn.style.background = 'var(--green)';
+      setTimeout(function(){
+        reset();
+        document.getElementById('assign-topic').value = '';
+        document.getElementById('assign-date').value = '';
+        document.getElementById('assign-notes').value = '';
+      }, 2000);
+    }).catch(function () {
+      reset();
+      alert('Couldn’t reach StudyFlow. Check your connection and try again.');
+    });
   }
 
   function showActiveAssignment(a) {
@@ -643,27 +708,18 @@
   }
 
   function loadActiveAssignment() {
-    // Firestore first, localStorage fallback
-    fetch('api/class?classCode=' + teacher.classCode + '&type=assignment')
-      .then(function(r){ return r.json(); })
-      .then(function(data) {
-        if (data.assignment && data.assignment.topic) showActiveAssignment(data.assignment);
-        else showActiveAssignment(JSON.parse(localStorage.getItem('studyflow_assignment_' + teacher.classCode) || 'null'));
-      })
-      .catch(function() {
-        showActiveAssignment(JSON.parse(localStorage.getItem('studyflow_assignment_' + teacher.classCode) || 'null'));
-      });
+    if (!teacher.classCode) return;
+    api('api/class?classCode=' + encodeURIComponent(teacher.classCode) + '&type=assignment')
+      .then(function (data) { if (data.assignment && data.assignment.topic) showActiveAssignment(data.assignment); })
+      .catch(function () {});
   }
 
   function logout() {
-    localStorage.removeItem('studyflow_teacher');
-    window.location.href = 'teacher-login.html';
+    try { localStorage.removeItem('studyflow_teacher'); } catch (e) {}
+    window.location.href = 'teacher-login.html?signout=1';
   }
 
-}
-
-  init();
-  loadActiveAssignment();
+  if (teacher.uid && window.SFAuth) init();
 </script>
 </body>
 </html>

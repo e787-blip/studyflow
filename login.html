@@ -403,7 +403,7 @@
         </button>
         <div class="code-box" id="code-box" hidden>
           <label class="sr-only" for="code">Class code</label>
-          <input class="input" id="code" name="classcode" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="SF-AB12" maxlength="7" aria-describedby="code-err code-hint"/>
+          <input class="input" id="code" name="classcode" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="SF-AB12CD" maxlength="9" aria-describedby="code-err code-hint"/>
           <p class="err" id="code-err" aria-live="polite"></p>
           <p class="hint" id="code-hint">Your teacher sees your progress once you join. You can add it later too.</p>
         </div>
@@ -446,10 +446,11 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var MIN_PW = 8;
-  /* Class codes are minted by teacher.html as "SF-" + 4 characters, and
-     app.html's join box checks exactly that. The old placeholder here was
-     "MS-7401", a format nothing accepts. */
-  var CODE_RE = /^SF-[A-Z0-9]{4}$/;
+  /* Class codes are minted by api/class.js as "SF-" + 6 characters; classes
+     made before Oct 2026 have 4, and still work. app.html's and
+     dashboard.html's join boxes check exactly this. The old placeholder here
+     was "MS-7401", a format nothing accepts. */
+  var CODE_RE = /^SF-(?:[A-Z0-9]{4}|[A-Z0-9]{6})$/;
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   var LAST_EMAIL_KEY = 'studyflow_last_email';
   var mode = 'signin';
@@ -639,15 +640,20 @@
      would pass the check and join a class that does not exist. */
   function normaliseCode(v) {
     var raw = String(v || '').trim().toUpperCase();
+    /* A typed prefix that is not SF ("MS-7401") is a different code, never
+       one to repair: with 6-character codes, dropping the hyphen would turn
+       it into a valid-looking SF-MS7401. */
+    var pre = /^([A-Z0-9]+)[^A-Z0-9]+[A-Z0-9]/.exec(raw);
+    if (pre && pre[1] !== 'SF') return raw;
     var s = raw.replace(/[^A-Z0-9]/g, '');
-    var rest = s.indexOf('SF') === 0 && s.length === 6 ? s.slice(2) : s;
-    return rest.length === 4 ? 'SF-' + rest : raw;
+    var rest = s.indexOf('SF') === 0 && (s.length === 6 || s.length === 8) ? s.slice(2) : s;
+    return rest.length === 4 || rest.length === 6 ? 'SF-' + rest : raw;
   }
   function checkCode(show) {
     var v = $('code').value.trim();
     if (!v) { clearError('code'); return true; }
     var n = normaliseCode(v);
-    if (!CODE_RE.test(n)) { if (show) setError('code', 'Class codes look like SF-AB12. Check with your teacher, or leave it blank.'); return false; }
+    if (!CODE_RE.test(n)) { if (show) setError('code', 'Class codes look like SF-AB12CD. Check with your teacher, or leave it blank.'); return false; }
     $('code').value = n;
     clearError('code');
     return true;
@@ -730,15 +736,22 @@
      next line, so the request was usually cancelled by the page unloading
      and the "class is full" message could never be seen. Wait for it, but
      never longer than a few seconds. */
-  function joinClass(code, record) {
+  /* api/class checks a Firebase ID token on every call and keys the student
+     record on it, so the new account's own token goes with the request. */
+  function joinClass(code, record, fbUser) {
     return new Promise(function (resolve) {
       var t = setTimeout(function () { resolve('timeout'); }, 5000);
-      fetch('api/class', {
-        method: 'POST', keepalive: true,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'join', classCode: code, studentData: record })
+      fbUser.getIdToken().then(function (token) {
+        return fetch('api/class', {
+          method: 'POST', keepalive: true,
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ action: 'join', classCode: code, studentData: record })
+        });
       }).then(function (r) { return r.json(); })
-        .then(function (d) { clearTimeout(t); resolve(d && d.error === 'class_full' ? 'full' : 'ok'); })
+        .then(function (d) {
+          clearTimeout(t);
+          resolve(d && d.success ? 'ok' : d && d.error === 'class_full' ? 'full' : d && d.error === 'no_such_class' ? 'missing' : 'error');
+        })
         .catch(function () { clearTimeout(t); resolve('error'); });
     });
   }
@@ -760,12 +773,18 @@
             writeLS('studyflow_class_' + code, JSON.stringify(classData));
           }
         } catch (e) {}
-        return joinClass(code, record).then(function (res) {
-          if (res !== 'full') { window.location.href = 'app.html'; return; }
+        return joinClass(code, record, cred.user).then(function (res) {
+          /* A timeout keeps the code: the keepalive request may still land.
+             Anything else that is not a yes means they are NOT in the class,
+             and the account must not say they are. */
+          if (res === 'ok' || res === 'timeout') { window.location.href = 'app.html'; return; }
           user.classCode = null;
           writeLS('studyflow_user', JSON.stringify(user));
           setBusy(false);
-          showAlert('info', 'Your account is ready, but class ' + code + ' is full (5 students on a free class). Ask your teacher to upgrade, then add the code later.',
+          var why = res === 'full' ? 'class ' + code + ' is full (5 students on a free class). Ask your teacher to upgrade, then add the code later.'
+                  : res === 'missing' ? 'there’s no class with the code ' + code + '. Check it with your teacher, then add it later.'
+                  : 'we couldn’t add you to class ' + code + ' just now. You can add the code later from your dashboard.';
+          showAlert('info', 'Your account is ready, but ' + why,
                     { label: 'Continue to StudyFlow', run: function () { window.location.href = 'app.html'; } });
         });
       })
@@ -906,7 +925,7 @@
   /* ── Starting state ──────────────────────────────────────────────────────
      ?mode=signup comes from the landing page's "Build my study plan"
      buttons: a new visitor should land on the form that makes an account,
-     not on "Welcome back". ?class=SF-AB12 comes from a teacher's invite and
+     not on "Welcome back". ?class=SF-AB12CD comes from a teacher's invite and
      opens sign-up with the code already in. A device that has signed in
      before starts on sign-in with the email filled. */
   (function start() {

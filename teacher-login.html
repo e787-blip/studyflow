@@ -42,6 +42,8 @@
   .msg-box.success { background:#d1faf0; border:1px solid #38bfa1; color:#1a9e80; display:block; }
   .back-link { text-align:center; margin-top:1.5rem; font-size:0.82rem; color:var(--muted); }
   .back-link a { color:var(--blue); text-decoration:none; font-weight:500; }
+  .link-btn { background:none; border:none; padding:0; color:var(--blue); font:inherit; font-weight:500; cursor:pointer; }
+  .btn-submit:disabled { cursor:wait; }
 
   @media(max-width:768px) { body{flex-direction:column;} .left{width:100%;padding:2.5rem 2rem;min-height:auto;} .right{padding:2rem 1.5rem;} }
 
@@ -81,86 +83,255 @@
 
 <div class="right">
   <div class="auth-box">
-    <div class="tabs">
-      <button class="tab active" id="tab-login" onclick="switchTab('login')">Sign in</button>
-      <button class="tab" id="tab-signup" onclick="switchTab('signup')">Get started</button>
+    <div class="tabs" id="tabs">
+      <button class="tab active" id="tab-login" type="button" onclick="switchTab('login')">Sign in</button>
+      <button class="tab" id="tab-signup" type="button" onclick="switchTab('signup')">Get started</button>
     </div>
 
-    <div id="login-view">
-      <h2>Welcome <em>back</em></h2>
-      <p>Sign in to your teacher dashboard.</p>
-      <div class="msg-box" id="login-msg"></div>
-      <div class="form-field"><label class="form-label">Email</label><input type="email" class="form-input" id="login-email" placeholder="teacher@school.edu"/></div>
-      <div class="form-field"><label class="form-label">Password</label><input type="password" class="form-input" id="login-password" placeholder="••••••••"/></div>
-      <button class="btn-submit" onclick="handleLogin()">Sign in →</button>
-    </div>
-
-    <div id="signup-view" style="display:none;">
-      <h2>Set up your <em>classroom</em></h2>
-      <p>Create your teacher account and get your class code instantly.</p>
-      <div class="msg-box" id="signup-msg"></div>
-      <div class="form-field"><label class="form-label">Your name</label><input type="text" class="form-input" id="signup-name" placeholder="Ms. Johnson"/></div>
-      <div class="form-field"><label class="form-label">School email</label><input type="email" class="form-input" id="signup-email" placeholder="teacher@school.edu"/></div>
-      <div class="form-field"><label class="form-label">School name</label><input type="text" class="form-input" id="signup-school" placeholder="Lincoln High School"/></div>
-      <div class="form-field"><label class="form-label">Password</label><input type="password" class="form-input" id="signup-password" placeholder="Min. 8 characters"/></div>
-      <button class="btn-submit" onclick="handleSignup()">Create classroom →</button>
-    </div>
+    <!-- One form, so Enter submits and password managers recognise it. -->
+    <form id="auth-form" novalidate>
+      <div id="login-head">
+        <h2>Welcome <em>back</em></h2>
+        <p>Sign in to your teacher dashboard.</p>
+      </div>
+      <div id="signup-head" style="display:none;">
+        <h2>Set up your <em>classroom</em></h2>
+        <p>Create your teacher account and get your class code instantly.</p>
+      </div>
+      <div id="setup-head" style="display:none;">
+        <h2>One more <em>step</em></h2>
+        <p>You're signed in. Tell us who you are and we'll make your class code.</p>
+      </div>
+      <div class="msg-box" id="auth-msg" role="alert"></div>
+      <div class="form-field" id="f-name" style="display:none;"><label class="form-label" for="name">Your name</label><input type="text" class="form-input" id="name" autocomplete="name" placeholder="Ms. Johnson"/></div>
+      <div class="form-field" id="f-email"><label class="form-label" for="email">School email</label><input type="email" class="form-input" id="email" autocomplete="email" placeholder="teacher@school.edu"/></div>
+      <div class="form-field" id="f-school" style="display:none;"><label class="form-label" for="school">School name</label><input type="text" class="form-input" id="school" autocomplete="organization" placeholder="Lincoln High School"/></div>
+      <div class="form-field" id="f-password"><label class="form-label" for="password">Password</label><input type="password" class="form-input" id="password" autocomplete="current-password" placeholder="••••••••"/></div>
+      <button class="btn-submit" id="submit" type="submit">Sign in →</button>
+      <div class="back-link" id="forgot-line"><button type="button" class="link-btn" id="forgot">Forgot your password?</button></div>
+    </form>
 
     <div class="back-link">Student? <a href="login.html">Sign in here →</a></div>
   </div>
 </div>
 
 <script>
-  function switchTab(tab) {
-    document.getElementById('tab-login').classList.toggle('active', tab==='login');
-    document.getElementById('tab-signup').classList.toggle('active', tab==='signup');
-    document.getElementById('login-view').style.display = tab==='login' ? 'block' : 'none';
-    document.getElementById('signup-view').style.display = tab==='signup' ? 'block' : 'none';
+  /* Tabs live outside the module so the inline onclick handlers can reach
+     them; the module listens for the change. */
+  function switchTab(tab) { window.dispatchEvent(new CustomEvent('sf-teacher-tab', { detail: tab })); }
+</script>
+<script type="module">
+  /* ── Teacher accounts are Firebase accounts ────────────────────────────
+     They used to be a localStorage object holding every teacher's password
+     in plain text. A teacher who cleared their browser, or sat down at a
+     different computer, could never reach their class again, and anyone
+     with the code could read it because the server had no idea who a
+     teacher was. Now a teacher signs in exactly like a student, and the
+     classroom is created and owned on the server (api/class.js,
+     action "teacher-setup"). */
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail, signOut, setPersistence, browserLocalPersistence, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+  const app = initializeApp({
+    apiKey: "AIzaSyCY4FI-6L9tsAokNFl6o5bsmCt-JD0H8HI",
+    authDomain: "studyflow-e59ef.firebaseapp.com",
+    projectId: "studyflow-e59ef",
+    storageBucket: "studyflow-e59ef.firebasestorage.app",
+    messagingSenderId: "723571132683",
+    appId: "1:723571132683:web:e659dc51095a767ca63a0e"
+  });
+  const auth = getAuth(app);
+
+  var $ = function (id) { return document.getElementById(id); };
+  var MIN_PW = 8;
+  var mode = 'login';   // login | signup | setup
+  var busy = false;
+  var pendingUser = null;  // signed in, but no classroom yet
+
+  function readLS(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function writeLS(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function removeLS(k) { try { localStorage.removeItem(k); } catch (e) {} }
+
+  function showMsg(type, text) {
+    var el = $('auth-msg');
+    el.className = 'msg-box' + (text ? ' ' + type : '');
+    el.textContent = text || '';
   }
 
-  function handleLogin() {
-    var email = document.getElementById('login-email').value.trim();
-    var password = document.getElementById('login-password').value;
-    if (!email || !email.includes('@')) { showMsg('login-msg','error','Please enter a valid email.'); return; }
-    if (!password) { showMsg('login-msg','error','Please enter your password.'); return; }
-    var accounts = JSON.parse(localStorage.getItem('studyflow_teacher_accounts') || '{}');
-    if (!accounts[email]) { showMsg('login-msg','error','No account found. Please sign up.'); return; }
-    if (accounts[email].password !== password) { showMsg('login-msg','error','Incorrect password.'); return; }
-    localStorage.setItem('studyflow_teacher', JSON.stringify(accounts[email]));
-    showMsg('login-msg','success','Signing you in...');
-    setTimeout(function(){ window.location.href='teacher.html'; }, 800);
+  function setMode(next) {
+    mode = next;
+    $('tab-login').classList.toggle('active', next === 'login');
+    $('tab-signup').classList.toggle('active', next === 'signup');
+    $('tabs').style.display = next === 'setup' ? 'none' : 'flex';
+    $('login-head').style.display = next === 'login' ? 'block' : 'none';
+    $('signup-head').style.display = next === 'signup' ? 'block' : 'none';
+    $('setup-head').style.display = next === 'setup' ? 'block' : 'none';
+    $('f-name').style.display = next === 'login' ? 'none' : 'block';
+    $('f-school').style.display = next === 'login' ? 'none' : 'block';
+    $('f-email').style.display = next === 'setup' ? 'none' : 'block';
+    $('f-password').style.display = next === 'setup' ? 'none' : 'block';
+    $('forgot-line').style.display = next === 'login' ? 'block' : 'none';
+    $('password').setAttribute('autocomplete', next === 'signup' ? 'new-password' : 'current-password');
+    $('password').placeholder = next === 'signup' ? 'At least ' + MIN_PW + ' characters' : '••••••••';
+    $('submit').textContent = next === 'login' ? 'Sign in →' : 'Create classroom →';
+    showMsg('', '');
+  }
+  window.addEventListener('sf-teacher-tab', function (e) { if (!busy) setMode(e.detail); });
+
+  function setBusy(on, label) {
+    busy = on;
+    $('submit').disabled = on;
+    $('submit').style.opacity = on ? '.7' : '';
+    $('submit').textContent = on ? label : (mode === 'login' ? 'Sign in →' : 'Create classroom →');
+  }
+  function fail(text) { setBusy(false); showMsg('error', text); }
+
+  /* A class made before accounts were real lives in this browser under the
+     old localStorage account. Its code is offered to the server as a claim,
+     so the teacher keeps the students who already joined. */
+  function legacyCode(email) {
+    try {
+      var accts = JSON.parse(readLS('studyflow_teacher_accounts') || '{}') || {};
+      var key = Object.keys(accts).filter(function (k) { return k.toLowerCase() === String(email).toLowerCase(); })[0];
+      if (key && accts[key].classCode) return accts[key].classCode;
+      var t = JSON.parse(readLS('studyflow_teacher') || '{}') || {};
+      if (t.classCode && !t.uid && String(t.email || '').toLowerCase() === String(email).toLowerCase()) return t.classCode;
+    } catch (e) {}
+    return '';
+  }
+  function forgetLegacy(email) {
+    try {
+      var accts = JSON.parse(readLS('studyflow_teacher_accounts') || '{}') || {};
+      Object.keys(accts).forEach(function (k) { if (k.toLowerCase() === String(email).toLowerCase()) delete accts[k]; });
+      if (Object.keys(accts).length) writeLS('studyflow_teacher_accounts', JSON.stringify(accts));
+      else removeLS('studyflow_teacher_accounts');
+    } catch (e) { removeLS('studyflow_teacher_accounts'); }
   }
 
-  function handleSignup() {
-    var name = document.getElementById('signup-name').value.trim();
-    var email = document.getElementById('signup-email').value.trim();
-    var school = document.getElementById('signup-school').value.trim();
-    var password = document.getElementById('signup-password').value;
-    if (!name || !email || !school || !password) { showMsg('signup-msg','error','Please fill in all fields.'); return; }
-    if (password.length < 6) { showMsg('signup-msg','error','Password must be at least 6 characters.'); return; }
-    var accounts = JSON.parse(localStorage.getItem('studyflow_teacher_accounts') || '{}');
-    if (accounts[email]) { showMsg('signup-msg','error','Account already exists. Please sign in.'); return; }
-    var classCode = 'SF-' + Math.random().toString(36).substring(2,6).toUpperCase();
-    var teacher = { name:name, email:email, school:school, password:password, classCode:classCode, plan:'free' };
-    accounts[email] = teacher;
-    localStorage.setItem('studyflow_teacher_accounts', JSON.stringify(accounts));
-    localStorage.setItem('studyflow_teacher', JSON.stringify(teacher));
-    // Initialize empty class
-    localStorage.setItem('studyflow_class_' + classCode, JSON.stringify({ students: [], classCode: classCode }));
-    showMsg('signup-msg','success','Classroom created! Your class code is ' + classCode);
-    setTimeout(function(){ window.location.href='teacher.html'; }, 1200);
+  function api(fbUser, url, opts) {
+    return fbUser.getIdToken().then(function (token) {
+      opts = opts || {};
+      opts.headers = Object.assign({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, opts.headers || {});
+      return fetch(url, opts).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) { d._status = r.status; return d; });
+      });
+    });
   }
 
-  function showMsg(id, type, text) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    el.className = 'msg-box ' + type;
-    el.textContent = text;
+  function serverTrouble(d) {
+    if (d && d.error === 'classroom_not_configured') return 'Classrooms aren’t switched on yet. Please try again later.';
+    return (d && d.message) || 'Couldn’t reach StudyFlow. Check your connection and try again.';
   }
 
-  if (localStorage.getItem('studyflow_teacher')) {
+  function finish(fbUser, teacher) {
+    forgetLegacy(fbUser.email);
+    /* A cache for the dashboard's first paint. The server copy is the truth:
+       teacher.html re-reads it on every load. No password, ever. */
+    writeLS('studyflow_teacher', JSON.stringify({
+      uid: fbUser.uid, email: fbUser.email, name: teacher.name, school: teacher.school || '', classCode: teacher.classCode
+    }));
     window.location.href = 'teacher.html';
   }
+
+  function setupClassroom(fbUser, name, school) {
+    setBusy(true, 'Making your class…');
+    return api(fbUser, 'api/class', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'teacher-setup', name: name, school: school, claimCode: legacyCode(fbUser.email) })
+    }).then(function (d) {
+      if (d.teacher && d.teacher.classCode) return finish(fbUser, d.teacher);
+      fail(serverTrouble(d));
+    }).catch(function () { fail(serverTrouble(null)); });
+  }
+
+  // Signed in: go to the classroom, or ask for what's needed to make one.
+  function afterAuth(fbUser, form) {
+    setBusy(true, 'Opening your class…');
+    return api(fbUser, 'api/class?type=teacher').then(function (d) {
+      if (d.teacher && d.teacher.classCode) return finish(fbUser, d.teacher);
+      if (d._status !== 200) return fail(serverTrouble(d));
+      if (form) return setupClassroom(fbUser, form.name, form.school);
+      pendingUser = fbUser;
+      setBusy(false);
+      setMode('setup');
+      $('name').value = fbUser.displayName || '';
+      $('name').focus();
+    }).catch(function () { fail(serverTrouble(null)); });
+  }
+
+  function authError(err) {
+    var c = (err && err.code) || '';
+    if (c === 'auth/invalid-credential' || c === 'auth/wrong-password' || c === 'auth/invalid-login-credentials' || c === 'auth/user-not-found')
+      return 'That email and password don’t match. If you set up your class before October 2026, choose Get started once to move it to your new account.';
+    if (c === 'auth/email-already-in-use') return 'That email already has a StudyFlow account. Sign in with it instead.';
+    if (c === 'auth/invalid-email') return 'That doesn’t look like an email address.';
+    if (c === 'auth/weak-password') return 'Choose a longer password (at least ' + MIN_PW + ' characters).';
+    if (c === 'auth/too-many-requests') return 'Too many tries. Wait a few minutes, or reset your password.';
+    if (c === 'auth/network-request-failed') return 'Can’t reach StudyFlow. Check your internet connection and try again.';
+    return 'That didn’t work' + (c ? ' (' + c.replace('auth/', '') + ')' : '') + '. Try again.';
+  }
+
+  $('auth-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (busy) return;
+    var email = $('email').value.trim(), password = $('password').value;
+    var name = $('name').value.trim(), school = $('school').value.trim();
+
+    if (mode === 'setup') {
+      if (name.length < 2) return showMsg('error', 'Please enter your name.');
+      return setupClassroom(pendingUser, name, school);
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return showMsg('error', 'Please enter a valid email.');
+    if (!password) return showMsg('error', 'Please enter your password.');
+
+    if (mode === 'login') {
+      setBusy(true, 'Signing in…');
+      setPersistence(auth, browserLocalPersistence).catch(function () {})
+        .then(function () { return signInWithEmailAndPassword(auth, email, password); })
+        .then(function (cred) { return afterAuth(cred.user, null); })
+        .catch(function (err) { fail(authError(err)); });
+      return;
+    }
+
+    if (name.length < 2 || !school) return showMsg('error', 'Please fill in all fields.');
+    if (password.length < MIN_PW) return showMsg('error', 'Password must be at least ' + MIN_PW + ' characters.');
+    setBusy(true, 'Creating your account…');
+    setPersistence(auth, browserLocalPersistence).catch(function () {})
+      .then(function () { return createUserWithEmailAndPassword(auth, email, password); })
+      .then(function (cred) { return updateProfile(cred.user, { displayName: name }).catch(function () {}).then(function () { return cred; }); })
+      .then(function (cred) { return afterAuth(cred.user, { name: name, school: school }); })
+      .catch(function (err) { fail(authError(err)); });
+  });
+
+  $('forgot').addEventListener('click', function () {
+    var email = $('email').value.trim();
+    if (!email) { showMsg('error', 'Type your email above first, then tap this again.'); $('email').focus(); return; }
+    sendPasswordResetEmail(auth, email)
+      .then(function () { showMsg('success', 'If there’s an account for ' + email + ', a reset link is on its way.'); })
+      .catch(function (err) {
+        var c = (err && err.code) || '';
+        showMsg('error', c === 'auth/invalid-email' ? 'That doesn’t look like an email address.' : 'Couldn’t send the link. Try again in a minute.');
+      });
+  });
+
+  // ?signout=1 comes from the dashboard's Sign out button.
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('signout') === '1') {
+    removeLS('studyflow_teacher');
+    signOut(auth).catch(function () {});
+    history.replaceState(null, '', window.location.pathname);
+  } else {
+    /* Already signed in as this teacher: straight to the dashboard. Keyed on
+       the Firebase session AND the cached uid, so an old localStorage-only
+       teacher record (no uid) can never bounce between the two pages. */
+    var unsub = onAuthStateChanged(auth, function (u) {
+      unsub();
+      var cached = {};
+      try { cached = JSON.parse(readLS('studyflow_teacher') || '{}') || {}; } catch (e) {}
+      if (u && cached.uid && cached.uid === u.uid && cached.classCode) window.location.href = 'teacher.html';
+    });
+  }
+  setMode('login');
 </script>
 </body>
 </html>
