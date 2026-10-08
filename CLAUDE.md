@@ -36,6 +36,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `teacher-login.html` / `teacher.html` | ~21 / ~41 KB | Teacher sign-in (Firebase Auth) and the class dashboard |
 | `api/class.js` | ~20 KB | The classroom API. Checks a Firebase ID token on every call |
 | `firestore.rules` | | Deny-all. Paste into the Firebase console; only the service account reaches Firestore |
+| `draw-lab.html` / `api/draw-lab.js` / `lab/` | | **Internal.** Draws the same lessons with Haiku, Sonnet and Opus through the real lesson prompt, beside Servier Medical Art (CC BY 3.0), to decide which model draws for Pro. Linked from nothing. The endpoint is **locked**: 403 unless `DRAW_LAB_KEY` (12+ chars) is set in Vercel and sent as `x-lab-key`, so a deploy costs nothing. Delete all three when the comparison is done |
 | `sf-topics.js` | ~38 KB | **The subtopic skill.** Reads the notes of ANY subject into parts, groups them to fit the days, and composes each day's question mix. Loaded by `app.html`. See "Subtopics made from the notes" |
 
 `lesson.html` has **two `<script>` blocks**. Block 1 is the session runtime.
