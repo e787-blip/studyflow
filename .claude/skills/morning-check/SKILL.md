@@ -67,6 +67,41 @@ host: say so once in the report and move on - it is not a bug in the site.
 labelling walkthrough) and `/tmp/sf-morning/wv_step3.png` (a picture walkthrough).
 A test can pass on a page that looks wrong.
 
+### No Node on this machine? Run the same suite in the browser pane
+
+The dev Mac has no Node, so `run_all.sh` cannot run there. `browser/` runs the
+SAME test files, unmodified, in the Claude desktop app's browser pane: pages
+are same-origin iframes, `api/generate` is routed through a hook the server
+injects at the top of every page, and `require`, `fs` and a slice of
+Playwright (`evaluate`, `route`, `click`, `fill`, `locator`, `waitFor*`,
+`emulateMedia` for JS reads of reduced motion) are shimmed (`pwshim.js`).
+
+```bash
+python3 -I .claude/skills/morning-check/browser/server.py 8765 &
+```
+
+Open `http://localhost:8765/__h/pw.html` in the pane, call `runSuite()` with
+the page's JS tool (or `runSuite(['newtypes', 'mix'])` for some), and poll
+`suiteSummary()` - a call that waits more than ~40s times out. Parse checks
+and the subtopic rules run under macOS's own JavaScriptCore:
+
+```bash
+JSC=/System/Library/Frameworks/JavaScriptCore.framework/Versions/Current/Helpers/jsc
+$JSC .claude/skills/morning-check/browser/noderun.js -- "$PWD/.claude/skills/morning-check/browser/parseall.js" "$PWD" $(ls *.html sf-*.js whiteboard.js api/*.js)
+$JSC .claude/skills/morning-check/browser/noderun.js -- "$PWD/.claude/skills/subtopics/scripts/check_topics.js"
+```
+
+`dg_regress` writes `diagrams.json` to the server's out folder (`GET /__repo`
+says where); `cmp` it with `diagram_baseline.json`. Known differences from
+Playwright: **a hidden pane stops rendering after a while** - animation
+frames, Web Animations and IntersectionObserver freeze, so `draw_on`'s motion
+checks fail until the pane is shown; and this Mac HAS speech voices, so
+`test_language`'s "no voice on this device" check cannot pass here. Neither
+is a bug in the site. For stills, headless Chrome works
+(`--headless=new --screenshot`), but it does not exit on its own - kill it
+once the file exists - and its virtual clock catches entrance animations
+part-way, so add `*{animation:none!important}` to the page first.
+
 ## 2. Fix what is broken (max 3)
 
 For each failure: reproduce it from the log, find the cause with `grep`, fix
