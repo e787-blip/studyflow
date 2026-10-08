@@ -36,6 +36,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `teacher-login.html` / `teacher.html` | ~21 / ~41 KB | Teacher sign-in (Firebase Auth) and the class dashboard |
 | `api/class.js` | ~20 KB | The classroom API. Checks a Firebase ID token on every call |
 | `firestore.rules` | | Deny-all. Paste into the Firebase console; only the service account reaches Firestore |
+| `sf-topics.js` | ~38 KB | **The subtopic skill.** Reads the notes of ANY subject into parts, groups them to fit the days, and composes each day's question mix. Loaded by `app.html`. See "Subtopics made from the notes" |
 
 `lesson.html` has **two `<script>` blocks**. Block 1 is the session runtime.
 Block 2 is the whiteboard module (`window.SFWhiteboard`). Both must stay
@@ -224,6 +225,11 @@ Two gotchas already paid for:
 
 ### Subtopics
 
+**Since Sept 2026 the subtopics are made from the notes by `sf-topics.js` —
+see the next section.** What follows is the premade table, which is now two
+things: the **fallback** when that call fails, and the set of **known shapes**
+a made subtopic can be generalised under (`like`).
+
 A subject is not one kind of knowledge, so the matrix above is the **fallback**,
 not the whole story. `SUBTOPICS` in `app.html` splits the nine non-maths
 subjects into 25 subtopics, each with its own mix, its own "ask this / avoid
@@ -277,8 +283,86 @@ Two things follow from how mixes are written:
   hand-maintained strings, and a tally disagreeing with the schema reads to
   the model as permission to improvise.
 
-Adding a subtopic is a `SUBTOPICS` entry and nothing else. Adding a question
-*type* is still the four-place job described above.
+Adding a subtopic is a `SUBTOPICS` entry and nothing else — the map prompt
+lists `SUBTOPICS` itself, so a new entry is offered to the model as a `like`
+target automatically. Adding a question *type* is still the eight-place job
+described above, plus the mix tables in `sf-topics.js` if made subtopics should
+ever ask for it (`.claude/skills/subtopics/SKILL.md` §6).
+
+### Subtopics made from the notes — `sf-topics.js`
+
+**The premade list could only recognise what someone thought to type into
+it.** Measured on ten subjects before this: **eight fell through to
+`general`** — music theory, contract law, nursing pharmacology, cooking,
+ethics, accounting, a driving test and *astronomy* — and every one got the same
+`3 MCQ, 2 True/False, 2 Fill, 1 Write` day, prompted as "a study day for a
+General student" under a content lock reading "a person who knows no GENERAL
+at all". The two that matched were not safe either: photosynthesis was split
+between life and physical science because the notes said "light".
+
+Now `startGeneration` makes **one call before day 1** (`mapTopicsThen`): the
+model reads the notes and describes them, and `SFTopics.judge` decides what to
+do with the description.
+
+| The model says | The code decides |
+|---|---|
+| the subject and its broad **field** ("Music") | the **family** it is held to (policy below) |
+| its **parts**, in teaching order, each under a **parent** | how parts group when days are short |
+| each part's **kind** (mechanism, procedure, facts, interpretation, application, language) | the question **mix** (`compose`) |
+| the **material** in each part (order, dates, parts, numbers, calculation, procedure, code, sources, text, sentences, categories, cases, places) | which formats that material can carry (`NEEDS`) |
+| what a good question asks / avoids, a picture, a teach-it-back tip | passed through, capped, one line, no `<>` |
+| optionally, the premade subtopic it is `like` | whether that inherited mix still fits the material |
+
+**The model never picks a question type.** It says what is in the notes, and a
+format is only let in when the material can carry it: an ordering card needs a
+real order (invariant 6), a labelling card a thing with parts, a word problem an
+economics plan (invariant 8), a Parsons problem code. A model that under-reports
+material costs a plainer day, never a broken one. Every mix keeps at least 3
+producing formats of 9 — or, when inherited, the premade list's own count, so
+cs/algorithms keeps its deliberate no-prose mix. With full material, all 25
+premade mixes come back byte-identical: that is a test.
+
+**Generalising, in both directions:**
+
+- **Parts up to a parent, then the field.** More parts than days → siblings
+  merge into their shared parent ("Intervals" + "Triads" + "Chord progressions"
+  → "Harmony"); only unrelated parts become "A and B", once, and the field's
+  name after that. A merged part's covers name every part it absorbed, so
+  nothing in the notes loses its day — tested for every parts × days pair.
+  Two bugs already paid for: a merged "Harmony" stopped matching its third
+  child (whose parent was still "Harmony"), and two half-merged "Harmony"
+  nodes were treated as siblings and generalised to "Music". `related()`
+  handles both.
+- **A subject up to a family — asymmetric on purpose.** Maths never reaches
+  the skill (invariant 1). A family the local classifier chose stands. Only
+  `general` is upgraded, and **never to maths**: a false maths upgrade turns a
+  driving test into ten equations a day, while a missed one costs a composed
+  mix that still produces answers.
+
+**What each day now gets:** `TODAY'S PART OF THE NOTES: <part> (part of
+<parent>): <covers>` (every day in the first pass through the parts; after
+that the final day is left whole), the part's quota and schema, its own
+guide and **mandate** (`KIND_RULE`, the rule for its kind of knowledge,
+followed by the exact tally `mixMandate` writes from the day's own schema -
+the two were written in parallel branches and the merge keeps both), its
+picture hint, and the **field** where the prompt used to print `GENERAL`.
+sf-topics.js knows main's later formats too: `dictation` is offered only on
+a language day and true/false never on history (`ONLY_FAMILY`,
+`NEVER_FAMILY`), and an inherited premade list keeps its own counts, so
+history/era's three passage cards survive.
+`day.allowedTypes` admits the day's own mix; `day.subtopic` and `plan.topics`
+are saved. The build screen says "Your notes cover: A · B · C".
+
+**It never blocks a plan.** Capped at `TOPICS_TIMEOUT_MS` (20 s). No reply, a
+502, prose, a refused map, `sf-topics.js` failing to load — all leave the plan
+built exactly as before, and a reply after the cap is ignored (day 2 must not be
+planned from a different map than day 1).
+
+`lesson.html` reads it back in two places: `generateMoreQuestions` adds "Part
+of the course: …" and the part's guide, and `getFeynmanTip` uses the model's
+tip on a `general` plan — **escaped**, because it goes into `innerHTML`.
+
+Full guide, change checklists and tests: `.claude/skills/subtopics/SKILL.md`.
 
 ### `concepts[].visual` — a picture per main idea
 
@@ -2028,10 +2112,11 @@ that vanished with each session):
 bash .claude/skills/morning-check/scripts/run_all.sh /tmp/sf-morning
 ```
 
-24 checks on real page loads with `api/generate` mocked - parse, every card
+26 checks on real page loads with `api/generate` mocked - parse, every card
 type answered wrong, walkthroughs, the picture budget, the labelling card,
 plan-time drawing, board text sizes, pictures drawing themselves, the icons
-and the layouts built on them, and every diagram against an audited
+and the layouts built on them, the subtopic skill (its rules exhaustively,
+then the plan builder and the top-up), and every diagram against an audited
 baseline, plus `test_mix.js` (every subtopic's real prompt) and
 `test_visuals.js` (the visual pass of 2026-09-30: heading weight, one chip
 colour, paper under drawings in dark mode, the banner, the results list; it
@@ -2244,6 +2329,11 @@ every future line of guidance.
 
 200 000 chars of notes produce a byte-identical prompt length, because of that
 cap — there is a test for it.
+
+**With a made subtopic** (`sf-topics.js`) a day prompt also carries the part's
+focus, guide and mandate. Measured with every field at its cap, 30 000 chars of
+notes and a full brief: **43 616** — `test_topics.js` asserts it stays under
+50 000. The map call itself is ~7 000 chars plus the same ≤ 8 000 of notes.
 
 ## Reading what the learner uploads
 
@@ -2581,6 +2671,15 @@ objects, strings-with-matching-concepts, strings-without, concepts-only, and
 genuinely nothing.
 
 ## Open items
+
+- **The subtopic map has not been seen from a real model.** `sf-topics.js` is
+  tested against hand-written answers, hostile ones and every failure mode, but
+  no API key reaches the cloud environment. First: map three unfamiliar
+  subjects and one familiar one, save each raw answer, and run
+  `node .claude/skills/subtopics/scripts/preview.js answer.json <days>`. Check
+  the parts are real parts of the notes, that `material` is honest
+  (over-claiming `parts` asks for a labelling card of something with none),
+  and time the call — it adds one before day 1.
 
 - **The intake answers have not been seen against a real model.** The
   `ABOUT THIS LEARNER` block is captured off the wire and correct, and plans
