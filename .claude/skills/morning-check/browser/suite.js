@@ -31,6 +31,7 @@
     ['icons', 'ICONS OK', S + 'test_icons.js'],
     ['topics_rules', 'TOPICS OK', '/.claude/skills/subtopics/scripts/check_topics.js'],
     ['topics_page', 'TOPICS PAGE OK', S + 'test_topics.js'],
+    ['e2e_cards', 'E2E CARDS OK', S + 'test_e2e_cards.js'],
     ['census', '__census__', S + 'census.js', ['0'], { FX: S + 'bigday' }],
     ['diagrams', '__any__', S + 'dg_regress.js', ['diagrams.json']]
   ];

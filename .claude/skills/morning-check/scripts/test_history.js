@@ -67,6 +67,18 @@ const plan = { id: 'hist', subject: 'History: causes of the American Revolution'
   assert(/answer EITHER way/.test(pr) && /today.s values/.test(pr), 'and says how to write them (debatable question; the presentism trap)');
   const modes = (qs || []).filter(q => q.type === 'write').map(q => q.mode || '-').join(',');
   assert(modes === 'claim,-,-', 'a claim keeps its mode; one with no model answer, or a made-up mode, becomes a plain write (' + modes + ')');
+  /* Events and eras had no terms, so it was the answer only when the notes
+     named nothing civic or social - and "rights" sent the French Revolution
+     to civics on every day, without the then-and-now card. */
+  await pg.goto((process.env.SF_BASE || 'http://localhost:8765/') + 'app.html?cb=' + Date.now(), { waitUntil: 'load' }); await pg.waitForTimeout(300);
+  const subs = await pg.evaluate(() => [
+    ['History: the French Revolution', 'In 1789 the Third Estate declared the rights of man and stormed the Bastille.'],
+    ['Civics: the Constitution and branches of government', 'Congress makes laws, the president enforces them.'],
+    ['History: the Industrial Revolution and labor reform', 'Factories grew. Child labor led to reform movements.'],
+    ['History: the American Revolution and the Constitution', 'The colonies declared independence in 1776.'],
+    ['History: the Civil Rights Movement', 'Protest and boycotts ended legal segregation.']
+  ].map(([s, n]) => resolveSubtopics('history', s, n).map(x => x.key).join('+')).join(' | '));
+  assert(subs === 'era | civics | social | era+civics | social', 'history subtopics: the French Revolution is an era, civics and social still win their own (' + subs + ')');
   assert(errs.length === 0, 'plan builder: no page errors ' + errs.join('|'));
   await b.close();
   console.log(fails ? fails + ' FAILED' : 'HISTORY OK');

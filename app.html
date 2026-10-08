@@ -2860,6 +2860,14 @@
         visual:'compare before and after, or a bar chart when the notes carry real figures.' },
       { key:'era', label:'Events and eras',
         fallback:true,
+        /* Oct 2026: it had no terms, so it was reached only when the notes
+           named nothing from civics or social history - and real notes
+           always do. "History: the French Revolution" went to civics off the
+           one word "rights" in its notes, on every day, and lost the
+           chronology, context and "then and now" cards this mix carries.
+           Still listed last and still the fallback: a tie goes to the
+           narrower subtopic. */
+        terms:['revolution','war','wars','empire','dynasty','century','centuries','ancient','medieval','renaissance','conquest','invasion','treaty','battle','colonial','colonies','independence','emperor','kingdom','monarch','civilization','civilisation','pharaoh','crusade','feudal'],
         /* passage:context is the fourth Reading Like a Historian skill -
            contextualization - and it was the one this app did not ask for.
            Sourcing, corroboration and close reading were all covered. */
@@ -3052,7 +3060,9 @@
     var body = String(notes || '').toLowerCase().substring(0, 3000);
     var scored = [], i, hits;
     for (i = 0; i < list.length; i++) {
-      if (list[i].fallback) continue;
+      /* A fallback with terms of its own (history/era) is scored like any
+         other; one with none is only ever the answer when nothing matched. */
+      if (list[i].fallback && !list[i].terms) continue;
       hits = countSubtopicHits(list[i].terms, line) * 3 +
              countSubtopicHits(list[i].terms, body);
       if (hits > 0) scored.push({ st: list[i], hits: hits, order: i });

@@ -34,6 +34,19 @@ Top first. One item per morning. Tick it when done and say which run did it.
 
 ## Runs
 
+### 2026-10-08 - "do the new cards actually show up?" (asked for, not a morning run)
+Built history and Spanish plans in the real plan builder (every day's reply
+filled in from the exact question list its prompt asked for) and ran every
+day in the lesson page, with the notes-map call composing, naming a premade
+shape, and failing. Found: a composed history day asked for none of the
+three history cards; a composed Spanish day had no dictation, and a vocab
+part listed as `categories` lost its sentence builder too; with the map
+failing, the French Revolution went to civics on every day (era had no
+terms) and never got "Then and now". Fixed in `sf-topics.js`
+(`FAMILY_FIRST`, language parts always have `sentences`) and `app.html`
+(era terms). New `test_e2e_cards.js` (fails 8 ways on the old code);
+`check_topics.js` and `test_history.js` extended.
+
 ### 2026-09-30 - the visual pass (asked for, not a morning run)
 Walked whole sessions at 390px, light and dark, and looked at every card.
 Fixed: faux-bold serif headings (lesson + dashboard); dark-mode drawings on a

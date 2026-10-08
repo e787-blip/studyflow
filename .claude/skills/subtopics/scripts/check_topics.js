@@ -57,6 +57,28 @@ function checkMix(out, mat, fam, label, floor, seed) {
   if (why.length && bad.length < 8) bad.push(label.name + ': ' + why.join(', ') + ' -> ' + out.join(','));
   return why.length === 0;
 }
+// A day built from scratch still gets its family's own cards (Oct 2026):
+// measured end to end, a history part with no premade "like" asked for none
+// of the three history cards, and a language part whose material earned a
+// reading set lost its dictation.
+let famN = 0; const famBad = [];
+function familyCheck(out, mat, fam, kind) {
+  const why = [];
+  if (fam === 'history') {
+    famN++;
+    if (out.indexOf('write:claim') < 0) why.push('no write:claim');
+    if ((mat.sources || mat.text) && out.indexOf('passage:perspective') < 0) why.push('sources but no passage:perspective');
+    if (mat.dates && out.indexOf('classify:change') < 0) why.push('dates but no classify:change');
+    if (out.filter(e => e === 'write:claim').length > 1) why.push('two claim cards');
+  }
+  if (fam === 'language') {
+    famN++;
+    if (out.indexOf('dictation') < 0) why.push('no dictation');
+    if (out.indexOf('sentence') < 0) why.push('no sentence');
+  }
+  if (fam !== 'history' && out.some(e => e === 'write:claim' || e === 'classify:change' || e === 'passage:perspective')) why.push('history card on ' + fam);
+  if (why.length && famBad.length < 8) famBad.push(kind + '/' + fam + '/' + Object.keys(mat) + ': ' + why.join(', ') + ' -> ' + out.join(','));
+}
 const archList = [];
 for (const fam of Object.keys(SUBTOPICS)) for (const st of SUBTOPICS[fam]) archList.push(st);
 for (let bits = 0; bits < (1 << MATS.length); bits++) {
@@ -67,7 +89,11 @@ for (let bits = 0; bits < (1 << MATS.length); bits++) {
     if (kind === 'language') m.sentences = 1;
     if (kind === 'procedure') m.procedure = 1;
     for (const fam of FAMS) {
-      checkMix(T.compose(kind, m, fam, null), m, fam, { name: kind + '/' + fam + '/' + Object.keys(m), args: [kind, m, fam, null] }, 3);
+      // build() gives every part of a language course sentences; mirror it.
+      const mf = fam === 'language' ? Object.assign({}, m, { sentences: 1 }) : m;
+      const out = T.compose(kind, mf, fam, null);
+      checkMix(out, mf, fam, { name: kind + '/' + fam + '/' + Object.keys(mf), args: [kind, mf, fam, null] }, 3);
+      familyCheck(out, mf, fam, kind);
     }
     // Inherited: every archetype against a sample of material sets.
     if (bits % 97 === 0) for (const st of archList) {
@@ -78,6 +104,29 @@ for (let bits = 0; bits < (1 << MATS.length); bits++) {
 }
 ok(bad.length === 0, n + ' compositions: right length, known types only, every format backed by its material, caps held, ' +
    'no bigequation, wordproblem only on economics, producing floor held, deterministic' + (bad.length ? '\n   ' + bad.join('\n   ') : ''));
+
+ok(famBad.length === 0 && famN > 0, famN + ' history and language days from scratch: every history day makes a case, has a perspective ' +
+   'card when the notes give sources and "then and now" when they give dates; every language day builds a sentence and takes a dictation' +
+   (famBad.length ? '\n   ' + famBad.join('\n   ') : ''));
+{
+  // Through the judge: a vocabulary part the model listed as categories only.
+  const t = T.judge({ subject: 'Spanish', field: 'Spanish', family: 'language', subtopics: [
+    { name: 'Everyday words', covers: ['la casa', 'el libro'], kind: 'facts', material: ['categories'], like: 'language/vocab' },
+    { name: 'Verbs', covers: ['hablar'], kind: 'facts', material: ['categories'] }] },
+    { localType: 'language', days: 2, archetypes: SUBTOPICS });
+  const vocab = SUBTOPICS.language.find(s => s.key === 'vocab').types;
+  ok(t && JSON.stringify(t.subtopics[0].types) === JSON.stringify(vocab) && t.subtopics[1].types.indexOf('dictation') >= 0 &&
+     t.subtopics[1].types.indexOf('sentence') >= 0,
+     'a language part listed as categories only keeps its sentence builder and dictation (vocab inherits byte for byte)');
+  const h = T.judge({ subject: 'The French Revolution', field: 'History', family: 'history', subtopics: [
+    { name: 'The events of 1789', covers: ['Bastille'], kind: 'interpretation', material: ['dates', 'sources'] },
+    { name: 'Causes', covers: ['taxes'], kind: 'mechanism', material: ['dates'], like: 'history/civics' }] },
+    { localType: 'history', days: 2, archetypes: SUBTOPICS });
+  const a = h && h.subtopics[0].types, c = h && h.subtopics[1].types;
+  ok(a && ['write:claim', 'passage:perspective', 'classify:change'].every(e => a.indexOf(e) >= 0) &&
+     c.filter(e => e === 'write:claim').length === 1 && c.indexOf('classify:change') >= 0,
+     'a history part with no premade shape asks for all three history cards; one like civics keeps one claim and gains "then and now": ' + (c || []).join(','));
+}
 
 // 3. The family policy.
 const fam = (local, model) => { const t = T.judge({ family: model, subtopics: [{ name: 'Part one' }] }, { localType: local, days: 3 }); return t ? t.family : null; };

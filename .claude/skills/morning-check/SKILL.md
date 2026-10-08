@@ -53,7 +53,7 @@ bash .claude/skills/morning-check/scripts/run_all.sh /tmp/sf-morning
 
 Parses every page, `sf-draw.js`, `sf-topics.js` and `api/*.js`, then drives real page loads in
 Chromium with `api/generate` mocked: every card type answered wrong, the
-subtopic skill (see the `subtopics` skill), the walkthroughs, the picture budget (at most 30% of question cards, never the
+subtopic skill (see the `subtopics` skill), a plan built end to end and every day of it run (the history and language cards must reach a session), the walkthroughs, the picture budget (at most 30% of question cards, never the
 same picture twice), the labelling card, pre-drawing in the plan builder,
 board text sizes at phone width, and every diagram against the audited
 baseline. About 5 minutes. Logs and screenshots land in `/tmp/sf-morning`.

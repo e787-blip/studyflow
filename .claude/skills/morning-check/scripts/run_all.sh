@@ -68,6 +68,10 @@ check icons        "ICONS OK"              node "$HERE/test_icons.js"
 # The subtopic skill: its rules exhaustively in Node, then the plan builder and the top-up on real pages.
 check topics_rules "TOPICS OK"             node "$REPO/.claude/skills/subtopics/scripts/check_topics.js"
 check topics_page  "TOPICS PAGE OK"        node "$HERE/test_topics.js"
+# End to end: the plan builder makes history and Spanish plans three ways (the
+# map composes, the map names a premade shape, the map fails) and the lesson
+# page runs every day - the history and language cards must reach a session.
+check e2e_cards    "E2E CARDS OK"          node "$HERE/test_e2e_cards.js"
 # 3. The picture budget: at most 30% of question cards, never the same picture twice.
 FX="$HERE/bigday" timeout 300 node "$HERE/census.js" 0 >"$OUT/census.log" 2>&1
 PCT=$(grep -oE "\(([0-9]+)%\)" "$OUT/census.log" | tr -dc 0-9); REP=$(grep -oE "repeated pictures: [0-9]+" "$OUT/census.log" | tr -dc 0-9)

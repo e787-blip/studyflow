@@ -369,6 +369,24 @@ sf-topics.js knows main's later formats too: `dictation` is offered only on
 a language day and true/false never on history (`ONLY_FAMILY`,
 `NEVER_FAMILY`), and an inherited premade list keeps its own counts, so
 history/era's three passage cards survive.
+
+**A family's own cards come first (`FAMILY_FIRST`, Oct 2026).** A part the
+model describes without naming a premade shape is composed from its kind's
+core, and the cores know nothing about history or language. Walked end to end
+- plan builder, then every day in the lesson page - a French Revolution plan
+mapped that way asked for **none** of "Make your case", "Then and now" or
+the historical perspective, and a Spanish plan lost its dictation on every
+day (it sat last in the language core and was crowded out) and, on a
+vocabulary part the model listed as `categories`, its sentence builder too.
+Now every history day asks for `write:claim`, plus `passage:perspective` when
+the notes give sources and `classify:change` when they give dates or two
+groups (`NEEDS['classify:change']`: its own two groups are given, so a
+stretch of time is enough); every language day asks for a `sentence` and a
+`dictation`, and **every part of a language course has `sentences`**
+(`build()`), whatever the model listed. They spend the material's earned
+slots, or a day with sources, dates and parts kept 2 of 9 producing.
+`test_e2e_cards.js` walks it three ways (map composes / names a shape /
+fails) and fails 8 ways on the code before.
 `day.allowedTypes` admits the day's own mix; `day.subtopic` and `plan.topics`
 are saved. The build screen says "Your notes cover: A · B · C".
 
@@ -539,6 +557,16 @@ guidance in the prompt, and a renderer branch.
   one option is always the presentist reading, named in the explanation.
 - **True/false is out of all three history mixes.** `test_history.js`
   covers the cards, the queue, the escaping and the prompt.
+- **`history/era` has terms now.** It was `fallback:true` with none, so the
+  premade match reached it only when the notes named nothing civic or social
+  - and real notes always do: "History: the French Revolution" went to
+  civics off the one word "rights", on every day, and never got "Then and
+  now", the chronology or the context card. `resolveSubtopics` scores a
+  fallback that has terms like any other; one with none (micro, systems,
+  vocab) is still only the answer when nothing matched. A tie still goes to
+  the narrower subtopic, so "the American Revolution and the Constitution"
+  is era + civics. Matters when the notes-map call fails; when it works the
+  model picks the shape.
 
 ### The five formats of Oct 2026 — recall, selfcheck, conceptmap, whosright, readchart
 

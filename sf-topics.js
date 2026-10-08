@@ -194,6 +194,25 @@
   var ONLY_FAMILY = { dictation: 'language' };
   var NEVER_FAMILY = { history: { truefalse: 1 } };
 
+  /* What a family asks for on EVERY one of its days, ahead of what the
+     material earns. The premade language mixes all build a sentence and take
+     a dictation (§8). The premade history mixes all carry "make your case" and
+     a historical perspective, and two carry "then and now" (question-design
+     §9) - but a part the model described without naming a premade shape was
+     composed from the kind's core alone, which knows none of them. Measured
+     end to end before this: a French Revolution plan mapped that way asked
+     for none of the three on any day. Each still has to pass allowed(): the
+     perspective card needs a source the notes give (a quote the model
+     invents is not a source), and "then and now" needs dated events or two
+     groups to set against each other. */
+  var FAMILY_FIRST = {
+    history: ['write:claim', 'passage:perspective', 'classify:change'],
+    /* The dictation sat last in the language core, so a day whose material
+       earned anything else crowded it out: a composed language day with a
+       text in it asked for none. */
+    language: ['sentence', 'dictation']
+  };
+
   /* A format that needs something from the material, or it cannot be
      written honestly. ANY one of the listed flags is enough. A format not
      listed needs nothing. Looked up by full entry first
@@ -212,6 +231,11 @@
     'twopart:passage':   ['text', 'sources'],
     sentence:            ['sentences'],
     dictation:           ['sentences'],
+    /* Then and now: its two groups are given (changed / stayed the same),
+       so dated events are enough - or the notes' own two groups, which is
+       what kept it on an inherited history/social day before it had a line
+       of its own here. */
+    'classify:change':   ['dates', 'categories'],
     /* A chart needs figures to chart; "selfcheck:code" needs code to explain. */
     readchart:           ['numbers'],
     'selfcheck:code':    ['code'],
@@ -326,8 +350,15 @@
     }
 
     if (seed) for (i = 0; i < seed.length; i++) add(String(seed[i]));
+    /* Never twice: an inherited history list already holds its claim card,
+       and the write cap alone would let a second one in. And they spend the
+       material's earned slots: three big reading cards on top of five earned
+       ones left a day with sources, dates and parts no room for the core's
+       fill and write, and 2 of 9 cards producing an answer. */
+    var first = has(FAMILY_FIRST, family) ? FAMILY_FIRST[family] : [], spent = 0;
+    for (i = 0; i < first.length; i++) if (out.indexOf(first[i]) < 0 && add(first[i])) spent++;
     var earned = earnedFor(mat);
-    for (i = 0, n = 0; i < earned.length && n < MAX_EARNED; i++) if (add(earned[i])) n++;
+    for (i = 0, n = spent; i < earned.length && n < MAX_EARNED; i++) if (add(earned[i])) n++;
     /* A reading set is one entry and four cards (a passage and three
        questions), so a new list that carries one is a card shorter. */
     if (!seed && count.readingset) target = 8;
@@ -566,6 +597,12 @@
   }
 
   function build(e, family, table, used) {
+    /* Every part of a language course has sentences in that language - the
+       model writes them, whatever the notes are. Left to the model's own
+       material list, a vocabulary part ("la casa, el libro") came back as
+       categories only, and lost the sentence builder and the dictation that
+       every premade language mix carries. */
+    if (family === 'language') e.mat.sentences = 1;
     var arch = archetype(e.like, table);
     var types = compose(e.kind, e.mat, family, arch ? arch.st.types : null);
     var guide = 'ASK: ' + (e.ask || DEFAULT_ASK[e.kind]) + '. AVOID: ' + (e.avoid || DEFAULT_AVOID[e.kind]) + '.' +
