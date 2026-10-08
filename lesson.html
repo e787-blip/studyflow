@@ -6352,13 +6352,21 @@
     [/portuguese|portugu[eê]s/, 'pt', 'pt-BR'], [/\blatin\b/, 'la', ''],
     [/japanese|nihongo/, 'ja', 'ja-JP'], [/chinese|mandarin/, 'zh', 'zh-CN'],
     [/korean/, 'ko', 'ko-KR'], [/arabic/, 'ar', 'ar-SA'], [/russian/, 'ru', 'ru-RU'],
-    [/hawaiian|[ʻ']?ōlelo/, 'haw', '']
+    [/hawaiian|[ʻ']?ōlelo/, 'haw', ''],
+    /* Oct 2026: these had no entry, so the plan was a language plan with no
+       voice to read its dictation. */
+    [/hindi/, 'hi', 'hi-IN'], [/vietnamese/, 'vi', 'vi-VN'], [/tagalog|filipino/, 'fil', 'fil-PH'],
+    [/turkish/, 'tr', 'tr-TR'], [/dutch/, 'nl', 'nl-NL'], [/swahili/, 'sw', 'sw-KE'],
+    [/cantonese/, 'yue', 'zh-HK'], [/greek/, 'el', 'el-GR'], [/hebrew/, 'he', 'he-IL'],
+    [/polish/, 'pl', 'pl-PL'], [/\bthai\b/, 'th', 'th-TH'], [/indonesian/, 'id', 'id-ID'],
+    [/\burdu\b/, 'ur', 'ur-PK'], [/bengali/, 'bn', 'bn-IN'], [/persian|farsi/, 'fa', 'fa-IR']
   ];
   /* The letters a school keyboard cannot type. Hawaiian's ʻokina is a
      letter, not punctuation. */
   var ACCENT_KEYS = {
     es: 'á é í ó ú ñ ü ¿ ¡', fr: 'é è ê ë à â ç î ï ô û ù œ', de: 'ä ö ü ß',
-    it: 'à è é ì ò ù', pt: 'á â ã à ç é ê í ó ô õ ú', haw: 'ā ē ī ō ū ʻ'
+    it: 'à è é ì ò ù', pt: 'á â ã à ç é ê í ó ô õ ú', haw: 'ā ē ī ō ū ʻ',
+    tr: 'ç ğ ı İ ö ş ü', nl: 'é ë ï ó ü'
   };
   function targetLang() {
     try { if (resolveSubjectType(plan, day) !== 'language') return null; } catch (e) { return null; }
@@ -6371,7 +6379,9 @@
   /* The same word with its marks taken off: "habló" -> "hablo", "niño" -> "nino". */
   function stripMarks(s) {
     s = String(s || '');
-    if (s.normalize) s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    /* \u3099 \u309a are Japanese dakuten and handakuten: が is か + ゛, and
+       a missed ゛ is the same kind of slip as a missed accent. */
+    if (s.normalize) s = s.normalize('NFD').replace(/[\u0300-\u036f\u3099\u309a]/g, '');
     return s.replace(/ß/g, 'ss').replace(/œ/g, 'oe').replace(/[ʻ‘’']/g, '');
   }
   /* Punctuation a language answer carries that is not the answer. */
@@ -9344,15 +9354,24 @@
      gap-fill: the sentence is already on screen. Grading is the fill card's,
      so the accent keys and the accent prompt come with it. */
   function dictationGap(text, blank) {
+    var GAP = '<span class="dict-gap" aria-label="missing word"></span>';
     var toks = String(text || '').split(/(\s+)/), want = langTrim(String(blank || '').toLowerCase()), i, done = false;
     for (i = 0; i < toks.length; i++) {
-      if (!done && /\S/.test(toks[i]) && langTrim(toks[i].toLowerCase()) === want) {
+      var tl = langTrim(toks[i].toLowerCase());
+      /* The word itself, or the word after an elision: "l'école" keeps its
+         "l'" on screen and gaps "école" (app.html's validator allows both). */
+      var el = (!done && tl !== want && want) ? /^(.*['’])(.+)$/.exec(langTrim(toks[i])) : null;
+      if (!done && /\S/.test(toks[i]) && (tl === want || (el && el[2].toLowerCase() === want))) {
         var lead = (/^[¿¡"“«(]+/.exec(toks[i]) || [''])[0], tail = (/[.!?,;:"”»)]+$/.exec(toks[i]) || [''])[0];
-        toks[i] = escHtml(lead) + '<span class="dict-gap" aria-label="missing word"></span>' + escHtml(tail);
+        toks[i] = escHtml(lead) + (tl === want ? '' : escHtml(el[1])) + GAP + escHtml(tail);
         done = true;
       } else toks[i] = escHtml(toks[i]);
     }
-    return done ? toks.join('') : '';
+    if (done) return toks.join('');
+    /* Chinese and Japanese are written without spaces: gap the first run. */
+    var t = String(text || ''), b = String(blank || ''), at = t.indexOf(b);
+    if (b && at !== -1 && /[\u3040-\u30ff\u3400-\u9fff]/.test(b)) return escHtml(t.slice(0, at)) + GAP + escHtml(t.slice(at + b.length));
+    return '';
   }
 
   function renderDictation(q) {
@@ -12035,7 +12054,7 @@
     if (/psycholog|\bbrain\b|cognit|behavio|memory|neuro/.test(text)) return 'psychology';
     if (/geograph|climate|\briver/.test(text) || /tectonic|biome|latitude|longitude|erosion|watershed|\bdelta\b|monsoon|\bglacier/.test(text)) return 'geography';
 
-    if (/spanish|french|german|japanese|chinese|conjugat|\bverb\b|translat|grammar/.test(text)) return 'language';
+    if (/spanish|french|german|japanese|chinese|mandarin|korean|italian|portuguese|russian|arabic|hawaiian|hindi|conjugat|\bverb\b|translat|grammar/.test(text)) return 'language';
     return saved || 'general';
   }
 

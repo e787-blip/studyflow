@@ -534,6 +534,29 @@ Evidence and sources: [docs/question-design.md §8](docs/question-design.md).
   the sentence. Never in `MOMENT_NEVER`'s drawings or the recall picture.
 - Every language mix traded its true/false for a dictation; conversation
   has two. `test_language.js` covers all of it, and fails on the code before.
+- **Every language, not just Spanish (Oct 2026)** - `test_languages.js` runs
+  17 (Spanish, French, German, Italian, Portuguese, Latin, Japanese with and
+  without spaces, Chinese, Korean, Arabic, Russian, Hawaiian, Turkish, Greek,
+  Hindi) through the plan builder and the lesson. What it found, all fixed:
+  **Chinese and Japanese lost every fill-in and dictation** - the fill-in
+  needed 15 characters round the blank ("我___学生。" has 4; three CJK
+  characters are enough now), the dictation 8 characters and a blank between
+  spaces (a run of a no-space sentence is a blank now, in the validator and
+  `dictationGap`); **a French dictation on an elided word** ("à l'école",
+  blank "école") was dropped (the word after an apostrophe counts, and the
+  "l'" stays on screen); **a missed ゛ was graded wrong** where a missed
+  accent gets one prompt (`stripMarks` drops U+3099/U+309A); and **Russian,
+  Hawaiian, Hindi, Mandarin, Turkish, Dutch... plans were filed `general`** -
+  no keys, no voice, no language mix. `classifySubject` now takes those
+  names only when the TITLE leads with them (`LANG_TITLE`: "Hawaiian:",
+  "Mandarin tones", "Hebrew 1"; `LANG_LEARN`: "learning Turkish"), never as
+  a scored word - scored, "Native Hawaiian culture", "The Swahili coast" and
+  "The Dutch East India Company" went to language. `LANG_TABLE` has a voice
+  for each; Turkish and Dutch have keys.
+- **Not solved: typing a whole other script.** Accent keys cover marks, not
+  alphabets - a Russian, Arabic, Greek, Hindi, Korean, Japanese or Chinese
+  fill-in needs the device's own keyboard for that script (Chromebooks,
+  iPads and phones have them built in; a school may not switch them on).
 
 ### The history cards (Oct 2026) — claim, change, perspective
 

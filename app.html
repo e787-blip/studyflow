@@ -2437,12 +2437,24 @@
                    'spaced repetition', 'active recall', 'flashcard']]]
   };
 
+  var LANG_NAMES = 'russian|mandarin|cantonese|hawaiian|hindi|vietnamese|tagalog|filipino|swahili|dutch|turkish|greek|hebrew|polish|urdu|bengali|persian|farsi|thai|indonesian|ʻōlelo hawaiʻi';
+  var LANG_TITLE = new RegExp('^(?:' + LANG_NAMES + ')(?:\\s+(?:chinese|language))?\\s*(?:[:\\-\u2013\u2014]|$|\\s+(?:language|vocab|vocabulary|words|phrases|greetings|grammar|verbs?|tenses?|conversation|tones|pronunciation|alphabet|characters|script|numbers|for beginners|[0-9]+|i{1,3}|101)\\b)');
+  var LANG_LEARN = new RegExp('\\b(?:learn(?:ing)?|speak(?:ing)?|beginner|intro(?:duction)? to|basic)\\s+(?:' + LANG_NAMES + ')\\b(?!\\s+(?:history|culture|art|food|cooking|literature|politics))');
   function classifySubject(subjectName, notes) {
     /* The typed subject is a deliberate signal, so it counts for more than a
        word that happens to appear in the notes. */
     var head = subjText(subjectName).toLowerCase();
     var body = subjText(notes).substring(0, 4000).toLowerCase();
     if (!head && !body) return 'general';
+
+    /* Oct 2026: "Russian: greetings", "Hawaiian: everyday words", "Hindi:
+       greetings" went to general - no accent keys, no listening card, no
+       language mix. These names only count when the TITLE leads with the
+       language as the thing studied ("Hawaiian:", "Mandarin tones", "learn
+       Hindi"), never as a word in the scoring above: there "Native Hawaiian
+       culture and the kingdom", "The Swahili coast trade cities" and "The
+       Dutch East India Company" all went to language. */
+    if (LANG_TITLE.test(head) || LANG_LEARN.test(head)) return 'language';
 
     var scores = {}, best = 'general', bestScore = 0, second = 0;
 
@@ -3640,8 +3652,13 @@
               if (re.test(normalized)) normalized = normalized.replace(re, '________');
               else return false; // no blank and no way to make one
             }
-            // Needs real sentence context around the blank.
-            if (normalized.replace(/________/g, '').trim().length < 15) return false;
+            // Needs real sentence context around the blank. A Chinese,
+            // Japanese or Korean character carries about a word, so three of
+            // them are enough: "我___学生。" is a whole sentence in four
+            // characters, and the 15-character test dropped every CJK fill-in.
+            var ctx = normalized.replace(/________/g, '').trim();
+            var cjk = (ctx.match(/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/g) || []).length;
+            if (cjk ? cjk < 3 : ctx.length < 15) return false;
             q.question = normalized;
           }
           return true;
@@ -3728,9 +3745,18 @@
         if (q.type === 'dictation') {
           var dt = String(q.text || '').replace(/\s+/g, ' ').trim();
           var db = String(q.blank || '').replace(/^[\s¿¡"“«]+|[\s.!?,;:"”»]+$/g, '');
-          if (dt.length < 8 || dt.length > 140 || !db || /\s/.test(db)) return false;
+          /* "我是学生。" is a sentence in five characters. */
+          var dMin = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/.test(dt) ? 4 : 8;
+          if (dt.length < dMin || dt.length > 140 || !db || /\s/.test(db)) return false;
           var dWords = dt.split(' ').map(function (w) { return w.replace(/^[¿¡"“«(]+|[.!?,;:"”»)]+$/g, '').toLowerCase(); });
-          if (dWords.indexOf(db.toLowerCase()) === -1) return false;
+          /* The blank is one whole word - or the word after an elision
+             ("l'école", "dell'acqua"), or, in a script written without
+             spaces (Chinese, Japanese), any run of the sentence. Both were
+             dropped: a French dictation on "école" and every Chinese one. */
+          var dbl = db.toLowerCase(), dOk = dWords.indexOf(dbl) !== -1;
+          if (!dOk) dOk = dWords.some(function (w) { return w.split(/['’]/).pop() === dbl && w !== dbl; });
+          if (!dOk && /[\u3040-\u30ff\u3400-\u9fff]/.test(db)) dOk = dt.indexOf(db) !== -1 && dt.replace(db, '').replace(/[\s。、！？.!?]/g, '').length > 0;
+          if (!dOk) return false;
           q.text = dt; q.blank = db;
           q.translation = String(q.translation || '').trim().slice(0, 160);
           if (!String(q.question || '').trim()) q.question = 'Listen and type the missing word.';

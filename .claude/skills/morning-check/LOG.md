@@ -34,6 +34,13 @@ Top first. One item per morning. Tick it when done and say which run did it.
 
 ## Runs
 
+### 2026-10-08 - every language, not just Spanish (asked for)
+17 languages through the plan builder and lesson (`test_languages.js`, fails
+13 ways on the code before). Fixed: CJK fill-ins and dictations dropped by
+length/spacing rules; French elided dictation; Japanese dakuten graded wrong
+instead of prompted; Russian/Hawaiian/Hindi/Mandarin/Turkish/Dutch plans
+filed general (title-led match only, so history titles keep history).
+
 ### 2026-10-08 - "do the new cards actually show up?" (asked for, not a morning run)
 Built history and Spanish plans in the real plan builder (every day's reply
 filled in from the exact question list its prompt asked for) and ran every

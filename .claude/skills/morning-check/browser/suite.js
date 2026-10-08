@@ -25,6 +25,7 @@
     ['mix', 'MIX OK', S + 'test_mix.js'],
     ['visuals', 'VISUALS OK', S + 'test_visuals.js'],
     ['language', 'LANGUAGE OK', S + 'test_language.js'],
+    ['languages', 'LANGUAGES OK', S + 'test_languages.js'],
     ['history', 'HISTORY OK', S + 'test_history.js'],
     ['newtypes', 'NEWTYPES OK', S + 'test_newtypes.js'],
     ['draw_on', 'DRAWON OK', S + 'test_drawon.js'],
