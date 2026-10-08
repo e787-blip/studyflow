@@ -81,7 +81,7 @@ function day(l) {
           if (!locked) { await page.evaluate((v) => { document.getElementById('fill-input').value = v; answerFillBtn(); }, ans); await page.waitForTimeout(150); }
           else prompt = 'GRADED-WRONG ' + prompt.slice(0, 40);
           const c1 = await page.evaluate(() => correctCount);
-          row[c.t] = (info.gap ? 'gap ' : (c.t === 'dictation' ? 'NO-GAP(fell back to fill) ' : '')) + 'keys[' + info.keys + '] ' + (c.t === 'dictation' ? (info.voice ? 'voice ' : 'no-voice ') : '') +
+          row[c.t] = (info.gap ? 'gap ' : (c.t === 'dictation' ? 'NO-GAP(fell back to fill) ' : '')) + 'keys[' + info.keys + '] ' + (c.t === 'dictation' ? (info.voice ? 'voice ' : 'no-voice ') + 'dir=' + info.dir + ' ' : '') +
             (wrongMark ? 'markOnlyMiss=' + (/accent|Almost/i.test(prompt) ? 'prompt' : 'graded-wrong') + ' ' : '') + 'correctGraded=' + (c1 > c0);
         }
         if (c.t === 'sentence' && !row.sentence) {
@@ -104,7 +104,8 @@ function day(l) {
     const code = row.lang ? (JSON.parse(row.lang) || {}).code : '';
     const ok = row.cls === 'language' && row.saved === 'fill,dictation,sentence,recall,mcq' && !row.errors &&
       ['fill', 'dictation', 'sentence', 'recall'].every(k => /correctGraded=true/.test(row[k] || '')) && /^gap /.test(row.dictation || '') &&
-      (!KEYS[code] || /keys\[[^\]]+\]/.test(row.fill)) && !/markOnlyMiss=graded-wrong/.test(row.fill);
+      (!KEYS[code] || /keys\[[^\]]+\]/.test(row.fill)) && !/markOnlyMiss=graded-wrong/.test(row.fill) &&
+      /dir=(\w+)/.exec(row.dictation || 'dir=x')[1] === (code === 'ar' ? 'rtl' : 'ltr');
     assert(ok, l[0] + (ok ? '' : '  ' + JSON.stringify(row)));
     await ctx.close();
   }

@@ -6294,10 +6294,10 @@
       '<div class="q-meta"><span class="q-type-label fill">Fill in the Blank</span>' +
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       sciDiagram +
-      '<div class="q-text" style="line-height:2.2;">' + questionText + '</div>' +
+      '<div class="q-text" style="line-height:2.2;"' + langDir() + '>' + questionText + '</div>' +
       '<div style="font-size:0.75rem;color:var(--muted);margin:.6rem 0 .75rem;">' + (targetLang() ? 'Type the missing word' : 'Type the missing word, number, or formula') + '</div>' +
       '<div class="fill-wrap">' +
-      '<input class="fill-input" id="fill-input" type="text" placeholder="Your answer..." autocomplete="off" autocorrect="off" autocapitalize="off" autocomplete="off" />' +
+      '<input class="fill-input" id="fill-input" type="text" placeholder="Your answer..." autocomplete="off" autocorrect="off" autocapitalize="off" autocomplete="off"' + langDir() + ' />' +
       '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
       '</div>' +
       accentBarHtml('fill-input') +
@@ -6375,6 +6375,14 @@
       if (LANG_TABLE[i][0].test(t)) return { code: LANG_TABLE[i][1], speech: LANG_TABLE[i][2] };
     }
     return { code: '', speech: '' };
+  }
+  /* Arabic, Hebrew, Urdu and Persian read right to left. Laid out left to
+     right, an Arabic dictation put its full stop at the wrong end and its
+     gap between the wrong words. "auto" lets an English instruction inside
+     the same box ("(eat)") stay as it is. */
+  function langDir() {
+    var L = targetLang();
+    return (L && /^(ar|he|ur|fa)$/.test(L.code)) ? ' dir="auto"' : '';
   }
   /* The same word with its marks taken off: "habló" -> "hablo", "niño" -> "nino". */
   function stripMarks(s) {
@@ -9388,9 +9396,9 @@
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
       '<div class="q-text">' + (voice ? 'Play it, then type the missing word.' : 'Type the missing word.') + '</div>' +
       player +
-      '<div class="dict-text" lang="' + escHtml((targetLang() || {}).code || '') + '">' + gapped + '</div>' +
+      '<div class="dict-text" lang="' + escHtml((targetLang() || {}).code || '') + '"' + langDir() + '>' + gapped + '</div>' +
       '<div class="fill-wrap">' +
-      '<input class="fill-input" id="fill-input" type="text" placeholder="The missing word" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />' +
+      '<input class="fill-input" id="fill-input" type="text" placeholder="The missing word" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"' + langDir() + ' />' +
       '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
       '</div>' +
       accentBarHtml('fill-input') +

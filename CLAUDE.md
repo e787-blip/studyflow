@@ -552,7 +552,9 @@ Evidence and sources: [docs/question-design.md §8](docs/question-design.md).
   "Mandarin tones", "Hebrew 1"; `LANG_LEARN`: "learning Turkish"), never as
   a scored word - scored, "Native Hawaiian culture", "The Swahili coast" and
   "The Dutch East India Company" went to language. `LANG_TABLE` has a voice
-  for each; Turkish and Dutch have keys.
+  for each; Turkish and Dutch have keys. Arabic, Hebrew, Urdu and Persian
+  fill-ins and dictations are laid out right to left (`langDir`): left to
+  right, the full stop sat at the wrong end of the sentence.
 - **Not solved: typing a whole other script.** Accent keys cover marks, not
   alphabets - a Russian, Arabic, Greek, Hindi, Korean, Japanese or Chinese
   fill-in needs the device's own keyboard for that script (Chromebooks,
