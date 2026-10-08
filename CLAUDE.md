@@ -2781,6 +2781,24 @@ genuinely nothing.
 
 ## Open items
 
+- **The five formats of Oct 2026 have not been seen from a real model.**
+  `recall`, `selfcheck`, `conceptmap`, `whosright` and `readchart` are
+  prompted, validated and tested against hand-written good and bad cards,
+  and every card was looked at in screenshots - but no plan has been
+  generated against the live endpoint since. First thing with a key:
+  generate a life-science, a history/era and a cs/programming plan and read
+  what comes back. Specifically: how many concept maps survive the
+  validator (twin blanks and leaks are the likely losses); whether the
+  "who's right" wrong answers are REAL misconceptions or strawmen; whether
+  `readchart` uses figures from the notes or labels its data as example;
+  and whether `selfcheck` ideas are separate ideas or one idea split in
+  three. If maps keep failing validation, the prompt's example is the lever
+  (see "The model copies the EXAMPLE").
+- **The classroom is off on the live site until two console steps are
+  done** - `FIREBASE_SERVICE_ACCOUNT` in Vercel and `firestore.rules`
+  published (see "The classroom"). Until then `api/class` answers 503
+  `classroom_not_configured`, verified on the live site 2026-10-08.
+
 - **The subtopic map has not been seen from a real model.** `sf-topics.js` is
   tested against hand-written answers, hostile ones and every failure mode, but
   no API key reaches the cloud environment. First: map three unfamiliar
