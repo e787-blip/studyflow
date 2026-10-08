@@ -62,6 +62,7 @@ check mix          "MIX OK"                node "$HERE/test_mix.js"
 check visuals      "VISUALS OK"            node "$HERE/test_visuals.js"
 check language     "LANGUAGE OK"           node "$HERE/test_language.js"
 check history      "HISTORY OK"            node "$HERE/test_history.js"
+check newtypes     "NEWTYPES OK"           node "$HERE/test_newtypes.js"
 check draw_on      "DRAWON OK"             node "$HERE/test_drawon.js"
 check icons        "ICONS OK"              node "$HERE/test_icons.js"
 # The subtopic skill: its rules exhaustively in Node, then the plan builder and the top-up on real pages.

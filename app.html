@@ -2652,6 +2652,27 @@
        passage card followed by its questions. */
     if (type === 'labeldiagram') return '{"type":"labeldiagram","question":"Label each numbered part.","drawing":{"title":"","w":400,"h":260,"shapes":[]},"pins":[{"x":0,"y":0,"answer":""},{"x":0,"y":0,"answer":""},{"x":0,"y":0,"answer":""}],"options":["",""],' + tail;
     if (type === 'readingset')  return '{"type":"readingset","title":"","passage":"","questions":[{"question":"What is the main idea of the passage?","options":["","","",""],"correctIndex":' + idx + ',"questionType":"main-idea"},{"question":"","options":["","","",""],"correctIndex":' + ((i + 1) % 4) + ',"questionType":"inference"},{"question":"","options":["","","",""],"correctIndex":' + ((i + 2) % 4) + ',"questionType":"vocab-in-context"}],' + tail;
+    /* The five formats of Oct 2026 - see docs/question-design.md §11 for the
+       evidence behind each. */
+    /* Cued free recall: type every item of a set from memory. "items" holds the
+       accepted answers, alternatives split by " / ". */
+    if (type === 'recall')      return '{"type":"recall","question":"","items":["","","",""],"need":4,' + tail;
+    /* Explain from memory, then judge the answer idea by idea (the idea-unit
+       standard of Rawson & Dunlosky). :code is Explain in Plain English. */
+    if (type === 'selfcheck')   return '{"type":"selfcheck","question":""' + (variant === 'code' ? ',"code":""' : '') + ',"ideas":["","",""],"modelAnswer":"",' + tail;
+    /* A partly finished concept map, filled in from memory (Karpicke et al.
+       2014). Node 0 is the main idea and is never blanked. */
+    if (type === 'conceptmap')  return '{"type":"conceptmap","question":"Complete the map.","nodes":["","","","",""],"links":[{"from":0,"to":1,"label":""},{"from":0,"to":2,"label":""},{"from":1,"to":3,"label":""},{"from":2,"to":4,"label":""}],"blanks":' + (i % 2 ? '[2,3]' : '[1,4]') + ',"extra":"",' + tail;
+    /* A concept cartoon: three classmates, one right, two holding real
+       misconceptions, each answered with a refutation. The right one rotates,
+       as correctIndex does. */
+    if (type === 'whosright') {
+      var wr = i % 3, claims = [];
+      for (var c = 0; c < 3; c++) claims.push('{"says":"","right":' + (c === wr) + ',"why":""}');
+      return '{"type":"whosright","question":"","claims":[' + claims.join(',') + '],' + tail;
+    }
+    /* Read the chart: tap the data (Part A), then say what it means (Part B). */
+    if (type === 'readchart')   return '{"type":"readchart","chart":{"kind":"' + (i % 2 ? 'line' : 'bar') + '","title":"","x":"","y":"","unit":"","data":"notes","points":[{"label":"","value":0},{"label":"","value":0},{"label":"","value":0},{"label":"","value":0},{"label":"","value":0}]},"find":"","findIndex":' + (i % 5) + ',"question":"","options":["","","",""],"correctIndex":' + idx + ',' + tail;
     return '';
   }
 
@@ -2671,7 +2692,9 @@
                      highlight:'Find-the-evidence', tracetable:'Trace table',
                      matchpairs:'Match pairs', estimate:'Estimate', dictation:'Listen and type',
                      readingset:'Reading set (passage + 3 questions)',
-                     labeldiagram:'Label the diagram' };
+                     labeldiagram:'Label the diagram',
+                     recall:'Name them all', selfcheck:'Explain and check yourself',
+                     conceptmap:'Concept map', whosright:'Who\'s right', readchart:'Read the chart' };
 
   /* The quota line the model reads is counted from the same list the schema is
      built from, so the two can no longer drift apart. They were two hand-kept
@@ -2707,6 +2730,48 @@
      question whose format contradicts the quota above is a defect". Two
      quotas that disagree read to the model as permission to improvise, and
      lesson.html then throws away whatever it improvised off the palette. */
+  /* How to write the five formats of Oct 2026 - only those this day's schema
+     asks for, so a day without them spends none of the prompt budget on
+     them. Each says what makes the card GRADEABLE, because that is what the
+     JSON cannot show: a concept map whose two blanks read the same, or a
+     "who's right" with two right answers, looks fine as JSON. */
+  var NEW_FORMAT_GUIDE = {
+    recall: 'recall ("Name them all"): the learner TYPES each item from memory. Ask for a SET the notes\n' +
+      '  actually list - the stages of a process, the parts of a structure, the causes of an event. "items"\n' +
+      '  holds every correct answer (3-6), each a word or short phrase, with accepted alternatives split by\n' +
+      '  " / " ("Carbon dioxide / CO2"). "need" is how many must be named; when it is fewer than the items,\n' +
+      '  the question says so ("Name three of..."). No item may appear in the question itself.\n',
+    selfcheck: 'selfcheck ("Explain it, then check yourself"): the learner types an explanation from memory, then\n' +
+      '  ticks off "ideas" - the 2-4 SEPARATE ideas a complete answer contains, each a short phrase under 60\n' +
+      '  characters that a learner can find, or not find, in their own words. "modelAnswer" joins them in one\n' +
+      '  or two sentences. Ask how or why something works, or what a key idea means - never a one-word fact.\n' +
+      '  When the shape has "code": 3-8 lines from the notes\' language, and the question asks what the code\n' +
+      '  does in plain English - its PURPOSE, not each line ("it finds the largest number in the list").\n',
+    conceptmap: 'conceptmap ("Complete the map"): 4-6 "nodes", each a short noun phrase; node 0 is the main idea.\n' +
+      '  Each link reads as a true sentence from -> to with a short verb in "label": "Photosynthesis" -makes->\n' +
+      '  "Glucose". "blanks" are the 2-3 nodes the learner fills in - never node 0, each linked to at least one\n' +
+      '  shown node, and no two blanks with the same links (or they cannot be told apart). "extra" is ONE more\n' +
+      '  term from the topic that fits no blank. A blank\'s words must not appear anywhere else on the map.\n',
+    whosright: 'whosright ("Who\'s right?"): three classmates answer the same question, each in ONE sentence the way\n' +
+      '  a student would say it. Exactly one is right. The other two are misconceptions learners really hold\n' +
+      '  about this - use the day\'s "misconceptions" - never silly or obviously wrong. "why" on each: for a\n' +
+      '  wrong one, what is wrong with it AND what is actually true; for the right one, why it holds. No names.\n',
+    readchart: 'readchart ("Read the chart"): "chart" is 3-8 points of ONE quantity - "bar" for categories, "line"\n' +
+      '  for change over time or with another quantity - with "x", "y" and "unit". Use figures from the notes\n' +
+      '  ("data":"notes"); only when the notes have none, realistic example values ("data":"example"). "find"\n' +
+      '  asks the learner to tap ONE bar or point ("Tap the month with the most rain"), "findIndex" its 0-based\n' +
+      '  position. "question" then asks what the pattern MEANS or predicts in this subject - never a value the\n' +
+      '  learner could just read off - with 4 "options".\n'
+  };
+  function newFormatGuide(types) {
+    var out = '', seen = {}, i, t;
+    for (i = 0; i < types.length; i++) {
+      t = String(types[i]).split(':')[0];
+      if (NEW_FORMAT_GUIDE[t] && !seen[t]) { seen[t] = 1; out += NEW_FORMAT_GUIDE[t]; }
+    }
+    return out;
+  }
+
   function mixMandate(types) {
     return 'Of these ' + types.length + ' questions, exactly: ' + tallyFor(types) + '.\n' +
       'Use ONLY these formats, in these numbers. A question in any other format - a word\n' +
@@ -2727,22 +2792,36 @@
      bigequation and wordproblem stay inside math and economics: a question
      belongs to its subject, and those two formats recast anything numeric as
      arithmetic. */
+  /* Oct 2026, five new formats (docs/question-design.md §11), one or two per
+     mix, each into the slot whose job it does better:
+       whosright  <- a true/false, where the material is misconception-heavy.
+                     It is pre-test eligible, so no mix lost its pre-test.
+       recall     <- a matchpairs or an mcq where the notes list a set.
+       selfcheck  <- a matchpairs, a fill or a second scenario, where the
+                     learner should explain rather than recognise.
+       conceptmap <- a classify, matchpairs or mcq, where the knowledge is
+                     how 4-6 ideas connect.
+       readchart  <- a classify, matchpairs or true/false, where the notes
+                     carry figures.
+     No mix lost a producing format, and no older format left the table:
+     matchpairs is in 8 mixes (was 14), true/false in 11 (was 18). Maths is
+     untouched (invariant 1). */
   var SUBTOPICS = {
     science: [
       { key:'life', label:'Life science',
         terms:['cell','cells','biolog','organism','photosynthesis','respiration','genetic','dna','rna','evolution','ecosystem','enzyme','mitosis','meiosis','protein','bacteria','virus','plant','animal','digest','circulat','nervous','immune','heredity','chromosome'],
-        types:['twopart','labeldiagram','sequence:process','classify','matchpairs','fill','mcq','truefalse','write'],
-        guide:'ASK: the order of a real process and what each stage produces, and what breaks if one stage fails. Where the topic allows, make the twopart Part A a prediction and Part B the mechanism. AVOID: naming a structure with no function attached. AVOID any question that is really arithmetic with science words on it.',
+        types:['twopart','labeldiagram','sequence:process','classify','recall','fill','mcq','whosright','write'],
+        guide:'ASK: the order of a real process and what each stage produces, and what breaks if one stage fails. Where the topic allows, make the twopart Part A a prediction and Part B the mechanism. AVOID: naming a structure with no function attached. AVOID any question that is really arithmetic with science words on it. The recall card names a set the notes list (the stages, the parts); the whosright card is a misconception learners really hold here (plants take their food from the soil).',
         visual:'a cycle or flow for a process, parts for a structure.' },
       { key:'physical', label:'Physical science',
         terms:['force','forces','motion','energy','atom','atoms','molecul','chemical','reaction','element','compound','physics','chemistry','electric','magnet','heat','thermal','wave','waves','light','sound','gravity','friction','momentum','acid','base','periodic'],
-        types:['twopart','estimate','tracetable','mcq','fill','classify','truefalse','mcq','write'],
-        guide:'ASK: PREDICT FIRST. Make the twopart Part A a prediction - what happens to one quantity when another changes - and Part B the reason. Committing to a prediction before seeing the outcome is what shifts a misconception; being told the right answer does not. AVOID: recall of a definition with nothing to reason about. AVOID any question that is really arithmetic with science words on it.',
+        types:['twopart','estimate','tracetable','mcq','fill','readchart','whosright','mcq','write'],
+        guide:'ASK: PREDICT FIRST. Make the twopart Part A a prediction - what happens to one quantity when another changes - and Part B the reason. Committing to a prediction before seeing the outcome is what shifts a misconception; being told the right answer does not. AVOID: recall of a definition with nothing to reason about. AVOID any question that is really arithmetic with science words on it. The whosright card is a classic misconception (heavier things fall faster); the readchart card plots one quantity against another from the notes.',
         visual:'a graph for a relationship, compare for two opposing cases.' },
       { key:'earth', label:'Earth and space science',
         terms:['earth','rock','rocks','mineral','volcan','earthquake','plate','tectonic','weather','climate','atmosphere','ocean','erosion','fossil','planet','solar','star','moon','space','galaxy','water cycle','carbon cycle'],
-        types:['twopart','labeldiagram','sequence:process','corroborate','mcq','fill','truefalse','classify','write'],
-        guide:'ASK: how one stage of a cycle feeds the next, and what evidence shows it happened. AVOID: naming layers or categories with no process attached.',
+        types:['twopart','labeldiagram','sequence:process','corroborate','mcq','fill','whosright','classify','write'],
+        guide:'ASK: how one stage of a cycle feeds the next, and what evidence shows it happened. AVOID: naming layers or categories with no process attached. The whosright card is a misconception about this process that learners really hold (why there are seasons, what causes the phases of the moon).',
         visual:'a cycle for anything that repeats, timeline for anything dated.' }
     ],
     english: [
@@ -2753,13 +2832,13 @@
         visual:'a concept hub around the central idea, or compare for two viewpoints.' },
       { key:'grammar', label:'Grammar and mechanics',
         terms:['grammar','punctuation','comma','apostrophe','clause','sentence structure','subject.verb','agreement','tense','pronoun','modifier','fragment','run.on','capitali[sz]','spelling','mechanics','parts of speech'],
-        types:['highlight','sentence','sentence','matchpairs','fill','truefalse','mcq','twopart','write'],
-        guide:'ASK: the learner to build or repair a real sentence. Every question needs an actual sentence in it. AVOID: asking what a term means in the abstract - naming the rule is not applying it.',
+        types:['highlight','sentence','sentence','matchpairs','fill','whosright','mcq','twopart','write'],
+        guide:'ASK: the learner to build or repair a real sentence. Every question needs an actual sentence in it. AVOID: asking what a term means in the abstract - naming the rule is not applying it. The whosright card is three classmates fixing the same sentence; the two wrong fixes are the slips students really make.',
         visual:'compare a correct and an incorrect form side by side.' },
       { key:'literature', label:'Literary analysis',
         terms:['literature','literary','novel','poem','poetry','shakespeare','theme','symbol','metaphor','character','narrat','imagery','tone','motif','protagonist','setting','plot','figurative'],
-        types:['readingset','corroborate','twopart:passage','highlight','mcq','fill','write','truefalse'],
-        guide:'ASK: what a specific choice achieves in a specific passage, with the text quoted in the question. AVOID: naming a device with no text attached to it.',
+        types:['readingset','corroborate','twopart:passage','highlight','mcq','selfcheck','write','truefalse'],
+        guide:'ASK: what a specific choice achieves in a specific passage, with the text quoted in the question. AVOID: naming a device with no text attached to it. The selfcheck card asks what a device or choice does in the text, in the learner\'s own words.',
         visual:'a concept hub for theme, compare for two characters, timeline for plot.' }
     ],
     history: [
@@ -2771,95 +2850,95 @@
            true/false is the thinnest of them. In: an argument from evidence,
            continuity and change, and historical perspective - three of
            Seixas's six concepts nothing asked for. */
-        types:['twopart','sequence:process','highlight','write:claim','scenario','passage:sourcing','mcq','fill','passage:perspective'],
-        guide:'ASK: how a process actually moves - who acts, in what order, and what stops it. Apply a rule to a short concrete case. AVOID: counting seats or naming office-holders as trivia.',
+        types:['twopart','sequence:process','highlight','write:claim','scenario','passage:sourcing','recall','fill','passage:perspective'],
+        guide:'ASK: how a process actually moves - who acts, in what order, and what stops it. Apply a rule to a short concrete case. AVOID: counting seats or naming office-holders as trivia. The recall card names a set the notes give (the three branches, the rights in an amendment).',
         visual:'a flow for how a process moves, hierarchy for who answers to whom.' },
       { key:'social', label:'Social and economic history',
         terms:['industrial','immigration','migration','labor','labour','slavery','civil rights','women','social','economic','trade','agricultur','urban','class','reform','movement','protest','population'],
-        types:['corroborate','twopart','passage:cause-effect','classify:change','mcq','write:claim','fill','highlight','passage:perspective'],
-        guide:'ASK: what changed for ordinary people and why, and which groups experienced it differently. AVOID: a single national story with no one in it.',
+        types:['corroborate','twopart','passage:cause-effect','classify:change','whosright','write:claim','fill','highlight','passage:perspective'],
+        guide:'ASK: what changed for ordinary people and why, and which groups experienced it differently. AVOID: a single national story with no one in it. The whosright card is a myth about how people lived then that students really believe.',
         visual:'compare before and after, or a bar chart when the notes carry real figures.' },
       { key:'era', label:'Events and eras',
         fallback:true,
         /* passage:context is the fourth Reading Like a Historian skill -
            contextualization - and it was the one this app did not ask for.
            Sourcing, corroboration and close reading were all covered. */
-        types:['corroborate','passage:sourcing','passage:context','sequence:chronology','twopart','mcq','write:claim','fill','classify:change','passage:perspective'],
-        guide:'ASK: causes, consequences, motives and order. Tie an event to what it produced. AVOID: bare date recall unless the notes stress the chronology.',
+        types:['corroborate','passage:sourcing','passage:context','sequence:chronology','twopart','conceptmap','write:claim','fill','classify:change','passage:perspective'],
+        guide:'ASK: causes, consequences, motives and order. Tie an event to what it produced. AVOID: bare date recall unless the notes stress the chronology. The concept map links the event to its causes and consequences, each link a verb ("led to", "weakened").',
         visual:'a timeline for anything dated, flow for a causal chain.' }
     ],
     geography: [
       { key:'physical', label:'Physical geography',
         terms:['river','rivers','mountain','glacier','erosion','delta','climate','weather','biome','desert','rainforest','tectonic','volcano','earthquake','coast','landform','ecosystem','monsoon','hydrolog'],
-        types:['twopart','labeldiagram','sequence:process','estimate','mcq','fill','classify','truefalse','write'],
-        guide:'ASK: how a physical process produces the landform or pattern you can observe, and where. AVOID: naming a feature with no process behind it.',
+        types:['twopart','labeldiagram','sequence:process','estimate','mcq','fill','readchart','truefalse','write'],
+        guide:'ASK: how a physical process produces the landform or pattern you can observe, and where. AVOID: naming a feature with no process behind it. The readchart card is real figures across a year or a place (a climate graph, a river\'s flow).',
         visual:'a cycle or flow for the process, map only for real named places.' },
       { key:'human', label:'Human geography',
         terms:['population','urban','city','cities','migration','settlement','development','economy','culture','resource','agriculture','industry','globali[sz]','density','trade','tourism'],
-        types:['twopart','scenario','estimate','classify','mcq','fill','write','matchpairs','truefalse'],
-        guide:'ASK: why people are where they are, and what happens when one pressure changes. AVOID: capital-city trivia unless the notes are about capitals.',
+        types:['twopart','scenario','estimate','classify','mcq','fill','write','readchart','truefalse'],
+        guide:'ASK: why people are where they are, and what happens when one pressure changes. AVOID: capital-city trivia unless the notes are about capitals. The readchart card is population, migration or development figures, and asks what explains the pattern.',
         visual:'compare two places, or a bar chart when the notes carry real figures.' },
       { key:'maps', label:'Maps and regions',
         terms:['map','maps','atlas','latitude','longitude','coordinate','scale','projection','continent','region','border','country','countries','capital','hemisphere','compass'],
-        types:['estimate','matchpairs','twopart','mcq','fill','classify','truefalse','highlight','write'],
-        guide:'ASK: where something is relative to something else, and what that position causes. AVOID: lists of names with nothing following from them.',
+        types:['estimate','matchpairs','twopart','mcq','fill','classify','whosright','highlight','write'],
+        guide:'ASK: where something is relative to something else, and what that position causes. AVOID: lists of names with nothing following from them. The whosright card is a common misreading of a map (a projection\'s sizes, which way latitude runs).',
         visual:'a map, but only with real place names the notes use.' }
     ],
     psychology: [
       { key:'methods', label:'Research methods',
         terms:['research','method','experiment','variable','control','hypothesis','sampling','correlation','causation','validity','reliability','ethic','bias','placebo','double.blind','statistic'],
-        types:['twopart','corroborate','scenario','classify','mcq','truefalse','fill','write','matchpairs'],
-        guide:'ASK: judge a described study - what is wrong with it, what it can and cannot show. AVOID: definitions of method terms with no study attached.',
+        types:['twopart','corroborate','scenario','classify','mcq','truefalse','fill','write','readchart'],
+        guide:'ASK: judge a described study - what is wrong with it, what it can and cannot show. AVOID: definitions of method terms with no study attached. The readchart card is the result of a described study; ask what it can and cannot show.',
         visual:'compare two study designs, or a 2x2 matrix for variable types.' },
       { key:'bioCog', label:'Biological and cognitive',
         terms:['brain','neuron','neural','cortex','memory','cognit','perception','attention','sensation','encoding','retrieval','sleep','conditioning','learning','language','neurotransmitter','hormone'],
         /* The scenario was a classify, which made this mix identical to
            geography/physical's, type for type. Applying a memory or
            perception effect to a concrete case is this subtopic's own work. */
-        types:['twopart','labeldiagram','sequence:process','fill','mcq','truefalse','write','scenario','estimate'],
-        guide:'ASK: the path information takes and where it breaks down. Use the scenario to apply a memory or perception effect to one concrete situation. AVOID: asking who discovered something, which tests trivia rather than understanding.',
+        types:['twopart','labeldiagram','sequence:process','fill','mcq','whosright','write','scenario','estimate'],
+        guide:'ASK: the path information takes and where it breaks down. Use the scenario to apply a memory or perception effect to one concrete situation. AVOID: asking who discovered something, which tests trivia rather than understanding. The whosright card is a myth about the brain or memory that students really believe.',
         visual:'a flow for a processing path, parts for brain structure.' },
       { key:'social', label:'Social and developmental',
         terms:['social','develop','child','adolescen','attachment','personality','group','conform','obedien','attitude','prejudice','stage','moral','identity','therapy','disorder','stress'],
-        types:['twopart','scenario','scenario','matchpairs','classify','fill','write','truefalse','mcq'],
-        guide:'ASK: apply a named theory or effect to a short concrete situation. AVOID: naming a stage without what it predicts.',
+        types:['twopart','scenario','selfcheck','matchpairs','classify','fill','write','truefalse','mcq'],
+        guide:'ASK: apply a named theory or effect to a short concrete situation. AVOID: naming a stage without what it predicts. The selfcheck card asks the learner to explain an effect and why it happens.',
         visual:'a hierarchy for staged theories, concept hub for an idea and its parts.' }
     ],
     economics: [
       { key:'personal', label:'Personal finance',
         terms:['budget','saving','savings','credit','debt','loan','interest rate','compound interest','invest','tax','taxes','income','salary','insurance','bank','mortgage','personal finance'],
-        types:['estimate','wordproblem','twopart','tracetable','fill','mcq','truefalse','write','matchpairs'],
-        guide:'ASK: work the actual figures from the notes - what it costs, what it grows to, what is left. AVOID: definitions with no money in them.',
+        types:['estimate','wordproblem','twopart','tracetable','fill','mcq','whosright','write','matchpairs'],
+        guide:'ASK: work the actual figures from the notes - what it costs, what it grows to, what is left. AVOID: definitions with no money in them. The whosright card is a money misconception people really hold (paying the minimum on a card is fine).',
         visual:'a bar chart or graph, but only with real figures from the notes.' },
       { key:'macro', label:'Macroeconomics',
         terms:['gdp','inflation','unemployment','fiscal','monetary','central bank','federal reserve','recession','growth','trade deficit','tariff','exchange rate','macro','national income','business cycle'],
-        types:['twopart','estimate','wordproblem','mcq','classify','fill','truefalse','write','matchpairs'],
-        guide:'ASK: what happens to output, prices or employment when one lever moves, and in which direction. AVOID: definition-only questions with no change to reason about.',
+        types:['twopart','estimate','wordproblem','mcq','readchart','fill','truefalse','write','matchpairs'],
+        guide:'ASK: what happens to output, prices or employment when one lever moves, and in which direction. AVOID: definition-only questions with no change to reason about. The readchart card is real figures over time (inflation, unemployment, output).',
         visual:'a graph for a trend, flow for a causal chain.' },
       { key:'micro', label:'Microeconomics',
         fallback:true,
-        types:['twopart','estimate','wordproblem','scenario','classify','mcq','fill','truefalse','write'],
-        guide:'ASK: what happens to price, quantity or incentives when one thing changes, and why. Direction of movement matters more than a number. AVOID: definition-only questions.',
+        types:['twopart','estimate','wordproblem','scenario','conceptmap','mcq','fill','truefalse','write'],
+        guide:'ASK: what happens to price, quantity or incentives when one thing changes, and why. Direction of movement matters more than a number. AVOID: definition-only questions. The concept map links what moves price and quantity, each link a direction ("raises", "lowers").',
         visual:'a supply-demand template, or compare two market cases.' }
     ],
     cs: [
       { key:'programming', label:'Programming fundamentals',
         terms:['variable','loop','loops','function','conditional','if statement','syntax','debug','python','javascript','java','code','coding','program','string','array','input','output','boolean','operator'],
-        types:['tracetable','twopart','errorspot','sequence:parsons','mcq','fill','write','truefalse','matchpairs'],
-        guide:'ASK: trace what the code does line by line with a given input, or find the one line that breaks it. AVOID: syntax trivia a reference would answer.',
+        types:['tracetable','twopart','errorspot','sequence:parsons','mcq','fill','write','truefalse','selfcheck:code'],
+        guide:'ASK: trace what the code does line by line with a given input, or find the one line that breaks it. AVOID: syntax trivia a reference would answer. The selfcheck card shows a short snippet and asks what it does, in plain English - not line by line, what it is FOR.',
         visual:'a flow for control flow, compare for two versions of the code.' },
       { key:'algorithms', label:'Algorithms and data structures',
         terms:['algorithm','sort','sorting','search','recursion','recursive','complexity','big.o','stack','queue','tree','graph','hash','linked list','data structure','traversal','binary'],
-        types:['tracetable','twopart','estimate','sequence:parsons','classify','mcq','truefalse','errorspot','matchpairs'],
-        guide:'ASK: the order of steps on a concrete input, and which approach costs more as the input grows. AVOID: quoting a complexity without reasoning to it.',
+        types:['tracetable','twopart','estimate','sequence:parsons','readchart','mcq','truefalse','errorspot','matchpairs'],
+        guide:'ASK: the order of steps on a concrete input, and which approach costs more as the input grows. AVOID: quoting a complexity without reasoning to it. The readchart card plots how the work grows with the input size, for one approach.',
         visual:'a flow for the steps, graph for how cost grows, compare for two approaches.' },
       { key:'systems', label:'Theory and systems',
         fallback:true,
         /* The trace table was an estimate, which made this mix identical to
            geography/maps's, type for type. Running a system's procedure by
            hand is what this material has that maps do not. */
-        types:['twopart','matchpairs','classify','mcq','truefalse','fill','write','tracetable','highlight'],
-        guide:'ASK: how two things differ and when each is used. Use the trace table for a procedure the system runs - a binary conversion, a logic gate\'s outputs, a packet\'s hops. AVOID: acronym expansion as an end in itself.',
+        types:['twopart','conceptmap','classify','mcq','truefalse','fill','write','tracetable','highlight'],
+        guide:'ASK: how two things differ and when each is used. Use the trace table for a procedure the system runs - a binary conversion, a logic gate\'s outputs, a packet\'s hops. AVOID: acronym expansion as an end in itself. The concept map shows how the parts of the system connect, each link what one does to another.',
         visual:'a hierarchy for layered systems, compare for two designs.' }
     ],
     language: [
@@ -2887,15 +2966,15 @@
            on. Productive retrieval builds productive knowledge; recall beats
            recognition for producing a word. One matchpairs and one mcq become
            a second sentence and a write. */
-        types:['matchpairs','fill','fill','sentence','sentence','dictation','write','mcq','twopart'],
-        guide:'ASK: the word used inside a sentence that fixes its meaning. AVOID: bare word-to-word pairs with no context.',
+        types:['recall','fill','fill','sentence','sentence','dictation','write','mcq','twopart'],
+        guide:'ASK: the word used inside a sentence that fixes its meaning. AVOID: bare word-to-word pairs with no context. The recall card asks for words the notes group together (four foods, the family members), typed with their accents.',
         visual:'a concept hub grouping words by theme.' }
     ],
     general: [
       { key:'study', label:'Study skills',
         terms:['study','studying','revision','revise','note.taking','memor','exam technique','time management','productivity','habit','focus','procrastinat','flashcard','recall'],
-        types:['twopart','scenario','scenario','matchpairs','mcq','fill','write','truefalse','highlight'],
-        guide:'ASK: apply the technique to a described situation and say what to do next. AVOID: asking which technique is best in the abstract.',
+        types:['twopart','scenario','recall','matchpairs','mcq','fill','write','truefalse','selfcheck'],
+        guide:'ASK: apply the technique to a described situation and say what to do next. AVOID: asking which technique is best in the abstract. The recall card names the steps or parts of a technique; the selfcheck card explains why it works.',
         visual:'a flow for a routine, compare for two techniques.' }
     ]
   };
@@ -3215,6 +3294,218 @@
     }
 
     // ── Sanitize questions ──
+    /* ── VALIDATORS FOR THE FIVE FORMATS OF OCT 2026 ─────────────────────
+       Each returns false to drop the question. Strings are flattened, tags
+       stripped and capped here; lesson.html escapes them again when it
+       draws them, because a plan can be loaded that never came through here. */
+    function scText(v, n) {
+      return String(v == null ? '' : v).replace(/<[^>]*>/g, ' ').replace(/[<>]/g, ' ')
+        .replace(/\s+/g, ' ').trim().slice(0, n || 200);
+    }
+    /* Lowercase words with single spaces round them, for "is X printed in Y". */
+    function scWords(v) {
+      return ' ' + String(v == null ? '' : v).toLowerCase().replace(/[^a-z0-9à-ÿ]+/g, ' ').trim() + ' ';
+    }
+
+    /* RECALL - a set typed from memory. An item the question already prints is
+       read, not recalled, so it is dropped (and the card, if too few are
+       left). "Name three causes..." sets how many count, whatever "need" said:
+       the learner reads the stem, not the JSON. */
+    function sanitizeRecall(q, qText) {
+      if (!qText) return false;
+      var stem = scWords(qText), seen = {}, items = [];
+      (Array.isArray(q.items) ? q.items : []).forEach(function (it) {
+        var v = scText(it && typeof it === 'object' ? (it.answer || it.text || '') : it, 80);
+        var alts = v.split('/').map(function (a) { return a.trim(); }).filter(Boolean);
+        if (!alts.length) return;
+        var key = alts[0].toLowerCase();
+        if (seen[key]) return;
+        var given = alts.some(function (a) {
+          var k = scWords(a);
+          return k.length >= 5 && stem.indexOf(k) !== -1;
+        });
+        if (given) return;
+        seen[key] = 1;
+        items.push(alts.join(' / '));
+      });
+      if (items.length < 2) return false;
+      q.items = items.slice(0, 8);
+      var NUMW = { two: 2, three: 3, four: 4, five: 5, six: 6 };
+      var said = /\b(two|three|four|five|six)\b/.exec(qText.toLowerCase());
+      var need = said ? NUMW[said[1]] : parseInt(q.need, 10);
+      if (!isFinite(need) || need < 2) need = q.items.length;
+      if (need > q.items.length) return false;   // "name five" with three answers in the key
+      q.need = Math.min(need, 6);
+      q.question = scText(q.question, 220);
+      return true;
+    }
+
+    /* SELFCHECK - explain from memory, then judge the answer idea by idea.
+       Needs 2-4 separate ideas; the model answer defaults to them joined. A
+       code snippet keeps its line breaks (they are escaped line by line when
+       drawn - esc() in lesson.html flattens newlines). */
+    function sanitizeSelfCheck(q, qText) {
+      if (!qText || qText.length < 8) return false;
+      var seen = {}, ideas = [];
+      (Array.isArray(q.ideas) ? q.ideas : []).forEach(function (it) {
+        var v = scText(it && typeof it === 'object' ? (it.idea || it.text || '') : it, 90);
+        var k = v.toLowerCase();
+        if (v.length < 3 || seen[k]) return;
+        seen[k] = 1;
+        ideas.push(v);
+      });
+      if (ideas.length < 2) return false;
+      q.ideas = ideas.slice(0, 4);
+      q.modelAnswer = scText(q.modelAnswer, 420) || (q.ideas.join('; ') + '.');
+      var code = String(q.code == null ? '' : q.code).replace(/\r\n?/g, '\n').replace(/\t/g, '  ');
+      q.code = code.split('\n').slice(0, 14).map(function (l) { return l.slice(0, 80).replace(/\s+$/, ''); })
+        .join('\n').replace(/^\n+|\n+$/g, '');
+      q.question = scText(q.question, 260);
+      return true;
+    }
+
+    /* CONCEPTMAP - 4-7 nodes, labelled links, 2-3 blanks. Refused when the map
+       cannot be graded honestly:
+         - not connected (a node floating alone has nothing to recall it by);
+         - node 0, the hub, blanked or missing;
+         - a blank with no visible neighbour (it is a guess, not a recall);
+         - two blanks with the same propositions ("Photosynthesis -makes-> ?"
+           twice): whichever way round the learner puts them, one is wrong;
+         - a blank's own words printed elsewhere on the map. */
+    function sanitizeConceptMap(q) {
+      var nodes = [], idx = {}, seen = {};
+      (Array.isArray(q.nodes) ? q.nodes : []).forEach(function (n, i) {
+        var v = scText(n && typeof n === 'object' ? (n.label || n.name || '') : n, 32);
+        var k = v.toLowerCase();
+        if (!v || seen[k]) return;
+        seen[k] = 1; idx[i] = nodes.length; nodes.push(v);
+      });
+      if (nodes.length < 4 || nodes.length > 7 || idx[0] !== 0) return false;
+      var links = [], pairs = {};
+      (Array.isArray(q.links) ? q.links : []).forEach(function (l) {
+        if (!l) return;
+        var a = idx[parseInt(l.from, 10)], b = idx[parseInt(l.to, 10)];
+        var lab = scText(l.label, 28);
+        if (a === undefined || b === undefined || a === b || !lab || lab.split(' ').length > 5) return;
+        var pk = Math.min(a, b) + '-' + Math.max(a, b);
+        if (pairs[pk]) return;
+        pairs[pk] = 1;
+        links.push({ from: a, to: b, label: lab });
+      });
+      if (links.length > 9) return false;
+      var adj = nodes.map(function () { return []; });
+      links.forEach(function (l) { adj[l.from].push(l.to); adj[l.to].push(l.from); });
+      var reach = { 0: 1 }, stack = [0], n = 1;
+      while (stack.length) {
+        var x = stack.pop();
+        for (var y = 0; y < adj[x].length; y++) if (!reach[adj[x][y]]) { reach[adj[x][y]] = 1; n++; stack.push(adj[x][y]); }
+      }
+      if (n !== nodes.length) return false;
+      var blanks = [];
+      (Array.isArray(q.blanks) ? q.blanks : []).forEach(function (b) {
+        var j = idx[parseInt(b, 10)];
+        if (j === undefined || j === 0 || blanks.indexOf(j) !== -1) return;
+        blanks.push(j);
+      });
+      blanks = blanks.slice(0, 3);
+      if (blanks.length < 2) return false;
+      function isBlank(i) { return blanks.indexOf(i) !== -1; }
+      if (!blanks.every(function (b) { return adj[b].some(function (y) { return !isBlank(y); }); })) return false;
+      function sig(b) {
+        return links.filter(function (l) { return l.from === b || l.to === b; }).map(function (l) {
+          var other = l.from === b ? l.to : l.from;
+          return (l.from === b ? '>' : '<') + l.label.toLowerCase() + '|' + (isBlank(other) ? '?' : nodes[other].toLowerCase());
+        }).sort().join(';');
+      }
+      var sigs = {};
+      for (var s = 0; s < blanks.length; s++) {
+        var g = sig(blanks[s]);
+        if (sigs[g]) return false;
+        sigs[g] = 1;
+      }
+      var shown = [q.question];
+      nodes.forEach(function (nm, i) { if (!isBlank(i)) shown.push(nm); });
+      links.forEach(function (l) { shown.push(l.label); });
+      var shownW = scWords(shown.join(' '));
+      if (blanks.some(function (b) { var k = scWords(nodes[b]); return k.length >= 5 && shownW.indexOf(k) !== -1; })) return false;
+      var extra = scText(Array.isArray(q.extra) ? q.extra[0] : q.extra, 32);
+      if (extra && seen[extra.toLowerCase()]) extra = '';
+      q.nodes = nodes;
+      q.links = links;
+      q.blanks = blanks.sort(function (a, b) { return a - b; });
+      q.extra = extra;
+      q.question = scText(q.question, 160) || 'Complete the map.';
+      return true;
+    }
+
+    /* WHOSRIGHT - two to four classmates, exactly one right. A name the model
+       wrote anyway ("Maya: ...") is stripped; the app gives the names. */
+    function sanitizeWhosRight(q, qText) {
+      if (!qText) return false;
+      var seen = {}, claims = [];
+      (Array.isArray(q.claims) ? q.claims : []).forEach(function (c) {
+        if (!c) return;
+        var says = scText(typeof c === 'string' ? c : (c.says || c.claim || c.text), 220)
+          .replace(/^[A-Z][a-z]{1,12}(\s+(says|thinks|said))?\s*:\s*/, '')
+          .replace(/^["“]+|["”]+$/g, '');
+        var k = says.toLowerCase();
+        if (says.length < 8 || seen[k]) return;
+        seen[k] = 1;
+        claims.push({ says: says, right: c.right === true || c.right === 'true', why: scText(c.why, 280) });
+      });
+      if (claims.filter(function (c) { return c.right; }).length !== 1 || claims.length < 2) return false;
+      if (claims.length > 4) {
+        var keep = claims.filter(function (c) { return c.right; }).concat(claims.filter(function (c) { return !c.right; }).slice(0, 3));
+        claims = claims.filter(function (c) { return keep.indexOf(c) !== -1; });
+      }
+      q.claims = claims;
+      q.question = scText(q.question, 220);
+      return true;
+    }
+
+    /* READCHART - 3-8 points of one quantity, then Part A (tap a bar or point)
+       and/or Part B (what the pattern means). A "most/least" tap is CHECKED
+       against the data and re-pointed at the true maximum or minimum - the
+       one answer key in this file that can be verified rather than trusted.
+       A tap about a change between points has no single bar to tap, so that
+       Part A is dropped. */
+    function sanitizeReadChart(q) {
+      var ch = q.chart && typeof q.chart === 'object' ? q.chart : {};
+      var pts = [], seenL = {};
+      (Array.isArray(ch.points) ? ch.points : []).forEach(function (p) {
+        if (!p) return;
+        var lab = scText(p.label != null ? p.label : p.x, 14);
+        var v = parseFloat(p.value != null ? p.value : p.y);
+        if (!lab || !isFinite(v) || seenL[lab.toLowerCase()]) return;
+        seenL[lab.toLowerCase()] = 1;
+        pts.push({ label: lab, value: v });
+      });
+      if (pts.length < 3) return false;
+      pts = pts.slice(0, 8);
+      var vals = pts.map(function (p) { return p.value; });
+      var mx = Math.max.apply(null, vals), mn = Math.min.apply(null, vals);
+      if (mx === mn) return false;                  // a flat line has no pattern to read
+      q.chart = { kind: ch.kind === 'line' ? 'line' : 'bar', title: scText(ch.title, 60), x: scText(ch.x, 30),
+                  y: scText(ch.y, 30), unit: scText(ch.unit, 12), data: ch.data === 'example' ? 'example' : 'notes',
+                  points: pts };
+      var find = scText(q.find, 140), fi = parseInt(q.findIndex, 10);
+      if (!find || !(fi >= 0 && fi < pts.length)) find = '';
+      else if (/\b(increas\w*|rise|rises|rose|grow\w*|drop\w*|fall|falls|fell|declin\w*|chang\w*)\b/i.test(find)) find = '';
+      else if (/\b(most|highest|largest|greatest|biggest|maximum|peak|wettest|hottest|warmest|longest|fastest|busiest)\b/i.test(find)) {
+        if (vals.filter(function (v) { return v === mx; }).length !== 1) find = ''; else fi = vals.indexOf(mx);
+      } else if (/\b(least|lowest|smallest|fewest|minimum|driest|coldest|coolest|shortest|slowest|quietest)\b/i.test(find)) {
+        if (vals.filter(function (v) { return v === mn; }).length !== 1) find = ''; else fi = vals.indexOf(mn);
+      }
+      q.find = find;
+      q.findIndex = find ? fi : -1;
+      var raw = Array.isArray(q.options) ? q.options : [], opts = [], ci = parseInt(q.correctIndex, 10), nci = -1;
+      raw.forEach(function (o, i) { var t = scText(o, 200); if (t) { if (i === ci) nci = opts.length; opts.push(t); } });
+      var stemB = scText(q.question, 240);
+      if (stemB && opts.length >= 2 && nci !== -1) { q.question = stemB; q.options = opts; q.correctIndex = nci; }
+      else { q.question = ''; q.options = []; q.correctIndex = -1; }
+      return !!(q.find || q.question);
+    }
+
     function sanitizeDayQuestions(day) {
       if (!day) return day;
       if (!Array.isArray(day.questions)) { day.questions = []; return day; }
@@ -3480,6 +3771,14 @@
           if (String(q.passage || '').trim().length < 20) return false;
           return !!(qText && Array.isArray(q.options) && q.options.length >= 2);
         }
+        /* ── The five formats of Oct 2026. Each is refused here rather than
+           rendered broken: a card whose answer key cannot be graded teaches
+           the wrong thing more confidently than no card at all. ── */
+        if (q.type === 'recall')     return sanitizeRecall(q, qText);
+        if (q.type === 'selfcheck')  return sanitizeSelfCheck(q, qText);
+        if (q.type === 'conceptmap') return sanitizeConceptMap(q);
+        if (q.type === 'whosright')  return sanitizeWhosRight(q, qText);
+        if (q.type === 'readchart')  return sanitizeReadChart(q);
         // Unknown types — keep if they have question text
         return qText.length > 3;
       });
@@ -4073,6 +4372,7 @@
         '  the blank, so write it the way a person would say it.\n' +
         'estimate: "answer" is a number from the notes and "tolerance" is how far off is\n' +
         '  still fine (about 10%). Use it where reasoning to the right ballpark is the skill.\n' +
+        newFormatGuide(schemaTypes(questionSchema)) +
         '\nVISUAL (field "visual") - pick the ONE diagram type that genuinely fits this topic and fill it with REAL content from the notes. Never invent filler labels. Use exactly one of:\n' +
         '{"type":"timeline","items":["1914: war begins","1918: armistice signed"]}  <- dates/eras\n' +
         '{"type":"flow","items":["Tariffs rise","Southern states protest","Secession"],"label":"Cause and effect"}  <- causal chains, processes\n' +

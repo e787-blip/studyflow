@@ -145,7 +145,7 @@ Keep the two lists identical.
 
 ### Subject → question type matrix
 
-10 subject types, **19 question types**. Schemas live in `app.html`.
+10 subject types, **24 question types**. Schemas live in `app.html`.
 
 The original 12 are `mcq`, `truefalse`, `fill`, `write`, `classify`, `sequence`,
 `sentence`, `passage`, `errorspot`, `scenario`, `wordproblem`, `bigequation`.
@@ -166,7 +166,10 @@ Six more were added for formats those could not express — see
 | general | mcq ×3, truefalse ×2, fill ×2, write |
 
 `dictation` (listen and type) is the 19th, language only - see "The
-language cards" below.
+language cards" below. The 20th-24th are `recall`, `selfcheck`, `conceptmap`,
+`whosright` and `readchart` - see "The five formats of Oct 2026" below. The
+table above is the fallback mix; the per-subtopic mixes in `SUBTOPICS` are
+what most days actually get.
 
 Math carries no MCQ on purpose — see invariant 1. Science's `sequence` replaced a
 third MCQ when the synthetic key-terms ordering card was removed (invariant 6).
@@ -194,6 +197,21 @@ four; four is what the compiler would catch if this had one. The full list:
 
 Anything with its own check button also belongs in `submitControl()`'s id list,
 or Enter and Cmd-Enter will not reach it.
+
+**And four more that no test caught until Oct 2026:** `correctAnswerText`
+(the results list's "Correct:" line - and it must come BEFORE the generic
+options line if the type has options, or a two-part card loses its first
+part), `MOMENT_NEVER` / `RECALL_WHOLE` / `RECALL_NEVER` (which pictures the
+card may show), a `typedWalkthrough` branch in block 2 (or the walkthrough
+is the generic "What was asked / The answer"), and `sf-topics.js`'s `KNOWN`
+(plus `PRODUCE`, `NEEDS`, `CAP` - see the subtopics skill) with the same
+name in `check_topics.js` and `test_mix.js`. Without `KNOWN`, every made
+subtopic "like" a premade one silently drops the type.
+
+**A type can ride the main loop instead of an injector** - `whosright` does,
+so items 4 and 6 do not apply to it. It is then a pre-test candidate like
+mcq and truefalse, which is the point for a misconception probe. Only a type
+that renders whole on its own card, with no splicing, may do this.
 
 ### Extended formats
 
@@ -521,6 +539,78 @@ guidance in the prompt, and a renderer branch.
   one option is always the presentist reading, named in the explanation.
 - **True/false is out of all three history mixes.** `test_history.js`
   covers the cards, the queue, the escaping and the prompt.
+
+### The five formats of Oct 2026 — recall, selfcheck, conceptmap, whosright, readchart
+
+Evidence, design reasons and what was rejected:
+[docs/question-design.md §11](docs/question-design.md). Every one grades
+itself on the device - no model call at answer time - and ends in
+`handleResult`, so the walkthrough button, spaced repetition, the results
+list and "Draw it for me" all work as for multiple choice. The third argument
+there is the learner's own answer as WORDS: `handleResult` accepts a string.
+
+- **`recall` - name them all.** Cued free recall: the set is named, one slot
+  per answer (`need`, capped by the number of answers; "Name three..." in the
+  stem wins over the JSON), first letters in the hint. Any order. `rcMatch`
+  forgives a plural and a one- or two-letter slip **except on a language
+  day** (`targetLang()`), where marks count and an accent-only miss gets the
+  fill-in's one prompt. A repeat says "already named". Items are strings with
+  alternatives split by " / ". **Enter moves to the next empty slot**
+  (`data-sf-enter="next"`, honoured in `handleEnterKey`) - it used to check
+  the list from slot one. The accent bar targets whichever slot has focus
+  (`accentBarHtml('*')`).
+- **`selfcheck` - explain it, then check yourself.** Write (three words
+  minimum, or "I don't remember"), then the full answer, then a yes/no per
+  idea; the score is the ideas you had, and it IS in the percentage. A "yes"
+  to an idea whose content words are less than half in the answer gets a note
+  naming the missing words - it asks, never decides. One shared word is not
+  enough: "blood" is in every heart answer. `selfcheck:code` shows a snippet
+  (escaped line by line - `esc()` flattens newlines) and asks what it is FOR.
+- **`conceptmap` - complete the map.** Node 0 is the hub and is never blank.
+  Laid out top-down by distance from it, 3 a row at 380px+, 2 below, drawn
+  **1:1 at the card's real width** (`nfFigWidth`, which subtracts the card
+  body's padding: `clientWidth` includes it, and laying out at that width
+  shrank 11.5px labels to 10.3px on a phone). Blanks are all the size of the
+  LARGEST word in the bank, so a box's size never says which word goes in it.
+  Link labels are placed by a scored search (overlap with every box, every
+  placed label, and the strip under each blank where a "not ..." correction
+  will be written); first-fit put two labels on top of each other where links
+  leave the same box. Tap a blank, then a word. A wrong blank is corrected in
+  place. The validator refuses disconnected maps, blanks with no shown
+  neighbour, two blanks with identical links, and a blank's words anywhere
+  else on the map.
+- **`whosright` - who's right?** Two to four classmates, one right; after the
+  choice every bubble shows its refutation. **Rides the main loop** (not in
+  `SPECIAL_TYPES`) so it can be in the pre-test, and it replaced true/false in
+  five mixes that would otherwise have lost theirs. Names come from
+  `WHO_NAMES` via `wrNames` - one per claim, every initial different, stable
+  per question - and the validator strips any the model wrote ("Maya: ...").
+  Shown starting at a claim picked by the question, so the right one is not
+  always first. Keeps the confidence tap (hypercorrection).
+- **`readchart` - read the chart.** One series, bar or line, drawn 1:1 on
+  paper. Part A taps a bar or point; Part B (hidden until A is answered) asks
+  what the pattern means; credit needs both; either part may be absent. No
+  values are printed until the tap. The validator re-points a "most/least"
+  tap at the real maximum or minimum, drops a tap about a change ("rose the
+  most" has no single point), and refuses a flat series. `"data":"example"`
+  prints "Example data - not taken from your notes" on the card.
+
+Shared plumbing (block 1, "THE FIVE FORMATS OF OCT 2026"): `nfShell` builds
+the header from the card exactly as `renderQuestion` does (invariant 9 -
+retry, pre-test re-ask, review); `nfUsable` skips a card that cannot be
+graded, as the labelling card skips without a picture; model text goes in
+through `escHtml` only, never `esc()`. The concept map and the chart count
+against the picture budget like the labelling card, and are in
+`MOMENT_NEVER` and `RECALL_NEVER` (one picture a card). `recall` is in
+`RECALL_WHOLE`: the lesson picture is withheld before answering if it
+shares any word with the set. **`handleEnterKey` honours `data-sf-enter`**:
+`"self"` for an element that handles its own Enter (a map blank, a chart
+bar), `"next"` for answer slots.
+
+Where they went in the mixes, and why each slot: the comment above
+`SUBTOPICS`. `test_newtypes.js` covers all of it (60+ checks, including
+hostile text, malformed cards, dark mode, legibility at 375px, and the
+validators off the plan builder's real page).
 
 ### `labeldiagram` — the learner acts on the picture
 
@@ -2113,7 +2203,7 @@ that vanished with each session):
 bash .claude/skills/morning-check/scripts/run_all.sh /tmp/sf-morning
 ```
 
-26 checks on real page loads with `api/generate` mocked - parse, every card
+27 checks on real page loads with `api/generate` mocked - parse, every card
 type answered wrong, walkthroughs, the picture budget, the labelling card,
 plan-time drawing, board text sizes, pictures drawing themselves, the icons
 and the layouts built on them, the subtopic skill (its rules exhaustively,
@@ -2121,9 +2211,15 @@ then the plan builder and the top-up), and every diagram against an audited
 baseline, plus `test_mix.js` (every subtopic's real prompt) and
 `test_visuals.js` (the visual pass of 2026-09-30: heading weight, one chip
 colour, paper under drawings in dark mode, the banner, the results list; it
-fails 12 ways on the code before it). Proven to catch a syntax error and a broken picture budget. The
+fails 12 ways on the code before it), and `test_newtypes.js` (the five
+formats of Oct 2026). Proven to catch a syntax error and a broken picture budget. The
 morning routine runs it daily (`.claude/skills/morning-check/SKILL.md`), and
 `LOG.md` beside it holds the visual backlog.
+
+**No Node here?** The same suite runs, unmodified, in the desktop app's
+browser pane (`.claude/skills/morning-check/browser/`), and the parse checks
+and subtopic rules under macOS's own JavaScriptCore - the skill says how,
+and what that route cannot check (motion while the pane is hidden).
 
 What to check after any `buildQueue` or renderer change:
 
@@ -2237,6 +2333,18 @@ What to check after any `buildQueue` or renderer change:
     label; a boxes-with-nouns drawing is gated; the prompt's leaf audits
     clean; icons pop in whole and the diagram is handed back identical.
     Proven to catch a hub label hung under its spoke and the date cut.
+18g. **The five formats of Oct 2026** (`test_newtypes.js`): each queued once
+    outside the pre-test, `whosright` in it and the other four never; recall
+    forgives a plural and a slip but not a repeat, Enter moves between slots,
+    and a Spanish accent miss is one prompt; selfcheck reveals nothing for one
+    word, notes a "yes" the answer never words, and "I don't remember" is a
+    miss; the map is legible at 375px (11px type, no overlaps, nothing off
+    the drawing - also after a whiteboard card), corrected in place, and
+    states each blank's sentence; who's right answers every bubble; the chart
+    hides Part B until the tap and needs both; teach-it-back never names a
+    blank; every walkthrough renders and says the answer; hostile markup
+    never renders and malformed cards are skipped; dark mode keeps paper;
+    and the plan builder's validators drop exactly the ungradeable cards.
 
 **And a second suite that belongs to `app.html`**, not the session — load
 `app.html`, inject `appsuite.js`, call `SFRunAppSuite()`:

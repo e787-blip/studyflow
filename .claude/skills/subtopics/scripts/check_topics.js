@@ -8,8 +8,9 @@ const base = e => String(e).split(':')[0];
 const MATS = Object.keys(T.MATERIALS), KINDS = Object.keys(T.KINDS);
 const KNOWN = ['mcq','truefalse','fill','write','classify','sequence','sentence','passage','errorspot','scenario',
   'wordproblem','twopart','corroborate','highlight','tracetable','matchpairs','estimate','readingset','labeldiagram',
-  'dictation'];
-const CAP1 = ['labeldiagram','corroborate','tracetable','sequence','classify','errorspot','estimate','wordproblem'];
+  'dictation','recall','selfcheck','conceptmap','whosright','readchart'];
+const CAP1 = ['labeldiagram','corroborate','tracetable','sequence','classify','errorspot','estimate','wordproblem',
+  'recall','selfcheck','conceptmap','whosright','readchart'];
 const produce = l => l.filter(e => T.PRODUCE[base(e)]).length;
 function needsMet(e, mat) {
   const need = T.NEEDS[e] || T.NEEDS[base(e)];

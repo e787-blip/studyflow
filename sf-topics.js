@@ -177,12 +177,13 @@
                 sentence: 1, passage: 1, errorspot: 1, scenario: 1, wordproblem: 1,
                 twopart: 1, corroborate: 1, highlight: 1, tracetable: 1,
                 matchpairs: 1, estimate: 1, readingset: 1, labeldiagram: 1,
-                dictation: 1 };
+                dictation: 1, recall: 1, selfcheck: 1, conceptmap: 1, whosright: 1,
+                readchart: 1 };
 
   /* Producing an answer vs choosing one - the same split as §7 of the
      research doc. A dictation is typed from what was heard. */
   var PRODUCE = { fill: 1, write: 1, sentence: 1, estimate: 1, tracetable: 1, wordproblem: 1,
-                  dictation: 1 };
+                  dictation: 1, recall: 1, selfcheck: 1 };
 
   /* Formats a FAMILY rules in or out, whatever the material says.
        - dictation is read aloud in the language being learned, and
@@ -211,6 +212,9 @@
     'twopart:passage':   ['text', 'sources'],
     sentence:            ['sentences'],
     dictation:           ['sentences'],
+    /* A chart needs figures to chart; "selfcheck:code" needs code to explain. */
+    readchart:           ['numbers'],
+    'selfcheck:code':    ['code'],
     classify:            ['categories']
   };
 
@@ -218,30 +222,35 @@
      two ordering cards or two labelling cards in one session is a pattern
      the learner notices before the content. Everything else: two. */
   var CAP = { labeldiagram: 1, corroborate: 1, tracetable: 1, sequence: 1,
-              classify: 1, errorspot: 1, estimate: 1, wordproblem: 1 };
+              classify: 1, errorspot: 1, estimate: 1, wordproblem: 1,
+              recall: 1, selfcheck: 1, conceptmap: 1, whosright: 1, readchart: 1 };
 
   /* The retrieval base for each kind, best first. Every list alone gives at
      least 3 producing formats in its first 9, so a part with no material at
      all still gets a sound day. */
   var CORE = {
-    mechanism:      ['twopart', 'mcq', 'fill', 'write', 'truefalse', 'mcq', 'fill', 'matchpairs', 'truefalse'],
-    procedure:      ['errorspot', 'twopart', 'fill', 'write', 'mcq', 'fill', 'truefalse', 'matchpairs', 'mcq'],
+    /* Oct 2026 (question-design §11): a mechanism is where misconceptions
+       live (whosright) and where ideas connect (conceptmap); explaining it
+       and checking the explanation (selfcheck) replaces a second fill. */
+    mechanism:      ['twopart', 'mcq', 'fill', 'write', 'whosright', 'conceptmap', 'selfcheck', 'mcq', 'truefalse'],
+    /* Explaining what a method is FOR beats matching its parts. */
+    procedure:      ['errorspot', 'twopart', 'fill', 'write', 'mcq', 'fill', 'truefalse', 'selfcheck', 'mcq'],
     /* Production first: recall beats recognition for being able to USE a
        fact (the language/vocab finding, §7). */
-    facts:          ['fill', 'matchpairs', 'fill', 'write', 'mcq', 'twopart', 'truefalse', 'mcq', 'truefalse'],
-    interpretation: ['twopart', 'highlight', 'write', 'mcq', 'fill', 'write', 'truefalse', 'mcq', 'matchpairs'],
-    application:    ['scenario', 'twopart', 'scenario', 'fill', 'write', 'mcq', 'truefalse', 'fill', 'matchpairs'],
+    facts:          ['fill', 'recall', 'fill', 'write', 'mcq', 'matchpairs', 'twopart', 'mcq', 'truefalse'],
+    interpretation: ['twopart', 'highlight', 'write', 'mcq', 'fill', 'write', 'whosright', 'mcq', 'matchpairs'],
+    application:    ['scenario', 'twopart', 'scenario', 'fill', 'write', 'mcq', 'whosright', 'fill', 'selfcheck'],
     /* Every premade language mix traded its true/false for a dictation
        (§8). Outside the language family the dictation is refused and a
        filler takes the slot. */
-    language:       ['sentence', 'fill', 'sentence', 'write', 'fill', 'mcq', 'twopart', 'matchpairs', 'dictation']
+    language:       ['sentence', 'fill', 'sentence', 'write', 'fill', 'mcq', 'twopart', 'recall', 'dictation']
   };
 
   /* What each material EARNS, in priority order. These are the formats that
      make a day fit its material, so they go in before the core. */
   function earnedFor(mat) {
     var out = [];
-    if (mat.code) out.push('tracetable', 'sequence:parsons', 'errorspot');
+    if (mat.code) out.push('tracetable', 'sequence:parsons', 'errorspot', 'selfcheck:code');
     if (mat.sentences) out.push('sentence');
     if (mat.sources) {
       out.push('corroborate', 'passage:sourcing');
@@ -257,7 +266,7 @@
     if (mat.order) out.push('sequence:process');
     if (mat.cases) out.push('scenario');
     if (mat.categories) out.push('classify');
-    if (mat.numbers) out.push('estimate', 'wordproblem');
+    if (mat.numbers) out.push('estimate', 'readchart', 'wordproblem');
     return out;
   }
   var MAX_EARNED = 5;

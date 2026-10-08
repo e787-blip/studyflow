@@ -90,7 +90,7 @@ const CASES = [
        format the mix does not contain. */
     const qs = prompt.indexOf('QUESTION FORMAT IS NOT OPTIONAL'), qe = prompt.indexOf('WHAT A GOOD QUESTION', qs);
     const quota = qs > 0 ? prompt.slice(qs, qe) : '';
-    const demanded = [...quota.matchAll(/"(\w+)"/g)].map(m => m[1]).filter(t => /^(mcq|truefalse|fill|write|classify|sequence|sentence|passage|errorspot|scenario|wordproblem|bigequation|twopart|corroborate|highlight|tracetable|matchpairs|estimate|readingset|labeldiagram)$/.test(t));
+    const demanded = [...quota.matchAll(/"(\w+)"/g)].map(m => m[1]).filter(t => /^(mcq|truefalse|fill|write|classify|sequence|sentence|passage|errorspot|scenario|wordproblem|bigequation|twopart|corroborate|highlight|tracetable|matchpairs|estimate|readingset|labeldiagram|dictation|recall|selfcheck|conceptmap|whosright|readchart)$/.test(t));
     /* Maths's quota names formats to AVOID ("ZERO fill"), so it is not read this way. */
     const contra = want === 'math' ? [] : [...new Set(demanded.filter(t => !counts[t]))];
     if (info.st !== want) FAIL(subj + ': classified ' + info.st + ', expected ' + want);

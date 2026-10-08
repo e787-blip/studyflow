@@ -384,6 +384,166 @@ the right six. They are the distinctions §1–§7 already draw — mechanism,
 procedure, fact, reading, application, language production — and nothing more
 was invented to fill the table.
 
+## 11. Five formats for what the others could not ask (Oct 2026)
+
+The 19 formats before this covered recognising, filling a blank, ordering,
+sorting, reading, tracing, estimating and writing. Laid against the
+learning-science literature, five well-evidenced *interactions* were still
+missing - not five subjects, five things a learner can do. Each was chosen
+because the evidence is about that interaction, and each was built so the
+card can be graded honestly by the app, with no model call at answer time.
+Candidates that were researched and **rejected** are at the end; they matter
+as much as the five.
+
+### `recall` - name them all (cued free recall)
+
+Retrieving a set from memory is the strongest form of retrieval practice in
+the lab: free recall beat elaborative study with concept maps on a delayed
+test, even when that test asked for a concept map (Karpicke & Blunt 2011),
+and generating an answer beats reading it, d = .40 across 86 studies
+(Bertsch et al. 2007). Nothing in the app asked for more than one thing
+from memory at a time - a fill-in is one word.
+
+**The design change the evidence forced:** children asked to free-recall a
+whole text produced about a tenth of it (Karpicke et al. 2014). Uncued free
+recall is too hard for this audience. So the card is *cued*: the set is
+named ("the four chambers of the heart"), there is one slot per answer, and
+the hint gives first letters. Order never matters. Spelling slips and
+plurals are forgiven everywhere except a language day, where spelling is the
+skill and an accent-only miss gets the same one prompt as the fill-in (§8).
+
+### `selfcheck` - explain it, then check yourself (idea-unit standards)
+
+Explaining is the strongest thing a learner can produce, and the app already
+asks for it - but only through the tutor-graded teach-it-back card, which is
+slow, costs a model call, and is out of the percentage. The question was
+whether a learner can grade a short explanation themselves. The research
+says: not unaided, but yes with the right standard.
+
+- Students scoring their own recall with no answer to compare against gave
+  credit to **83%** of their completely wrong answers (Rawson & Dunlosky
+  2007); middle-school students, this app's audience, to **73%** (Lipko et
+  al. 2009).
+- Showing the full correct answer cut that to **44%** for the middle
+  schoolers.
+- Judging the answer **idea unit by idea unit** - "did I say this?" -
+  reduced overconfidence further (Dunlosky et al. 2011), and is how the
+  successive-relearning studies score definitions (Rawson & Dunlosky).
+
+So: write first (at least three words, or "I don't remember"), then the
+full answer, then one yes/no per idea, and the score is the ideas you had.
+**One addition is ours, not the studies':** a "yes" to an idea whose words
+the answer never uses gets a note under it ("Your answer doesn't use
+'valves' or 'behind' - choose Yes only if you said the same thing in other
+words"). It asks; it never decides. The `:code` variant is **Explain in
+Plain English** - say what a snippet is *for* - which correlates strongly
+with the ability to write code (Murphy, McCauley & Fitzgerald 2012).
+
+### `conceptmap` - complete the map (retrieval-based concept mapping)
+
+Learning with concept maps beats the comparison conditions, g = .58 over 142
+effects; building one beats studying a finished one, .72 against .43
+(Schroeder et al. 2018). But Karpicke & Blunt's result above says building a
+map *while reading* is elaboration, not retrieval - and the fourth graders in
+Karpicke et al. (2014) put only a fifth of the ideas on maps they built with
+the text open. What worked for them was a **partly completed map filled in
+from memory**, which improved later learning. That is this card: 4-7 nodes,
+labelled links that each read as a sentence ("Heart -pumps blood into->
+?"), 2-3 blanks filled from a word bank with one extra term.
+
+It is the one format whose answer key is *structural*, so the validator does
+real work: it refuses maps that are not connected, blanks with no shown
+neighbour (a guess, not a recall), two blanks with identical links (one is
+wrong whichever way round they go), and blanks whose words appear elsewhere
+on the map. A wrong blank is corrected in place, as the labelling card does.
+
+### `whosright` - who's right? (concept cartoons with refutations)
+
+Misconceptions are the hard core of school science and much of everything
+else, and a misconception is a belief someone holds, not a wrong option on
+a list. Concept cartoons put competing explanations in classmates' mouths
+and ask whose you agree with (Keogh & Naylor 1999); the review literature
+reports they draw out misconceptions without spreading them, though much of
+the early evidence is the developers' own (Naylor & Keogh 2013; Kabapınar
+2005 found worksheets as effective as posters).
+
+What makes this more than a relabelled multiple choice is what happens
+**after** the choice: every bubble is answered with a **refutation** - what is
+wrong with it and what is actually true. Refutation texts beat plain
+expository text for changing misconceptions across subjects and test types
+(Schroeder & Kucera 2022; Guzzetti et al. 1993), and explanation feedback
+beats being told the right answer, .49 against .32 (Van der Kleij et al.
+2015). The confidence tap stays on this card, because high-confidence errors
+are the ones feedback corrects best (hypercorrection, Butterfield & Metcalfe
+2001).
+
+It is **pre-test eligible** - it rides the main question loop, not an
+injector - because eliciting a belief *before* teaching and asking again
+after is the concept-cartoon method itself, and because it replaced true/false
+in five mixes that would otherwise have lost their pre-test. The names come
+from the app, never the model.
+
+### `readchart` - read the chart (graph comprehension in levels)
+
+Graph comprehension runs in levels: reading the data, reading *between* it
+(compare, find the extreme), reading *beyond* it (predict) and *behind* it
+(explain with subject knowledge) (Friel, Curcio & Bright 2001). Students
+mostly stop at the first: in one study of ninth graders a third or fewer
+answered the higher levels, and reviews call graph reading a skill that
+needs explicit practice (Glazer 2011; Shah & Hoeffner 2002). No card in the
+app showed a chart outside maths.
+
+So two parts, like `twopart`: **Part A** is a tap on the data itself (between),
+**Part B** what the pattern means in this subject (beyond / behind), shown
+only once A is committed; credit needs both. The validator checks the one
+answer key in the app that can be *verified* rather than trusted: a "most" or
+"least" tap is re-pointed at the real maximum or minimum, and a tap about a
+change ("rose the most") is dropped because no single point answers it. Data
+that is not from the notes is labelled **example data** on the card.
+
+### Rejected after research
+
+- **Multiple true/false** (a stem with several statements, each judged).
+  More reliable per minute than multiple choice in some studies, but the
+  scoring literature has no consensus on partial credit, and it is still
+  recognition - the direction §1 and §7 move away from.
+- **Analogy completion** (A is to B as C is to ?). Real evidence for
+  analogical reasoning, but as a card it is a multiple choice with a
+  different stem. Structure-mapping is better served by `matchpairs`.
+- **Speaking practice** for languages. Browser speech recognition sends a
+  child's voice to a third party and is unreliable for learners' accents;
+  the same reason an earlier microphone feature was removed (CLAUDE.md,
+  "Reading what the learner uploads").
+- **A cloze paragraph** (several blanks in one text). Mostly the fill-in
+  card several times over; the evidence for it is as a test, not as practice.
+- **Anything for maths.** Its mix is the point (invariant 1).
+
+### Where they went
+
+One or two per subtopic, each into the slot whose job it does better, with
+three rules: no mix loses a producing format, no mix loses its pre-test, and
+no older format leaves the table (matchpairs is in 8 mixes, true/false in 11).
+`whosright` took true/false in misconception-heavy mixes; `readchart` went
+where the notes carry figures; `recall` and `selfcheck` replaced recognition
+(matchpairs, a second scenario, an mcq); `conceptmap` went where the knowledge
+is how ideas connect (history/era, economics/micro, cs/systems). The table is
+the comment above `SUBTOPICS` in `app.html`. Composed mixes for unusual
+subjects get them through `sf-topics.js`'s kind cores.
+
+### What this does not establish
+
+- **The effect sizes are not this app's.** Karpicke's children, Rawson's
+  college students, Schroeder's 142 effects: none of them used a phone card
+  in a 30-minute session written by a model.
+- **Self-scoring stays imperfect.** With full standards the middle schoolers
+  still credited 44% of their wrong answers. The idea-by-idea judgment and
+  the note are there to push that down, not because the problem is solved.
+  Nothing here has measured how honest StudyFlow's learners are.
+- **The model has not been seen writing these.** The validators were tested
+  against hand-written good and bad cards; whether Haiku produces gradeable
+  concept maps and real misconceptions at a useful rate is unknown until a
+  plan is generated against the live endpoint.
+
 ## What none of this establishes
 
 - **The specific counts.** That reading comprehension gets four passage
@@ -393,6 +553,29 @@ was invented to fill the table.
 - **That interleaving transfers** to history or English at this age. See §3.
 
 ## Sources
+
+The five formats of Oct 2026 (§11):
+- [Karpicke & Blunt (2011), retrieval practice produces more learning than elaborative studying with concept mapping (Science) - Purdue summary](https://www.purdue.edu/newsroom/research/2011/110120KarpickeScience.html)
+- [Blunt & Karpicke (2014), learning with retrieval-based concept mapping (J. Educational Psychology)](https://andymatuschak.org/prompts/Blunt2014.pdf)
+- [Karpicke, Blunt, Smith & Karpicke (2014), retrieval-based learning with children: partly completed concept maps (JARMAC)](https://learninglab.psych.purdue.edu/downloads/2014/2014_Karpicke_etal_JARMAC.pdf)
+- [Learning Scientists: retrieval practice activities for elementary students](https://www.learningscientists.org/blog/2017/4/6-1)
+- [Bertsch, Pesta, Wiscott & McDaniel (2007), the generation effect: a meta-analytic review](https://pubmed.ncbi.nlm.nih.gov/17645161/)
+- [Schroeder, Nesbit, Anguiano & Adesope (2018), studying and constructing concept maps: a meta-analysis](https://summit.sfu.ca/item/17789)
+- [Rawson & Dunlosky (2007), improving students' self-evaluation of learning for key concepts](https://www.tandfonline.com/doi/abs/10.1080/09541440701326022)
+- [Lipko et al. (2009), using standards to improve middle school students' accuracy at evaluating their recall](https://www.researchgate.net/publication/40755951_Using_Standards_to_Improve_Middle_School_Students'_Accuracy_at_Evaluating_the_Quality_of_Their_Recall)
+- [Dunlosky, Hartwig, Rawson & Lipko (2011), improving college students' evaluation of text learning using idea-unit standards](https://journals.sagepub.com/doi/10.1080/17470218.2010.502239)
+- [Successive relearning (Dunlosky, Greve, Badali, Wissman & Rawson)](https://www.unh.edu/teaching-learning-resource-hub/sites/default/files/media/2023-06/itow-successive-relearning-dunlosky-greve-badali-wissman-rawson.pdf)
+- [Murphy, Fitzgerald, Lister & McCauley (2012), ability to "explain in plain English" linked to programming proficiency](https://opus.lib.uts.edu.au/handle/10453/22969)
+- [Naylor & Keogh, concept cartoons: what have we learnt? (review)](https://www.tused.org/index.php/tused/article/view/273)
+- [Concept cartoons as worksheets and posters for misconceptions (Education and Science)](https://educationandscience.ted.org.tr/article/view/841)
+- [Refutation texts: pre-registered meta-analysis (NSF)](https://par.nsf.gov/biblio/10629626) and [conceptual change texts meta-analysis](https://scimath.editorialpark.com/download/effectiveness-of-conceptual-change-texts-a-meta-analysis-9515.pdf)
+- [Van der Kleij, Feskens & Eggen (2015), effects of feedback in computer-based learning environments: a meta-analysis](https://acuresearchbank.acu.edu.au/item/86y84/effects-of-feedback-in-a-computer-based-learning-environment-on-students-learning-outcomes-a-meta-analysis)
+- [Hypercorrection: high-confidence errors are corrected more often (PMC)](https://pmc.ncbi.nlm.nih.gov/articles/PMC3604148)
+- [Friel, Curcio & Bright (2001), making sense of graphs](https://www.causeweb.org/cause/node/7832)
+- [Shah & Hoeffner (2002), review of graph comprehension research](https://deepblue.lib.umich.edu/items/e347a2b5-1625-442e-9fe3-d09575ad97df)
+- [Multiple true-false scoring methods: no consensus (rejected format)](https://pure.psu.edu/en/publications/a-brief-report-on-a-comparison-of-six-scoring-methods-for-multipl/)
+
+Earlier sections:
 - [Reisman (2012), Reading Like a Historian, Stanford dissertation](https://purl.stanford.edu/by786ht6640) and [summary](https://historynewsnetwork.org/article/147039)
 - [Seixas & Morton, The Big Six historical thinking concepts](https://www.thenhier.ca/en/content/seixas-peter-and-tom-morton-big-six-historical-thinking-concepts-2012.html)
 - [Historical thinking concepts (Canadian Encyclopedia)](https://www.thecanadianencyclopedia.ca/en/article/historical-thinking-concepts)

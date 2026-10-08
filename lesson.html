@@ -1256,6 +1256,125 @@
     .swp-step, .swp-step.is-locked { animation:none; }
     .swp-go:hover:not(:disabled) { transform:none; }
   }
+
+  /* ── THE FIVE FORMATS OF OCT 2026 ─────────────────────────────────────────
+     recall (rc-), selfcheck (sc-), conceptmap (cm-), whosright (who-),
+     readchart (rch-). One hue: the brand blue for "this is the thing";
+     graded states reuse .sel-right / .sel-wrong. Anything drawn sits on
+     .art-paper, which keeps a light ground in dark mode. */
+  .nf-sub { font-size:.8rem; color:var(--muted); margin:-.6rem 0 .85rem; }
+  .nf-actions { display:flex; align-items:center; flex-wrap:wrap; gap:.6rem; margin-top:.85rem; }
+  .nf-quiet { background:none; border:none; padding:.3rem 0; font-family:var(--sans); font-size:.8rem;
+    font-weight:600; color:var(--muted); cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+  .nf-quiet:hover { color:var(--blue); }
+  .nf-quiet:disabled { display:none; }
+
+  /* RECALL - numbered slots, typed from memory */
+  .rc-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:.45rem; }
+  .rc-slot { display:flex; align-items:center; gap:.55rem; }
+  .rc-n { flex:0 0 24px; height:24px; border-radius:50%; background:var(--blue-light); color:var(--blue);
+    font-size:.72rem; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  .rc-in { flex:1 1 auto; min-width:0; padding:.6rem .75rem; border:1.5px solid var(--border); border-radius:10px;
+    font-family:var(--sans); font-size:.92rem; background:var(--white); color:var(--ink); }
+  .rc-in:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(74,124,246,.15); }
+  .rc-in:disabled { opacity:1; }
+  .rc-in.is-almost { border-color:var(--blue); background:var(--blue-light); }
+  .rc-fix { flex:0 0 auto; font-size:.74rem; font-weight:700; color:#065f46; max-width:42%; }
+  .rc-list.is-graded .rc-fix { flex:0 0 34%; }
+  .rc-fix.is-dup { color:#991b1b; }
+  body.dark .rc-fix { color:#6ee7b7; }
+  body.dark .rc-fix.is-dup { color:#fca5a5; }
+  .rc-letters { margin-top:.4rem; font-weight:700; letter-spacing:.06em; }
+  .rc-missed { margin-top:.75rem; font-size:.86rem; color:var(--ink); line-height:1.55; }
+  .rc-missed:empty { display:none; }
+  .rc-missed b { font-weight:700; }
+
+  /* SELFCHECK - write, then judge your answer idea by idea */
+  .sc-code { background:#0f172a; color:#e2e8f0; border-radius:10px; padding:.75rem .9rem; margin:0 0 .85rem;
+    font:0.82rem/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; overflow-x:auto; white-space:pre; }
+  .sc-text { width:100%; box-sizing:border-box; min-height:104px; resize:vertical; padding:.7rem .8rem;
+    border:1.5px solid var(--border); border-radius:12px; font-family:var(--sans); font-size:.92rem; line-height:1.55;
+    background:var(--white); color:var(--ink); }
+  .sc-text:focus { outline:none; border-color:var(--blue); box-shadow:0 0 0 3px rgba(74,124,246,.15); }
+  .sc-text[readonly] { background:var(--soft); }
+  .sc-count { font-size:.74rem; color:var(--muted); }
+  .sc-judge { margin-top:.9rem; }
+  .sc-judge:empty { display:none; }
+  .sc-model { background:var(--soft); border-radius:12px; padding:.75rem .9rem; font-size:.88rem; line-height:1.6;
+    color:var(--ink); margin-bottom:.8rem; }
+  .sc-kick { display:block; font-size:.66rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:.3rem; }
+  .sc-ideas { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.5rem; }
+  .sc-idea { border:1.5px solid var(--border); border-radius:12px; padding:.6rem .75rem; background:var(--white); }
+  .sc-idea-row { display:flex; align-items:center; gap:.6rem; }
+  .sc-idea-t { flex:1 1 auto; font-size:.88rem; font-weight:600; color:var(--ink); line-height:1.4; }
+  .sc-yn { flex:0 0 auto; display:flex; gap:.3rem; }
+  .sc-yn button { min-width:48px; padding:.42rem .6rem; border-radius:9px; border:1.5px solid var(--border);
+    background:var(--soft); color:var(--muted); font-family:var(--sans); font-size:.8rem; font-weight:700; cursor:pointer; }
+  .sc-yn button[aria-pressed="true"].is-yes { border-color:var(--blue); background:var(--blue); color:#fff; }
+  .sc-yn button[aria-pressed="true"].is-no { border-color:#94a3b8; background:#e2e8f0; color:#334155; }
+  body.dark .sc-yn button[aria-pressed="true"].is-no { background:#2a3350; color:#cbd5e1; }
+  .sc-yn button:disabled { cursor:default; }
+  .sc-nudge { margin-top:.4rem; font-size:.76rem; color:var(--muted); line-height:1.45; }
+  .sc-nudge:empty { display:none; }
+  .sc-idea.is-had { border-color:#10b981; }
+  .sc-idea.is-missed { border-color:#ef4444; }
+
+  /* CONCEPTMAP - the figure is SVG on paper; the word bank is real buttons */
+  .cm-fig { padding:.55rem; margin-bottom:.75rem; }
+  .cm-fig svg { display:block; width:100%; height:auto; }
+  .cm-blank { cursor:pointer; outline:none; }
+  .cm-blank:focus-visible rect.cm-box { stroke-width:3; }
+  .cm-bank { display:flex; flex-wrap:wrap; gap:.45rem; min-height:40px; }
+  .cm-chip { padding:.5rem .8rem; border:1.5px solid var(--border); border-radius:10px; background:var(--white);
+    color:var(--ink); font-family:var(--sans); font-size:.88rem; font-weight:600; cursor:pointer; }
+  .cm-chip:hover:not(:disabled) { border-color:var(--blue); }
+  .cm-chip:disabled { cursor:default; opacity:.4; }
+  .cm-help { font-size:.78rem; color:var(--muted); margin:.1rem 0 .55rem; }
+
+  /* WHOSRIGHT - three classmates, one bubble each */
+  .who-list { display:flex; flex-direction:column; gap:.6rem; }
+  .who-say { display:flex; align-items:flex-start; gap:.65rem; width:100%; text-align:left; padding:0; border:none;
+    background:none; font-family:var(--sans); color:var(--ink); cursor:pointer; }
+  .who-say:disabled { cursor:default; }
+  .who-av { flex:0 0 36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:.85rem; font-weight:800; background:var(--blue-light); color:#2851c8; margin-top:.15rem; }
+  .who-av.is-alt { background:#e2e8f0; color:#334155; }
+  body.dark .who-av { background:rgba(74,124,246,.2); color:#c7d7ff; }
+  body.dark .who-av.is-alt { background:#2a3350; color:#cbd5e1; }
+  .who-bub { position:relative; flex:1 1 auto; min-width:0; border:1.5px solid var(--border); border-radius:4px 14px 14px 14px;
+    background:var(--soft); padding:.6rem .8rem .65rem; transition:border-color .18s ease, background .18s ease; }
+  .who-say:hover:not(:disabled) .who-bub { border-color:var(--blue); background:var(--blue-light); }
+  .who-say:focus-visible .who-bub { outline:2px solid var(--blue); outline-offset:2px; }
+  .who-name { display:block; font-size:.72rem; font-weight:800; letter-spacing:.02em; color:var(--muted); margin-bottom:.15rem; }
+  .who-txt { display:block; font-size:.9rem; line-height:1.5; font-weight:500; }
+  .who-why[hidden] { display:none; }
+  .who-why { display:block; margin-top:.45rem; padding-top:.45rem; border-top:1px dashed var(--border);
+    font-size:.82rem; line-height:1.5; color:var(--ink); font-weight:400; }
+  .who-tag { display:inline-block; font-size:.66rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+    margin-right:.35rem; }
+  .who-say.is-right .who-bub { border-color:#10b981; background:#ecfdf5; }
+  .who-say.is-wrong .who-bub { border-color:#ef4444; background:#fef2f2; }
+  .who-say.is-right .who-tag { color:#047857; }
+  .who-say.is-wrong .who-tag, .who-say.is-other .who-tag { color:#b91c1c; }
+  .who-say.is-other .who-bub { opacity:.92; }
+  .who-say.is-picked .who-bub { box-shadow:0 0 0 3px rgba(74,124,246,.22); }
+  body.dark .who-say.is-right .who-bub { background:rgba(16,185,129,.12); }
+  body.dark .who-say.is-wrong .who-bub { background:rgba(239,68,68,.11); }
+  body.dark .who-say.is-right .who-tag { color:#6ee7b7; }
+  body.dark .who-say.is-wrong .who-tag, body.dark .who-say.is-other .who-tag { color:#fca5a5; }
+
+  /* READCHART - the chart on paper, then the two parts */
+  .rch-fig { padding:.6rem .55rem .45rem; margin-bottom:.8rem; }
+  .rch-fig svg { display:block; width:100%; height:auto; }
+  .rch-title { font-family:var(--serif); font-weight:400; font-size:1.08rem; color:#1a1d2e; margin:.1rem .25rem .15rem; line-height:1.2; }
+  .rch-src { font-size:.7rem; color:#6b7280; margin:.15rem .25rem 0; }
+  .rch-bar { cursor:pointer; outline:none; }
+  .rch-bar:focus-visible .rch-hit { stroke:#2851c8; stroke-width:2.5; }
+  .rch-part { font-size:.66rem; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--blue);
+    margin:.2rem 0 .3rem; }
+  .rch-b { margin-top:1rem; }
+  .rch-b[hidden] { display:none; }
 </style>
 </head>
 <body>
@@ -1995,7 +2114,7 @@
     // every other type has its own dedicated renderer and must be excluded here.
     /* Kept in sync with SPECIAL_TYPES below - a sequence question drawn into
        the pre-test would still be spliced in later by its own injector. */
-    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1, labeldiagram:1, dictation:1 };
+    var SPECIAL_TYPES_PRETEST = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1, labeldiagram:1, dictation:1, recall:1, selfcheck:1, conceptmap:1, readchart:1 };
     var simpleQuestions = questions.filter(function(q){ return !SPECIAL_TYPES_PRETEST[q.type]; });
     var shuffled = simpleQuestions.slice().sort(function(){ return Math.random() - 0.5; });
 
@@ -2079,7 +2198,7 @@
        main loop queued it once and the injector spliced the very same question
        in again - every history and geography day showed its "order these
        events" question twice. Every type with its own injector belongs here. */
-    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1, labeldiagram:1, dictation:1 };
+    var SPECIAL_TYPES = { fill:1, bigequation:1, wordproblem:1, errorspot:1, passage:1, sentence:1, write:1, classify:1, scenario:1, sequence:1, twopart:1, corroborate:1, highlight:1, tracetable:1, matchpairs:1, estimate:1, readingset:1, labeldiagram:1, dictation:1, recall:1, selfcheck:1, conceptmap:1, readchart:1 };
     var fillQuestions = questions.filter(function(q){ return q.type === 'fill'; });
     var regularQuestions = questions.filter(function(q){ return !SPECIAL_TYPES[q.type]; });
     var shuffled = regularQuestions.slice().sort(function(){ return Math.random() - 0.5; });
@@ -2395,8 +2514,12 @@
        SPECIAL_TYPES, so it reaches the learner only through this injector -
        and none of them is gated on subject, because a question of type X
        exists only because a schema asked for one. */
+    /* whosright is not here: it rides the main loop like mcq, which is what
+       makes it pre-test eligible - a misconception probed BEFORE the lesson
+       and asked again after it is the concept-cartoon method itself. */
     [['twopart', 0], ['corroborate', 1], ['highlight', 1],
-     ['tracetable', 0], ['matchpairs', 2], ['estimate', 0], ['dictation', 1]].forEach(function (pair) {
+     ['tracetable', 0], ['matchpairs', 2], ['estimate', 0], ['dictation', 1],
+     ['recall', 2], ['selfcheck', -1], ['conceptmap', 3], ['readchart', 1]].forEach(function (pair) {
       var t = pair[0];
       var qs = (day.questions || []).filter(function (q) { return q.type === t; });
       qs.forEach(function (q, i) {
@@ -2629,7 +2752,8 @@
       match: 1, classify: 1, graph: 1, passage: 1, write: 1, scenario: 1,
       fill: 1,
       twopart: 1, corroborate: 1, highlight: 1, tracetable: 1, matchpairs: 1,
-      estimate: 1, readingset: 1, dictation: 1
+      estimate: 1, readingset: 1, dictation: 1,
+      recall: 1, selfcheck: 1, conceptmap: 1, whosright: 1, readchart: 1
     };
     if (DIRECT[t]) {
       /* A fill question that is really a calculation belongs on the equation
@@ -2929,7 +3053,8 @@
     /* The visible check/submit control on the current card, whatever type it is. */
     var ids = ['fill-btn', 'seq-check-btn', 'classify-check-btn', 'write-submit',
                'graph-check-btn', 'match-check-btn',
-               'mp-check-btn', 'tt-check-btn', 'est-check-btn', 'ld-check-btn', 'sb-check-btn'];
+               'mp-check-btn', 'tt-check-btn', 'est-check-btn', 'ld-check-btn', 'sb-check-btn',
+               'rc-check-btn', 'sc-check-btn', 'sc-done-btn', 'cm-check-btn'];
     var i, el;
     for (i = 0; i < ids.length; i++) {
       el = document.getElementById(ids[i]);
@@ -2950,6 +3075,24 @@
 
     /* Never hijack Enter from a real button the learner has focused. */
     if (tag === 'button' && t.id !== 'btn-next') return;
+
+    /* data-sf-enter: "self" - the element handles its own Enter (a concept
+       map's blank, a chart's bar); "next" - one of several answer slots, so
+       Enter moves to the next empty slot and only checks once none is left
+       (the recall card would otherwise be checked from its first slot). */
+    var sfEnter = t.getAttribute ? t.getAttribute('data-sf-enter') : null;
+    if (sfEnter === 'self') return;
+    if (sfEnter === 'next' && !currentAnswered) {
+      var slots = document.querySelectorAll('#session-card [data-sf-enter="next"]'), si, after = false, go = null;
+      for (si = 0; si < slots.length && !go; si++) {
+        if (slots[si] === t) { after = true; continue; }
+        if (after && !slots[si].disabled && !slots[si].value.trim()) go = slots[si];
+      }
+      for (si = 0; si < slots.length && !go; si++) {
+        if (slots[si] !== t && !slots[si].disabled && !slots[si].value.trim()) go = slots[si];
+      }
+      if (go) { ev.preventDefault(); ev._sfEnterHandled = true; go.focus(); return; }
+    }
 
     var submit = submitControl();
     if (submit && !currentAnswered) {
@@ -4038,8 +4181,10 @@
     parts: 1, same: 1, other: 1, both: 1, shown: 1, down: 1, back: 1, over: 1
   };
   var RECALL_WHOLE = { sequence: 1, classify: 1, matchpairs: 1, match: 1,
-                       errorspot: 1, tracetable: 1, sentence: 1, dictation: 1 };
-  var RECALL_NEVER = { write: 1, labeldiagram: 1, graph: 1, readingset: 1, match: 1 };
+                       errorspot: 1, tracetable: 1, sentence: 1, dictation: 1, recall: 1 };
+  /* The concept map and the chart are drawings already: one picture a card. */
+  var RECALL_NEVER = { write: 1, labeldiagram: 1, graph: 1, readingset: 1, match: 1,
+                       conceptmap: 1, readchart: 1 };
 
   function recallWords(s) {
     var out = [], seen = {}, w = String(s == null ? '' : s).toLowerCase()
@@ -4088,6 +4233,8 @@
     var opts = q.options || q.sentences;
     if (opts && q.correctIndex != null && opts[q.correctIndex] != null) add(opts[q.correctIndex]);
     add(q.answer); add(q.correctAnswer); add(q.modelAnswer);
+    /* whosright: the right classmate's words are the answer. */
+    if (q.claims) for (i = 0; i < q.claims.length; i++) if (q.claims[i] && q.claims[i].right) add(q.claims[i].says);
     if (RECALL_WHOLE[t]) {
       add(q.items); add(q.itemsA); add(q.itemsB); add(q.categoryA); add(q.categoryB);
       add(q.pairs); add(q.rows); add(q.words); add(q.translation);
@@ -4193,7 +4340,9 @@
     if (t === 'labeldiagram' && !card.q) return;   // still waiting for its drawing
     picTurn = { card: card, idx: cardIndex, choice: null };
     if (!card || card.isPretest) return;
-    if (t === 'labeldiagram') {
+    /* The concept map and the chart are pictures too: the budget is about
+       how much of a session is drawings, whatever drew them. */
+    if (t === 'labeldiagram' || t === 'conceptmap' || t === 'readchart') {
       picBudget.cards++;
       picSpend('');                          // the visual question IS a picture
       return;
@@ -4583,7 +4732,8 @@
      or would be a picture of words (a sentence, a translation, a trace table,
      a teach-it-back, a list of pairs). */
   var MOMENT_NEVER = { write: 1, labeldiagram: 1, graph: 1, bigequation: 1, sentence: 1,
-                       tracetable: 1, match: 1, matchpairs: 1, readingset: 1, dictation: 1 };
+                       tracetable: 1, match: 1, matchpairs: 1, readingset: 1, dictation: 1,
+                       conceptmap: 1, readchart: 1 };
 
   function momentStr(v, n) {
     return fmStr(v).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ')
@@ -4605,6 +4755,13 @@
       return '';
     }
     if (t === 'sequence') return ldArr(q.items).length ? 'In order: ' + ldArr(q.items).map(function (x) { return momentStr(x, 60); }).join(' -> ') : '';
+    if (t === 'recall') return ldArr(q.items).length ? 'The set is: ' + ldArr(q.items).map(function (x) { return momentStr(rcAlts(x)[0], 60); }).join(', ') : '';
+    if (t === 'selfcheck') return momentStr(q.modelAnswer || ldArr(q.ideas).join('; '), 240);
+    if (t === 'whosright') {
+      var wc = ldArr(q.claims);
+      for (i = 0; i < wc.length; i++) if (wc[i] && wc[i].right) return momentStr(wc[i].says, 200);
+      return '';
+    }
     if (t === 'classify') {
       return momentStr(q.categoryA, 40) + ': ' + ldArr(q.itemsA).join(', ') + '. ' +
              momentStr(q.categoryB, 40) + ': ' + ldArr(q.itemsB).join(', ');
@@ -5862,6 +6019,17 @@
     }
     else if (card.type === 'estimate')    { html = renderEstimate(card.q); }
     else if (card.type === 'dictation')   { html = renderDictation(card.q); }
+    else if (card.type === 'recall' || card.type === 'selfcheck' || card.type === 'conceptmap' ||
+             card.type === 'whosright' || card.type === 'readchart') {
+      /* A card that cannot be graded is skipped, as the labelling card skips
+         when it has no picture - see nfUsable. */
+      if (!nfUsable(card.type, card.q)) { showNextCard(); return; }
+      if (card.type === 'recall')          html = renderRecall(card.q, card);
+      else if (card.type === 'selfcheck')  html = renderSelfCheck(card.q, card);
+      else if (card.type === 'conceptmap') html = renderConceptMap(card.q, card);
+      else if (card.type === 'whosright')  html = renderWhosRight(card.q, card);
+      else                                 html = renderReadChart(card.q, card);
+    }
     else if (card.type === 'done') {
       html = buildCard('Session Complete', 'Great work today!', false,
         '<p class="content-text" style="text-align:center;">You\'ve finished all the cards for this session. Tap below to see your results.</p>',
@@ -6056,15 +6224,7 @@
     }
 
     // TIER 2: Confidence tap — shown before answer buttons, hides after answered
-    var confidenceTap = '<div class="confidence-row" id="confidence-row">' +
-      '<span class="confidence-label">How confident?</span>' +
-      '<button class="conf-btn sure" onclick="setConfidence(\'sure\',this)">' +
-      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
-      ' Sure</button>' +
-      '<button class="conf-btn unsure" onclick="setConfidence(\'unsure\',this)">' +
-      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-      ' Not sure</button>' +
-      '</div>';
+    var confidenceTap = confidenceRowHtml();
 
     var body = '<div class="q-meta"><span class="q-type-label ' + typeClass + '">' + typeLabel + '</span>' +
       '<span class="q-difficulty ' + diffClass + '">' + (q.difficulty || 'Medium') + '</span></div>' +
@@ -6230,7 +6390,18 @@
       }).join('') + '</div>';
   }
   function insertAccent(btn) {
-    var el = document.getElementById(btn.getAttribute('data-t'));
+    var id = btn.getAttribute('data-t'), el;
+    /* "*": the field the learner is in - the recall card has one per answer.
+       mousedown is cancelled, so focus has not moved to the key. */
+    if (id === '*') {
+      el = document.activeElement;
+      if (!el || !/^(INPUT|TEXTAREA)$/.test(el.tagName)) {
+        var f = document.querySelectorAll('#session-card .rc-in'), k;
+        el = null;
+        for (k = 0; k < f.length && !el; k++) if (!f[k].disabled && !f[k].value) el = f[k];
+        if (!el && f.length) el = f[f.length - 1];
+      }
+    } else el = document.getElementById(id);
     if (!el || el.disabled) return;
     var ch = btn.textContent, a = el.selectionStart, b = el.selectionEnd;
     if (typeof a !== 'number') { el.value += ch; }
@@ -8341,6 +8512,35 @@
     if (type === 'readingset')  return 'How to find the main idea and the evidence for it in a text';
     /* The concept is the sentence's meaning, never the word that was blanked. */
     if (type === 'dictation')   return q.translation ? 'How to say "' + trim(q.translation, 60) + '", word by word' : 'What this sentence means, word by word';
+    /* The five formats of Oct 2026. Invariant 4 again: never the stem's
+       instruction ("Name the four...", "In your own words..."), and never a
+       blank's answer - a teach-it-back card can come BEFORE the question. */
+    if (type === 'recall') {
+      /* "Name the four stages of mitosis" -> "The stages of mitosis, and how
+         they connect". The number goes: it is the instruction's, not the idea's. */
+      var set = stem.replace(/[?.!:]+$/, '')
+        .replace(/^(name|list|give|write( down)?|type|recall|what are)\s+/i, '')
+        .replace(/^(any\s+)?(two|three|four|five|six|\d+)\s+(of\s+)?/i, '')
+        .replace(/^(the|all)\s+(two|three|four|five|six|\d+)\s+/i, 'the ');
+      if (!/^the\s/i.test(set)) set = 'the ' + set;
+      return set.length > 8 ? (trim(set.charAt(0).toUpperCase() + set.slice(1), 80) + ', and how they connect')
+                            : 'The key parts of ' + topic + ', and how they connect';
+    }
+    if (type === 'selfcheck') {
+      if (fmStr(q.code).trim()) return topic ? ('What the code in ' + topic + ' is for, in plain English')
+                                             : 'What a short program is for, in plain English';
+      var ex = stem.replace(/^(in your own words[,:]?\s*|explain( in plain english)?[,:]?\s*|describe[,:]?\s*)/i, '');
+      return ex ? trim(ex.charAt(0).toUpperCase() + ex.slice(1), 90) : 'The main idea of ' + topic + ', in your own words';
+    }
+    if (type === 'conceptmap') {
+      var hub = trim(nfArr(q.nodes)[0], 40);
+      return hub ? 'How ' + hub + ' connects to the ideas around it' : 'How the ideas in ' + topic + ' connect';
+    }
+    if (type === 'whosright')   return trim(stem, 90) || ('The common mistake about ' + topic + ', and what is actually true');
+    if (type === 'readchart') {
+      var ct = trim(q.chart && q.chart.title, 50);
+      return ct ? 'What the chart "' + ct + '" shows, and why' : 'What the pattern in the data shows about ' + topic;
+    }
     /* A labelling stem is an instruction - "Label each numbered part" - so
        the concept is the thing that was labelled. Invariant 4. */
     if (type === 'labeldiagram') {
@@ -9251,6 +9451,1045 @@
     var msg = ok ? '' : ('A good estimate was about ' + st.q.answer + (st.q.unit ? ' ' + st.q.unit : '') + '. ');
     if (ok) spawnConfetti();
     handleResult(ok, msg + (st.q.explanation || ''), btn);
+    enableNext();
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     THE FIVE FORMATS OF OCT 2026 - recall, selfcheck, conceptmap, whosright,
+     readchart. The evidence for each is in docs/question-design.md §11.
+
+     Shapes are validated in app.html (sanitizeRecall and friends), and checked
+     again here, because a plan can come out of localStorage that never went
+     through that validator: a card that cannot be graded is skipped in
+     renderCardInner (nfUsable), never drawn half-broken. Model text reaches
+     the page through escHtml only - never esc(), which leaves < and > alone.
+
+     Every grader ends in handleResult, so the walkthrough button, spaced
+     repetition, the results list and the picture-on-a-miss all work exactly
+     as they do for multiple choice. The third argument is the learner's own
+     answer as words (handleResult accepts a string there).
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  function nfArr(v) { return Object.prototype.toString.call(v) === '[object Array]' ? v : []; }
+  function nfMeta(label, q) {
+    var d = fmStr(q && q.difficulty).toLowerCase();
+    if (d !== 'easy' && d !== 'hard') d = 'medium';
+    return '<div class="q-meta"><span class="q-type-label">' + escHtml(label) + '</span>' +
+      '<span class="q-difficulty ' + d + '">' + d.charAt(0).toUpperCase() + d.slice(1) + '</span></div>';
+  }
+  /* The header, chosen from the card the way renderQuestion chooses it
+     (invariant 9): a retry says so, a pre-test re-ask says so, a review is amber. */
+  function nfShell(badge, body, card) {
+    card = card || {};
+    var cls = '', b = badge;
+    if (card.isReview) { b = 'Review Question'; cls = ' struggling-header'; }
+    else if (card.isSpacedRepeat) b = 'Try again';
+    else if (card.isRetest) { b = 'You saw this in the pre-test'; cls = ' retest-header'; }
+    return '<div class="session-card">' +
+      '<div class="card-header' + cls + '"><div class="card-badge">✦ ' + escHtml(b) + '</div><h2>' +
+      escHtml(day.title || 'Practice') + '</h2></div>' +
+      '<div class="card-body">' + body + '</div>' +
+      '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
+      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+  }
+  function nfHint(html) {
+    return '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-box" id="hint-box">' + html + '</div></div>';
+  }
+  function nfHash(s) {
+    var h = 5381, i;
+    s = String(s == null ? '' : s);
+    for (i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return Math.abs(h);
+  }
+  /* The width a drawing will actually have on THIS screen, in px, so the
+     concept map and the chart can be laid out 1:1 - type set at 12px stays
+     12px on a phone instead of shrinking with a fixed viewBox (the reason
+     Scene.steps measures boardPx). Read from the card still on screen. */
+  function nfFigWidth() {
+    var body = document.querySelector('#session-card .card-body'), w = 0;
+    if (body) {
+      /* clientWidth includes the padding; the figure sits inside it, inside
+         its own .art-paper padding (.55rem) and 1px border. Floor it, so the
+         drawing is never laid out wider than it is shown. */
+      var cs = getComputedStyle(body), fs = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      w = body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 2 * (0.55 * fs + 1);
+    }
+    if (!(w > 0)) w = 400;
+    return Math.max(260, Math.min(520, Math.floor(w)));
+  }
+  /* The width a figure ACTUALLY has, measured once it is on screen: its
+     content box (clientWidth minus its own padding). The render-time guess
+     above reads the card being replaced, and when that is a whiteboard card
+     there is no .card-body to read - a 400 fallback on a phone drew 11.5px
+     labels at 8px. 0 when nothing is laid out (a hidden tab). */
+  function nfMeasured(el) {
+    if (!el || !el.clientWidth) return 0;
+    var cs = getComputedStyle(el);
+    var w = el.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+    return w > 0 ? Math.max(260, Math.min(520, Math.floor(w))) : 0;
+  }
+  /* A card the renderer cannot grade is skipped, not drawn broken. */
+  function nfUsable(type, q) {
+    if (!q) return false;
+    if (type === 'recall') return nfArr(q.items).filter(function (x) { return fmStr(x).trim(); }).length >= 2 && !!qText(q).trim();
+    if (type === 'selfcheck') return nfArr(q.ideas).filter(function (x) { return fmStr(x).trim(); }).length >= 2 && !!qText(q).trim();
+    if (type === 'conceptmap') return !!cmModel(q);
+    if (type === 'whosright') return !!whoModel(q);
+    if (type === 'readchart') return !!rchModel(q);
+    return true;
+  }
+
+  /* ── RECALL: name them all ──────────────────────────────────────────────
+     Free recall beat elaborative study with concept maps on the delayed test
+     (Karpicke & Blunt 2011), and generating an answer beats reading it
+     (Bertsch et al. 2007, d = .40). But children asked to free-recall a whole
+     text produced about a tenth of it (Karpicke et al. 2014), so this is CUED
+     recall: the set is named, one slot per answer, the hint gives first
+     letters, and the order never matters. */
+  function rcAlts(item) {
+    return fmStr(item).split('/').map(function (a) { return a.replace(/\s+/g, ' ').trim(); }).filter(Boolean);
+  }
+  /* Lower case, punctuation and a leading article off. Marks are kept only
+     on a language day. A script with no Latin letters at all is compared as
+     typed, or every Japanese answer would normalise to nothing. */
+  function rcNorm(s, keepMarks) {
+    var raw = String(s == null ? '' : s).toLowerCase().replace(/[‘’`]/g, "'");
+    var t = keepMarks ? raw : stripMarks(raw);
+    t = t.replace(/[^a-z0-9À-ɏ'ʻ]+/g, ' ').replace(/\s+/g, ' ').trim()
+      .replace(/^(the|a|an|el|la|los|las|un|una|unos|unas|le|les|der|die|das|den|dem|ein|eine|il|lo|gli|o|os|as|um|uma)\s+/, '');
+    return t || raw.replace(/\s+/g, ' ').trim();
+  }
+  function rcSing(s) { return s.length > 4 ? s.replace(/ies$/, 'y').replace(/(es|s)$/, '') : s; }
+  /* Edit distance, given up as soon as it passes max. */
+  function rcDist(a, b, max) {
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    var prev = [], cur, i, j, best;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (i = 1; i <= a.length; i++) {
+      cur = [i]; best = i;
+      for (j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1));
+        if (cur[j] < best) best = cur[j];
+      }
+      if (best > max) return max + 1;
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  /* Which item a typed answer names: {kind: right | accent | dup | wrong, item}.
+     A language day keeps the marks (hablo is not habló) and forgives no
+     typos - spelling the word IS the skill there. Anywhere else a slipped
+     letter or a plural does not cost the answer. */
+  function rcMatch(typed, items, used, lang) {
+    var t = rcNorm(typed, !!lang), tPlain = rcNorm(typed, false), i, j, best = null;
+    for (i = 0; i < items.length; i++) {
+      for (j = 0; j < items[i].length; j++) {
+        var a = rcNorm(items[i][j], !!lang), hit = t === a;
+        if (!hit && !lang) {
+          var ts = rcSing(t), as = rcSing(a), tol = as.length >= 9 ? 2 : (as.length >= 5 ? 1 : 0);
+          hit = ts === as || (tol > 0 && rcDist(ts, as, tol) <= tol);
+        }
+        if (hit) {
+          if (!used[i]) return { kind: 'right', item: i };
+          if (!best) best = { kind: 'dup', item: i };
+        } else if (lang && !best && tPlain === rcNorm(items[i][j], false)) {
+          best = { kind: used[i] ? 'dup' : 'accent', item: i };
+        }
+      }
+    }
+    return best || { kind: 'wrong', item: -1 };
+  }
+  function rcNeed(q, n) {
+    var need = parseInt(q.need, 10);
+    if (!(need >= 1)) need = n;
+    return Math.max(1, Math.min(need, n, 6));
+  }
+
+  function renderRecall(q, card) {
+    var items = nfArr(q.items).map(rcAlts).filter(function (a) { return a.length; });
+    var need = rcNeed(q, items.length);
+    window._recallState = { q: q, items: items, need: need, done: false };
+    var slots = '', i;
+    for (i = 0; i < need; i++) {
+      slots += '<li class="rc-slot"><span class="rc-n" aria-hidden="true">' + (i + 1) + '</span>' +
+        '<input class="rc-in" id="rc-in-' + i + '" type="text" autocomplete="off" autocorrect="off" ' +
+        'autocapitalize="off" spellcheck="false" data-sf-enter="next" aria-label="Answer ' + (i + 1) + ' of ' + need + '" ' +
+        'oninput="rcInput()"><span class="rc-fix" id="rc-fix-' + i + '"></span></li>';
+    }
+    var letters = items.map(function (a) { return a[0].charAt(0).toUpperCase(); }).join(' · ');
+    var sub = need < items.length
+      ? 'Any ' + need + ' of the ' + items.length + ' right answers count. Type each from memory \u2014 the order does not matter.'
+      : 'Type each one from memory — the order does not matter.';
+    var body = nfMeta('Name them all', q) +
+      '<div class="q-text">' + escHtml(qText(q)) + '</div>' +
+      '<div class="nf-sub">' + sub + '</div>' +
+      '<ol class="rc-list">' + slots + '</ol>' +
+      accentBarHtml('*') +
+      '<div class="nf-actions"><button class="fill-submit" id="rc-check-btn" onclick="checkRecall()" disabled>Check my list →</button></div>' +
+      '<div class="rc-missed" id="rc-missed" aria-live="polite"></div>' +
+      nfHint((q.hint ? escHtml(q.hint) : 'Picture the lesson card and walk through it in order.') +
+        '<div class="rc-letters">Starts with: ' + escHtml(letters) + '</div>') +
+      '<div class="feedback-box" id="feedback-box"></div>';
+    return nfShell('Name them all', body, card);
+  }
+
+  function rcInput() {
+    var ins = document.querySelectorAll('#session-card .rc-in'), any = false, i;
+    for (i = 0; i < ins.length; i++) { if (ins[i].value.trim()) any = true; ins[i].classList.remove('is-almost'); }
+    var b = document.getElementById('rc-check-btn');
+    if (b && !currentAnswered) b.disabled = !any;
+  }
+
+  function checkRecall() {
+    var st = window._recallState;
+    if (!st || st.done || currentAnswered) return;
+    var ins = Array.prototype.slice.call(document.querySelectorAll('#session-card .rc-in'));
+    var typed = ins.map(function (el) { return el.value.replace(/\s+/g, ' ').trim(); });
+    if (!typed.some(Boolean)) return;
+    var lang = targetLang(), used = {}, res = [], i;
+    for (i = 0; i < typed.length; i++) {
+      res.push(typed[i] ? rcMatch(typed[i], st.items, used, lang) : { kind: 'empty', item: -1 });
+      if (res[i].kind === 'right') used[res[i].item] = 1;
+    }
+    /* Right letters, wrong marks: one prompt for the whole list, the answer
+       withheld - the same self-repair the fill-in card asks for. */
+    var almost = res.filter(function (r) { return r.kind === 'accent'; }).length;
+    if (almost && !accentRetryUsed) {
+      accentRetryUsed = true;
+      ins.forEach(function (el, k) { el.classList.toggle('is-almost', res[k].kind === 'accent'); });
+      var fbA = document.getElementById('feedback-box');
+      if (fbA) {
+        fbA.className = 'feedback-box show info-fb';
+        fbA.innerHTML = '<div class="feedback-label">Almost — look at the accents</div><div class="feedback-text">' +
+          (almost === 1 ? 'The marked answer has the right letters, but a mark is missing or wrong.'
+                        : 'The marked answers have the right letters, but marks are missing or wrong.') +
+          ' Fix ' + (almost === 1 ? 'it' : 'them') + ' and check again.' +
+          (lang && ACCENT_KEYS[lang.code] ? ' The keys under the list type them.' : '') + '</div>';
+      }
+      return;
+    }
+    st.done = true;
+    currentAnswered = true;
+    totalAnswered++;
+    var right = 0, olist = document.querySelector('#session-card .rc-list');
+    if (olist) olist.classList.add('is-graded');
+    ins.forEach(function (el, k) {
+      var r = res[k], fix = document.getElementById('rc-fix-' + k);
+      el.disabled = true;
+      el.classList.remove('is-almost');
+      if (r.kind === 'right') {
+        right++;
+        el.classList.add('sel-right');
+        var canon = st.items[r.item][0];
+        /* Accepted with a slip: show how it is spelled. */
+        if (fix && rcNorm(canon, !!lang) !== rcNorm(typed[k], !!lang)) fix.textContent = '✓ ' + canon;
+      } else {
+        el.classList.add('sel-wrong');
+        if (r.kind === 'dup' && fix) { fix.textContent = 'already named'; fix.className = 'rc-fix is-dup'; }
+      }
+    });
+    var ok = right >= st.need;
+    var missed = st.items.filter(function (a, k) { return !used[k]; }).map(function (a) { return a[0]; });
+    var box = document.getElementById('rc-missed');
+    if (box && missed.length) {
+      box.innerHTML = '<b>' + (ok ? 'Others that count' : (right ? 'Still to learn' : 'The list')) + ':</b> ' +
+        escHtml(missed.join(', '));
+    }
+    var btn = document.getElementById('rc-check-btn');
+    if (btn) btn.disabled = true;
+    if (ok) spawnConfetti();
+    handleResult(ok, escHtml((ok ? '' : right + ' of ' + st.need + ' named. ') + fmStr(st.q.explanation)),
+      typed.filter(Boolean).join(', ') || '—');
+    enableNext();
+  }
+
+  /* ── SELFCHECK: explain it, then check yourself ─────────────────────────
+     Students scoring their own recall with no answer to compare against gave
+     credit to most of their COMPLETELY wrong answers - 83% in Rawson &
+     Dunlosky (2007), 73% for middle-school students (Lipko et al. 2009).
+     Showing the full answer cut that to 44%, and judging idea by idea - "did
+     I say this?" - cut overconfidence further (Dunlosky et al. 2011). So:
+     write first, then the full answer, then one yes/no per idea.
+     The note under a "yes" whose words the answer never uses is this app's
+     own addition, not the studies': it asks, it never decides. */
+  var SC_MIN_WORDS = 3;
+  function scWordCount(s) { var m = String(s || '').trim().match(/\S+/g); return m ? m.length : 0; }
+  /* Up to two readable content words of an idea that the answer does NOT
+     use - the ones worth looking for - for the note. */
+  function scKeyWords(idea, have) {
+    var words = fmStr(idea).replace(/[^A-Za-zÀ-ɏ'\- ]+/g, ' ').split(/\s+/).filter(function (w) {
+      if (w.length < 4 || RECALL_STOP[w.toLowerCase()]) return false;
+      var k = recallWords(w)[0];
+      return !(have && k && have[k]);
+    });
+    words.sort(function (a, b) { return b.length - a.length; });
+    return words.slice(0, 2);
+  }
+
+  function renderSelfCheck(q, card) {
+    var ideas = nfArr(q.ideas).map(function (x) { return fmStr(x).replace(/\s+/g, ' ').trim(); }).filter(Boolean).slice(0, 4);
+    window._scState = { q: q, ideas: ideas, marks: [], stage: 'write', text: '' };
+    var code = fmStr(q.code).replace(/\r\n?/g, '\n');
+    /* esc() flattens newlines - escape line by line and rejoin (the
+       tracetable lesson). */
+    var codeHtml = code.trim() ? '<pre class="sc-code" aria-label="Code">' + code.split('\n').map(escHtml).join('\n') + '</pre>' : '';
+    var body = nfMeta(codeHtml ? 'Explain the code' : 'Explain and check', q) +
+      '<div class="q-text">' + escHtml(qText(q)) + '</div>' + codeHtml +
+      '<div class="nf-sub">' + (codeHtml ? 'Say what it is FOR, in plain English. Then check yourself against a full answer.'
+                                          : 'In your own words, from memory. Then check it against a full answer.') + '</div>' +
+      '<textarea class="sc-text" id="sc-text" rows="4" placeholder="Write your explanation…" oninput="scInput()"></textarea>' +
+      accentBarHtml('sc-text') +
+      '<div class="nf-actions"><button class="fill-submit" id="sc-check-btn" onclick="scReveal(false)" disabled>Check myself →</button>' +
+      '<button type="button" class="nf-quiet" id="sc-giveup" onclick="scReveal(true)">I don’t remember — show me</button>' +
+      '<span class="sc-count" id="sc-count" aria-live="polite"></span></div>' +
+      '<div class="sc-judge" id="sc-judge"></div>' +
+      nfHint(q.hint ? escHtml(q.hint) : 'Start with what it does, then say why.') +
+      '<div class="feedback-box" id="feedback-box"></div>';
+    return nfShell(codeHtml ? 'Explain in plain English' : 'Explain it', body, card);
+  }
+
+  function scInput() {
+    var ta = document.getElementById('sc-text'), b = document.getElementById('sc-check-btn');
+    if (!ta || !b) return;
+    var n = scWordCount(ta.value);
+    b.disabled = n < SC_MIN_WORDS;
+    var c = document.getElementById('sc-count');
+    if (c) c.textContent = n ? n + ' word' + (n === 1 ? '' : 's') : '';
+  }
+
+  function scReveal(gaveUp) {
+    var st = window._scState;
+    if (!st || st.stage !== 'write' || currentAnswered) return;
+    var ta = document.getElementById('sc-text');
+    st.text = ta ? ta.value.replace(/\s+/g, ' ').trim() : '';
+    if (!gaveUp && scWordCount(st.text) < SC_MIN_WORDS) return;
+    st.stage = gaveUp ? 'done' : 'judge';
+    if (ta) ta.readOnly = true;
+    ['sc-check-btn', 'sc-giveup'].forEach(function (id) { var e = document.getElementById(id); if (e) e.disabled = true; });
+    /* The first stage's row has done its job; the full answer takes its place. */
+    var row1 = document.getElementById('sc-check-btn');
+    if (row1 && row1.parentNode) row1.parentNode.style.display = 'none';
+    var acc = document.querySelector('#session-card .accent-bar');
+    if (acc) acc.style.display = 'none';
+    var have = {}, w = recallWords(st.text), i;
+    for (i = 0; i < w.length; i++) have[w[i]] = 1;
+    /* "Said" when at least half the idea's content words are in the answer.
+       One shared word is not enough: "blood" turns up in nearly every answer
+       about the heart, whatever it says. */
+    st.found = st.ideas.map(function (idea) {
+      var iw = recallWords(idea), k, hits = 0;
+      if (!iw.length) return true;
+      for (k = 0; k < iw.length; k++) if (have[iw[k]]) hits++;
+      return hits * 2 >= iw.length;
+    });
+    st.have = have;
+    var rows = st.ideas.map(function (idea, k) {
+      return '<li class="sc-idea" id="sc-idea-' + k + '"><div class="sc-idea-row"><span class="sc-idea-t">' + escHtml(idea) + '</span>' +
+        (gaveUp ? '' : '<span class="sc-yn" role="group" aria-label="Did your answer say this?">' +
+          '<button type="button" class="is-yes" aria-pressed="false" onclick="scMark(' + k + ',1)">Yes</button>' +
+          '<button type="button" class="is-no" aria-pressed="false" onclick="scMark(' + k + ',0)">No</button></span>') +
+        '</div><div class="sc-nudge" id="sc-nudge-' + k + '"></div></li>';
+    }).join('');
+    var judge = document.getElementById('sc-judge');
+    if (judge) {
+      judge.innerHTML = '<div class="sc-model"><span class="sc-kick">A full answer</span>' +
+        escHtml(fmStr(st.q.modelAnswer) || st.ideas.join('; ')) + '</div>' +
+        '<span class="sc-kick">' + (gaveUp ? 'The ideas to learn' : 'Did your answer say…') + '</span>' +
+        '<ul class="sc-ideas">' + rows + '</ul>' +
+        (gaveUp ? '' : '<div class="nf-actions"><button class="fill-submit" id="sc-done-btn" onclick="scDone()" disabled>Done →</button></div>');
+    }
+    if (gaveUp) {
+      currentAnswered = true;
+      totalAnswered++;
+      st.ideas.forEach(function (x, k) { var r = document.getElementById('sc-idea-' + k); if (r) r.classList.add('is-missed'); });
+      handleResult(false, escHtml('Read the full answer, then say it once to yourself without looking. ' + fmStr(st.q.explanation)),
+        '(did not remember)');
+      enableNext();
+    }
+  }
+
+  function scMark(k, yes) {
+    var st = window._scState;
+    if (!st || st.stage !== 'judge') return;
+    st.marks[k] = yes ? 1 : 0;
+    var row = document.getElementById('sc-idea-' + k);
+    if (row) {
+      var y = row.querySelector('.is-yes'), n = row.querySelector('.is-no');
+      if (y) y.setAttribute('aria-pressed', yes ? 'true' : 'false');
+      if (n) n.setAttribute('aria-pressed', yes ? 'false' : 'true');
+    }
+    var nud = document.getElementById('sc-nudge-' + k);
+    if (nud) {
+      var keys = scKeyWords(st.ideas[k], st.have);
+      nud.textContent = (yes && !st.found[k] && keys.length)
+        ? 'Your answer doesn’t use “' + keys.join('” or “') + '” — choose Yes only if you said the same thing in other words.'
+        : '';
+    }
+    var all = true, i;
+    for (i = 0; i < st.ideas.length; i++) if (st.marks[i] !== 0 && st.marks[i] !== 1) all = false;
+    var d = document.getElementById('sc-done-btn');
+    if (d) d.disabled = !all;
+  }
+
+  function scDone() {
+    var st = window._scState;
+    if (!st || st.stage !== 'judge' || currentAnswered) return;
+    var i, had = 0, missed = [];
+    for (i = 0; i < st.ideas.length; i++) {
+      if (st.marks[i] !== 0 && st.marks[i] !== 1) return;
+      if (st.marks[i]) had++; else missed.push(st.ideas[i]);
+    }
+    st.stage = 'done';
+    currentAnswered = true;
+    totalAnswered++;
+    var btns = document.querySelectorAll('#sc-judge .sc-yn button');
+    for (i = 0; i < btns.length; i++) btns[i].disabled = true;
+    st.ideas.forEach(function (x, k) {
+      var r = document.getElementById('sc-idea-' + k);
+      if (r) r.classList.add(st.marks[k] ? 'is-had' : 'is-missed');
+    });
+    var d = document.getElementById('sc-done-btn');
+    if (d) d.disabled = true;
+    var ok = had === st.ideas.length;
+    var msg = ok ? 'Every idea is there. '
+                 : 'You had ' + had + ' of ' + st.ideas.length + ' ideas. ' +
+                   (missed.length === 1 ? 'The one to learn: ' : 'The ones to learn: ') + missed.join('; ') + '. ';
+    if (ok) spawnConfetti();
+    handleResult(ok, escHtml(msg + fmStr(st.q.explanation)), st.text.slice(0, 160) || '—');
+    enableNext();
+  }
+
+  /* ── CONCEPTMAP: complete the map ───────────────────────────────────────
+     Learning with concept maps beats the comparison conditions (Schroeder et
+     al. 2018, g = .58 over 142 effects), and fourth graders who could barely
+     BUILD a map from memory did very well filling in a partly finished one -
+     and learned more from it (Karpicke et al. 2014). So: a partly finished
+     map, blanks filled from a word bank, every link a short sentence.
+
+     Laid out top-down from the main idea (node 0), one row per distance from
+     it, at most 3 a row (2 on a phone), drawn 1:1 at the card's real width so
+     12px type is 12px. A wrong blank is corrected in place, as the labelling
+     card does - a wrong word left in the map teaches it twice. */
+  function cmModel(q) {
+    if (!q) return null;
+    var nodes = nfArr(q.nodes).map(function (n) { return fmStr(n).replace(/\s+/g, ' ').trim(); });
+    if (nodes.length < 3 || !nodes[0]) return null;
+    var links = nfArr(q.links).filter(function (l) {
+      return l && nodes[l.from] && nodes[l.to] && l.from !== l.to && fmStr(l.label).trim();
+    }).map(function (l) { return { from: +l.from, to: +l.to, label: fmStr(l.label).replace(/\s+/g, ' ').trim() }; });
+    var blanks = nfArr(q.blanks).map(Number).filter(function (b, i, a) {
+      return b > 0 && b < nodes.length && nodes[b] && a.indexOf(b) === i;
+    });
+    if (blanks.length < 1 || links.length < 2) return null;
+    return { nodes: nodes, links: links, blanks: blanks, extra: fmStr(q.extra).trim() };
+  }
+  function cmWrap(text, maxChars) {
+    var words = String(text).split(/\s+/), lines = [], cur = '';
+    words.forEach(function (w) {
+      if (!cur) cur = w;
+      else if ((cur + ' ' + w).length <= maxChars) cur += ' ' + w;
+      else { lines.push(cur); cur = w; }
+    });
+    if (cur) lines.push(cur);
+    return lines.slice(0, 3);
+  }
+  /* Where every node and link goes. Pure: model in, geometry out. */
+  function cmLayout(m, W) {
+    var n = m.nodes.length, perRow = W >= 380 ? 3 : 2, CH = 7.1, LINE = 16, i, j;
+    var slotW = W / perRow, boxMax = Math.min(150, slotW - 12), chars = Math.max(8, Math.floor((boxMax - 18) / CH));
+    function box(text) {
+      var lines = cmWrap(text, chars), w = 0;
+      lines.forEach(function (l) { w = Math.max(w, l.length); });
+      return { lines: lines, w: Math.max(68, Math.min(boxMax, w * CH + 20)), h: 14 + lines.length * LINE };
+    }
+    /* Every blank is the size of the LARGEST answer that could go in it, so
+       the size of an empty box never says which word belongs there. */
+    var bank = m.blanks.map(function (b) { return m.nodes[b]; });
+    if (m.extra) bank.push(m.extra);
+    var bw = 68, bh = 30;
+    bank.forEach(function (t) { var b = box(t); bw = Math.max(bw, b.w); bh = Math.max(bh, b.h); });
+    var size = m.nodes.map(function (t, k) {
+      var b = box(t);
+      return m.blanks.indexOf(k) !== -1 ? { lines: b.lines, w: bw, h: bh } : b;
+    });
+    var adj = [];
+    for (i = 0; i < n; i++) adj.push([]);
+    m.links.forEach(function (l) { adj[l.from].push(l.to); adj[l.to].push(l.from); });
+    var depth = [], order = [0];
+    for (i = 0; i < n; i++) depth.push(-1);
+    depth[0] = 0;
+    for (i = 0; i < order.length; i++) {
+      for (j = 0; j < adj[order[i]].length; j++) {
+        var y = adj[order[i]][j];
+        if (depth[y] < 0) { depth[y] = depth[order[i]] + 1; order.push(y); }
+      }
+    }
+    var maxD = 0;
+    for (i = 0; i < n; i++) maxD = Math.max(maxD, depth[i]);
+    for (i = 0; i < n; i++) if (depth[i] < 0) depth[i] = maxD + 1;      // not reachable: last row
+    var rows = [], d;
+    for (d = 0; d <= maxD + 1; d++) {
+      var g = [];
+      for (i = 0; i < n; i++) if (depth[i] === d) g.push(i);
+      if (!g.length) continue;
+      var nr = Math.ceil(g.length / perRow), per = Math.ceil(g.length / nr);
+      for (i = 0; i < g.length; i += per) rows.push(g.slice(i, i + per));
+    }
+    var pos = [];
+    /* Order each row against the rows above it: the arrangement whose links
+       run shortest, with linked neighbours kept side by side. */
+    function perms(a) {
+      if (a.length <= 1) return [a.slice()];
+      var out = [];
+      a.forEach(function (x, k) {
+        perms(a.slice(0, k).concat(a.slice(k + 1))).forEach(function (p) { out.push([x].concat(p)); });
+      });
+      return out;
+    }
+    var yTop = 14;
+    rows.forEach(function (row, r) {
+      var hMax = 0;
+      row.forEach(function (k) { hMax = Math.max(hMax, size[k].h); });
+      var cy = yTop + hMax / 2;
+      var best = null, bestCost = Infinity;
+      perms(row).forEach(function (p) {
+        var cost = 0;
+        p.forEach(function (k, s) {
+          var x = (s + 0.5) * W / p.length;
+          adj[k].forEach(function (o) {
+            if (pos[o]) cost += Math.abs(x - pos[o].x);
+            var t = p.indexOf(o);
+            if (t !== -1 && Math.abs(t - s) > 1) cost += 1000;
+          });
+        });
+        if (cost < bestCost) { bestCost = cost; best = p; }
+      });
+      best.forEach(function (k, s) {
+        pos[k] = { x: (s + 0.5) * W / best.length, y: cy, w: size[k].w, h: size[k].h, lines: size[k].lines, row: r, slot: s };
+      });
+      yTop = cy + hMax / 2 + 56;
+    });
+    var H = yTop - 56 + 26;   // room under the last row for a "not ..." correction
+
+    /* Links: straight between box borders when nothing is in the way, bent
+       round a box when one is, and arched under the row between two nodes of
+       the same row that are not side by side. */
+    function inside(px, py, k, pad) {
+      var b = pos[k];
+      return Math.abs(px - b.x) <= b.w / 2 + pad && Math.abs(py - b.y) <= b.h / 2 + pad;
+    }
+    function edgePoint(k, tx, ty) {
+      var b = pos[k], dx = tx - b.x, dy = ty - b.y;
+      if (!dx && !dy) return { x: b.x, y: b.y };
+      var sx = dx ? (b.w / 2 + 3) / Math.abs(dx) : Infinity, sy = dy ? (b.h / 2 + 3) / Math.abs(dy) : Infinity;
+      var s = Math.min(sx, sy);
+      return { x: b.x + dx * s, y: b.y + dy * s };
+    }
+    function quad(p0, c, p1, t) {
+      var u = 1 - t;
+      return { x: u * u * p0.x + 2 * u * t * c.x + t * t * p1.x, y: u * u * p0.y + 2 * u * t * c.y + t * t * p1.y };
+    }
+    function blocked(p0, c, p1, a, b) {
+      for (var s = 1; s < 12; s++) {
+        var pt = c ? quad(p0, c, p1, s / 12) : { x: p0.x + (p1.x - p0.x) * s / 12, y: p0.y + (p1.y - p0.y) * s / 12 };
+        for (var k = 0; k < n; k++) if (k !== a && k !== b && inside(pt.x, pt.y, k, 6)) return true;
+      }
+      return false;
+    }
+    var edges = [], pills = [], maxY = H;
+    m.links.forEach(function (l) {
+      var A = pos[l.from], B = pos[l.to], c = null, p0, p1;
+      if (A.row === B.row && Math.abs(A.slot - B.slot) > 1) {
+        c = { x: (A.x + B.x) / 2, y: Math.max(A.y + A.h / 2, B.y + B.h / 2) + 46 };
+      } else {
+        p0 = edgePoint(l.from, B.x, B.y); p1 = edgePoint(l.to, A.x, A.y);
+        if (blocked(p0, null, p1, l.from, l.to)) {
+          var tries = [70, -70, 130, -130], mid = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 };
+          for (var q = 0; q < tries.length && !c; q++) {
+            var cc = { x: mid.x + tries[q], y: mid.y };
+            var a0 = edgePoint(l.from, cc.x, cc.y), a1 = edgePoint(l.to, cc.x, cc.y);
+            if (!blocked(a0, cc, a1, l.from, l.to)) c = cc;
+          }
+        }
+      }
+      if (c) { p0 = edgePoint(l.from, c.x, c.y); p1 = edgePoint(l.to, c.x, c.y); }
+      var at = function (t) { return c ? quad(p0, c, p1, t) : { x: p0.x + (p1.x - p0.x) * t, y: p0.y + (p1.y - p0.y) * t }; };
+      /* The label sits on the link, on a pill. Every candidate spot along it
+         (and a nudge to either side) is scored by how much it overlaps any
+         box - its own two included - and any label already placed, plus a
+         little for straying from the middle; the cheapest wins. Links that
+         leave the same box converge there, so "first spot that fits" fell
+         back to the middle and two pills landed on each other. */
+      var pw = Math.min(W - 8, l.label.length * 6.4 + 14), ph = 18, spot = null, bestScore = Infinity;
+      function ov(ax, ay, aw, ah, bx2, by2, bw2, bh2) {
+        var dx = Math.min(ax + aw / 2, bx2 + bw2 / 2) - Math.max(ax - aw / 2, bx2 - bw2 / 2);
+        var dy = Math.min(ay + ah / 2, by2 + bh2 / 2) - Math.max(ay - ah / 2, by2 - bh2 / 2);
+        return dx > 0 && dy > 0 ? dx * dy : 0;
+      }
+      [0.5, 0.6, 0.4, 0.7, 0.3, 0.78, 0.22].forEach(function (tt, ti) {
+        var base = at(tt);
+        [0, -16, 16].forEach(function (nx, ni) {
+          var px = Math.max(pw / 2 + 2, Math.min(W - pw / 2 - 2, base.x + nx)), py = base.y, sc = ti * 2 + ni * 6, k2;
+          for (k2 = 0; k2 < n; k2++) {
+            sc += 40 * ov(px, py, pw + 4, ph + 4, pos[k2].x, pos[k2].y, pos[k2].w, pos[k2].h);
+            /* Under a blank, the strip where a wrong answer's "not ..." will
+               be written - keep it clear now, or the correction lands on a label. */
+            if (m.blanks.indexOf(k2) !== -1) sc += 40 * ov(px, py, pw + 4, ph + 2, pos[k2].x, pos[k2].y + pos[k2].h / 2 + 11, Math.max(pos[k2].w, 120), 16);
+          }
+          for (k2 = 0; k2 < pills.length; k2++) sc += 40 * ov(px, py, pw + 6, ph + 4, pills[k2].x, pills[k2].y, pills[k2].w, ph);
+          if (sc < bestScore) { bestScore = sc; spot = { x: px, y: py }; }
+        });
+      });
+      pills.push({ x: spot.x, y: spot.y, w: pw, label: l.label });
+      /* A quadratic reaches 0.25 p0 + 0.5 c + 0.25 p1 at its middle, not c. */
+      if (c) maxY = Math.max(maxY, 0.25 * p0.y + 0.5 * c.y + 0.25 * p1.y + 14, spot.y + 14);
+      edges.push({ from: l.from, to: l.to, p0: p0, p1: p1, c: c });
+    });
+    return { W: W, H: Math.ceil(maxY), pos: pos, edges: edges, pills: pills };
+  }
+
+  function cmSvg(st) {
+    var m = st.m, L = st.layout, s = '', i;
+    var F = 'font-family="DM Sans, system-ui, sans-serif"';
+    s += '<svg viewBox="0 0 ' + L.W + ' ' + L.H + '" width="' + L.W + '" role="img" aria-label="' +
+      escHtml('Concept map of ' + m.nodes[0]) + '"><defs><marker id="cmArrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+      'markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#94a3b8"/></marker></defs>';
+    L.edges.forEach(function (e) {
+      var d = e.c ? 'M' + e.p0.x.toFixed(1) + ' ' + e.p0.y.toFixed(1) + ' Q' + e.c.x.toFixed(1) + ' ' + e.c.y.toFixed(1) + ' ' + e.p1.x.toFixed(1) + ' ' + e.p1.y.toFixed(1)
+                  : 'M' + e.p0.x.toFixed(1) + ' ' + e.p0.y.toFixed(1) + ' L' + e.p1.x.toFixed(1) + ' ' + e.p1.y.toFixed(1);
+      s += '<path d="' + d + '" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#cmArrow)"/>';
+    });
+    L.pills.forEach(function (p) {
+      s += '<rect x="' + (p.x - p.w / 2).toFixed(1) + '" y="' + (p.y - 9).toFixed(1) + '" width="' + p.w.toFixed(1) +
+        '" height="18" rx="9" fill="#ffffff" stroke="#e2e8f0"/>' +
+        '<text x="' + p.x.toFixed(1) + '" y="' + (p.y + 4).toFixed(1) + '" text-anchor="middle" font-size="11.5" font-weight="600" ' +
+        'fill="#475569" ' + F + '>' + escHtml(p.label) + '</text>';
+    });
+    for (i = 0; i < m.nodes.length; i++) {
+      var b = L.pos[i], bi = m.blanks.indexOf(i), x0 = b.x - b.w / 2, y0 = b.y - b.h / 2;
+      var fill = '#eef3ff', stroke = '#c7d7fb', ink = '#1a1d2e', dash = '', words = b.lines, wt = '600', extra = '';
+      if (i === 0) { fill = '#3563e9'; stroke = '#3563e9'; ink = '#ffffff'; wt = '700'; }
+      if (bi !== -1) {
+        var placed = st.placed[i], res = st.result && st.result[i];
+        fill = '#ffffff'; stroke = '#94a3b8'; dash = ' stroke-dasharray="5 4"';
+        words = placed != null ? cmWrap(st.bank[placed], 99) : ['?'];
+        ink = placed != null ? '#1a1d2e' : '#94a3b8';
+        if (!st.done && st.active === i) { fill = '#f5f8ff'; stroke = '#3563e9'; dash = ''; }
+        if (res) {
+          dash = '';
+          if (res.ok) { fill = '#ecfdf5'; stroke = '#10b981'; ink = '#065f46'; }
+          else {
+            fill = '#fef2f2'; stroke = '#ef4444'; ink = '#991b1b';
+            words = cmWrap(m.nodes[i], 99);
+            if (res.got) extra = '<text x="' + b.x.toFixed(1) + '" y="' + (y0 + b.h + 13).toFixed(1) + '" text-anchor="middle" ' +
+              'font-size="11" font-weight="600" fill="#b91c1c" ' + F + '>not “' + escHtml(res.got) + '”</text>';
+          }
+        }
+        s += '<g class="cm-blank" data-b="' + i + '" tabindex="' + (st.done ? '-1' : '0') + '" role="button" data-sf-enter="self" ' +
+          'aria-label="' + escHtml('Blank ' + (bi + 1) + ': ' + (placed != null ? st.bank[placed] : 'empty')) + '" ' +
+          'onclick="cmPick(' + i + ')" onkeydown="cmKey(event,' + i + ')">';
+      }
+      s += '<rect class="cm-box" x="' + x0.toFixed(1) + '" y="' + y0.toFixed(1) + '" width="' + b.w.toFixed(1) + '" height="' + b.h.toFixed(1) +
+        '" rx="10" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + (bi !== -1 && (st.active === i || (st.result && st.result[i])) ? 2.2 : 1.5) + '"' + dash + '/>';
+      var ly = b.y - (words.length - 1) * 8 + 4.5;
+      words.forEach(function (w, k) {
+        s += '<text x="' + b.x.toFixed(1) + '" y="' + (ly + k * 16).toFixed(1) + '" text-anchor="middle" font-size="13" ' +
+          'font-weight="' + wt + '" fill="' + ink + '" ' + F + '>' + escHtml(w) + '</text>';
+      });
+      if (bi !== -1) {
+        s += '<circle cx="' + (x0 + 3).toFixed(1) + '" cy="' + (y0 + 3).toFixed(1) + '" r="9" fill="#3563e9"/>' +
+          '<text x="' + (x0 + 3).toFixed(1) + '" y="' + (y0 + 7).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="800" fill="#ffffff" ' + F + '>' + (bi + 1) + '</text>' +
+          extra + '</g>';
+      }
+    }
+    return s + '</svg>';
+  }
+
+  function renderConceptMap(q, card) {
+    var m = cmModel(q);
+    var bank = m.blanks.map(function (b) { return m.nodes[b]; });
+    if (m.extra && bank.indexOf(m.extra) === -1) bank.push(m.extra);
+    /* Shuffled, but never in blank order - that would hand over the answer. */
+    var order = bank.map(function (x, i) { return i; }), h = nfHash(qText(q) + m.nodes.join('|'));
+    order.sort(function (a, b) { return ((a * 7 + h) % 11) - ((b * 7 + h) % 11); });
+    if (order.every(function (v, i) { return v === i; })) order.reverse();
+    bank = order.map(function (i) { return bank[i]; });
+    var w0 = nfFigWidth();
+    window._cmState = { q: q, m: m, bank: bank, placed: {}, used: {}, active: m.blanks[0], done: false,
+                        layout: cmLayout(m, w0), layoutW: w0 };
+    var body = nfMeta('Concept map', q) +
+      '<div class="q-text">' + escHtml(qText(q) || 'Complete the map.') + '</div>' +
+      '<div class="cm-help">Tap a blank, then the word that belongs there. Every arrow reads as a sentence.</div>' +
+      '<div class="cm-fig art-paper" id="cm-fig"></div>' +
+      '<div class="cm-bank" id="cm-bank" aria-label="Words to place"></div>' +
+      '<div class="nf-actions"><button class="fill-submit" id="cm-check-btn" onclick="cmCheck()" disabled>Check the map →</button></div>' +
+      nfHint(q.hint ? escHtml(q.hint) : 'Read each arrow out loud, from the box it leaves to the box it reaches.') +
+      '<div class="feedback-box" id="feedback-box"></div>';
+    setTimeout(cmPaint, 0);
+    return nfShell('Complete the map', body, card);
+  }
+
+  function cmPaint() {
+    var st = window._cmState, fig = document.getElementById('cm-fig'), bank = document.getElementById('cm-bank');
+    if (!st || !fig || !bank) return;
+    var hadFocus = document.activeElement && document.activeElement.getAttribute &&
+                   document.activeElement.getAttribute('data-b');
+    var mw = nfMeasured(fig);
+    if (mw && mw !== st.layoutW) { st.layout = cmLayout(st.m, mw); st.layoutW = mw; }
+    var svg = cmSvg(st);
+    fig.innerHTML = (typeof SFDiagramKit !== 'undefined' && SFDiagramKit.uniqIds) ? SFDiagramKit.uniqIds(svg) : svg;
+    bank.innerHTML = st.bank.map(function (w, i) {
+      return '<button type="button" class="cm-chip" ' + (st.used[i] || st.done ? 'disabled ' : '') +
+        'onclick="cmPlace(' + i + ')">' + escHtml(w) + '</button>';
+    }).join('');
+    var all = st.m.blanks.every(function (b) { return st.placed[b] != null; });
+    var cb = document.getElementById('cm-check-btn');
+    if (cb) cb.disabled = st.done || !all;
+    if (hadFocus && !st.done) {
+      var g = fig.querySelector('[data-b="' + (st.active != null ? st.active : hadFocus) + '"]');
+      if (g) try { g.focus({ preventScroll: true }); } catch (e) { g.focus(); }
+    }
+  }
+  /* Tap a blank: it becomes the one being filled, and gives back its word. */
+  function cmPick(b) {
+    var st = window._cmState;
+    if (!st || st.done) return;
+    if (st.placed[b] != null) { delete st.used[st.placed[b]]; delete st.placed[b]; }
+    st.active = b;
+    cmPaint();
+  }
+  function cmKey(ev, b) {
+    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); cmPick(b); }
+  }
+  /* Tap a word: it goes in the blank being filled, then the next empty one is up. */
+  function cmPlace(i) {
+    var st = window._cmState;
+    if (!st || st.done || st.used[i]) return;
+    var b = st.active;
+    if (b == null || st.m.blanks.indexOf(b) === -1) {
+      b = null;
+      st.m.blanks.forEach(function (x) { if (b == null && st.placed[x] == null) b = x; });
+      if (b == null) return;
+    }
+    if (st.placed[b] != null) delete st.used[st.placed[b]];
+    st.placed[b] = i;
+    st.used[i] = 1;
+    st.active = null;
+    st.m.blanks.forEach(function (x) { if (st.active == null && st.placed[x] == null) st.active = x; });
+    cmPaint();
+  }
+  /* The sentence a blank completes, for the feedback: "Photosynthesis makes glucose". */
+  function cmSentence(m, b) {
+    for (var i = 0; i < m.links.length; i++) {
+      var l = m.links[i];
+      if (l.from === b && m.blanks.indexOf(l.to) === -1) return m.nodes[b] + ' ' + l.label + ' ' + m.nodes[l.to];
+      if (l.to === b && m.blanks.indexOf(l.from) === -1) return m.nodes[l.from] + ' ' + l.label + ' ' + m.nodes[b];
+    }
+    return m.nodes[b];
+  }
+  function cmCheck() {
+    var st = window._cmState;
+    if (!st || st.done || currentAnswered) return;
+    if (!st.m.blanks.every(function (b) { return st.placed[b] != null; })) return;
+    st.done = true;
+    currentAnswered = true;
+    totalAnswered++;
+    st.result = {};
+    var right = 0, wrongSent = [], said = [];
+    st.m.blanks.forEach(function (b, k) {
+      var got = st.bank[st.placed[b]], ok = rcNorm(got) === rcNorm(st.m.nodes[b]);
+      st.result[b] = { ok: ok, got: got };
+      said.push((k + 1) + ' ' + got);
+      if (ok) right++; else wrongSent.push(cmSentence(st.m, b));
+    });
+    st.active = null;
+    cmPaint();
+    var all = right === st.m.blanks.length;
+    if (all) spawnConfetti();
+    var msg = all ? '' : right + ' of ' + st.m.blanks.length + ' in place. ' + wrongSent.join('. ') + '. ';
+    handleResult(all, escHtml(msg + fmStr(st.q.explanation)), said.join(', '));
+    enableNext();
+  }
+
+  /* ── WHOSRIGHT: three classmates, one right ─────────────────────────────
+     A concept cartoon (Keogh & Naylor 1999): the wrong answers are the
+     misconceptions learners really hold, said the way a classmate would say
+     them. Committing to one is the point - which is why it is pre-test
+     eligible. After the choice every bubble is answered with a REFUTATION:
+     what is wrong with it and what is actually true. Refutation texts beat
+     plain expository ones for conceptual change across subjects (Schroeder &
+     Kucera 2022), and elaborated feedback beats being told the right answer
+     (Van der Kleij et al. 2015: .49 vs .32). The confidence tap stays: high-
+     confidence errors are the ones feedback corrects best (hypercorrection,
+     Butterfield & Metcalfe 2001). */
+  var WHO_NAMES = ['Maya', 'Kai', 'Leo', 'Priya', 'Sam', 'Noa', 'Ana', 'Jin', 'Zoe', 'Omar', 'Theo', 'Ravi', 'Elena', 'Hana'];
+  function whoModel(q) {
+    if (!q || !qText(q).trim()) return null;
+    var claims = nfArr(q.claims).filter(function (c) { return c && fmStr(c.says).trim(); }).map(function (c) {
+      return { says: fmStr(c.says).replace(/\s+/g, ' ').trim(), right: c.right === true || c.right === 'true', why: fmStr(c.why).trim() };
+    });
+    var rights = claims.filter(function (c) { return c.right; }).length;
+    return claims.length >= 2 && rights === 1 ? claims : null;
+  }
+  /* Names come from the app, never the model: one per claim, every initial
+     different, the same names every time the question is shown. */
+  function wrNames(q) {
+    var n = nfArr(q && q.claims).length, start = nfHash(q && q.question) % WHO_NAMES.length, out = [], i;
+    for (i = 0; i < n; i++) out.push(WHO_NAMES[(start + i * 5) % WHO_NAMES.length]);
+    return out;
+  }
+  function confidenceRowHtml() {
+    return '<div class="confidence-row" id="confidence-row">' +
+      '<span class="confidence-label">How confident?</span>' +
+      '<button class="conf-btn sure" onclick="setConfidence(\'sure\',this)">' +
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+      ' Sure</button>' +
+      '<button class="conf-btn unsure" onclick="setConfidence(\'unsure\',this)">' +
+      '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
+      ' Not sure</button>' +
+      '</div>';
+  }
+
+  function renderWhosRight(q, card) {
+    var claims = whoModel(q), names = wrNames({ question: q.question, claims: claims });
+    /* Shown starting from a claim picked by the question, so the right one
+       is not always first however the model ordered them. */
+    var rot = nfHash(q.question + '|order') % claims.length, order = [], i;
+    for (i = 0; i < claims.length; i++) order.push((rot + i) % claims.length);
+    window._whoState = { q: q, claims: claims, names: names, done: false };
+    var count = ['', '', 'Two', 'Three', 'Four'][claims.length] || String(claims.length);
+    var list = order.map(function (ci, pos) {
+      return '<button type="button" class="who-say" id="who-' + ci + '" onclick="whoPick(' + ci + ')" ' +
+        'aria-label="' + escHtml('I agree with ' + names[ci] + ': ' + claims[ci].says) + '">' +
+        '<span class="who-av' + (pos % 2 ? ' is-alt' : '') + '" aria-hidden="true">' + names[ci].charAt(0) + '</span>' +
+        '<span class="who-bub"><span class="who-name">' + names[ci] + '</span>' +
+        '<span class="who-txt">' + escHtml(claims[ci].says) + '</span>' +
+        '<span class="who-why" id="who-why-' + ci + '" hidden></span></span></button>';
+    }).join('');
+    var body = nfMeta('Who’s right?', q) +
+      '<div class="q-text">' + escHtml(qText(q)) + '</div>' +
+      '<div class="nf-sub">' + count + ' classmates answered. Who do you agree with?</div>' +
+      '<div class="who-list">' + list + '</div>' +
+      confidenceRowHtml() +
+      nfHint(q.hint ? escHtml(q.hint) : 'Test each answer against what the lesson said - does it explain everything?') +
+      '<div class="feedback-box" id="feedback-box"></div>';
+    return nfShell('Who’s right?', body, card);
+  }
+
+  function whoPick(ci) {
+    var st = window._whoState;
+    if (!st || st.done || currentAnswered) return;
+    st.done = true;
+    currentAnswered = true;
+    totalAnswered++;
+    var rightIdx = -1, i;
+    for (i = 0; i < st.claims.length; i++) if (st.claims[i].right) rightIdx = i;
+    var ok = ci === rightIdx;
+    for (i = 0; i < st.claims.length; i++) {
+      var b = document.getElementById('who-' + i), w = document.getElementById('who-why-' + i), c = st.claims[i];
+      if (!b) continue;
+      b.disabled = true;
+      b.classList.add(c.right ? 'is-right' : (i === ci ? 'is-wrong' : 'is-other'));
+      if (i === ci) b.classList.add('is-picked');
+      if (w) {
+        w.innerHTML = '<span class="who-tag">' + (c.right ? '✓ Right' : '✗ Not quite') + '</span>' +
+          escHtml(c.why || (c.right ? fmStr(st.q.explanation) : ''));
+        w.hidden = false;
+      }
+    }
+    if (ok) spawnConfetti();
+    var msg = ok ? '' : st.names[rightIdx] + ' is right. ';
+    handleResult(ok, escHtml(msg + fmStr(st.q.explanation)), st.names[ci] + ': ' + st.claims[ci].says);
+    enableNext();
+  }
+
+  /* ── READCHART: read the chart ──────────────────────────────────────────
+     Graph comprehension runs in levels - read the data, read BETWEEN the
+     data (compare, find the extreme), read BEYOND it (predict) and behind it
+     (explain with what you know) - and school students mostly stop at the
+     first: about a third or fewer answered the higher levels in one ninth-
+     grade study (Friel, Curcio & Bright 2001; Glazer 2011 review). Part A is
+     a tap on the data itself (between); Part B is what the pattern means in
+     this subject (beyond/behind), shown only once Part A is answered, as
+     twopart does. Credit needs both. One series, one hue; drawn 1:1 at the
+     card's width on paper. Example data says it is example data. */
+  function rchModel(q) {
+    var ch = q && q.chart;
+    if (!ch) return null;
+    var pts = nfArr(ch.points).filter(function (p) { return p && fmStr(p.label).trim() && isFinite(parseFloat(p.value)); })
+      .map(function (p) { return { label: fmStr(p.label).trim(), value: parseFloat(p.value) }; });
+    if (pts.length < 2) return null;
+    var fi = parseInt(q.findIndex, 10), hasA = !!fmStr(q.find).trim() && fi >= 0 && fi < pts.length;
+    var opts = nfArr(q.options).map(fmStr), ci = parseInt(q.correctIndex, 10);
+    var hasB = !!fmStr(q.question).trim() && opts.filter(Boolean).length >= 2 && ci >= 0 && ci < opts.length && !!opts[ci];
+    if (!hasA && !hasB) return null;
+    return { kind: ch.kind === 'line' ? 'line' : 'bar', title: fmStr(ch.title).trim(), x: fmStr(ch.x).trim(), y: fmStr(ch.y).trim(),
+             unit: fmStr(ch.unit).trim(), example: ch.data === 'example', points: pts,
+             find: hasA ? fmStr(q.find).trim() : '', findIndex: hasA ? fi : -1,
+             question: hasB ? fmStr(q.question).trim() : '', options: hasB ? opts : [], correctIndex: hasB ? ci : -1 };
+  }
+  /* A tick step of 1, 2 or 5 times a power of ten. */
+  function rchStep(range, ticks) {
+    var raw = range / Math.max(1, ticks), p = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10)), f = raw / p;
+    return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+  }
+  function rchFmt(v) {
+    var r = Math.round(v * 100) / 100;
+    return Math.abs(r) >= 1000 ? String(Math.round(r)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : String(r);
+  }
+  function rchSvg(st) {
+    var m = st.m, W = st.W, pts = m.points, n = pts.length, i, s = '';
+    var F = 'font-family="DM Sans, system-ui, sans-serif"';
+    var vals = pts.map(function (p) { return p.value; });
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    if (m.kind === 'bar') { lo = Math.min(0, lo); hi = Math.max(0, hi); }
+    else { var padV = (hi - lo) * 0.12 || 1; lo -= padV; hi += padV; if (Math.min.apply(null, vals) >= 0 && lo < 0) lo = 0; }
+    var step = rchStep(hi - lo, 4), y0 = Math.floor(lo / step) * step, y1 = Math.ceil(hi / step) * step;
+    if (y1 === y0) y1 = y0 + step;
+    var ticks = [];
+    for (var t = y0; t <= y1 + step / 2; t += step) ticks.push(Math.round(t / step) * step);
+    var tickW = 0;
+    ticks.forEach(function (v) { tickW = Math.max(tickW, rchFmt(v).length); });
+    var left = 14 + tickW * 7, right = 10, top = 24, H = Math.round(Math.max(190, Math.min(280, W * 0.62)));
+    var slot = (W - left - right) / n, labChars = Math.max(3, Math.floor((slot - 4) / 6.4));
+    var xl = pts.map(function (p) {
+      var lines = cmWrap(p.label, labChars);
+      if (lines.length > 2) lines = [lines[0], lines.slice(1).join(' ')];
+      return lines.map(function (l) { return l.length > labChars + 2 ? l.slice(0, labChars) + '…' : l; });
+    });
+    var xlLines = 1;
+    xl.forEach(function (l) { xlLines = Math.max(xlLines, l.length); });
+    var bottom = 10 + xlLines * 14 + (m.x ? 18 : 0), plotH = H - top - bottom;
+    function Y(v) { return top + plotH * (1 - (v - y0) / (y1 - y0)); }
+    function X(k) { return left + slot * (k + 0.5); }
+    var yLab = (m.y || '') + (m.unit ? ' (' + m.unit + ')' : '');
+    if (yLab) s += '<text x="' + left + '" y="14" font-size="11.5" font-weight="700" fill="#6b7280" ' + F + '>' + escHtml(yLab) + '</text>';
+    ticks.forEach(function (v) {
+      var y = Y(v).toFixed(1);
+      s += '<line x1="' + left + '" x2="' + (W - right) + '" y1="' + y + '" y2="' + y + '" stroke="' + (v === 0 ? '#94a3b8' : '#e5e9f2') + '" stroke-width="1"/>' +
+        '<text x="' + (left - 6) + '" y="' + (+y + 4) + '" text-anchor="end" font-size="11" fill="#6b7280" ' + F + '>' + rchFmt(v) + '</text>';
+    });
+    /* Bars grow from zero, or from the axis edge nearest zero. */
+    var base = Y(0 < y0 ? y0 : (0 > y1 ? y1 : 0));
+    var res = st.a, chosen = res ? res.pick : -1, want = m.findIndex;
+    function stateOf(k) {
+      if (!res) return 'idle';
+      if (k === want) return 'want';
+      if (k === chosen) return 'wrong';
+      return 'dim';
+    }
+    if (m.kind === 'line') {
+      var dPath = pts.map(function (p, k) { return (k ? 'L' : 'M') + X(k).toFixed(1) + ' ' + Y(p.value).toFixed(1); }).join(' ');
+      s += '<path d="' + dPath + '" fill="none" stroke="#4a7cf6" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>';
+    }
+    for (i = 0; i < n; i++) {
+      var v = pts[i].value, x = X(i), y = Y(v), state = stateOf(i), tappable = st.partA && !res;
+      var fill = '#4a7cf6', op = state === 'dim' ? 0.45 : 1, ring = '';
+      if (state === 'want') fill = '#10b981';
+      if (state === 'wrong') fill = '#ef4444';
+      s += '<g class="rch-bar" data-i="' + i + '"' + (tappable ? ' tabindex="0" role="button" data-sf-enter="self" onclick="rchTap(' + i + ')" ' +
+        'onkeydown="rchKey(event,' + i + ')" aria-label="' + escHtml(pts[i].label + ': ' + rchFmt(v) + (m.unit ? ' ' + m.unit : '')) + '"' : '') + '>';
+      s += '<rect class="rch-hit" x="' + (x - slot / 2 + 1).toFixed(1) + '" y="' + top + '" width="' + (slot - 2).toFixed(1) + '" height="' + plotH.toFixed(1) +
+        '" fill="transparent" stroke="none" rx="6"/>';
+      if (m.kind === 'bar') {
+        var bw = Math.min(slot * 0.62, 56), yTop = Math.min(y, base), hgt = Math.max(1.5, Math.abs(base - y));
+        s += '<rect x="' + (x - bw / 2).toFixed(1) + '" y="' + yTop.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + hgt.toFixed(1) +
+          '" rx="3" fill="' + fill + '" opacity="' + op + '"/>';
+      } else {
+        s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (state === 'want' || state === 'wrong' ? 7 : 5.5) +
+          '" fill="' + (state === 'idle' || state === 'dim' ? '#ffffff' : fill) + '" stroke="' + fill + '" stroke-width="2.4" opacity="' + op + '"/>';
+      }
+      if (state === 'want' || state === 'wrong') {
+        s += '<text x="' + x.toFixed(1) + '" y="' + ((m.kind === 'bar' ? Math.min(y, base) : y) - (m.kind === 'bar' ? 8 : 12)).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="800" ' +
+          'fill="' + (state === 'want' ? '#047857' : '#b91c1c') + '" ' + F + '>' + rchFmt(v) + '</text>';
+      }
+      s += '</g>';
+      xl[i].forEach(function (line, k) {
+        s += '<text x="' + x.toFixed(1) + '" y="' + (top + plotH + 16 + k * 14).toFixed(1) + '" text-anchor="middle" font-size="11.5" ' +
+          'font-weight="' + (state === 'want' ? '800' : '600') + '" fill="#334155" ' + F + '>' + escHtml(line) + '</text>';
+      });
+    }
+    if (m.x) s += '<text x="' + ((left + W - right) / 2).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="11.5" ' +
+      'font-weight="700" fill="#6b7280" ' + F + '>' + escHtml(m.x) + '</text>';
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" role="img" aria-label="' + escHtml((m.title || 'Chart') + ', ' + (m.kind === 'line' ? 'line chart' : 'bar chart')) + '">' + s + '</svg>';
+  }
+
+  function renderReadChart(q, card) {
+    var m = rchModel(q);
+    window._rchState = { q: q, m: m, W: nfFigWidth(), partA: m.findIndex >= 0, a: null, b: null, done: false };
+    var opts = '';
+    if (m.question) {
+      opts = '<div class="q-options">' + m.options.map(function (o, i) {
+        return o ? '<button class="q-option" data-i="' + i + '" onclick="rchChoose(' + i + ',this)"><span class="opt-letter">' +
+          String.fromCharCode(65 + i) + '</span><span>' + escHtml(o) + '</span></button>' : '';
+      }).join('') + '</div>';
+    }
+    var partA = m.findIndex >= 0;
+    var body = nfMeta('Read the chart', q) +
+      '<div class="rch-fig art-paper">' + (m.title ? '<div class="rch-title">' + escHtml(m.title) + '</div>' : '') +
+      '<div id="rch-svg"></div>' +
+      (m.example ? '<div class="rch-src">Example data — shaped like the real thing, not taken from your notes.</div>' : '') + '</div>' +
+      (partA ? '<div class="rch-part">' + (m.question ? 'Part A' : 'Find it') + '</div>' +
+               '<div class="q-text">' + escHtml(m.find) + '</div>' +
+               '<div class="nf-sub">Tap it on the chart.</div>' : '') +
+      (m.question ? '<div class="rch-b" id="rch-b"' + (partA ? ' hidden' : '') + '>' +
+        (partA ? '<div class="rch-part">Part B</div>' : '') +
+        '<div class="q-text">' + escHtml(m.question) + '</div>' + opts + '</div>' : '') +
+      nfHint(q.hint ? escHtml(q.hint) : 'Read the axes first: what is measured, and in what units?') +
+      '<div class="feedback-box" id="feedback-box"></div>';
+    setTimeout(rchPaint, 0);
+    return nfShell('Read the chart', body, card);
+  }
+  function rchPaint() {
+    var st = window._rchState, el = document.getElementById('rch-svg');
+    if (!st || !el) return;
+    var mw = nfMeasured(el);
+    if (mw) st.W = mw;
+    el.innerHTML = rchSvg(st);
+  }
+  function rchKey(ev, i) {
+    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); rchTap(i); }
+  }
+  function rchTap(i) {
+    var st = window._rchState;
+    if (!st || !st.partA || st.a || st.done || currentAnswered) return;
+    st.a = { pick: i, ok: i === st.m.findIndex };
+    rchPaint();
+    if (st.m.question) {
+      var b = document.getElementById('rch-b');
+      if (b) { b.hidden = false; try { b.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {} }
+    } else rchFinish();
+  }
+  function rchChoose(i, el) {
+    var st = window._rchState;
+    if (!st || st.done || currentAnswered || (st.partA && !st.a)) return;
+    st.b = { pick: i, ok: i === st.m.correctIndex };
+    var btns = document.querySelectorAll('#rch-b .q-option'), k;
+    for (k = 0; k < btns.length; k++) {
+      btns[k].disabled = true;
+      var idx = +btns[k].getAttribute('data-i');
+      if (idx === st.m.correctIndex) btns[k].classList.add('correct-ans');
+      else if (idx === i) btns[k].classList.add('wrong-ans');
+      else btns[k].classList.add('dimmed');
+    }
+    rchFinish(el);
+  }
+  function rchFinish() {
+    var st = window._rchState;
+    if (!st || st.done) return;
+    st.done = true;
+    currentAnswered = true;
+    totalAnswered++;
+    var m = st.m, aOk = !st.partA || (st.a && st.a.ok), bOk = !m.question || (st.b && st.b.ok), ok = aOk && bOk;
+    var want = m.findIndex >= 0 ? m.points[m.findIndex] : null, said = [];
+    if (st.a) said.push(m.points[st.a.pick].label);
+    if (st.b) said.push(m.options[st.b.pick]);
+    var msg = '';
+    if (st.partA && !aOk) msg += (m.question ? 'Part A: it was ' : 'It was ') + want.label + ' (' + rchFmt(want.value) + (m.unit ? ' ' + m.unit : '') + '). ';
+    if (m.question && st.partA && aOk && !bOk) msg += 'Part A was right; Part B was not. ';
+    if (ok) spawnConfetti();
+    handleResult(ok, escHtml(msg + fmStr(st.q.explanation)), said.join(' — ') || '—');
     enableNext();
   }
 
@@ -10242,6 +11481,31 @@
     var t = fmStr(q.type).toLowerCase();
     function pick(arr, f) { return (Object.prototype.toString.call(arr) === '[object Array]' ? arr : []).map(f).filter(Boolean); }
     if (t === 'truefalse') return fmStr(q.correct);
+    /* The five formats of Oct 2026 come before the generic options line: a
+       chart's Part B has options, and its Part A answer would be lost. */
+    if (t === 'recall') {
+      var ri = pick(q.items, function (x) { return rcAlts(x)[0]; }), rn = rcNeed(q, ri.length);
+      return (rn < ri.length ? 'any ' + rn + ' of: ' : '') + ri.join(', ');
+    }
+    if (t === 'selfcheck') return fmStr(q.modelAnswer) || pick(q.ideas, fmStr).join('; ');
+    if (t === 'conceptmap') {
+      var cmm = cmModel(q);
+      return cmm ? cmm.blanks.map(function (b, k) { return (k + 1) + ' ' + cmm.nodes[b]; }).join(', ') : '';
+    }
+    if (t === 'whosright') {
+      var wm = whoModel(q);
+      if (!wm) return '';
+      var wn = wrNames({ question: q.question, claims: wm });
+      for (var wi = 0; wi < wm.length; wi++) if (wm[wi].right) return wn[wi] + ': ' + wm[wi].says;
+      return '';
+    }
+    if (t === 'readchart') {
+      var rm = rchModel(q), bits = [];
+      if (!rm) return '';
+      if (rm.findIndex >= 0) bits.push(rm.points[rm.findIndex].label);
+      if (rm.question) bits.push(rm.options[rm.correctIndex]);
+      return bits.join(' \u2014 ');
+    }
     if (q.options && typeof q.correctIndex === 'number') return fmStr(q.options[q.correctIndex]);
     if (t === 'labeldiagram') return pick(q.pins, function (p, i) { return p && p.answer ? (i + 1) + ' ' + p.answer : ''; }).join(', ');
     if (t === 'matchpairs') return pick(q.pairs, function (p) { return p && p.left ? p.left + ' → ' + p.right : ''; }).join('; ');
@@ -10258,7 +11522,7 @@
     /* Escaped: "Your answer" is what the learner TYPED, since the fill-in
        and estimate graders started reporting it. */
     return '<div class="wrong-item">' +
-      '<div class="wi-q">' + (q.question || 'Question') +
+      '<div class="wi-q">' + (q.question || (q.find ? escHtml(q.find) : 'Question')) +
         (item.times > 1 ? ' <span class="wi-times">missed ' + item.times + '×</span>' : '') + '</div>' +
       (item.userAns ? '<div class="wi-yours">Your answer: ' + escHtml(item.userAns) + '</div>' : '') +
       '<div class="wi-correct">Correct: ' + escHtml(correctAns) + '</div>' +
@@ -10382,7 +11646,11 @@
         ordering: 'sequence', order: 'sequence', sortable: 'sequence',
         matching: 'match', categorise: 'classify', categorize: 'classify',
         wordproblem: 'wordproblem', bigequation: 'bigequation',
-        errorspot: 'errorspot', reading: 'passage'
+        errorspot: 'errorspot', reading: 'passage',
+        "who'sright": 'whosright', whoisright: 'whosright', conceptcartoon: 'whosright',
+        freerecall: 'recall', listrecall: 'recall', namethemall: 'recall',
+        explainandcheck: 'selfcheck', selfexplain: 'selfcheck',
+        readthechart: 'readchart', chart: 'readchart', graphreading: 'readchart'
       };
       q.type = TYPE_ALIAS[t] || t;
     }
@@ -19686,6 +20954,74 @@ var SFBoard = (function () {
       if (derived) {
         return { type: 'worked', title: title, kicker: 'Worked through',
                  problem: clean(q.equation), items: derived, quantitative: true };
+      }
+    }
+
+    /* The five formats of Oct 2026, each walked through in its own shape -
+       before the calculation sniff below, which a chart's figures could trip.
+       Every walk has a row whose label says "answer", so picWalkRows does
+       not add a second one. */
+    if (type === 'whosright') {
+      var wcl = list(q.claims).filter(function (c) { return c && clean(c.says); });
+      var wnm = typeof window.wrNames === 'function' ? window.wrNames({ question: q.question, claims: wcl }) : [];
+      var wit = [];
+      if (clean(q.question)) wit.push({ label: 'The question', detail: clean(q.question) });
+      for (i = 0; i < wcl.length; i++) {
+        var isRight = wcl[i].right === true || wcl[i].right === 'true';
+        wit.push({ label: (wnm[i] || 'Classmate ' + (i + 1)) + (isRight ? ' — the right answer' : ' — not quite'),
+                   detail: clean(wcl[i].says) + (clean(wcl[i].why) ? ' → ' + clean(wcl[i].why) : '') });
+      }
+      if (wit.length >= 3) return { type: 'steps', title: title + ' — who was right', items: wit };
+    }
+    if (type === 'recall') {
+      var rit = list(q.items).map(function (x) { return clean(String(x).split('/')[0]); }).filter(Boolean);
+      if (rit.length >= 2) {
+        var rw = [];
+        if (clean(q.question)) rw.push({ label: 'What was asked', detail: clean(q.question) });
+        rw.push({ label: 'The answer', detail: rit.join(', ') });
+        if (clean(q.explanation)) rw.push({ label: 'Why these', detail: clean(q.explanation) });
+        return { type: 'steps', title: title, items: rw };
+      }
+    }
+    if (type === 'selfcheck') {
+      var ids = list(q.ideas).map(clean).filter(Boolean);
+      if (ids.length >= 2) {
+        var sw = [];
+        if (clean(q.question)) sw.push({ label: 'What was asked', detail: clean(q.question) });
+        for (i = 0; i < ids.length; i++) sw.push({ label: 'Idea ' + (i + 1), detail: ids[i] });
+        sw.push({ label: 'The full answer', detail: clean(q.modelAnswer) || ids.join('; ') });
+        return { type: 'steps', title: title, items: sw };
+      }
+    }
+    if (type === 'conceptmap') {
+      var cn = list(q.nodes).map(clean), cl = list(q.links), cb = list(q.blanks).map(Number);
+      if (cn.length >= 3 && cb.length) {
+        var cw = [{ label: 'The map', detail: 'Every idea here links to ' + cn[0] + '.' }];
+        for (i = 0; i < cb.length; i++) {
+          var bn = cb[i], sent = '', k;
+          for (k = 0; k < cl.length && !sent; k++) {
+            var lk = cl[k] || {};
+            if (+lk.from === bn && cb.indexOf(+lk.to) === -1 && cn[+lk.to]) sent = cn[bn] + ' ' + clean(lk.label) + ' ' + cn[+lk.to] + '.';
+            else if (+lk.to === bn && cb.indexOf(+lk.from) === -1 && cn[+lk.from]) sent = cn[+lk.from] + ' ' + clean(lk.label) + ' ' + cn[bn] + '.';
+          }
+          if (cn[bn]) cw.push({ label: 'The answer for blank ' + (i + 1), detail: sent || cn[bn] });
+        }
+        if (clean(q.explanation)) cw.push({ label: 'Why', detail: clean(q.explanation) });
+        return { type: 'steps', title: title + ' — the map, link by link', items: cw };
+      }
+    }
+    if (type === 'readchart') {
+      var chd = q.chart || {}, cpts = list(chd.points), unit = clean(chd.unit), rcw = [];
+      if (cpts.length >= 2) {
+        rcw.push({ label: 'The chart', detail: (clean(chd.title) ? clean(chd.title) + ': ' : '') +
+          cpts.slice(0, 8).map(function (p) { return clean(p && p.label) + ' ' + (p ? p.value : '') + (unit ? ' ' + unit : ''); }).join(', ') });
+        var fi = parseInt(q.findIndex, 10);
+        if (clean(q.find) && fi >= 0 && cpts[fi]) rcw.push({ label: 'Part A — the answer', detail: clean(q.find) + ' → ' + clean(cpts[fi].label) });
+        if (clean(q.question) && list(q.options).length && typeof q.correctIndex === 'number' && q.options[q.correctIndex]) {
+          rcw.push({ label: 'Part B — the answer', detail: clean(q.options[q.correctIndex]) });
+        }
+        if (clean(q.explanation)) rcw.push({ label: 'Why', detail: clean(q.explanation) });
+        if (rcw.length >= 2) return { type: 'steps', title: title + ' — reading the chart', items: rcw };
       }
     }
 
