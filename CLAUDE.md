@@ -29,7 +29,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `login.html` | ~57 KB | Sign in, sign up, password reset. Firebase Auth (module script), one form for all three |
 | `app.html` | ~292 KB | Plan builder: the lesson upload, one question per screen, then generation. Subject detection, AI prompt, question schemas, validators |
 | `lesson.html` | ~590 KB | The session runtime. Card queue, all question renderers, the whiteboard |
-| `dashboard.html` | ~101 KB | Plan list and progress |
+| `dashboard.html` | ~150 KB | Plan list and progress. Redesigned Oct 2026 - see "The dashboard" |
 | `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
 | `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
 | `sf-auth.js` | ~5 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html` — see "The classroom" |
@@ -2672,6 +2672,48 @@ active day.
 **Setup on a new deployment:** Firebase console → Project settings → Service
 accounts → Generate new private key; paste the whole JSON into Vercel as
 `FIREBASE_SERVICE_ACCOUNT`; publish `firestore.rules` in Firestore → Rules.
+
+## The dashboard (`dashboard.html`) — redesigned Oct 2026
+
+Built on the `apple-design` skill: one primary action, springs, materials.
+No sidebar any more. Top to bottom: greeting and the plan's name (a button -
+it opens the plan switcher), the **Up next** hero, the **day-by-day path**,
+and a side column of At a glance / Scores / Calendar / reminder / invite.
+
+- **The hero says only what the session will really do.** "Opens with N you
+  missed last time" reads `studyflow_missed_day_<i-1>`, which is what
+  `buildQueue` actually opens with; "Resume Day N" only when
+  `studyflow_timer_day` + `studyflow_seconds_left` say a session is open.
+  The old "N questions due for spaced review" was dropped: nothing in the
+  lesson reads SM-2 due dates (`getDueQuestions` has no caller).
+- **Session length is real.** The segmented control writes
+  `studyflow_minutes`, which sets the lesson's timer, and the timer ends the
+  session. The old time modal did this and was never opened.
+- **Springs.** The head script samples a damped spring (damping ratio +
+  response, Apple's parameters) into CSS `linear()` as `--spring*` and
+  `--spring*-ms`; `SFSpring` runs the same maths in JS for anything a finger
+  moves (the phone sheet: 1:1 drag, rubber-band, momentum projection,
+  velocity handed to the settle spring). Content swaps run on a **timer**,
+  never on an animation's `finish` - a background tab runs no frames, and a
+  swap waiting on one never happened.
+- **Deleting a plan has Undo, not a confirm box.** The plan is looked up by
+  id when the row has collapsed; capturing its index first meant a second
+  quick delete removed nothing.
+- **A lost score is repaired on load** (`reconcileActiveCopy`): the results
+  screen writes the score only into `studyflow_plan` until "Back to
+  dashboard" is tapped. Completion and score are copied over; a score is
+  never overwritten.
+- The streak is alive until a full day is missed (it read 0 every morning),
+  shows the longest run, and the mark is the monochrome flame. Scores are
+  one blue with the latest bar solid; the calendar's exam day is a square
+  among circles so it reads without colour. **No warm hue anywhere** -
+  checked by scanning computed colours in both themes, not by grepping.
+- The teacher's assignment banner sits OUTSIDE the plan view: inside it, a
+  student who had joined a class but built no plan never saw it. "Join a
+  class" is in the account menu and on the empty page (its old button id
+  pointed at nothing).
+- **The browser pane throttles animation frames while hidden**, so
+  screenshots catch count-ups mid-way. Check values in JS after waiting.
 
 ## The teach-it-back card
 
