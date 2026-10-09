@@ -24,6 +24,7 @@
     ['review_change', 'REVIEW CHANGE OK', S + 'test_review_change.js'],
     ['mix', 'MIX OK', S + 'test_mix.js'],
     ['visuals', 'VISUALS OK', S + 'test_visuals.js'],
+    ['eqcard', 'EQCARD OK', S + 'test_eqcard.js'],
     ['language', 'LANGUAGE OK', S + 'test_language.js'],
     ['languages', 'LANGUAGES OK', S + 'test_languages.js'],
     ['history', 'HISTORY OK', S + 'test_history.js'],

@@ -99,6 +99,20 @@ the fonts or the no-build-step stack.
   `.sel-wrong`, never inline pastels - inline `#fef2f2` with `--ink` text was
   unreadable in dark mode on the labelling, matching, trace-table, highlight
   and estimate cards.
+- **The equation card says each thing once** (`renderBigEquation`,
+  `mxSplit`, `.mx-panel`, Oct 2026, by the `apple-design` skill). It put
+  "Evaluate: 2x + 5 when x = 4" in the header AND in a 2.4rem Georgia-bold
+  box that wrapped to two lines, with an instruction line repeating the
+  header and an "x = ?" box on a question with nothing to solve. Now: the
+  header is the instruction ("Evaluate", "Solve for y"), the panel is the
+  maths in the body font at weight 500 with tight tracking, sized down for
+  long expressions so it stays on one line at 320px, and a given value
+  ("when x = 4") sits under it, muted. The placeholder asks for what the
+  question asks for, an answer with letters gets a keyboard with letters,
+  the calculus rules live in the hint, and every model string is escaped
+  (the header and the panel were raw). One panel style for every shape -
+  columns, division, fractions, functions - not one look per shape.
+  `test_eqcard.js` covers it.
 - **"Let's slow down a bit" is a moment, not a banner that stays.** It shows at
   the third miss in a row (then every third), is gone on the next card, never
   counts the pre-test (missing it is what it is for), and closing it is final.

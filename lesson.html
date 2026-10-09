@@ -198,6 +198,41 @@
 
   .card-body { padding:1.6rem 2rem; }
 
+  /* THE MATHS PANEL (renderBigEquation). One quiet panel for every equation
+     card: a hairline, not a 2px border; the body font at weight 500, not
+     Georgia bold; display type tracked in (large type reads loose), sized
+     down for longer expressions so they stay on one line on a phone; the
+     given value ("when x = 4") a muted line under the maths, never part of
+     it. */
+  .mx-panel { background:var(--soft); border:1px solid var(--border); border-radius:16px; padding:1.45rem 1rem 1.3rem; margin:.1rem 0 1rem; text-align:center; }
+  .mx-expr { font-family:var(--sans); font-weight:500; font-size:2rem; line-height:1.15; letter-spacing:-0.02em; color:var(--ink); font-variant-numeric:tabular-nums lining-nums; overflow-wrap:anywhere; }
+  .mx-expr.mx-mid { font-size:1.7rem; }
+  .mx-expr.mx-long { font-size:1.35rem; letter-spacing:-0.01em; }
+  .mx-expr sup { font-size:.58em; line-height:0; }
+  .mx-cond { margin-top:.45rem; font-size:.92rem; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .mx-stack { display:inline-grid; justify-items:end; font-family:var(--sans); font-weight:500; font-size:1.85rem; line-height:1.22; letter-spacing:-0.01em; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .mx-op { color:var(--muted); font-weight:500; }
+  .mx-stack .mx-op { margin-right:.45rem; }
+  .mx-rule { justify-self:stretch; border-top:2px solid var(--ink); margin:.3rem 0 .15rem; }
+  .mx-q { color:var(--blue); }
+  .mx-div { color:var(--muted); margin-right:.12em; }
+  .mx-bracket { border-left:2px solid var(--ink); border-top:2px solid var(--ink); border-top-left-radius:.4em; padding:.04em .35em 0 .4em; }
+  .mx-fracs { display:inline-flex; align-items:center; gap:.55rem; }
+  .mx-frac { display:inline-flex; flex-direction:column; align-items:center; line-height:1.1; }
+  .mx-frac span:first-child { border-bottom:2px solid var(--ink); padding:0 .25em .08em; }
+  .mx-frac span:last-child { padding-top:.08em; }
+  .mx-prose { margin:.1rem 0 1rem; }
+  .mx-cond-inline { color:var(--muted); }
+  /* --soft is darker than the card in dark mode; the panel would read as a hole. */
+  body.dark .mx-panel { background:#1c2234; border-color:#2a3150; }
+  @media (max-width:480px) {
+    .mx-panel { padding:1.2rem .85rem 1.1rem; }
+    .mx-expr { font-size:1.65rem; }
+    .mx-expr.mx-mid { font-size:1.4rem; }
+    .mx-expr.mx-long { font-size:1.15rem; }
+    .mx-stack { font-size:1.6rem; }
+  }
+
   /* CONTENT */
   .content-text { font-size:0.95rem; color:var(--ink); line-height:1.85; font-weight:300; }
   .content-text p { margin-bottom:.85rem; }
@@ -6800,35 +6835,54 @@
       topic.placeholder = solveVar + ' = ?';
       if (topic.instruction) topic.instruction = topic.instruction.replace(/\bfor x\b/gi, 'for ' + solveVar);
     }
-    // If the AI wrote its own question text (e.g. "Solve for y"), show THAT as the
-    // card title instead of the generic detector title — it is always more accurate.
-    if (q.question && q.question.trim().length > 3 && q.question.trim().length < 60) {
-      topic.title = q.question.trim();
+    /* The card used to say everything twice. The question went into the
+       header AND into the big box ("Evaluate: 2x + 5 when x = 4", in 2.4rem
+       Georgia bold, wrapping to two lines), with an instruction line between
+       them that repeated the header in other words, and an "x = ?" answer box
+       on a question with nothing to solve for. Now each thing is said once:
+       the header is the instruction ("Evaluate"), the panel is the maths
+       ("2x + 5", with "when x = 4" under it), and the box asks for what the
+       question asks for. */
+    var parts = mxSplit(q.question, eq);
+    if (parts.verb) topic.title = parts.verb;
+    else if (/^solve for [a-z]$/i.test(topic.title) && parts.expr && parts.expr.indexOf('=') === -1) {
+      /* No equals sign, nothing to solve: an expression is evaluated when a
+         value is given for its letter, and simplified otherwise. */
+      topic.title = parts.cond ? 'Evaluate' : 'Simplify';
+    }
+    var placeholder = 'Your answer';
+    var solveM = /^solve(?:\s+for\s+([a-z]))?/i.exec(topic.title);
+    if (solveM && parts.expr.indexOf('=') !== -1) placeholder = (solveM[1] || solveVar || 'x').toLowerCase() + ' = ?';
+    else if (topic.id === 'geometry') placeholder = 'Answer, with units';
+    else if (topic.id === 'fraction') placeholder = 'Answer as a fraction';
+    else if (/^find\s+([fgh]\(-?[\d.]+\))$/i.test(parts.cond)) placeholder = /^find\s+(.+)$/i.exec(parts.cond)[1] + ' = ?';
+    /* A simplified expression has letters in it ("2x + 12"); the decimal
+       keypad a phone opens for inputmode="decimal" has none. */
+    var inputMode = /[a-z]/i.test(String(ans)) ? 'text' : 'decimal';
+    /* The calculus rules sat in the panel, in the learner's way, before they
+       had tried anything. They are help, so they live with the help. */
+    if (topic.id === 'calculus' && hint.indexOf('Power rule') === -1) {
+      hint += ' Power rule: d/dx[xⁿ] = nxⁿ⁻¹. Chain rule: d/dx[f(g(x))] = f′(g(x))·g′(x).';
     }
 
-    var visual = buildMathVisual(topic, eq, q);
-    /* clean() is not in scope here - it lives inside other functions further
-       down the file - so normalise locally. */
-    var eqNorm = String(eq || '').replace(/\s+/g, ' ').trim();
-    var titleNorm = String(topic.title || '').replace(/\s+/g, ' ').trim();
+    var visual = buildMathVisual(topic, eq, q, parts);
 
     var body =
       '<div class="q-meta">' +
       '<span class="q-type-label">' + topic.label + '</span>' +
       '<span class="q-difficulty ' + diffClass + '">' + diff + '</span>' +
       '</div>' +
-      '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:.75rem;">' + topic.instruction + '</div>' +
       visual +
-      '<div class="fill-wrap" style="margin-top:.9rem;">' +
-      '<input class="fill-input" id="fill-input" type="text" placeholder="' + topic.placeholder + '" inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off"/>' +
+      '<div class="fill-wrap">' +
+      '<input class="fill-input" id="fill-input" type="text" placeholder="' + escHtml(placeholder) + '" inputmode="' + inputMode + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>' +
       '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
       '</div>' +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show steps</button>' +
-      '<div class="hint-box" id="hint-box">' + hint + '</div></div>' +
+      '<div class="hint-box" id="hint-box">' + escHtml(hint) + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
     var card = '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ ' + topic.badge + '</div><h2>' + topic.title + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">✦ ' + topic.badge + '</div><h2>' + escHtml(topic.title) + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -6903,165 +6957,121 @@
     return { id:'algebra', label:'Algebra', badge:'Equation', title:'Solve for x', instruction:'Solve the equation step by step.', placeholder:'x = ?' };
   }
 
-  // ── VISUAL BUILDER — builds the topic-specific visual display ──
-  function buildMathVisual(topic, eq, q) {
-    var SERIF = 'font-family:\'Georgia\',serif;';
-    var BOX = 'padding:.9rem 1.1rem;background:var(--soft);border-radius:14px;border:2px solid var(--border);';
+  /* ── THE MATHS, SAID ONCE ──────────────────────────────────────────────
+     Splits a question into the instruction, the expression and any given
+     value: "Evaluate: 2x + 5 when x = 4" -> Evaluate / 2x + 5 / when x = 4.
+     When the equation came separately, the question IS the instruction
+     ("Solve for x" over "3x + 7 = 22"). */
+  function mxSplit(question, eq) {
+    var qs = String(question || '').replace(/\s+/g, ' ').trim();
+    var es = String(eq || '').replace(/\s+/g, ' ').trim();
+    var verb = '', expr = '', cond = '', m;
+    if (es && es !== qs) { verb = qs.replace(/[:.]\s*$/, ''); expr = es; }
+    else if ((m = /^(.*=.*?)[.;]\s+((?:find|what is|evaluate|calculate|work out)\b.*)$/i.exec(qs))) {
+      /* "f(x) = 2x + 1. Find f(3)." - a definition, then what to find. */
+      expr = m[1]; cond = m[2].replace(/[.?!]\s*$/, '');
+      cond = cond.charAt(0).toUpperCase() + cond.slice(1);
+    } else {
+      m = /^(evaluate|simplify|expand|factori[sz]e|factor|solve(?:\s+for\s+[a-z])?|find the derivative of|differentiate|integrate|find the value of|calculate|compute|work out|what is)\b\s*:?\s*/i.exec(qs);
+      if (m && qs.length > m[0].length) { verb = m[1]; expr = qs.slice(m[0].length); }
+      else expr = qs;
+    }
+    if (!cond) {
+      var c = /,?\s*\b(when|if|where|for)\s+([a-z]\s*=\s*[-−]?[\d.]+(?:\s*(?:,|and)\s*[a-z]\s*=\s*[-−]?[\d.]+)*)\s*[.?]?\s*$/i.exec(expr);
+      if (c && c.index > 0) { cond = c[1].toLowerCase() + ' ' + c[2]; expr = expr.slice(0, c.index); }
+    }
+    expr = expr.replace(/\s*[?.]\s*$/, '').trim();
+    verb = verb ? verb.charAt(0).toUpperCase() + verb.slice(1).toLowerCase() : '';
+    if (/^what is$/i.test(verb)) verb = '';
+    else if (/^find the derivative of$/i.test(verb)) verb = 'Find the derivative';
+    else if (/^find the value of$/i.test(verb)) verb = 'Evaluate';
+    /* A header is an instruction, not a question restated. A long or
+       sentence-shaped "verb" is left to the topic detector's title. */
+    if (verb.length > 28) verb = '';
+    return { verb: verb, expr: expr, cond: cond,
+             /* Words, not maths: three or more real words is a sentence, and a
+                sentence set at display size is what made the card bulky. */
+             prose: (expr.replace(/\b[a-z]\b/gi, '').match(/[a-z]{3,}/gi) || []).length >= 3 };
+  }
 
-    /* The column layouts below take the first two numbers they can find
-       anywhere in the string and stack them. That is only honest when the
-       expression really is one number OP one number. Given "Evaluate: 2x + 5
-       when x = 3" it produced a column sum of two unrelated digits - a picture
-       of a different problem, sitting above the question it contradicted.
-       Anything with a letter in it, or with more than two numbers, gets no
-       column visual: the card still shows the question, which is correct if
-       plainer. */
+  /* Display form of an expression: escaped first, then x^2 -> x², a hyphen
+     between spaces -> a real minus, * -> ×. The answer is never touched. */
+  function mxPretty(text) {
+    var SUP = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' };
+    return escHtml(String(text || ''))
+      .replace(/\^\(?(\d)\)?/g, function (_, d) { return SUP[d]; })
+      .replace(/\^\(?([a-z0-9+\-]{1,6})\)?/gi, '<sup>$1</sup>')
+      .replace(/ - /g, ' − ')
+      .replace(/(\d|\))\s*\*\s*(?=[\d(a-z])/gi, '$1 × ');
+  }
+
+  // ── VISUAL BUILDER — the one panel the maths sits in ──
+  /* One quiet panel for every shape (.mx-panel): a soft ground, a hairline
+     border, the expression in the body font at a size that fits on one line
+     on a phone. Each shape used to bring its own inline look - Georgia bold
+     at 2-2.4rem, 2px borders, uppercase INPUT/OUTPUT boxes, a 2.8rem ▭ glyph,
+     calculus rules in coloured chips - so the same card type looked
+     different on every question and loudest where it said least. */
+  function buildMathVisual(topic, eq, q, parts) {
+    parts = parts || mxSplit(q && q.question, eq);
+    var tab = function (rows, op) {
+      return '<div class="mx-panel"><div class="mx-stack">' + rows + '</div></div>';
+    };
+
+    /* The column layouts take the first two numbers they find and stack them.
+       That is only honest when the expression really is one number OP one
+       number: given "Evaluate: 2x + 5 when x = 3" it drew a column sum of two
+       unrelated digits. Anything else gets the plain expression. */
     function isPlainArithmetic(text) {
       var t = String(text || '').trim().replace(/^[^0-9\-]*/, '').replace(/[=?\s]+$/, '');
       return /^-?\d+(?:\.\d+)?\s*[+\-−*×xX/÷]\s*-?\d+(?:\.\d+)?$/.test(t);
     }
-    if (!isPlainArithmetic(eq) &&
-        (topic.id === 'add' || topic.id === 'subtract' ||
-         topic.id === 'multiply' || topic.id === 'divide')) {
-      return '';
-    }
+    var plain = isPlainArithmetic(eq);
 
-    // ── ADDITION: vertical stacked format ──
-    if (topic.id === 'add' || topic.id === 'subtract') {
+    // ── ADDITION / SUBTRACTION / MULTIPLICATION: written in columns ──
+    if (plain && (topic.id === 'add' || topic.id === 'subtract' || topic.id === 'multiply')) {
       var nums = eq.match(/-?\d+(?:\.\d+)?/g) || [];
       if (nums.length >= 2) {
-        var top = nums[0], bot = nums[1];
-        var op = topic.id === 'subtract' ? '−' : '+';
-        var maxLen = Math.max(top.replace('-','').length, bot.replace('-','').length);
-        var pad = function(n){ var s = String(n); while(s.length < maxLen + 1) s = '\u00a0' + s; return s; };
-        return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;display:inline-block;min-width:140px;">' +
-          '<div style="' + SERIF + 'font-size:clamp(1.35rem,6.5vw,2.2rem);font-weight:700;color:var(--ink);letter-spacing:.05em;white-space:pre;font-variant-numeric:tabular-nums;">' +
-          '\u00a0' + pad(top) + '<br>' +
-          op + pad(bot) + '<br>' +
-          '<span style="display:inline-block;border-top:3px solid var(--ink);width:100%;margin:4px 0;"></span><br>' +
-          '<span style="color:#3563e9;">___</span>' +
-          '</div></div>';
+        var op = topic.id === 'subtract' ? '−' : topic.id === 'multiply' ? '×' : '+';
+        return tab('<span>' + escHtml(nums[0].replace('-', '−')) + '</span>' +
+          '<span><b class="mx-op">' + op + '</b>' + escHtml(nums[1].replace('-', '−')) + '</span>' +
+          '<span class="mx-rule"></span><span class="mx-q">?</span>');
       }
     }
 
-    // ── MULTIPLICATION: vertical long-form ──
-    if (topic.id === 'multiply') {
-      var nums2 = eq.match(/\d+(?:\.\d+)?/g) || [];
-      if (nums2.length >= 2) {
-        var a = nums2[0], b = nums2[1];
-        return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;display:inline-block;min-width:140px;">' +
-          '<div style="' + SERIF + 'font-size:clamp(1.35rem,6.5vw,2.2rem);font-weight:700;color:var(--ink);letter-spacing:.05em;white-space:pre;font-variant-numeric:tabular-nums;">' +
-          '\u00a0\u00a0' + a + '<br>' +
-          '×\u00a0' + b + '<br>' +
-          '<span style="display:inline-block;border-top:3px solid var(--ink);width:100%;margin:4px 0;"></span><br>' +
-          '<span style="color:#3563e9;">___</span>' +
-          '</div></div>';
-      }
-    }
-
-    // ── DIVISION: long division bracket ──
+    // ── DIVISION: the long-division bracket ──
     if (topic.id === 'divide') {
       var nums3 = eq.match(/\d+(?:\.\d+)?/g) || [];
       if (nums3.length >= 2) {
-        var dividend = nums3[0], divisor = nums3[1];
-        return '<div style="' + BOX + 'margin:.5rem 0 .9rem;text-align:center;">' +
-          '<div style="' + SERIF + 'font-size:1.6rem;font-weight:700;color:var(--ink);display:inline-block;text-align:left;">' +
-          '<span style="font-size:0.85em;color:var(--muted);">' + divisor + '</span>' +
-          '<span style="border-left:2.5px solid var(--ink);border-top:2.5px solid var(--ink);padding:.1em .5em .1em .4em;margin-left:2px;">' + dividend + '</span>' +
-          '</div>' +
-          '<div style="font-size:0.8rem;color:var(--muted);margin-top:.5rem;">' + dividend + ' ÷ ' + divisor + ' = ?</div>' +
-          '</div>';
+        return '<div class="mx-panel"><div class="mx-expr"><span class="mx-div">' + escHtml(nums3[1]) + '</span>' +
+          '<span class="mx-bracket">' + escHtml(nums3[0]) + '</span></div>' +
+          '<div class="mx-cond">' + escHtml(nums3[0]) + ' ÷ ' + escHtml(nums3[1]) + '</div></div>';
       }
     }
 
-    // ── FRACTIONS: visual fraction bars ──
-    if (topic.id === 'fraction') {
-      // Find fractions like 3/4, 1/2 in the equation
-      var fracParts = eq.match(/(-?\d+)\s*\/\s*(-?\d+)/g) || [];
-      var fracHtml = '';
-      if (fracParts.length > 0) {
-        fracHtml = fracParts.map(function(f) {
-          var parts = f.split('/');
-          var num = (parts[0] || '').trim();
-          var den = (parts[1] || '').trim();
-          return '<span style="display:inline-flex;flex-direction:column;align-items:center;' + SERIF + 'font-size:1.8rem;font-weight:700;color:var(--ink);margin:0 .4rem;vertical-align:middle;">' +
-            '<span>' + num + '</span>' +
-            '<span style="border-top:2.5px solid var(--ink);width:100%;display:block;margin:3px 0;min-width:1.5rem;"></span>' +
-            '<span>' + den + '</span>' +
-            '</span>';
-        }).join('<span style="font-size:1.8rem;font-weight:700;color:var(--muted);vertical-align:middle;margin:0 .3rem;">' + (eq.includes('+') ? '+' : eq.includes('-') && !eq.startsWith('-') ? '−' : eq.includes('×') || eq.includes('*') ? '×' : eq.includes('÷') || eq.includes('/') ? '÷' : '') + '</span>');
+    // ── FRACTIONS: stacked numerator over denominator ──
+    if (topic.id === 'fraction' && !parts.prose) {
+      var fr = /^\s*(-?\d+)\s*\/\s*(\d+)\s*([+\-−×*÷])\s*(-?\d+)\s*\/\s*(\d+)\s*$/.exec(parts.expr);
+      if (fr) {
+        var frac = function (n, d) { return '<span class="mx-frac"><span>' + escHtml(n) + '</span><span>' + escHtml(d) + '</span></span>'; };
+        var fop = { '+': '+', '-': '−', '−': '−', '×': '×', '*': '×', '÷': '÷' }[fr[3]];
+        return '<div class="mx-panel"><div class="mx-expr mx-fracs">' + frac(fr[1], fr[2]) +
+          '<span class="mx-op">' + fop + '</span>' + frac(fr[4], fr[5]) + '</div></div>';
       }
-      return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:.5rem;">' +
-        (fracHtml || '<span style="' + SERIF + 'font-size:2rem;font-weight:700;color:var(--ink);">' + eq + '</span>') +
-        '<span style="font-size:1.8rem;font-weight:700;color:var(--muted);vertical-align:middle;margin:0 .3rem;">=</span>' +
-        '<span style="' + SERIF + 'font-size:2rem;font-weight:700;color:#3563e9;">?</span>' +
-        '</div>';
     }
 
-    // ── FUNCTIONS: f(x) input→output display ──
-    if (topic.id === 'function') {
-      // Extract f(x) = ... and show input→output table
-      var funcMatch = eq.match(/f\s*\(x\)\s*=\s*(.+)/i) || eq.match(/[fgh]\s*\(x\)\s*=\s*(.+)/i);
-      var inputMatch = eq.match(/f\s*\((-?\d+(?:\.\d+)?)\)/i);
-      var inputVal = inputMatch ? inputMatch[1] : null;
-      var funcDef = funcMatch ? funcMatch[1].trim() : eq;
-      return '<div style="' + BOX + 'margin:.5rem 0 .9rem;">' +
-        '<div style="text-align:center;' + SERIF + 'font-size:2rem;font-weight:700;color:var(--ink);margin-bottom:.85rem;">' + eq + '</div>' +
-        (inputVal ? '<div style="display:flex;align-items:center;justify-content:center;gap:.75rem;">' +
-          '<div style="text-align:center;padding:.6rem 1rem;background:#eef4ff;border-radius:10px;border:1.5px solid #4a7cf6;">' +
-          '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.07em;color:#4a7cf6;text-transform:uppercase;">Input</div>' +
-          '<div style="' + SERIF + 'font-size:1.6rem;font-weight:700;color:var(--ink);">x = ' + inputVal + '</div>' +
-          '</div>' +
-          '<div style="font-size:1.4rem;color:var(--muted);">→</div>' +
-          '<div style="text-align:center;padding:.6rem 1rem;background:#eef3ff;border-radius:10px;border:1.5px solid #3563e9;">' +
-          '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.07em;color:#3563e9;text-transform:uppercase;">Output</div>' +
-          '<div style="' + SERIF + 'font-size:1.6rem;font-weight:700;color:#3563e9;">f(' + inputVal + ') = ?</div>' +
-          '</div>' +
-          '</div>' : '') +
-        '</div>';
+    // ── EVERYTHING ELSE: the expression, and the given value under it ──
+    if (!parts.expr) return '';
+    if (parts.prose) {
+      /* A sentence ("Find the area of a rectangle 8 cm by 5 cm") reads as a
+         question, not as maths on display. */
+      return '<div class="q-text mx-prose">' + mxPretty(parts.expr) +
+        (parts.cond ? ' <span class="mx-cond-inline">(' + escHtml(parts.cond) + ')</span>' : '') + '</div>';
     }
-
-    // ── GEOMETRY: formula + shape label ──
-    if (topic.id === 'geometry') {
-      var shapeIcon = '▭';
-      if (/circle|radius|diameter|π/.test(eq.toLowerCase())) shapeIcon = '○';
-      else if (/triangle/.test(eq.toLowerCase())) shapeIcon = '△';
-      else if (/square/.test(eq.toLowerCase())) shapeIcon = '□';
-      return '<div style="' + BOX + 'margin:.5rem 0 .9rem;text-align:center;">' +
-        '<div style="font-size:2.8rem;margin-bottom:.5rem;">' + shapeIcon + '</div>' +
-        '<div style="' + SERIF + 'font-size:1.7rem;font-weight:700;color:var(--ink);margin-bottom:.4rem;">' + eq + '</div>' +
-        '<div style="font-size:0.78rem;color:var(--muted);">Find the value — include units in your answer</div>' +
-        '</div>';
-    }
-
-    // ── CALCULUS: properly formatted with notation hint ──
-    if (topic.id === 'calculus') {
-      return '<div style="' + BOX + 'margin:.5rem 0 .9rem;text-align:center;">' +
-        '<div style="' + SERIF + 'font-size:2rem;font-weight:700;color:var(--ink);margin-bottom:.5rem;line-height:1.4;">' + eq + '</div>' +
-        '<div style="display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:.6rem;">' +
-        '<span style="font-size:0.72rem;padding:.25rem .6rem;background:#eef3ff;color:#3563e9;border-radius:6px;font-weight:600;">Power rule: d/dx[xⁿ] = nxⁿ⁻¹</span>' +
-        '<span style="font-size:0.72rem;padding:.25rem .6rem;background:#eef4ff;color:#4a7cf6;border-radius:6px;font-weight:600;">Chain rule: d/dx[f(g(x))] = f\'(g(x))·g\'(x)</span>' +
-        '</div>' +
-        '</div>';
-    }
-
-    // ── ALGEBRA (default for x-based equations) ──
-    if (topic.id === 'algebra' || topic.id === 'radical' || topic.id === 'trig' || topic.id === 'ratio') {
-      return '<div style="text-align:center;padding:1.4rem .5rem 1rem;">' +
-        '<div style="' + SERIF + 'font-size:2.4rem;font-weight:700;color:var(--ink);letter-spacing:.02em;line-height:1.3;' + BOX + 'display:inline-block;min-width:200px;">' +
-        eq + '</div></div>';
-    }
-
-    // ── FALLBACK: plain display ──
-    return '<div style="text-align:center;' + BOX + 'margin:.5rem 0 .9rem;">' +
-      /* Scales and wraps: a long expression used to run straight off the card.
-         Suppressed when it would only repeat the header - which happens when
-         the equation fell back to the question because the two disagreed. */
-      (eqNorm && eqNorm !== titleNorm
-        ? '<div style="' + SERIF + 'font-size:clamp(1.3rem,6vw,2.2rem);font-weight:700;color:var(--ink);' +
-          'line-height:1.35;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;">' + eq + '</div>'
-        : '') +
-      '</div>';
+    var len = parts.expr.replace(/\s+/g, '').length;
+    return '<div class="mx-panel"><div class="mx-expr' + (len > 22 ? ' mx-long' : len > 14 ? ' mx-mid' : '') + '">' +
+      mxPretty(parts.expr) + '</div>' +
+      (parts.cond ? '<div class="mx-cond">' + mxPretty(parts.cond) + '</div>' : '') + '</div>';
   }
 
   // ── WORD PROBLEM ──
