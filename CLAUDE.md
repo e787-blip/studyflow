@@ -28,7 +28,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `index.html` | ~172 KB | Marketing / landing page. 3D hero, one `<script>` block |
 | `login.html` | ~57 KB | Sign in, sign up, password reset. Firebase Auth (module script), one form for all three |
 | `app.html` | ~292 KB | Plan builder: the lesson upload, one question per screen, then generation. Subject detection, AI prompt, question schemas, validators |
-| `lesson.html` | ~590 KB | The session runtime. Card queue, all question renderers, the whiteboard |
+| `lesson.html` | ~1.2 MB | The session runtime. Card queue, all question renderers, the whiteboard. Restyled Oct 2026 - see "The session's look and motion" |
 | `dashboard.html` | ~150 KB | Plan list and progress. Redesigned Oct 2026 - see "The dashboard" |
 | `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
 | `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
@@ -42,6 +42,13 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 `lesson.html` has **two `<script>` blocks**. Block 1 is the session runtime.
 Block 2 is the whiteboard module (`window.SFWhiteboard`). Both must stay
 syntactically valid — a break in either kills the session silently.
+
+There are also two tiny **`<script data-sf-boot>`** tags (the spring curves in
+`<head>`, the dark class at the top of `<body>`). They carry that attribute
+on purpose: tools find "block 1" as the first script tag with NO attributes
+(`preview_diagrams.py` takes `blocks[0]`), so a bare one up there would be
+read as the session runtime. Never write the bare tag inside a comment on
+this page either - the same regexes match it there.
 
 **Block 1 must not use `window.SFWhiteboard` at parse time.** Block 2 has not run
 yet. `init()` is therefore deferred to `DOMContentLoaded` at the end of block 1;
@@ -2714,6 +2721,44 @@ and a side column of At a glance / Scores / Calendar / reminder / invite.
   pointed at nothing).
 - **The browser pane throttles animation frames while hidden**, so
   screenshots catch count-ups mid-way. Check values in JS after waiting.
+
+## The session's look and motion (`lesson.html`) — Oct 2026
+
+The apple-design pass, after the dashboard. Styles, the top bar's markup and
+a few small functions changed; no renderer, no queue logic, no class or id a
+test reads.
+
+- **One translucent session bar** (`nav.sbar`) replaced the logo nav and the
+  time bar under it (~100px of chrome): exit, time left, score, streak,
+  theme. Still a `<nav>`, and the time bar keeps `.time-bar-wrap` - two tests
+  pin both with `position:static`. The critical time bar no longer pulses.
+- **Cards move like a stack.** `.session-card` arrives from the right
+  (`sfCardIn`, a spring); the card you finished leaves to the left. The
+  leaving card is a copy in a **shadow root** on `document.body`
+  (`sfCardGhost` / `sfCardLeave`, next to `showNextCard`): `renderCard`
+  still swaps the real card synchronously, and nothing that queries the page
+  can see the copy - the tests count `.q-option`, `svg`, `text` and buttons
+  document-wide, and a plain clone doubled every count for 260ms. Its CSS is
+  every `<style>` on the page with `body.dark` rewritten to `:host(.dark)`
+  and all animation off. Skipped in a hidden tab and under reduced motion;
+  removed on a timer, never on `finish`.
+- **Press, not hover.** Every control answers on `:active` (scale .96-.985,
+  spring back). All the 2px hover lifts are gone - motion the design system
+  does not have, and sticky on a phone.
+- **An answer writes its mark**: `::after` on `.correct-ans` / `.wrong-ans`
+  draws a tick or cross left to right, so the right answer revealed after a
+  miss gets one too. A pseudo-element: `textContent` and "Your answer" are
+  unchanged.
+- **Off-palette colour removed**: milestone icons (an amber star, an orange
+  gradient flame, a purple bolt) are white on the blue; confetti is blues,
+  ink and the correct-green - it had amber, purple and RED, at the moment of
+  getting it right. The recap is a card, not a green slab (green means
+  "right"), and its heading no longer reads "> 10-Minute Recap".
+- Springs come from the boot script (`--spring*`, the dashboard's curves);
+  the flashcard turns on one too. Dark mode is applied before first paint.
+- **Instrument Serif's "1" is an "l" with a flag** - "1m studied" read as
+  "lm" in the results tiles. Numbers that sit next to letters stay in
+  DM Sans.
 
 ## The teach-it-back card
 
