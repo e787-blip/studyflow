@@ -5831,7 +5831,11 @@
     if (card) {
       card.style.animation = 'none';
       void card.offsetWidth;
-      card.style.animation = 'fadeUp .34s cubic-bezier(.16,1,.3,1) both';
+      /* backwards, never both: fadeUp animates transform, and a finished
+         animation that stays in effect pins transform at translateY(0) -
+         over .is-flipped's rotateY. The first card had no animation and
+         turned; every card after it would not. */
+      card.style.animation = 'fadeUp .34s cubic-bezier(.16,1,.3,1) backwards';
     }
     var pips = document.querySelectorAll('#fc-pips .fc-pip'), i;
     for (i = 0; i < pips.length; i++) {

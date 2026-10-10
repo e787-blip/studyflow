@@ -2029,6 +2029,12 @@ attention has already gone.
   faces get a dark ground — there are `body.dark .fc-*` rules for this.
 - `renderCardInner` skips straight past the card when `deckItems` is empty,
   and `buildQueue` does not queue it in the first place.
+- **Every card turns, not just the first.** `sfDeckGo` replays `fadeUp` on
+  the new card, and with fill-mode `both` the finished animation pinned
+  `transform` at `translateY(0)` over `.is-flipped`'s `rotateY` - card 1
+  turned and no other card ever did (Oct 2026). It is `backwards` now, the
+  same rule as `SFDrawOn` and the landing nav: a finished animation must not
+  stay in effect over a property something else changes. `test_deck.js`.
 
 ### `Scene.worked` — the sideways worked example
 
