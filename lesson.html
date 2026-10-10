@@ -6,7 +6,47 @@
 <title>StudyFlow — Study Session</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNWI4ZGY4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzI4NTFjOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0idXJsKCNnKSIvPgogIDxyZWN0IHg9IjciIHk9IjgiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNyIgcng9IjIuNSIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMjUiLz4KICA8cmVjdCB4PSIxMCIgeT0iOCIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3IiByeD0iMi41IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC45Ii8+CiAgPHJlY3QgeD0iMTMiIHk9IjEzIiB3aWR0aD0iNyIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSIjMzU2N2UwIi8+CiAgPHJlY3QgeD0iMTMiIHk9IjE2LjUiIHdpZHRoPSI1IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMzNTY3ZTAiIG9wYWNpdHk9IjAuNyIvPgogIDxyZWN0IHg9IjEzIiB5PSIyMCIgd2lkdGg9IjYiIGhlaWdodD0iMS41IiByeD0iMC43NSIgZmlsbD0iIzRhN2NmNiIgb3BhY2l0eT0iMC41Ii8+Cjwvc3ZnPg=="/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,400&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<!-- Marked data-sf-boot on purpose: the tools find "block 1" as the FIRST
+     script tag on this page with no attributes (preview_diagrams.py takes
+     blocks[0]), so this one must carry an attribute. parseall.js still
+     checks it. Never write the bare tag itself in a comment here either -
+     those tools match it inside comments too. -->
+<script data-sf-boot>
+  /* Springs, before the first paint. CSS cannot run a spring, but linear()
+     can replay one: a damped spring (Apple's damping ratio + response, not
+     stiffness and mass) sampled into points, lasting exactly as long as it
+     takes to settle. Without linear() the cubic-bezier fallbacks in :root
+     stand. Same curves as the dashboard. */
+  (function () {
+    var d = document.documentElement;
+    function curve(zeta, response) {
+      var w = 2 * Math.PI / response, k = w * w, c = 2 * zeta * w;
+      var h = 1 / 1200, x = 0, v = 0, t = 0, end = 3, a;
+      for (t = h; t < 3; t += h) {
+        a = -k * (x - 1) - c * v; v += a * h; x += v * h;
+        if (Math.abs(x - 1) < 0.0008 && Math.abs(v) < 0.01) { end = t; break; }
+      }
+      var n = Math.max(24, Math.min(64, Math.round(end * 70))), pts = [], step = end / n;
+      x = 0; v = 0; t = 0;
+      for (var i = 0; i <= n; i++) {
+        while (t < i * step) { a = -k * (x - 1) - c * v; v += a * h; x += v * h; t += h; }
+        pts.push(i === n ? 1 : +x.toFixed(4));
+      }
+      return { e: 'linear(' + pts.join(', ') + ')', ms: Math.round(end * 1000) };
+    }
+    try {
+      if (window.CSS && CSS.supports && CSS.supports('transition-timing-function', 'linear(0, 1)')) {
+        var specs = { '': [1, 0.42], '-fast': [1, 0.26], '-slow': [1, 0.62] };
+        for (var key in specs) {
+          var s = curve(specs[key][0], specs[key][1]);
+          d.style.setProperty('--spring' + key, s.e);
+          d.style.setProperty('--spring' + key + '-ms', s.ms + 'ms');
+        }
+      }
+    } catch (e) {}
+  })();
+</script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -14,7 +54,15 @@
     --blue: #4a7cf6; --blue-light: #dce8ff; --white: #fff; --border: #e8ecf4;
     --green: #38bfa1; --red: #ef4444; --orange: #f59e0b;
     --sans: 'DM Sans', system-ui, -apple-system, sans-serif; --serif: 'Instrument Serif', Georgia, serif;
+    /* Oct 2026 redesign. Fallback curves; the boot script swaps in springs. */
+    --blue-ink: #2f5fe0; --blue-deep: #2a52d4; --blue-tint: #eef3ff;
+    --material: rgba(244,246,251,.74); --edge: rgba(26,29,46,.07);
+    --shadow-card: 0 1px 2px rgba(26,29,46,.04), 0 22px 44px -22px rgba(26,29,46,.2);
+    --spring: cubic-bezier(.22,1,.36,1);       --spring-ms: 560ms;
+    --spring-fast: cubic-bezier(.22,1,.36,1);  --spring-fast-ms: 340ms;
+    --spring-slow: cubic-bezier(.16,1,.3,1);   --spring-slow-ms: 820ms;
   }
+  body { -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; font-optical-sizing:auto; }
   .logo-ink { fill: var(--ink); }
   body { font-family: var(--sans); color: var(--ink); background: var(--soft); min-height: 100vh; }
 
@@ -36,7 +84,7 @@
   @keyframes progressPulse { 0%,100%{opacity:1} 50%{opacity:.6} }
   @keyframes streakPop { 0%{transform:scale(0.8);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
   @keyframes milestoneIn { 0%{transform:translateY(-20px);opacity:0} 100%{transform:none;opacity:1} }
-  @keyframes optionCorrect { 0%{transform:scale(1)} 30%{transform:scale(1.05)} 60%{transform:scale(0.98)} 100%{transform:scale(1)} }
+  @keyframes optionCorrect { 0%{transform:scale(.985)} 100%{transform:none} }
   @keyframes optionWrong { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
   @keyframes checkmark { 0%{stroke-dashoffset:50} 100%{stroke-dashoffset:0} }
   @keyframes xmark { 0%{stroke-dashoffset:30} 100%{stroke-dashoffset:0} }
@@ -58,31 +106,68 @@
   /* GROWTH MINDSET FEEDBACK */
   .feedback-growth { font-size:0.75rem; color:var(--muted); margin-top:.5rem; font-style:italic; }
 
-  /* NAV */
-  nav {
-    background:#fff; border-bottom:1px solid var(--border); padding:.75rem 2rem;
-    display:flex; align-items:center; justify-content:space-between;
-    position:sticky; top:0; z-index:200; box-shadow:0 1px 12px rgba(74,124,246,.07);
+  /* ── THE SESSION BAR ─────────────────────────────────────────────────
+     One translucent bar, where there were two opaque ones stacked (the logo
+     nav and the time bar: ~100px of chrome above every card). A session is
+     a focused task, so the bar holds the way out, the time left, the score
+     and nothing else, and the card scrolls UNDER it. A soft fade replaces
+     the hairline, and only once something is actually underneath.
+     Still a <nav>, and the time bar keeps .time-bar-wrap: slide_check and
+     test_moment pin both with position:static for their screenshots. */
+  nav.sbar {
+    position:sticky; top:0; z-index:200; background:var(--material);
+    -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px);
   }
-  .logo { text-decoration:none; display:flex; align-items:center; }
-  .nav-back { font-size:0.82rem; color:var(--muted); text-decoration:none; font-weight:500; padding:.35rem .8rem; border-radius:8px; border:1px solid var(--border); transition:all .2s; }
-  .nav-back:hover { color:var(--blue); border-color:var(--blue); background:var(--blue-light); }
+  nav.sbar::after {
+    content:''; position:absolute; left:0; right:0; top:100%; height:16px; pointer-events:none;
+    background:linear-gradient(var(--edge),transparent); opacity:0; transition:opacity .3s ease;
+  }
+  nav.sbar.scrolled::after { opacity:1; }
+  .sbar-in { max-width:760px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; gap:12px; min-height:60px; }
+  .sbar-exit {
+    display:inline-flex; align-items:center; gap:.25rem; height:38px; padding:0 13px 0 7px; border-radius:999px; flex-shrink:0;
+    color:var(--ink); text-decoration:none; font-size:.86rem; font-weight:600;
+    transition:background-color .2s ease, transform var(--spring-fast-ms) var(--spring-fast);
+  }
+  .sbar-icon {
+    width:38px; height:38px; border-radius:999px; display:inline-grid; place-items:center; flex-shrink:0;
+    padding:0; border:0; background:transparent; color:var(--ink); cursor:pointer;
+    transition:background-color .2s ease, transform var(--spring-fast-ms) var(--spring-fast);
+  }
+  .sbar-exit:hover, .sbar-icon:hover { background:var(--white); }
+  .sbar-exit:active, .sbar-icon:active { transform:scale(.92); transition-duration:80ms; }
+  .sbar-exit:focus-visible, .sbar-icon:focus-visible { outline:2.5px solid var(--blue); outline-offset:2px; }
 
-  /* TIME BAR */
-  .time-bar-wrap {
-    background:#fff; border-bottom:1px solid var(--border);
-    padding:.65rem 2rem; display:flex; align-items:center; gap:1rem;
-    position:sticky; top:57px; z-index:100;
-  }
-  .time-label { font-size:0.75rem; font-weight:700; color:var(--muted); white-space:nowrap; min-width:72px; }
-  .time-bar-track { flex:1; height:8px; background:var(--border); border-radius:4px; overflow:hidden; }
-  .time-bar-fill { height:100%; background:var(--blue); border-radius:4px; transition:width 1s linear; }
+  /* TIME BAR - inside the session bar now, not a second strip under it. */
+  .time-bar-wrap { flex:1; min-width:0; display:flex; align-items:center; gap:.65rem; }
+  .time-label { font-size:0.78rem; font-weight:600; color:var(--muted); white-space:nowrap; min-width:3.4em; font-variant-numeric:tabular-nums; }
+  .time-bar-track { flex:1; height:6px; background:rgba(26,29,46,.08); border-radius:999px; overflow:hidden; }
+  .time-bar-fill { height:100%; background:var(--blue); border-radius:999px; transition:width 1s linear, background-color .4s ease; }
   .time-bar-fill.warning { background:var(--orange); }
-  .time-bar-fill.critical { background:var(--red); animation:progressPulse 1s ease infinite; }
-  .session-stats { display:flex; align-items:center; gap:.6rem; white-space:nowrap; }
-  .stat-pill { font-size:0.72rem; font-weight:700; padding:.22rem .65rem; border-radius:999px; }
+  /* Red says it. It used to pulse as well - a looping flash for the whole
+     last tenth of a session, behind the question being read. */
+  .time-bar-fill.critical { background:var(--red); }
+  .session-stats { display:flex; align-items:center; gap:.4rem; white-space:nowrap; }
+  .stat-pill { font-size:0.74rem; font-weight:700; padding:.3rem .7rem; border-radius:999px; font-variant-numeric:tabular-nums; }
   .stat-pill.correct { background:#d1faf0; color:#1a9e80; }
-  .stat-pill.total { background:var(--blue-light); color:var(--blue); }
+  .stat-pill.total { background:var(--blue-tint); color:var(--blue-ink); }
+
+  /* The theme mark morphs instead of swapping glyphs: a moon is a sun with
+     a shadow slid across it. Transforms only, so every engine animates it. */
+  .theme-ico { width:19px; height:19px; overflow:visible; }
+  .theme-ico .core, .theme-ico .cut, .theme-ico .rays { transform-box:fill-box; transform-origin:center;
+    transition:transform var(--spring-ms) var(--spring), opacity .25s ease; }
+  .theme-ico .core { transform:scale(1.7); }
+  .theme-ico .cut { transform:translate(-7px, 3px); }
+  .theme-ico .rays { transform:scale(.4) rotate(-45deg); opacity:0; }
+  body.dark .theme-ico .core, body.dark .theme-ico .cut { transform:none; }
+  body.dark .theme-ico .rays { transform:none; opacity:1; }
+  /* Theme changes are eased, never cut - white to near-black in one frame
+     is the one brightness jump a whole screen should not make. */
+  html.theme-easing, html.theme-easing *, html.theme-easing *::before, html.theme-easing *::after {
+    transition:background-color .38s ease, border-color .38s ease, color .38s ease, fill .38s ease,
+               stroke .38s ease, box-shadow .38s ease !important;
+  }
   /* The streak used to be a 44px orange-to-red gradient flame with the count
      reversed out in white - the single loudest thing on a page whose whole
      palette is one blue. It is now the same shape and weight as the score
@@ -98,39 +183,52 @@
   .streak-num-inside { font-variant-numeric:tabular-nums; }
 
   /* CONTAINER */
-  .container { max-width:680px; margin:0 auto; padding:1.5rem 1.5rem 6rem; }
+  .container { max-width:680px; margin:0 auto; padding:1.4rem 1.5rem 6rem; }
 
   /* MILESTONE BANNER */
+  @keyframes sfDropIn { from { opacity:0; transform:translateY(-10px) scale(.985); } to { opacity:1; transform:none; } }
   .milestone-banner {
-    background:linear-gradient(135deg,#4a7cf6,#2851c8);
-    border-radius:16px; padding:1.1rem 1.5rem; margin-bottom:1.2rem;
-    display:none; align-items:center; gap:1rem; color:#fff;
-    animation:milestoneIn .5s cubic-bezier(0.16,1,.3,1);
-    box-shadow:0 8px 24px rgba(74,124,246,.25);
+    background:
+      radial-gradient(120% 160% at 100% 0%, rgba(140,176,255,.5) 0%, rgba(140,176,255,0) 55%),
+      linear-gradient(160deg,#4f82f8,#2c56d8);
+    border-radius:20px; padding:.9rem 1rem .9rem .95rem; margin-bottom:1rem;
+    display:none; align-items:center; gap:.85rem; color:#fff;
+    animation:sfDropIn var(--spring-ms) var(--spring) both;
+    box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 16px 32px -16px rgba(42,82,212,.6);
   }
   .milestone-banner.show { display:flex; }
-  .milestone-icon { font-size:1.8rem; display:flex; align-items:center; justify-content:center; }
-  .milestone-text h4 { font-size:0.95rem; font-weight:700; margin-bottom:.15rem; }
-  .milestone-text p { font-size:0.8rem; color:rgba(255,255,255,.8); }
-  .milestone-close { margin-left:auto; background:rgba(255,255,255,.2); border:none; color:#fff; width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center; }
+  /* Monochrome on the blue. These were an amber star, an orange-to-red
+     gradient flame and a purple bolt - three hues the palette does not have. */
+  .milestone-icon { width:42px; height:42px; border-radius:14px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,.16); color:#fff; }
+  .milestone-icon svg { width:22px; height:22px; }
+  .milestone-text h4 { font-size:0.95rem; font-weight:700; margin-bottom:.1rem; }
+  .milestone-text p { font-size:0.82rem; color:rgba(255,255,255,.84); }
+  .milestone-close { margin-left:auto; background:rgba(255,255,255,.16); border:none; color:#fff; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 
   /* STRUGGLING BANNER */
-  .struggling-banner {    background:#fff8e0; border:1.5px solid var(--orange); border-radius:16px;
-    padding:1rem 1.3rem; margin-bottom:1.2rem; display:none; position:relative;
-    animation:fadeIn .4s ease;
+  /* Amber, because here amber means what it means: this needs attention. */
+  .struggling-banner {    background:#fffaf0; border:1px solid #f4d9a0; border-left:4px solid var(--orange); border-radius:18px;
+    padding:1rem 2.6rem 1rem 1rem; margin-bottom:1rem; display:none; position:relative;
+    animation:sfDropIn var(--spring-ms) var(--spring) both;
   }
   .struggling-banner.show { display:flex; align-items:flex-start; gap:.75rem; }
-  .struggling-icon { font-size:1.3rem; flex-shrink:0; margin-top:.1rem; }
-  .struggling-text h4 { font-size:0.88rem; font-weight:700; color:#92400e; margin-bottom:.2rem; }
-  .struggling-text p { font-size:0.82rem; color:#92400e; line-height:1.5; }
-  .btn-review-lesson { margin-top:.6rem; background:#f59e0b; color:#fff; border:none; border-radius:8px; padding:.4rem .9rem; font-family:var(--sans); font-size:0.8rem; font-weight:600; cursor:pointer; transition:background .2s; }
-  .btn-review-lesson:hover { background:#d97706; }
+  .struggling-icon { width:26px; height:26px; border-radius:50%; background:var(--orange); color:#fff; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:.85rem; font-weight:800; margin-top:.05rem; }
+  .struggling-text h4 { font-size:0.9rem; font-weight:700; color:#92400e; margin-bottom:.2rem; }
+  .struggling-text p { font-size:0.84rem; color:#92400e; line-height:1.5; }
+  .btn-review-lesson { margin-top:.65rem; background:#d97706; color:#fff; border:none; border-radius:999px; padding:.5rem 1rem; font-family:var(--sans); font-size:0.82rem; font-weight:600; cursor:pointer; transition:background .2s; }
+  .btn-review-lesson:hover { background:#b45309; }
 
   /* CARD */
+  /* A session is a stack of cards, so moving on is spatial: a new card
+     arrives from the right while the one you finished leaves to the left
+     (sfCardGhost, next to showNextCard). It used to rise from below. */
+  @keyframes sfCardIn { from { opacity:0; transform:translateX(30px) scale(.985); } to { opacity:1; transform:none; } }
   .session-card {
-    background:#fff; border:1.5px solid var(--border); border-radius:24px;
-    overflow:hidden; box-shadow:0 6px 28px rgba(74,124,246,.08);
-    animation:fadeUp .4s cubic-bezier(0.16,1,.3,1) both;
+    background:#fff; border:1px solid var(--border); border-radius:28px;
+    overflow:hidden; box-shadow:var(--shadow-card);
+    animation:sfCardIn var(--spring-ms) var(--spring) both;
   }
   /* Answer feedback glow.
 
@@ -180,23 +278,30 @@
     animation:optionWrong .4s ease both;
   }
 
+  /* The same page of blue as the dashboard's Up-next card: two soft lights
+     and faint notebook rules fading toward the words, instead of a dot grid. */
   .card-header {
-    background:linear-gradient(135deg,#4a7cf6,#2851c8);
-    padding:1.4rem 2rem; position:relative; overflow:hidden;
+    background:
+      radial-gradient(110% 130% at 100% 0%, rgba(140,176,255,.5) 0%, rgba(140,176,255,0) 55%),
+      radial-gradient(80% 90% at 0% 100%, rgba(30,62,190,.45) 0%, rgba(30,62,190,0) 60%),
+      linear-gradient(160deg,#4f82f8 0%,#3a69ec 50%,#2c56d8 100%);
+    padding:1.45rem 1.75rem 1.4rem; position:relative; overflow:hidden; isolation:isolate;
   }
-  .card-header::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle,rgba(255,255,255,.1) 1px,transparent 1px); background-size:24px 24px; pointer-events:none; }
-  .card-badge { display:inline-flex; align-items:center; gap:.4rem; background:rgba(255,255,255,.2); color:#fff; font-size:0.68rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:.25rem .7rem; border-radius:999px; border:1px solid rgba(255,255,255,.3); margin-bottom:.55rem; position:relative; z-index:1; }
-  .card-header h2 { font-family:var(--serif); font-weight:400; font-size:clamp(1.5rem,4.4vw,1.8rem); color:#fff; letter-spacing:-0.005em; position:relative; z-index:1; line-height:1.12; }
+  .card-header::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
+    background-image:repeating-linear-gradient(to bottom, transparent 0 27px, rgba(255,255,255,.08) 27px 28px);
+    -webkit-mask-image:linear-gradient(100deg, transparent 35%, #000 92%); mask-image:linear-gradient(100deg, transparent 35%, #000 92%); }
+  .card-badge { display:inline-flex; align-items:center; gap:.4rem; background:rgba(255,255,255,.16); color:#fff; font-size:0.7rem; font-weight:600; letter-spacing:.07em; text-transform:uppercase; padding:.3rem .75rem; border-radius:999px; border:0; box-shadow:inset 0 0 0 1px rgba(255,255,255,.24); margin-bottom:.6rem; position:relative; z-index:1; }
+  .card-header h2 { font-family:var(--serif); font-weight:400; font-size:clamp(1.65rem,4.6vw,2.1rem); color:#fff; letter-spacing:-0.015em; position:relative; z-index:1; line-height:1.08; text-wrap:balance; }
 
   /* STRUGGLING LESSON CARD */
-  .card-header.struggling-header { background:linear-gradient(135deg,#f59e0b,#d97706); }
+  .card-header.struggling-header { background:radial-gradient(110% 130% at 100% 0%, rgba(255,214,140,.45) 0%, rgba(255,214,140,0) 55%), linear-gradient(160deg,#f0a530,#d97706); }
 
   /* A question the pre-test already asked, now returning after the lesson.
      Green rather than the brand blue, so the learner reads it as "this is the
      same one again, on purpose" before reading the badge. */
-  .card-header.retest-header { background:linear-gradient(135deg,#34a065,#1d7a45); }
+  .card-header.retest-header { background:radial-gradient(110% 130% at 100% 0%, rgba(150,230,190,.35) 0%, rgba(150,230,190,0) 55%), linear-gradient(160deg,#34a065,#1d7a45); }
 
-  .card-body { padding:1.6rem 2rem; }
+  .card-body { padding:1.6rem 1.75rem; }
 
   /* THE MATHS PANEL (renderBigEquation). One quiet panel for every equation
      card: a hairline, not a 2px border; the body font at weight 500, not
@@ -288,17 +393,17 @@
   @keyframes lpOutRight { to { opacity:0; transform:translateX(26px); } }
 
   .lp-nav { display:flex; align-items:center; gap:.6rem; margin-top:1.15rem; }
-  .lp-back { background:none; border:1.5px solid var(--border); border-radius:10px;
+  .lp-back { background:none; border:1.5px solid var(--border); border-radius:999px;
     padding:.42rem .8rem; cursor:pointer; color:var(--muted);
     font-family:var(--sans); font-size:0.76rem; font-weight:600;
-    transition:border-color .18s ease, color .18s ease, transform .18s ease; }
-  .lp-back:hover { border-color:var(--blue); color:var(--blue); transform:translateX(-2px); }
+    }
+  .lp-back:hover { border-color:var(--blue); color:var(--blue); }
   .lp-hint { font-size:0.7rem; color:var(--muted); font-weight:500; }
 
   @media (prefers-reduced-motion:reduce) {
     .lp-pane > *, .lp-pane.lp-out-left, .lp-pane.lp-out-right { animation:none !important; }
     .lp-viewport { transition:none; }
-    .lp-seg:hover, .lp-back:hover { transform:none; }
+    .lp-seg:hover { transform:none; }
   }
 
   /* ── THE WATCH-OUT CARD ───────────────────────────────────────────────
@@ -313,7 +418,7 @@
   .fc-stage { width:100%; max-width:440px; perspective:1200px; }
   .fc-card {
     position:relative; width:100%; min-height:168px; cursor:pointer;
-    transform-style:preserve-3d; transition:transform .52s cubic-bezier(.22,.68,.3,1);
+    transform-style:preserve-3d; transition:transform var(--spring-slow-ms) var(--spring-slow);
   }
   .fc-card.is-flipped { transform:rotateY(180deg); }
   /* A term card with a picture of the thing (sf-icons.js): the faces are
@@ -481,44 +586,49 @@
   body.dark .q-difficulty { --b2:#2b3556; --b3:#2b3556; }
   body.dark .q-difficulty.medium { --b2:#4a7cf6; }
   body.dark .q-difficulty.hard { --b2:#4a7cf6; --b3:#4a7cf6; }
-  .q-text { font-size:1rem; font-weight:600; color:var(--ink); line-height:1.5; margin-bottom:1.1rem; }
+  .q-text { font-size:1.08rem; font-weight:600; color:var(--ink); line-height:1.5; letter-spacing:-.006em; margin-bottom:1.15rem; }
 
   /* MCQ */
-  .q-options { display:flex; flex-direction:column; gap:.45rem; }
+  .q-options { display:flex; flex-direction:column; gap:.55rem; }
   .q-option {
-    padding:.78rem 1rem; border-radius:12px; border:1.5px solid var(--border);
+    padding:.85rem 1rem; border-radius:16px; border:1.5px solid var(--border);
     background:var(--soft); font-family:var(--sans); font-size:0.9rem; font-weight:500;
     color:var(--ink); cursor:pointer; text-align:left; transition:all .2s;
     display:flex; align-items:center; gap:.7rem;
   }
-  /* Lift on hover, press on tap. Ported from the demo builds: the small
-     vertical travel is what makes an option feel like a physical control
-     rather than a coloured rectangle. Transitions name their properties so
-     hovering does not also animate the correct/wrong colour change. */
+  /* Feedback on the PRESS, not the hover. :active fires on pointer-down, so
+     the option answers the finger the instant it lands and springs back on
+     release. The hover lift is gone: on a phone it stuck on whatever was
+     last touched, and the design system has no hover motion - a blue border
+     says "you can tap this". */
   .q-option {
     transition:border-color .18s ease, background .18s ease, color .18s ease,
-               transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s ease;
+               transform var(--spring-fast-ms) var(--spring-fast), box-shadow .18s ease;
   }
-  .q-option:hover:not(:disabled) { border-color:var(--blue); background:var(--blue-light);
-    color:var(--blue); transform:translateY(-2px);
-    box-shadow:0 4px 14px rgba(74,124,246,.14); }
-  .q-option:active:not(:disabled) { transform:translateY(0) scale(.99); box-shadow:none; }
+  @media (hover:hover) {
+    .q-option:hover:not(:disabled) { border-color:var(--blue); background:var(--blue-tint); }
+  }
+  .q-option:active:not(:disabled) { transform:scale(.985); transition-duration:80ms; }
   .q-option:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
   .q-option.selected { border-color:var(--blue); background:var(--blue); color:#fff; }
   .q-option.correct { border-color:var(--green); background:#d1faf0; color:#1a9e80; }
   .q-option.wrong { border-color:var(--red); background:#fee2e2; color:#dc2626; }
   .q-option:disabled { cursor:not-allowed; }
-  .opt-letter { width:24px; height:24px; border-radius:6px; background:rgba(0,0,0,.06); display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; flex-shrink:0; }
+  .opt-letter { width:26px; height:26px; border-radius:8px; background:rgba(26,29,46,.06); display:flex; align-items:center; justify-content:center; font-size:0.74rem; font-weight:700; flex-shrink:0; }
+  body.dark .opt-letter { background:rgba(255,255,255,.08); }
   .q-option.selected .opt-letter { background:rgba(255,255,255,.25); }
 
   /* TRUE FALSE */
   .tf-grid { display:grid; grid-template-columns:1fr 1fr; gap:.7rem; }
   .tf-btn {
-    padding:.95rem; border-radius:12px; border:1.5px solid var(--border);
+    padding:.95rem; border-radius:16px; border:1.5px solid var(--border);
     background:var(--soft); font-family:var(--sans); font-size:1rem; font-weight:600;
-    color:var(--ink); cursor:pointer; transition:all .2s; text-align:center;
+    color:var(--ink); cursor:pointer; text-align:center;
+    display:flex; align-items:center; justify-content:center; gap:.45rem; min-height:54px;
   }
-  .tf-btn:hover:not(:disabled) { border-color:var(--blue); background:var(--blue-light); color:var(--blue); }
+  @media (hover:hover) {
+    .tf-btn:hover:not(:disabled) { border-color:var(--blue); background:var(--blue-tint); color:var(--blue-ink); }
+  }
   .tf-btn.selected { border-color:var(--blue); background:var(--blue); color:#fff; }
   .tf-btn.correct { border-color:var(--green); background:#d1faf0; color:#1a9e80; }
   .tf-btn.wrong { border-color:var(--red); background:#fee2e2; color:#dc2626; }
@@ -635,10 +745,10 @@
 
   /* HINT */
   .hint-row { margin-top:.9rem; }
-  .hint-btn { background:none; border:1.5px solid var(--border); color:var(--muted); padding:.38rem .8rem; border-radius:8px; font-family:var(--sans); font-size:0.78rem; font-weight:500; cursor:pointer; transition:all .2s; }
+  .hint-btn { background:none; border:1.5px solid var(--border); color:var(--muted); padding:.42rem .9rem; border-radius:999px; font-family:var(--sans); font-size:0.78rem; font-weight:500; cursor:pointer; transition:all .2s; }
   .hint-btn:hover { border-color:var(--orange); color:var(--orange); background:#fff8e0; }
   .hint-box { display:none; margin-top:.6rem; padding:.7rem .95rem; background:#fff8e0; border:1px solid #f59e0b; border-radius:10px; font-size:0.82rem; color:#92400e; line-height:1.6; }
-  .hint-box.show { display:block; animation:fadeIn .3s ease; }
+  .hint-box.show { display:block; animation:sfRise var(--spring-ms) var(--spring) both; }
 
   /* FEEDBACK */
   /* ── box sorting: instant per-item feedback ───────────────────────────
@@ -660,17 +770,17 @@
     animation:sfDropIn .28s cubic-bezier(.22,.61,.36,1) both, sfShake .42s ease .28s; }
   .classify-item { transition:transform .18s ease, border-color .18s ease,
     background .18s ease; }
-  .classify-item:hover { transform:translateY(-2px); }
-  .classify-item:active { transform:translateY(0) scale(.98); }
+  .classify-item:active { transform:scale(.97); }
   .classify-bin-over { background:rgba(74,124,246,.10) !important; border-style:solid !important; }
   .sf-nudge { margin-top:.6rem; font-size:.82rem; font-weight:600; color:var(--red);
     animation:sfShake .42s ease; }
   @media (prefers-reduced-motion:reduce){
     .sf-chip, .sf-chip.is-right, .sf-chip.is-wrong, .sf-nudge { animation:none; }
-    .classify-item:hover { transform:none; }
+    .classify-item:active { transform:none; }
   }
 
-  .feedback-box { margin-top:.9rem; border-radius:12px; padding:.85rem 1.1rem; display:none; animation:fadeIn .3s ease; }
+  @keyframes sfRise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  .feedback-box { margin-top:.95rem; border-radius:14px; padding:.9rem 1.1rem; display:none; animation:sfRise var(--spring-ms) var(--spring) both; }
   .feedback-box.show { display:block; }
   /* A tint and a rule down the side, not a slab: the wrong-answer box was
      solid #fee2e2 with a red outline, the loudest thing on the card at the
@@ -696,7 +806,7 @@
   .info-fb .feedback-text { color:#1e40af; }
 
   /* CARD FOOTER */
-  .card-footer { padding:1.2rem 2rem; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+  .card-footer { padding:1rem 1.25rem 1rem 1.75rem; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:1rem; }
 
   /* Flag / bookmark button */
   .btn-flag {
@@ -903,28 +1013,34 @@
   .footer-left { font-size:0.75rem; color:var(--muted); font-weight:500; }
   .footer-left span { color:var(--blue); font-weight:700; }
   .btn-next {
-    background:var(--blue); color:#fff; padding:.78rem 1.7rem; border-radius:12px;
-    font-family:var(--sans); font-size:0.9rem; font-weight:600; border:none; cursor:pointer;
-    transition:all .3s cubic-bezier(0.16,1,.3,1); box-shadow:0 4px 14px rgba(74,124,246,.3);
+    background:var(--blue); color:#fff; min-height:48px; padding:.8rem 1.6rem; border-radius:999px;
+    font-family:var(--sans); font-size:0.94rem; font-weight:600; border:none; cursor:pointer;
+    box-shadow:0 1px 0 rgba(255,255,255,.22) inset, 0 8px 18px -8px rgba(74,124,246,.7);
     white-space:nowrap;
   }
-  .btn-next:hover:not(:disabled) { background:#3567e0; transform:translateY(-2px); box-shadow:0 8px 20px rgba(74,124,246,.4); }
+  .btn-next:hover:not(:disabled) { background:var(--blue-ink); }
   .btn-next:disabled { background:var(--border); color:var(--muted); cursor:not-allowed; transform:none; box-shadow:none; }
 
   /* RECAP CARD */
-  .recap-card { background:linear-gradient(135deg,#f0fdf9,#d1faf0); border:1.5px solid var(--green); border-radius:24px; padding:1.8rem 2rem; margin-bottom:1.2rem; display:none; animation:milestoneIn .5s cubic-bezier(0.16,1,.3,1); }
+  /* A pause card, so it looks like one of the cards - not a green slab.
+     Green means "right" everywhere else on this page, and a recap is not a
+     grade. */
+  .recap-card { background:var(--white); border:1px solid var(--border); border-radius:28px; padding:1.6rem 1.75rem; margin-bottom:1.2rem; display:none; box-shadow:var(--shadow-card); animation:sfCardIn var(--spring-ms) var(--spring) both; }
   .recap-card.show { display:block; }
-  .recap-card h3 { font-family:var(--serif); font-size:1.2rem; color:#065f46; margin-bottom:.8rem; }
+  .recap-card h3 { font-family:var(--serif); font-size:1.65rem; line-height:1.1; color:var(--ink); margin-bottom:.35rem; }
+  .recap-kick { font-size:0.7rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--blue-ink); margin-bottom:.35rem; }
+  .recap-sub { font-size:0.88rem; color:var(--muted); margin-bottom:.9rem; }
   .recap-list { list-style:none; }
-  .recap-list li { font-size:0.88rem; color:#065f46; padding:.3rem 0; border-bottom:1px solid rgba(56,191,161,.2); display:flex; align-items:center; gap:.6rem; }
+  .recap-list li { font-size:0.9rem; line-height:1.5; color:var(--ink); padding:.55rem 0; border-bottom:1px solid var(--border); display:flex; align-items:baseline; gap:.65rem; }
   .recap-list li:last-child { border:none; }
-  .recap-list li::before { content:'✓'; font-weight:700; color:var(--green); }
-  .btn-recap-next { margin-top:1rem; padding:.75rem 1.5rem; background:var(--green); color:#fff; border:none; border-radius:10px; font-family:var(--sans); font-size:0.9rem; font-weight:600; cursor:pointer; transition:background .2s; }
-  .btn-recap-next:hover { background:#2ea88a; }
+  .recap-list li::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--blue); flex-shrink:0; transform:translateY(-.1em); }
+  .btn-recap-next { margin-top:1.1rem; min-height:48px; padding:.8rem 1.6rem; background:var(--blue); color:#fff; border:none; border-radius:999px; font-family:var(--sans); font-size:0.94rem; font-weight:600; cursor:pointer; transition:background .2s; box-shadow:0 8px 18px -8px rgba(74,124,246,.7); }
+  .btn-recap-next:hover { background:var(--blue-ink); }
 
   /* END SESSION */
-  .end-btn { display:block; margin:1.2rem auto 0; background:none; border:1.5px solid var(--border); color:var(--muted); padding:.6rem 1.4rem; border-radius:10px; font-family:var(--sans); font-size:0.82rem; cursor:pointer; transition:all .2s; }
-  .end-btn:hover { border-color:var(--red); color:var(--red); background:#fef2f2; }
+  /* Quiet, because it is the one control here that ends something. */
+  .end-btn { display:block; margin:1.3rem auto 0; background:none; border:0; color:var(--muted); padding:.6rem 1.1rem; border-radius:999px; font-family:var(--sans); font-size:0.84rem; font-weight:500; cursor:pointer; }
+  .end-btn:hover { color:var(--red); background:rgba(239,68,68,.07); }
 
   /* AI CHAT (VIP) */
   .chat-fab {
@@ -934,7 +1050,8 @@
     box-shadow:0 6px 20px rgba(74,124,246,.4); transition:all .3s; z-index:300;
   }
   .chat-fab.show { display:flex; }
-  .chat-fab:hover { transform:scale(1.1); box-shadow:0 10px 28px rgba(74,124,246,.5); }
+  .chat-fab:hover { box-shadow:0 10px 28px rgba(74,124,246,.5); }
+  .chat-fab:active { transform:scale(.92); transition-duration:80ms; }
   .chat-panel {
     position:fixed; bottom:6rem; right:2rem; width:320px; max-height:420px;
     background:#fff; border:1.5px solid var(--border); border-radius:20px;
@@ -957,10 +1074,15 @@
   .chat-send:hover { background:#3567e0; }
 
   /* RESULTS */
-  .results-wrap { display:none; animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both; }
+  .results-wrap { display:none; animation:sfCardIn var(--spring-ms) var(--spring) both; }
   .results-wrap.show { display:block; }
-  .results-top { background:var(--white); border:1.5px solid var(--border); border-radius:24px; padding:1.4rem 1.5rem;
-    margin-bottom:1rem; display:flex; align-items:center; gap:1.3rem; }
+  .results-top { background:var(--white); border:1px solid var(--border); border-radius:28px; padding:1.5rem 1.6rem;
+    margin-bottom:1rem; display:flex; align-items:center; gap:1.3rem; box-shadow:var(--shadow-card); }
+  /* The score draws itself round the ring, the way the dashboard's rings
+     fill. The final dash comes from the circle's own attribute (no "to"
+     keyframe), so the ring always ends exactly at the score. */
+  @keyframes sfRingDraw { from { stroke-dasharray:0 276.5; } }
+  .r-ring circle + circle { animation:sfRingDraw 1.1s var(--spring-slow) .2s both; }
   .r-ring-wrap { position:relative; flex:0 0 112px; width:112px; height:112px; }
   .r-ring { width:112px; height:112px; display:block; }
   .results-score { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
@@ -981,24 +1103,31 @@
   body.dark .r-note { background:rgba(74,124,246,.1); border-color:rgba(74,124,246,.28); }
   body.dark .r-note strong, body.dark .r-kicker { color:#8fb0ff; }
   .results-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:.8rem; margin-bottom:1.2rem; }
-  .r-stat { background:#fff; border:1.5px solid var(--border); border-radius:16px; padding:1.1rem; text-align:center; }
-  .r-stat-val { font-size:1.7rem; font-weight:700; color:var(--ink); letter-spacing:-0.02em; }
+  .r-stat { background:#fff; border:1px solid var(--border); border-radius:18px; padding:1.1rem; text-align:center; }
+  .r-stat-val { font-size:1.7rem; font-weight:700; color:var(--ink); letter-spacing:-0.02em; font-variant-numeric:tabular-nums; }
   .r-stat-label { font-size:0.68rem; color:var(--muted); margin-top:.2rem; text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
-  .wrong-reviews { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.6rem; margin-bottom:1.2rem; }
-  .wrong-reviews h3 { font-family:var(--serif); font-size:1.2rem; color:var(--ink); margin-bottom:.9rem; }
+  .wrong-reviews { background:#fff; border:1px solid var(--border); border-radius:24px; padding:1.5rem; margin-bottom:1.2rem; }
+  .wrong-reviews h3 { font-family:var(--serif); font-size:1.5rem; line-height:1.1; color:var(--ink); margin-bottom:.9rem; }
   .wrong-item { border-left:4px solid var(--red); padding:.85rem 1.1rem; margin-bottom:.7rem; background:var(--soft); border-radius:0 10px 10px 0; }
   .wi-q { font-size:0.88rem; font-weight:600; color:var(--ink); margin-bottom:.3rem; }
   .wi-yours { font-size:0.8rem; color:#dc2626; margin-bottom:.2rem; }
   .wi-correct { font-size:0.8rem; color:#1a9e80; margin-bottom:.4rem; }
   .wi-why { font-size:0.8rem; color:var(--muted); line-height:1.6; }
-  .btn-dashboard { width:100%; padding:.95rem; background:var(--blue); color:#fff; border:none; border-radius:14px; font-family:var(--sans); font-size:0.95rem; font-weight:600; cursor:pointer; box-shadow:0 4px 14px rgba(74,124,246,.3); transition:all .3s; }
-  .btn-dashboard:hover { background:#3567e0; transform:translateY(-2px); }
+  .btn-dashboard { width:100%; min-height:52px; padding:.95rem; background:var(--blue); color:#fff; border:none; border-radius:999px; font-family:var(--sans); font-size:0.98rem; font-weight:600; cursor:pointer; box-shadow:0 1px 0 rgba(255,255,255,.22) inset, 0 10px 22px -10px rgba(74,124,246,.75); }
+  .btn-dashboard:hover { background:var(--blue-ink); }
 
   /* DARK MODE */
-  body.dark { --ink:#e8eeff; --muted:#7a8aaa; --soft:#0f1117; --white:#161b28; --border:#222840; }
-  body.dark nav { background:#161b28; }
-  body.dark .time-bar-wrap { background:#161b28; }
-  body.dark .session-card { background:#161b28; }
+  body.dark { --ink:#e9eeff; --muted:#8b95ae; --soft:#0c0f16; --white:#141925; --border:#232a3c;
+    --blue-ink:#8db0ff; --blue-tint:rgba(91,138,248,.14); --material:rgba(12,15,22,.72); --edge:rgba(0,0,0,.35);
+    --shadow-card:0 1px 2px rgba(0,0,0,.35), 0 22px 44px -22px rgba(0,0,0,.75); }
+  body.dark .time-bar-track { background:rgba(255,255,255,.1); }
+  body.dark .session-card { background:var(--white); }
+  /* A step deeper in dark mode: at full brightness the header glared on a
+     near-black page and the eye went to its glow, not its words. */
+  body.dark .card-header:not(.struggling-header):not(.retest-header) {
+    background:
+      radial-gradient(110% 130% at 100% 0%, rgba(125,162,255,.36) 0%, rgba(125,162,255,0) 55%),
+      linear-gradient(160deg,#4273ea 0%,#305cd8 50%,#2447bb 100%); }
   body.dark .q-option { background:#1e2336; border-color:#222840; color:#e8eeff; }
   body.dark .q-option:hover:not(:disabled) { background:rgba(74,124,246,.15); border-color:var(--blue); color:var(--blue); }
   body.dark .tf-btn { background:#1e2336; border-color:#222840; color:#e8eeff; }
@@ -1025,7 +1154,7 @@
   body.dark .fc-arrow, body.dark .fc-pip { background:#1e2336; border-color:#222840; }
   body.dark .fc-pip { background:#222840; }
   body.dark .fc-pip.is-now { background:var(--blue); }
-  body.dark .recap-card { background:#0d2015; border-color:#1a9e80; }
+  body.dark .recap-card { background:var(--white); }
   body.dark .struggling-banner { background:#2a1800; border-color:#f59e0b; }
   body.dark .struggling-text h4, body.dark .struggling-text p { color:#fcd34d; }
   body.dark .milestone-banner { box-shadow:0 8px 24px rgba(74,124,246,.1); }
@@ -1035,36 +1164,36 @@
   body.dark .chat-panel { background:#161b28; border-color:#222840; }
   body.dark .chat-msg.ai { background:#1e2336; color:#e8eeff; }
   body.dark .chat-input { background:#1e2336; border-color:#222840; color:#e8eeff; }
-  body.dark .end-btn { border-color:#222840; color:#7a8aaa; }
+  body.dark .end-btn { color:var(--muted); }
 
   /* ── MOBILE ── */
   @media(max-width:768px) {
-    nav { padding:.65rem 1rem; }
-    nav svg { width:110px !important; height:27px !important; }
-    .nav-back { font-size:0.78rem; }
-    .time-bar-wrap { padding:.5rem 1rem; gap:.5rem; }
-    .time-label { min-width:50px; font-size:0.68rem; }
-    .stat-pill { font-size:0.63rem; padding:.15rem .45rem; }
-    .container { padding:.75rem .85rem 5rem; }
+    .sbar-in { padding:8px 10px; gap:8px; min-height:56px; }
+    .sbar-exit { width:38px; padding:0; justify-content:center; }
+    .sbar-exit span { display:none; }
+    .time-bar-wrap { gap:.5rem; }
+    .time-label { min-width:0; font-size:0.74rem; }
+    .stat-pill { font-size:0.72rem; padding:.26rem .58rem; }
+    .container { padding:.9rem 16px 5rem; }
     /* Cards */
-    .session-card { border-radius:20px; }
-    .card-header { padding:1.1rem 1.2rem .9rem; }
-    .card-header h2 { font-size:1.15rem; }
+    .session-card { border-radius:24px; }
+    .card-header { padding:1.15rem 1.25rem 1.05rem; }
+    .card-header h2 { font-size:1.55rem; }
     .card-badge { font-size:0.65rem; }
     .card-body { padding:1.1rem 1.2rem; }
     .card-footer { padding:.85rem 1.2rem; }
     .lp-rail { gap:.3rem; margin-bottom:.95rem; }
     .lp-hint { display:none; }
     /* Questions */
-    .q-text { font-size:0.95rem; line-height:1.55; }
+    .q-text { font-size:1.02rem; line-height:1.5; }
     .q-option {
-      padding:.85rem 1rem; font-size:0.88rem; border-radius:14px;
+      padding:.85rem 1rem; font-size:0.9rem; border-radius:16px;
       min-height:52px; /* bigger tap target */
     }
     .q-option-letter { width:26px; height:26px; font-size:0.75rem; }
     /* True/False */
     .tf-row { gap:.6rem; }
-    .tf-btn { padding:.95rem; font-size:0.92rem; min-height:52px; border-radius:14px; }
+    .tf-btn { padding:.95rem; font-size:0.95rem; min-height:54px; border-radius:16px; }
     /* Fill in blank */
     .fill-input { font-size:0.92rem; padding:.85rem 5.6rem .85rem 1rem; }
     .fill-wrap .fill-submit { padding:.5rem .85rem; font-size:0.82rem; }
@@ -1078,7 +1207,7 @@
     .r-stat-val { font-size:1.3rem; }
     .r-stat-label { font-size:0.65rem; }
     /* Next button bigger on mobile */
-    .btn-next { padding:.88rem 1.4rem; font-size:0.9rem; border-radius:12px; min-height:48px; }
+    .btn-next { padding:.85rem 1.4rem; font-size:0.92rem; border-radius:999px; min-height:48px; }
     /* Chat */
     .chat-fab { bottom:1.2rem; right:1rem; width:48px; height:48px; }
     .chat-panel { width:calc(100vw - 1.5rem); right:.75rem; bottom:4.5rem; max-height:65vh; }
@@ -1087,18 +1216,18 @@
     /* Streak pill - sizes itself from its content now, so no fixed square. */
     .streak-mark { width:12px; height:12px; }
     /* Milestone/Struggling banners */
-    .milestone-banner { padding:.85rem 1rem; font-size:0.82rem; border-radius:12px; }
-    .struggling-banner { padding:.8rem 1rem; font-size:0.82rem; border-radius:12px; }
+    .milestone-banner { padding:.8rem .85rem; font-size:0.82rem; border-radius:18px; }
+    .struggling-banner { padding:.85rem 2.4rem .85rem .9rem; font-size:0.82rem; border-radius:16px; }
   }
 
   @media(max-width:390px) {
-    .q-text { font-size:0.88rem; }
-    .card-header h2 { font-size:1.4rem; }
+    .q-text { font-size:0.98rem; }
+    .card-header h2 { font-size:1.45rem; }
+    .session-stats .streak-pill { padding:.22rem .45rem; }
   }
 
   /* ── GLOBAL TYPOGRAPHY STANDARD ── */
-  nav { min-height:60px; }
-  nav .logo-svg { width:140px; height:34px; }
+
   /* Instrument Serif has ONE weight. Headings are bold by default, so the
      browser was smearing a fake bold over every one of them - with the
      tightened spacing the letters ran into each other ("The heart and blood
@@ -1110,37 +1239,38 @@
 
   
   /* ── shared interaction feel ──────────────────────────────────────────
-     Every tappable control uses the same lift-and-press so the interface
-     behaves consistently, matching the demo builds. */
+     Every tappable control answers the same way: on the PRESS. :active fires
+     on pointer-down, the control gives a little, and the release springs it
+     back. They all used to lift 2px on hover - motion the design system does
+     not have, and on a phone the lift stuck to whatever was touched last.
+     Colour still changes on hover; that is how a control says "tap me". */
   .tf-btn, .seq-item, .match-item, .classify-item, .hint-btn,
-  .conf-btn, .fill-submit, .btn-next, .sfwb-explain {
+  .conf-btn, .fill-submit, .btn-next, .sfwb-explain, .write-submit, .swp-go,
+  .lp-back, .fc-arrow, .dict-play, .dict-slow, .hear-btn, .sb-word, .cm-chip,
+  .accent-key, .sf-recall-btn, .sf-moment-btn, .btn-flag, .btn-review-lesson,
+  .btn-recap-next, .btn-dashboard, .end-btn, .chat-send {
     transition:border-color .18s ease, background .18s ease, color .18s ease,
-               transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s ease;
+               transform var(--spring-fast-ms) var(--spring-fast), box-shadow .18s ease;
   }
-  .tf-btn:hover:not(:disabled), .seq-item:hover, .match-item:hover:not(:disabled),
-  .classify-item:hover, .hint-btn:hover, .conf-btn:hover,
-  .btn-next:hover:not(:disabled) { transform:translateY(-2px); }
-
-  /* Standalone check buttons lift like every other control. Placed before the
-     wrapper-scoped rules so those win by specificity (two classes beats one)
-     rather than relying on a :not() that must enumerate ancestors. */
-  .fill-submit:hover:not(:disabled) { transform:translateY(-2px); }
-  .fill-submit:active:not(:disabled) { transform:translateY(0) scale(.98); }
+  .fill-submit:active:not(:disabled) { transform:scale(.96); transition-duration:80ms; }
 
   /* Only inside the fill wrapper does the button sit within the field. */
   .fill-wrap .fill-submit {
     position:absolute; right:.4rem; top:50%; transform:translateY(-50%);
     padding:.55rem 1.05rem; border-radius:9px; font-size:0.85rem;
   }
-  /* Its hover must preserve the centring offset or it jumps out of the box. */
-  .fill-wrap .fill-submit:hover:not(:disabled) { transform:translateY(-50%) scale(1.03); }
-  .fill-wrap .fill-submit:active:not(:disabled) { transform:translateY(-50%) scale(.97); }
+  /* Its press must keep the centring offset or it jumps out of the box. */
+  .fill-wrap .fill-submit:active:not(:disabled) { transform:translateY(-50%) scale(.96); }
   .tf-btn:active:not(:disabled), .seq-item:active, .match-item:active:not(:disabled),
   .classify-item:active, .hint-btn:active, .conf-btn:active,
-  .btn-next:active:not(:disabled) {
-    transform:translateY(0) scale(.98);
+  .btn-next:active:not(:disabled), .write-submit:active:not(:disabled), .swp-go:active:not(:disabled),
+  .lp-back:active, .fc-arrow:active:not(:disabled), .dict-play:active, .dict-slow:active, .hear-btn:active,
+  .sb-word:active:not(:disabled), .cm-chip:active:not(:disabled), .accent-key:active,
+  .sf-recall-btn:active, .sf-moment-btn:active, .btn-flag:active, .btn-review-lesson:active,
+  .btn-recap-next:active, .btn-dashboard:active, .end-btn:active, .chat-send:active {
+    transform:scale(.96); transition-duration:80ms;
   }
-  .btn-next:hover:not(:disabled) { box-shadow:0 6px 18px rgba(74,124,246,.26); }
+
   .fill-input { transition:border-color .18s ease, box-shadow .18s ease; }
   .fill-input:focus { box-shadow:0 0 0 3px rgba(74,124,246,.14); }
 
@@ -1148,10 +1278,8 @@
   @media (prefers-reduced-motion:reduce) {
     .q-option, .tf-btn, .seq-item, .match-item, .classify-item, .hint-btn,
     .conf-btn, .fill-submit, .btn-next, .sfwb-explain { transition:none; }
-    .q-option:hover:not(:disabled), .tf-btn:hover:not(:disabled),
-    .seq-item:hover, .match-item:hover:not(:disabled), .classify-item:hover,
-    .hint-btn:hover, .conf-btn:hover, .fill-submit:hover:not(:disabled),
-    .btn-next:hover:not(:disabled) { transform:none; box-shadow:none; }
+    .q-option:active, .tf-btn:active, .seq-item:active, .match-item:active, .classify-item:active,
+    .hint-btn:active, .conf-btn:active, .fill-submit:active, .btn-next:active { transform:none; }
   }
 
   /* ── TOPIC PATH ───────────────────────────────────────────────────────
@@ -1264,8 +1392,7 @@
     border:1.5px solid var(--blue); border-radius:10px; padding:.5rem .85rem;
     cursor:pointer; transition:transform .18s cubic-bezier(.22,.61,.36,1), background .18s ease;
   }
-  .swp-go:hover:not(:disabled) { transform:translateY(-2px); background:#3B69DE; }
-  .swp-go:active:not(:disabled) { transform:translateY(0) scale(.98); }
+  .swp-go:hover:not(:disabled) { background:#3B69DE; }
   .swp-go:disabled { opacity:.4; cursor:default; transform:none; }
   /* The worked line for a step: what was actually computed. A learner who only
      sees "Correct" learns that they were right, not why. */
@@ -1289,7 +1416,6 @@
     margin-right:.4rem; }
   @media (prefers-reduced-motion:reduce) {
     .swp-step, .swp-step.is-locked { animation:none; }
-    .swp-go:hover:not(:disabled) { transform:none; }
   }
 
   /* ── THE FIVE FORMATS OF OCT 2026 ─────────────────────────────────────────
@@ -1410,54 +1536,82 @@
     margin:.2rem 0 .3rem; }
   .rch-b { margin-top:1rem; }
   .rch-b[hidden] { display:none; }
+
+  /* ── ANSWER MARKS (Oct 2026) ──────────────────────────────────────────
+     The chosen answer gets a tick or a cross that WRITES itself in, left to
+     right, the instant it is graded - and the right answer, revealed after
+     a miss, gets its tick too. A pseudo-element, so no text and no node is
+     added to the option: textContent, the results list's "Your answer" and
+     every test that reads the option are unchanged. */
+  .q-option.correct-ans::after, .q-option.wrong-ans::after,
+  .tf-btn.correct-ans::after, .tf-btn.wrong-ans::after {
+    content:''; flex:0 0 20px; width:20px; height:20px; margin-left:auto; background:currentColor;
+    -webkit-mask:var(--sf-mark) center / contain no-repeat; mask:var(--sf-mark) center / contain no-repeat;
+    animation:sfMarkIn .42s cubic-bezier(.3,.7,.2,1) .06s both;
+  }
+  .tf-btn.correct-ans::after, .tf-btn.wrong-ans::after { margin-left:0; }
+  .q-option.correct-ans, .tf-btn.correct-ans {
+    --sf-mark:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E"); }
+  .q-option.wrong-ans, .tf-btn.wrong-ans {
+    --sf-mark:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.7' stroke-linecap='round'%3E%3Cpath d='M7 7l10 10M17 7L7 17'/%3E%3C/svg%3E"); }
+  @keyframes sfMarkIn { from { clip-path:inset(0 100% 0 0); } to { clip-path:inset(0 0 0 0); } }
+  /* Here, after .who-bub's own rule, so the press is a spring and not a jump. */
+  .who-bub { transition:border-color .18s ease, background .18s ease, transform var(--spring-fast-ms) var(--spring-fast); }
+  .who-say:active:not(:disabled) .who-bub { transform:scale(.985); transition-duration:80ms; }
+  @media (prefers-reduced-motion:reduce) {
+    .q-option.correct-ans::after, .q-option.wrong-ans::after,
+    .tf-btn.correct-ans::after, .tf-btn.wrong-ans::after { animation:none; }
+    .session-card, .recap-card, .results-wrap, .feedback-box, .hint-box.show,
+    .milestone-banner, .struggling-banner { animation:none !important; }
+    .r-ring circle + circle { animation:none; }
+  }
 </style>
 </head>
 <body>
 
-<nav>
-  <a href="dashboard.html" class="logo">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
-      <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
-      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
-      <rect x="8" y="10" width="17" height="22" rx="3" fill="#dce8ff" opacity="1"/>
-      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
-      <rect x="14" y="10" width="17" height="22" rx="3" fill="#f0f4ff"/>
-      <rect x="17" y="16" width="11" height="2" rx="1" fill="#3567e0"/>
-      <rect x="17" y="21" width="8" height="2" rx="1" fill="#3567e0" opacity="0.7"/>
-      <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
-      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="#f0f4ff"/>
-      <text x="48" y="28" font-family="DM Sans, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
-        <tspan class="logo-ink">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
-      </text>
-    </svg>
-  </a>
-  <a href="dashboard.html" class="nav-back">← Dashboard</a>
-  <button onclick="toggleDark()" id="dark-toggle" title="Toggle dark mode" style="background:var(--soft);border:1.5px solid var(--border);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;padding:0;flex-shrink:0;"><svg id="dark-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
-</nav>
+<!-- Before anything paints, so a dark-mode learner is not shown a white
+     session first. The key is global (not namespaced), as SFStore keeps it.
+     Carries data-sf-boot for the reason given in the head. -->
+<script data-sf-boot>try { if (localStorage.getItem('studyflow_dark') === '1') document.body.classList.add('dark'); } catch (e) {}</script>
 
-<!-- TIME BAR -->
-<div class="time-bar-wrap">
-  <span class="time-label" id="time-label">30 min</span>
-  <div class="time-bar-track">
-    <div class="time-bar-fill" id="time-bar" style="width:100%"></div>
-  </div>
-  <div class="session-stats">
-    
-    <span class="stat-pill total" id="score-pill">0/0</span>
-    <span class="streak-pill" id="streak-pill" title="Answer streak">
-      <svg class="streak-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M12.4 2.6c.4 2.6 2 3.9 3.1 5.4a5.6 5.6 0 0 1 1.1 3.5 4.6 4.6 0 1 1-9.2 0c0-2 .9-3.3 2-4.5.2 1 .7 1.7 1.3 2.1.6-2.3 1-4.3 1.7-6.5Z"/>
+<nav class="sbar" id="sbar" aria-label="Session">
+  <div class="sbar-in">
+    <a href="dashboard.html" class="sbar-exit" aria-label="Back to dashboard">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span>Dashboard</span>
+    </a>
+    <!-- TIME BAR -->
+    <div class="time-bar-wrap">
+      <span class="time-label" id="time-label">30 min</span>
+      <div class="time-bar-track">
+        <div class="time-bar-fill" id="time-bar" style="width:100%"></div>
+      </div>
+    </div>
+    <div class="session-stats">
+      <span class="stat-pill total" id="score-pill" title="Correct so far">0/0</span>
+      <span class="streak-pill" id="streak-pill" title="Answer streak">
+        <svg class="streak-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12.4 2.6c.4 2.6 2 3.9 3.1 5.4a5.6 5.6 0 0 1 1.1 3.5 4.6 4.6 0 1 1-9.2 0c0-2 .9-3.3 2-4.5.2 1 .7 1.7 1.3 2.1.6-2.3 1-4.3 1.7-6.5Z"/>
+        </svg>
+        <span class="streak-num-inside" id="streak-num">2</span>
+      </span>
+    </div>
+    <button class="sbar-icon" onclick="toggleDark()" id="dark-toggle" title="Toggle dark mode" aria-label="Switch to dark mode">
+      <svg id="dark-icon" class="theme-ico" viewBox="0 0 24 24" aria-hidden="true">
+        <defs><mask id="sf-moon-mask"><rect x="-4" y="-4" width="32" height="32" fill="#fff"/><circle class="cut" cx="24" cy="4" r="7" fill="#000"/></mask></defs>
+        <circle class="core" cx="12" cy="12" r="5" fill="currentColor" mask="url(#sf-moon-mask)"/>
+        <g class="rays" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M12 1.5v2.2M12 20.3v2.2M1.5 12h2.2M20.3 12h2.2M4.6 4.6l1.5 1.5M17.9 17.9l1.5 1.5M4.6 19.4l1.5-1.5M17.9 6.1l1.5-1.5"/>
+        </g>
       </svg>
-      <span class="streak-num-inside" id="streak-num">2</span>
-    </span>
+    </button>
   </div>
-</div>
+</nav>
 
 <div class="container">
   <!-- MILESTONE BANNER -->
   <div class="milestone-banner" id="milestone-banner">
-    <span class="milestone-icon" id="milestone-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mlg" x1="50%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#ff9500"/><stop offset="100%" stop-color="#ff3b00"/></linearGradient></defs><path d="M12 2C10 6 8 9 8 13a4 4 0 0 0 8 0c0-3-2.5-5.5-4-11z" fill="url(#mlg)"/><path d="M12 15c0-1.2-.8-2-.8-3.2.8 1.2 1.6 2 1.6 3.2a.8.8 0 0 1-1.6 0z" fill="#ffcc00" opacity=".9"/></svg></span>
+    <span class="milestone-icon" id="milestone-icon"></span>
     <div class="milestone-text">
       <h4 id="milestone-title">Halfway there!</h4>
       <p id="milestone-msg">Keep it up — you're doing great!</p>
@@ -1467,7 +1621,7 @@
 
   <!-- STRUGGLING BANNER -->
   <div class="struggling-banner" id="struggling-banner">
-    <span class="struggling-icon">!</span>
+    <span class="struggling-icon" aria-hidden="true">!</span>
     <div class="struggling-text">
       <h4>Let's slow down a bit</h4>
       <p>You've missed a few in a row — no worries. Review the lesson content and try again.</p>
@@ -1478,9 +1632,11 @@
 
   <!-- RECAP CARD -->
   <div class="recap-card" id="recap-card">
-    <h3>> 10-Minute Recap</h3>
+    <div class="recap-kick">Ten minutes in</div>
+    <h3>Quick recap</h3>
+    <p class="recap-sub">The ideas so far, in one breath. Read them, then keep going.</p>
     <ul class="recap-list" id="recap-list"></ul>
-    <button class="btn-recap-next" onclick="closeRecap()">Keep grinding →</button>
+    <button class="btn-recap-next" onclick="closeRecap()">Keep going →</button>
   </div>
 
   <!-- MAIN SESSION CARD -->
@@ -3207,6 +3363,7 @@
     window.currentCard = card;
     if (card && card.q) window.currentQuestion = card.q;
 
+    var leaving = sfCardGhost();
     try {
       renderCard(card);
     } catch(err) {
@@ -3220,8 +3377,93 @@
           '<button class="btn-next" onclick="showNextCard()">Next →</button></div></div>';
       }
     }
+    sfCardLeave(leaving);
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ── THE LEAVING CARD (Oct 2026) ───────────────────────────────────────
+     The card just finished slides off to the left as the next one arrives
+     from the right (.session-card's own sfCardIn) - forward is leftward, as
+     in every card stack.
+
+     The leaving card is a COPY inside a shadow root, and that is the whole
+     design. renderCard still replaces the real card synchronously, so no
+     caller waits on motion; and nothing that queries the page can see the
+     copy, because selectors do not cross a shadow boundary. The tests count
+     .q-option, svg, text and buttons across the whole document - a plain
+     clone would have doubled every count for a quarter of a second.
+
+     The copy needs this page's CSS inside the shadow root: every <style> on
+     the page, with `body.dark` rewritten to `:host(.dark)` and every
+     animation switched off (a fresh clone would otherwise replay its own
+     entrance while it leaves). Built once, rebuilt only when a stylesheet is
+     added (the whiteboard injects its own).
+
+     Removal is on a timer, never on the animation finishing: a background
+     tab runs no animation frames. In one, or under reduced motion, there is
+     no copy at all. */
+  var sfGhostSheet = null, sfGhostStyleCount = -1;
+  function sfGhostStyles() {
+    var styles = document.querySelectorAll('style');
+    if (sfGhostSheet && styles.length === sfGhostStyleCount) return sfGhostSheet;
+    var css = '';
+    for (var i = 0; i < styles.length; i++) css += styles[i].textContent + '\n';
+    css = css.replace(/body\.dark/g, ':host(.dark)') +
+      '\n*,*::before,*::after{animation:none!important;transition:none!important;}' +
+      '.topic-step,.sfd-hold{opacity:1!important;}';
+    sfGhostStyleCount = styles.length;
+    sfGhostSheet = css;
+    try {
+      if (window.CSSStyleSheet && 'adoptedStyleSheets' in Document.prototype) {
+        var sheet = new CSSStyleSheet();
+        sheet.replaceSync(css);
+        sfGhostSheet = sheet;
+      }
+    } catch (e) { /* keep the string; it goes in as a <style> */ }
+    return sfGhostSheet;
+  }
+  function sfCardGhost() {
+    try {
+      var sc = document.getElementById('session-card');
+      if (!sc || !sc.attachShadow || !sc.firstElementChild || sc.style.display === 'none') return null;
+      if (document.visibilityState === 'hidden') return null;
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return null;
+      var r = sc.getBoundingClientRect();
+      if (!r.height || r.bottom < 0 || r.top > window.innerHeight) return null;
+      var host = document.createElement('div');
+      host.className = 'sf-leaving';
+      host.setAttribute('aria-hidden', 'true');
+      if (document.body.classList.contains('dark')) host.className += ' dark';
+      host.style.cssText = 'position:absolute;margin:0;left:' + (r.left + window.pageXOffset) + 'px;top:' +
+        (r.top + window.pageYOffset) + 'px;width:' + r.width + 'px;pointer-events:none;z-index:1;';
+      var root = host.attachShadow({ mode: 'open' });
+      var sheet = sfGhostStyles();
+      if (typeof sheet === 'string') {
+        var st = document.createElement('style'); st.textContent = sheet; root.appendChild(st);
+      } else root.adoptedStyleSheets = [sheet];
+      var copy = sc.cloneNode(true);
+      copy.removeAttribute('id');
+      /* Typed answers are properties, not attributes - carry them over, or
+         the leaving card shows an empty box where the answer was. */
+      var from = sc.querySelectorAll('input,textarea,select'), to = copy.querySelectorAll('input,textarea,select');
+      for (var k = 0; k < from.length && k < to.length; k++) {
+        try { to[k].value = from[k].value; to[k].checked = from[k].checked; } catch (e2) {}
+      }
+      root.appendChild(copy);
+      document.body.appendChild(host);
+      return host;
+    } catch (e) { return null; }
+  }
+  function sfCardLeave(host) {
+    if (!host) return;
+    try {
+      if (host.animate) {
+        host.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-44px) scale(.97)' }],
+          { duration: 240, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' });
+      }
+    } catch (e) {}
+    setTimeout(function () { if (host.parentNode) host.parentNode.removeChild(host); }, 260);
   }
 
   /* ── RENDER CARD ── */
@@ -10941,7 +11183,7 @@
 
   // DUOLINGO-STYLE CONFETTI
   function spawnConfetti() {
-    var colors = ['#38bfa1','#4a7cf6','#f59e0b','#8b5cf6','#ef4444','#10b981'];
+    var colors = ['#4a7cf6','#2f5fe0','#9dbcff','#dce8ff','#1a1d2e','#38bfa1'];
     var container = document.querySelector('.session-card') || document.body;
     var rect = container.getBoundingClientRect();
     for (var i = 0; i < 12; i++) {
@@ -11154,12 +11396,11 @@
     recentWrong = 0;
     // Insert a lesson review card
     var sc = document.getElementById('session-card');
+    var leaving = sfCardGhost();
     sc.innerHTML = buildCard('Review — Let\'s Go Over This', day.title || 'Lesson Review', true,
       '<div class="content-text">' + formatContent(day.content) + '</div>',
       'Take your time', 'Ready to try again →', false);
-    sc.style.animation = 'none';
-    void sc.offsetWidth;
-    sc.style.animation = 'fadeUp .4s cubic-bezier(0.16,1,.3,1) both';
+    sfCardLeave(leaving);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -11168,12 +11409,12 @@
     var pct = (totalSeconds - secondsLeft) / totalSeconds;
     if (pct >= 0.5 && !showedHalfMilestone) {
       showedHalfMilestone = true;
-      showMilestone('<svg width="28" height="28" viewBox="0 0 24 24" fill="#f59e0b" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>', 'Halfway there!', 'You\'re killing it — keep that momentum going!');
+      showMilestone('<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>', 'Halfway there!', 'You\'re killing it — keep that momentum going!');
     } else if (correctCount === 5 && !showedQuarterMilestone) {
       showedQuarterMilestone = true;
-      showMilestone('<svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mg" x1="50%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#ff9500"/><stop offset="100%" stop-color="#ff3b00"/></linearGradient></defs><path d="M12 2C10 6 8 9 8 13a4 4 0 0 0 8 0c0-3-2.5-5.5-4-11zm-1 12a.8.8 0 0 1-.8-.8c0-1.2.8-2 .8-3.2.8 1.2 1.6 2 1.6 3.2a.8.8 0 0 1-1.6 0z" fill="url(#mg)"/></svg>', '5 correct in a row!', 'On fire — keep it up!');
+      showMilestone('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.4 2.6c.4 2.6 2 3.9 3.1 5.4a5.6 5.6 0 0 1 1.1 3.5 4.6 4.6 0 1 1-9.2 0c0-2 .9-3.3 2-4.5.2 1 .7 1.7 1.3 2.1.6-2.3 1-4.3 1.7-6.5Z"/></svg>', '5 correct in a row!', 'On fire — keep it up!');
     } else if (currentStreak === 10) {
-      showMilestone('<svg width="28" height="28" viewBox="0 0 24 24" fill="#8b5cf6" stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', '10 streak!', 'Absolutely crushing it right now!');
+      showMilestone('<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>', '10 streak!', 'Absolutely crushing it right now!');
     }
   }
 
@@ -17392,16 +17633,36 @@
     }).join('');
   }
 
+  /* The mark morphs between sun and moon in CSS (.theme-ico); this only
+     flips the class, eases the change of brightness, and keeps the label
+     true. It used to rewrite the icon's markup. */
+  function sfThemeLabel() {
+    var b = document.getElementById('dark-toggle');
+    if (b) b.setAttribute('aria-label', document.body.classList.contains('dark') ? 'Switch to light mode' : 'Switch to dark mode');
+  }
   function toggleDark() {
+    var root = document.documentElement;
+    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!still) {
+      root.classList.add('theme-easing');
+      setTimeout(function () { root.classList.remove('theme-easing'); }, 460);
+    }
     var isDark = document.body.classList.toggle('dark');
     SFStore.setItem('studyflow_dark', isDark ? '1' : '0');
-    document.getElementById('dark-icon').innerHTML = isDark ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>' : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+    sfThemeLabel();
   }
-  if (SFStore.getItem('studyflow_dark') === '1') {
-    document.body.classList.add('dark');
-    var di = document.getElementById('dark-icon');
-    if (di) di.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
-  }
+  if (SFStore.getItem('studyflow_dark') === '1') document.body.classList.add('dark');
+  sfThemeLabel();
+  /* The bar's edge fade, once the card is actually under it. */
+  (function () {
+    var bar = document.getElementById('sbar'), ticking = false;
+    if (!bar) return;
+    function paint() { ticking = false; bar.classList.toggle('scrolled', window.pageYOffset > 4); }
+    window.addEventListener('scroll', function () { if (!ticking) { ticking = true; requestAnimationFrame(paint); } }, { passive: true });
+    paint();
+  })();
+  // iOS applies :active - the press feedback - only when a touch listener exists.
+  document.addEventListener('touchstart', function () {}, { passive: true });
 
   
 
