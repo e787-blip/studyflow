@@ -2859,6 +2859,13 @@ memory", which is a slogan; every question card uses that slot for the score.
 `main` is the live branch. Push to GitHub and Vercel rebuilds automatically —
 frontend and `api/*.js` together. There is no build step, so a push is the deploy.
 
+**Small bug fixes go straight to `main`, without asking** (the owner's
+standing instruction, Oct 2026): a fix for something broken - a card that
+does not turn, a button that does nothing, a crash - is merged to `main` and
+pushed as soon as it is verified (reproduced, fixed, a test that fails
+without it, the full suite green). New features, redesigns and anything that
+changes what a learner is taught still wait for the owner to say "merge it".
+
 ### The results screen
 
 - **The score is a ring on a plain card**, the same for 0% and 100%. It was
