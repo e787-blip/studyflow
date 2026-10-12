@@ -379,12 +379,32 @@
   .js .path-row.pre.pre-in { opacity: 1; transform: none;
     transition: opacity .45s ease, transform var(--spring-ms) var(--spring), border-color .2s, background-color .2s; transition-delay: var(--d, 0ms), var(--d, 0ms), 0s, 0s; }
 
+  /* ── WEAK SPOTS ──────────────────────────────────────────────────────── */
+  .weak-list { list-style:none; display:grid; gap:10px; }
+  .weak-row { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px 14px;
+              padding:13px 14px 14px 16px; border-radius:var(--r-md); background:var(--surface-2); border:1px solid var(--line); }
+  .weak-name { font-weight:600; font-size:.95rem; line-height:1.3; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .weak-meta { font-size:.78rem; color:var(--muted); margin-top:2px; font-variant-numeric:tabular-nums; }
+  .weak-go { height:34px; padding:0 14px; font-size:.82rem; }
+  /* Length is the number: how much of this part you get right. One blue,
+     like every other bar here - a weak spot is something to practise, not
+     an alarm. */
+  .weak-meter { grid-column:1 / -1; height:6px; border-radius:999px; background:var(--line-2); overflow:hidden; }
+  .weak-meter i { display:block; height:100%; width:calc(var(--p) * 100%); border-radius:999px; background:var(--blue);
+                  transform-origin:left center; transform:scaleX(0); transition:transform var(--spring-slow-ms) var(--spring-slow); transition-delay:var(--d, 0ms); }
+  .weak-list.grown .weak-meter i { transform:none; }
+  .weak-note { display:flex; align-items:flex-start; gap:.55rem; font-size:.86rem; color:var(--ink-2); line-height:1.45; margin-top:14px; }
+  .weak-note svg { margin-top:2px; color:var(--blue); }
+  .weak-none { font-size:.92rem; color:var(--ink-2); line-height:1.5; }
+
   /* ── AT A GLANCE ─────────────────────────────────────────────────────── */
   .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .stat { padding: 14px 14px 13px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line); min-width: 0; }
   .stat-label { display: flex; align-items: center; gap: .4rem; font-size: .76rem; font-weight: 600; color: var(--muted); }
   .stat-label svg { width: 14px; height: 14px; opacity: .8; }
-  .stat-val { font-family: var(--serif); font-size: 2.1rem; line-height: 1; letter-spacing: -.02em; margin-top: 10px;
+  /* DM Sans, not the serif: Instrument Serif's "1" is an "l" with a flag,
+     and a streak of one read "l day". */
+  .stat-val { font-size: 1.85rem; font-weight: 600; line-height: 1; letter-spacing: -.03em; margin-top: 10px;
               font-variant-numeric: tabular-nums; white-space: nowrap; }
   .stat-val small { font-family: var(--sans); font-size: .8rem; color: var(--muted); letter-spacing: 0; margin-left: 4px; font-weight: 500; }
   .stat-sub { font-size: .76rem; color: var(--muted); margin-top: 6px; line-height: 1.35; }
@@ -691,7 +711,7 @@
   @media (max-width: 380px) {
     .stats { gap: 8px; }
     .stat { padding: 12px; }
-    .stat-val { font-size: 1.8rem; }
+    .stat-val { font-size: 1.65rem; }
     .seg button { min-width: 38px; padding: 0 6px; }
     .seg-label { display: none; }
   }
@@ -809,7 +829,7 @@
   <!-- THE PLAN -->
   <div id="plan-view" hidden>
     <div class="page-head rise">
-      <div style="min-width:0;">
+      <div style="min-width:0;flex:1;">
         <p class="greet"><span id="greeting-time">Good day</span>, <strong id="user-name">there</strong></p>
         <!-- The chevron rides at the end of the title's last line. Beside a
              wrapped title as a flex item it floated off to the right edge of
@@ -865,6 +885,12 @@
             <button class="hero-back" id="hero-back" data-action="back-to-next" hidden>Back to up next</button>
           </div>
         </article>
+
+        <!-- WEAK SPOTS -->
+        <section class="card rise" id="weak-card" aria-labelledby="weak-title" hidden>
+          <div class="card-head"><h3 id="weak-title">Weak spots</h3><span class="card-aside" id="weak-aside"></span></div>
+          <div id="weak-body"></div>
+        </section>
 
         <!-- THE PATH -->
         <section class="card rise" aria-labelledby="path-title">
@@ -1441,6 +1467,7 @@
       renderHead();
       renderHero(false);
       renderPath();
+      renderWeakSpots();
       renderGlance();
       renderScoreHistory();
       renderCalendar(0);
@@ -1729,6 +1756,131 @@
       main.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.985)' }], { duration: 160, easing: 'ease-in', fill: 'forwards' });
     }
     setTimeout(function () { window.location.href = url; }, 150);
+  }
+
+  /* ── WEAK SPOTS ─────────────────────────────────────────────────────────
+     The question the other numbers do not answer: what am I bad at? Built
+     from the lesson's answer log (studyflow_answer_log, one line per graded
+     card, written at the card boundary in lesson.html) and grouped by the
+     part of the notes each question came from - day.subtopic when the plan
+     has made parts, else the day's own title. A question is placed by its
+     TEXT, so a review of yesterday's miss counts for yesterday's part.
+
+     Days studied before the log existed fall back to the spaced-repetition
+     record every question already has: whether its last answer was right.
+     One mark per question, coarser, but real.
+
+     Shown only when there is something to show. A part needs 3+ marks
+     before it can be called weak - one miss is not a pattern - and anything
+     at 85% or better is not a weak spot. */
+  var TYPE_NAMES = {
+    mcq: 'Multiple choice', question: 'Multiple choice', truefalse: 'True or false', fill: 'Fill in the blank',
+    write: 'Written answers', classify: 'Sorting', sequence: 'Putting things in order', sentence: 'Building sentences',
+    passage: 'Reading passages', errorspot: 'Finding the mistake', scenario: 'Scenarios', wordproblem: 'Word problems',
+    bigequation: 'Equations', twopart: 'Two-part questions', corroborate: 'Comparing sources', highlight: 'Finding the evidence',
+    tracetable: 'Trace tables', matchpairs: 'Matching', match: 'Matching', estimate: 'Estimates', dictation: 'Listen and type',
+    recall: 'Naming them all', selfcheck: 'Explaining it yourself', conceptmap: 'Concept maps', whosright: 'Who\u2019s right?',
+    readchart: 'Reading charts', labeldiagram: 'Labelling diagrams', graph: 'Graphs'
+  };
+  function typeName(t) {
+    t = String(t || '').split(':')[0];
+    return TYPE_NAMES[t] || (t ? t.charAt(0).toUpperCase() + t.slice(1) : 'Other');
+  }
+  /* The lesson's own key for a question's spaced-repetition record. */
+  function qHash(q) {
+    var str = String((q && q.question) || '').substring(0, 30), hash = 0;
+    for (var i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash = hash & hash; }
+    return 'q_' + Math.abs(hash);
+  }
+  function qText(q) { return String((q && (q.question || q.prompt)) || '').slice(0, 80); }
+  function partOf(i) {
+    var d = dayAt(i);
+    return (d && d.subtopic && d.subtopic.name) ? String(d.subtopic.name) : dayTitle(i);
+  }
+  function weakEntries() {
+    var days = daysOf(plan), byText = {}, logged = {}, out = [];
+    days.forEach(function (d, i) {
+      (d && Array.isArray(d.questions) ? d.questions : []).forEach(function (q) {
+        var t = qText(q); if (t && byText[t] == null) byText[t] = i;
+      });
+    });
+    var log = readJSON('studyflow_answer_log', []);
+    if (!Array.isArray(log)) log = [];
+    var pid = String(plan.id);
+    log.forEach(function (e) {
+      if (!e || String(e.p) !== pid) return;
+      var i = byText[e.q] != null ? byText[e.q] : e.d;
+      if (typeof i !== 'number' || !days[i]) return;
+      var n = Math.max(0, +e.n || 0), k = Math.max(0, Math.min(n, +e.k || 0));
+      if (!n) return;
+      out.push({ day: i, type: e.y, n: n, k: k });
+      logged[i] = 1;
+    });
+    days.forEach(function (d, i) {
+      if (logged[i] || !d || !d.completed) return;
+      (Array.isArray(d.questions) ? d.questions : []).forEach(function (q) {
+        var sm = readJSON('studyflow_sm2_' + qHash(q), null);
+        if (!sm || !sm.nextReview) return;
+        out.push({ day: i, type: q.type, n: 1, k: sm.repetitions > 0 ? 1 : 0 });
+      });
+    });
+    return out;
+  }
+  function renderWeakSpots() {
+    var card = $('weak-card'), body = $('weak-body');
+    var entries = weakEntries();
+    var total = 0, right = 0, parts = {}, order = [], types = {};
+    entries.forEach(function (e) {
+      total += e.n; right += e.k;
+      var name = partOf(e.day);
+      if (!parts[name]) { parts[name] = { name: name, n: 0, k: 0, days: {} }; order.push(name); }
+      parts[name].n += e.n; parts[name].k += e.k; parts[name].days[e.day] = 1;
+      var tn = typeName(e.type);
+      if (!types[tn]) types[tn] = { name: tn, n: 0, k: 0 };
+      types[tn].n += e.n; types[tn].k += e.k;
+    });
+    if (!total) { card.hidden = true; return; }
+    card.hidden = false;
+    $('weak-aside').textContent = 'from ' + plural(total, 'answer');
+
+    var weak = order.map(function (k) { return parts[k]; })
+      .filter(function (g) { return g.n >= 3 && g.k / g.n < 0.85; })
+      .sort(function (a, b) { return (a.k / a.n) - (b.k / b.n) || b.n - a.n; })
+      .slice(0, 3);
+    var st = planState(), html = '';
+    if (weak.length) {
+      html = '<ol class="weak-list" id="weak-list">' + weak.map(function (g, ix) {
+        // Review the latest day of that part that can be opened.
+        var ds = Object.keys(g.days).map(Number).sort(function (a, b) { return b - a; });
+        var go = -1;
+        for (var j = 0; j < ds.length; j++) { if (st.allDone || ds[j] <= st.next) { go = ds[j]; break; } }
+        var dd = dayAt(go), pct = Math.round(g.k / g.n * 100);
+        var dayWord = ds.length > 1 ? 'Days ' + ds.slice().reverse().map(function (x) { return x + 1; }).join(', ') : 'Day ' + (ds[0] + 1);
+        return '<li class="weak-row" style="--p:' + (g.k / g.n).toFixed(3) + ';--d:' + (ix * 80) + 'ms">' +
+          '<div style="min-width:0;"><div class="weak-name">' + esc(g.name) + '</div>' +
+          '<div class="weak-meta">' + g.k + ' of ' + g.n + ' right (' + pct + '%) · ' + esc(dayWord) + '</div></div>' +
+          (go >= 0 ? '<button class="btn btn-quiet weak-go" data-review="' + go + '">' + (dd && dd.completed ? 'Review' : 'Open') + ' Day ' + (go + 1) + '</button>' : '<span></span>') +
+          '<div class="weak-meter" role="img" aria-label="' + pct + '% right"><i></i></div></li>';
+      }).join('') + '</ol>';
+    } else {
+      html = '<p class="weak-none">Nothing to flag. Every part of your notes you\u2019ve practised is at 85% or better' +
+        (total < 10 ? ' so far' : '') + '.</p>';
+    }
+    // One line about KIND of question, only when one stands clearly apart.
+    var overall = right / total, list = Object.keys(types).map(function (k) { return types[k]; })
+      .filter(function (t) { return t.n >= 3; })
+      .sort(function (a, b) { return (a.k / a.n) - (b.k / b.n); });
+    if (list.length >= 2) {
+      var low = list[0], high = list[list.length - 1];
+      if (low.k / low.n <= overall - 0.15) {
+        html += '<p class="weak-note">' + ico('q', 15) + '<span>Hardest kind of question: <strong>' + esc(low.name) +
+          '</strong>, ' + low.k + ' of ' + low.n + ' right. ' +
+          (high.k / high.n >= 0.8 ? 'Strongest: ' + esc(high.name) + '.' : '') + '</span></p>';
+      }
+    }
+    body.innerHTML = html;
+    var listEl = $('weak-list');
+    if (listEl) requestAnimationFrame(function () { requestAnimationFrame(function () { listEl.classList.add('grown'); }); });
   }
 
   /* ── AT A GLANCE ────────────────────────────────────────────────────── */
@@ -2582,6 +2734,8 @@
     if (del) { e.stopPropagation(); deletePlan(del.getAttribute('data-del')); return; }
     var pi = e.target.closest('[data-plan]');
     if (pi) { switchPlan(pi.getAttribute('data-plan')); return; }
+    var rv = e.target.closest('[data-review]');
+    if (rv) { currentDayIndex = Number(rv.getAttribute('data-review')); startToday(); return; }
     var row = e.target.closest('.path-row');
     if (row) { if (row.getAttribute('aria-disabled') !== 'true') selectDay(Number(row.getAttribute('data-day'))); return; }
     var seg = e.target.closest('.seg button');

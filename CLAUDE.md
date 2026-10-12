@@ -2794,6 +2794,19 @@ and a side column of At a glance / Scores / Calendar / reminder / invite.
   pointed at nothing).
 - **The browser pane throttles animation frames while hidden**, so
   screenshots catch count-ups mid-way. Check values in JS after waiting.
+- **Weak spots** (`renderWeakSpots`) answer "what am I bad at?", grouped by
+  the part of the notes (`day.subtopic.name`, else the day title). Data:
+  `studyflow_answer_log`, one line per graded card, written by `lesson.html`
+  at the card boundary (`sfLogStart` / `sfLogFlush` around `showNextCard`
+  and `endSession`). It does not hook the ~30 graders - it diffs
+  `totalAnswered` / `correctCount`, so the log always agrees with the score
+  pill. Pre-test cards are not logged. A question is placed by its TEXT, so a
+  review of yesterday's miss counts for yesterday. Days before the log fall
+  back to each question's SM-2 record (last answer right or wrong). A part
+  needs 3+ marks and under 85% to be listed; a "hardest kind of question"
+  line shows only when one type is 15+ points below the overall rate. The
+  teacher's empty "Topics students struggle with" panel can be filled from
+  the same log once the classroom is switched on.
 
 ## The session's look and motion (`lesson.html`) — Oct 2026
 

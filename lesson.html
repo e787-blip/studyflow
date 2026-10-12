@@ -3334,6 +3334,7 @@
 
   function showNextCard() {
     if (!sessionActive) return;
+    sfLogFlush();
     /* Cancel any pending auto-advance. Without this a timer armed on an
        earlier card fires mid-question and skips it. */
     if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
@@ -3378,8 +3379,51 @@
       }
     }
     sfCardLeave(leaving);
+    sfLogStart();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ── THE ANSWER LOG (Oct 2026) ─────────────────────────────────────────
+     What the dashboard's "Weak spots" is built from: one line per graded
+     card - which plan, which day, which question, its type, how many marks
+     and how many right. About thirty graders bump totalAnswered and
+     correctCount, each its own way, so this does not hook any of them: it
+     reads the two counters when a card opens and again when it is left (or
+     the session ends). Whatever the score pill counted for the card is
+     what is logged, so the two can never disagree.
+
+     Pre-test cards are not logged: missing those, before any teaching, is
+     what they are for - the same reason they never raise the "slow down"
+     banner. Review cards ARE logged, under the question's own text; the
+     dashboard finds the day a question belongs to by that text, so a
+     review of yesterday's miss counts for yesterday's part. */
+  var sfLogMark = null;
+  var SF_LOG_KEY = 'studyflow_answer_log', SF_LOG_MAX = 800;
+  function sfLogStart() {
+    sfLogMark = { t: totalAnswered, c: correctCount, card: window.currentCard || null };
+  }
+  function sfLogFlush() {
+    var m = sfLogMark;
+    sfLogMark = null;
+    if (!m || !m.card || m.card.isPretest) return;
+    var n = totalAnswered - m.t, k = correctCount - m.c;
+    if (n <= 0) return;
+    try {
+      var q = m.card.q || window.currentQuestion || {};
+      var log = JSON.parse(SFStore.getItem(SF_LOG_KEY) || '[]');
+      if (!Array.isArray(log)) log = [];
+      log.push({
+        p: plan && plan.id != null ? String(plan.id) : '',
+        d: dayIndex,
+        q: fmStr(q.question || q.prompt || '').slice(0, 80),
+        y: fmStr(q.type || m.card.type || '').split(':')[0],
+        n: n, k: Math.max(0, Math.min(n, k)),
+        at: Date.now()
+      });
+      if (log.length > SF_LOG_MAX) log = log.slice(log.length - SF_LOG_MAX);
+      SFStore.setItem(SF_LOG_KEY, JSON.stringify(log));
+    } catch (e) { /* storage full or off: the session never pays for it */ }
   }
 
   /* ── THE LEAVING CARD (Oct 2026) ───────────────────────────────────────
@@ -11559,6 +11603,7 @@
 
   /* ── END SESSION ── */
   function endSession() {
+    sfLogFlush();
     /* Persist completion here rather than only on the way to the dashboard:
        a learner who closes the tab has still finished the lesson. */
     try {
