@@ -3056,10 +3056,14 @@ genuinely nothing.
   and whether `selfcheck` ideas are separate ideas or one idea split in
   three. If maps keep failing validation, the prompt's example is the lever
   (see "The model copies the EXAMPLE").
-- **The classroom is off on the live site until two console steps are
-  done** - `FIREBASE_SERVICE_ACCOUNT` in Vercel and `firestore.rules`
-  published (see "The classroom"). Until then `api/class` answers 503
-  `classroom_not_configured`, verified on the live site 2026-10-08.
+- **The classroom is live (set up 2026-10-13).** It needs TWO Vercel variables,
+  not one: `FIREBASE_SERVICE_ACCOUNT` (the JSON key) **and `FIREBASE_API_KEY`**
+  (the public web key from `login.html`) - `api/class.js` answers 503
+  `classroom_not_configured` if either is missing, and a mistyped
+  `FIREBASE_API_KEY` answers 401 "Sign in again" to every real sign-in. The
+  first key was rotated the same day (it had been shown in a screenshot) and
+  the old one deleted in Google Cloud. Not yet verified end to end: a student
+  joining with a teacher's code and appearing on the dashboard.
 
 - **The subtopic map has not been seen from a real model.** `sf-topics.js` is
   tested against hand-written answers, hostile ones and every failure mode, but
