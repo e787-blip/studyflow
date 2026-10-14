@@ -30,6 +30,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `app.html` | ~292 KB | Plan builder: the lesson upload, one question per screen, then generation. Subject detection, AI prompt, question schemas, validators |
 | `lesson.html` | ~1.2 MB | The session runtime. Card queue, all question renderers, the whiteboard. Restyled Oct 2026 - see "The session's look and motion" |
 | `dashboard.html` | ~150 KB | Plan list and progress. Redesigned Oct 2026 - see "The dashboard" |
+| `about.html` / `pricing.html` | ~52 / ~60 KB | "Our story" and the plans page, redesigned Oct 2026 in Liquid Glass to match `index.html` - see "Our story and Plans". Each carries its own copy of the shared glass CSS, nav and footer |
 | `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
 | `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
 | `sf-auth.js` | ~5 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html` — see "The classroom" |
@@ -133,6 +134,13 @@ the fonts or the no-build-step stack.
 | Free | $0 | 1 plan/month, 7-day max |
 | Pro | $7.99/mo | 5 plans, 14 days |
 | VIP | $14.99/mo | Unlimited + AI chat |
+| Classroom | $79.99/mo | Teacher dashboard, up to 5 students (`api/class.js` `MAX_STUDENTS = 5`) |
+
+The pricing page sells all four; its feature lists are copied from the
+landing page's, so the two agree. **`index.html`'s Schools section does not
+agree on Classroom**: it says $79 and up to 30 students, plus a $299 School
+tier that has a Stripe price (in `api/checkout.js`'s allowlist) but no button
+on the pricing page. Unresolved - decide which is true and fix the other.
 
 ---
 
@@ -2846,6 +2854,80 @@ test reads.
   "lm" in the results tiles. Numbers that sit next to letters stay in
   DM Sans.
 
+## Our story and Plans (`about.html`, `pricing.html`) — Liquid Glass, Oct 2026
+
+The apple-design pass on the two marketing pages still on the old white-bar
+look. They now share `index.html`'s notebook paper, floating nav, fonts, one
+blue and footer, and add its glass. The pages are self-contained, so **both
+carry the same block of CSS, the same nav and footer markup and the same
+shared script** (head spring curves, signed-in nav, lens, scroll edge,
+reveals, pointer light). A change to that block is a change to both files.
+
+- **What "glass" is here** (`.glass`): `backdrop-filter` blur 18px + saturate,
+  a 1.5px inset highlight along the top, a 1px rim ring (`::before`, a masked
+  gradient: white, clear, white) and a deep soft shadow. Pro (`.blue`) and
+  VIP (`.night`) are the same glass tinted, not different cards. Their fills
+  stay at .92-.94 opacity on purpose: white text has to hold 4.5:1 even where
+  the light behind is brightest, and every lighter fill failed it.
+- **Glass needs something behind it.** On flat paper it reads as a white card,
+  so each section carries an `.aura` of soft blue radial gradients (no blur
+  filter, so no cost), and the ruled paper is `position: fixed` so glass
+  scrolls OVER it. **An aura must fade out inside its own box**: a gradient
+  that runs past the box is cut flat and shows as a hard horizontal seam
+  across the page. `.aura` has a vertical mask for exactly that.
+- **Never put an opacity transition or animation on an ancestor of glass.**
+  An element with opacity < 1 is a *backdrop root*: glass inside it blurs only
+  what is inside it, which is nothing, so it flashes flat until the fade ends.
+  Reveals (`data-reveal="glass"`) therefore sit on the glass itself and bring
+  its blur and scale up with its opacity. For the same reason the nav fades
+  with `backwards`, not `both`. The CTA's day cards float with the `translate`
+  property so `transform` stays free for their entrance.
+- **Never light glass on light glass.** Buttons inside a card are solid
+  (`.btn-outline`, `.btn-light`, `.btn-blue`), chips inside a card are solid
+  `--blue-soft`, and text on glass is `--ink-3` at weight 500, not a flat grey.
+- **Every floating control is its own capsule** (logo, pill, My Dashboard)
+  with its own light material, so each stays legible over paper, the blue band
+  or the ink footer. The nav's blue CTA has a 1px white ring so it can be found
+  over the blue band. Once the page scrolls, `.edge-top` softens what passes
+  under them: a blur with a mask and NO tint (a tinted fade is wrong over blue
+  and ink).
+- **The nav lens** rests under the current page and follows pointer or
+  keyboard focus along the pill. It is placed first with no transition
+  (`.ready` is added after), or it slides in from the left on every load, and
+  it is placed again when the web fonts land. The pill hides at 1080px and
+  below, as on the landing: beside the other two capsules it needs about
+  1070px. On a phone the nav has room for one action - "My Dashboard" when
+  signed in (the old pricing page had a Back button for this), "Build my plan"
+  when not (`data-auth` on the nav).
+- **The light that follows the pointer** (`.live` panels, fine pointers,
+  motion allowed): a highlight moved with `transform`, UNDER the content, so
+  tracking never repaints the panel and never washes out text.
+- **Reduced motion, reduced transparency and `prefers-contrast: more` are
+  three separate switches.** The last two make every surface solid, and so
+  does `@supports not (backdrop-filter)`, so a browser without it never gets
+  see-through glass with sharp text behind it. Neither page has a dark theme
+  (neither did before); `studyflow_dark` is not read here.
+- **Pricing behaviour is unchanged, the markup is not.** `checkout(priceId,
+  plan)` posts the same body to `api/checkout`; the ids in `PRICES` must stay
+  in that file's allowlist. What did change: `alert()` is a toast (the
+  server's error goes in as text, never markup); the dimmed sheet is not left
+  up when Back from Stripe restores the page (`pageshow`); a second click
+  while one is in flight does nothing; the current plan is marked for every
+  tier (it was Pro and VIP only, by button index); and a visitor's Free
+  button is "Start free" (it said "Current plan" to someone with no account).
+  **"Downgrade" has nothing behind it** - there is no billing-portal
+  endpoint - so it points to Contact instead of telling a Pro subscriber
+  "you are on the Free plan". Classroom is a wide panel under the three
+  plans: it sat alone on a second row of a three-column grid.
+- **Our story keeps every word** of the old page, in order. The long paragraph
+  is split in two and its last sentence is the pull quote, so it is said once.
+  The row naming the three techniques is new; its lines come from the
+  landing's feature cards. "200% better retention" has no source anywhere in
+  the repo (it is also on the landing's SM-2 card).
+- **The browser pane throttles frames while hidden** (about 1 fps), so reveals
+  finish late in screenshots. Add `.in` to every `[data-reveal]` and wait, or
+  check values in JS.
+
 ## The teach-it-back card
 
 `.write-area` starts at **five lines and grows with what is typed**, to a
@@ -3147,6 +3229,16 @@ genuinely nothing.
   black-and-white hero above it made the rest of the page look like a
   different product. Try something else before trying that again. The 3D
   hero keeps the ripple as its background.
+
+- **Nothing stops a subscriber buying a second plan.** `api/checkout.js`
+  always opens a new Checkout Session in `subscription` mode, with no
+  customer and no look at what the account already has, and the pricing page
+  leaves every card except the current one clickable. A Pro subscriber who
+  presses "Upgrade to VIP" ends up with two active subscriptions, and the
+  webhook sets the tier from whichever event arrives last. Changing plans
+  needs the Stripe customer portal or a subscription update; neither exists
+  yet. Cancelling has the same gap, which is why "Downgrade" only points to
+  Contact (see "Our story and Plans").
 
 ## Conventions
 

@@ -2,332 +2,841 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<link rel="icon" type="image/png" href="/favicon.png"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>About — StudyFlow</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>StudyFlow · Our story</title>
+<meta name="description" content="StudyFlow was created from firsthand experience, because studying shouldn't feel overwhelming. Built by a student, for students." />
+<meta name="theme-color" content="#f5f7fc" />
+<meta property="og:title" content="Our story · StudyFlow" />
+<meta property="og:description" content="Built by a student, for students." />
+<meta property="og:url" content="https://studyflow-ten-vert.vercel.app/about.html" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNWI4ZGY4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzI4NTFjOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0idXJsKCNnKSIvPgogIDxyZWN0IHg9IjciIHk9IjgiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNyIgcng9IjIuNSIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMjUiLz4KICA8cmVjdCB4PSIxMCIgeT0iOCIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3IiByeD0iMi41IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC45Ii8+CiAgPHJlY3QgeD0iMTMiIHk9IjEzIiB3aWR0aD0iNyIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSIjMzU2N2UwIi8+CiAgPHJlY3QgeD0iMTMiIHk9IjE2LjUiIHdpZHRoPSI1IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMzNTY3ZTAiIG9wYWNpdHk9IjAuNyIvPgogIDxyZWN0IHg9IjEzIiB5PSIyMCIgd2lkdGg9IjYiIGhlaWdodD0iMS41IiByeD0iMC43NSIgZmlsbD0iIzRhN2NmNiIgb3BhY2l0eT0iMC41Ii8+Cjwvc3ZnPg=="/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400&family=DM+Mono:wght@400;500&family=Inter:wght@700&display=swap" rel="stylesheet">
+<script>
+  /* Runs before the first paint. `js` gates the reveal states, so a page whose
+     script fails still shows everything. The springs: CSS cannot run a spring,
+     but `linear()` can replay one. The curve is a damped spring (Apple's two
+     parameters, damping ratio and response, not stiffness and mass) sampled
+     into points; its duration is the time it takes to settle. Same maths as
+     dashboard.html. Browsers without linear() keep the cubic-bezier
+     fallbacks declared in :root. */
+  (function () {
+    var d = document.documentElement;
+    d.className += ' js';
+    function curve(zeta, response) {
+      var w = 2 * Math.PI / response, k = w * w, c = 2 * zeta * w;
+      var h = 1 / 1200, x = 0, v = 0, t = 0, end = 3, a;
+      for (t = h; t < 3; t += h) {
+        a = -k * (x - 1) - c * v; v += a * h; x += v * h;
+        if (Math.abs(x - 1) < 0.0008 && Math.abs(v) < 0.01) { end = t; break; }
+      }
+      var n = Math.max(24, Math.min(64, Math.round(end * 70))), pts = [], step = end / n;
+      x = 0; v = 0; t = 0;
+      for (var i = 0; i <= n; i++) {
+        while (t < i * step) { a = -k * (x - 1) - c * v; v += a * h; x += v * h; t += h; }
+        pts.push(i === n ? 1 : +x.toFixed(4));
+      }
+      return { e: 'linear(' + pts.join(', ') + ')', ms: Math.round(end * 1000) };
+    }
+    try {
+      if (window.CSS && CSS.supports && CSS.supports('transition-timing-function', 'linear(0, 1)')) {
+        var specs = { '': [1, 0.42], '-fast': [1, 0.26], '-slow': [1, 0.62] };
+        for (var key in specs) {
+          var s = curve(specs[key][0], specs[key][1]);
+          d.style.setProperty('--spring' + key, s.e);
+          d.style.setProperty('--spring' + key + '-ms', s.ms + 'ms');
+        }
+      }
+    } catch (e) {}
+  })();
+</script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --ink: #1a1d2e;
-    --muted: #6b7280;
-    --soft: #f4f6fb;
-    --blue: #4a7cf6;
-    --blue-light: #dce8ff;
-    --white: #ffffff;
-    --border: #e8ecf4;
-    --serif: 'Instrument Serif', Georgia, serif;
-    --sans: 'DM Sans', sans-serif;
-  }
-  html { scroll-behavior: smooth; }
-  body {
-    font-family: var(--sans);
-    color: var(--ink);
-    background: var(--white);
-    line-height: 1.6;
-    overflow-x: hidden;
-  }
+/* ══════════════════════════════════════════════════════════════════════
+   LIQUID GLASS. This block is shared by about.html and pricing.html and
+   sits beside index.html (same tokens, same nav, same footer). Each page
+   keeps its own copy so it stays self-contained like the rest of the site:
+   a change here has to be made in both files.
 
-  /* NAV */
-  nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 1.1rem 5%;
-    background: rgba(255,255,255,0.88);
-    backdrop-filter: blur(14px);
-    border-bottom: 1px solid var(--border);
-    animation: navSlideDown .6s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-  @keyframes navSlideDown {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .logo {
-    font-family: 'Inter', sans-serif;
-    font-size: 1.35rem; font-weight: 700;
-    color: var(--ink); letter-spacing: -0.01em;
-    text-decoration: none;
-  }
-  .logo span { color: var(--blue); }
-  nav a {
-    font-size: 0.88rem; font-weight: 500; color: var(--muted);
-    text-decoration: none; margin-left: 2rem; transition: color .2s;
-  }
-  nav a:hover { color: var(--ink); }
-  .nav-cta {
-    background: var(--blue); color: #fff !important;
-    padding: .45rem 1.1rem; border-radius: 8px;
-    font-size: 0.88rem !important;
-    -webkit-text-fill-color: #fff !important;
-  }
-  .nav-cta:hover { background: #3567e0 !important; }
+   What "glass" means on these pages (apple-design skill, materials):
+   - A translucent layer over something worth seeing through. Glass sits on
+     the page's blue light (.aura) or on the blue band, never on flat paper,
+     or it reads as a white card.
+   - A bright specular edge: a 1.5px highlight along the top (inset shadow)
+     and a 1px rim that runs white, clear, white (.glass::before).
+   - Weight encodes hierarchy: panels blur more and cast deeper shadows than
+     chips. Pro and VIP are tinted glass, not a different kind of card.
+   - Never light glass on light glass: buttons inside a card are solid.
+   - Text on glass is --ink-3 at weight 500 or darker, not a flat grey.
+   - NEVER put an opacity transition or animation on an ancestor of glass.
+     An element with opacity < 1 is a backdrop root: the glass inside can
+     only blur what is inside that ancestor (nothing), so it flashes flat
+     until the fade ends. Reveals go on the glass itself, or on leaves.
 
-  /* HERO */
-  .about-hero {
-    min-height: 60vh;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    text-align: center;
-    padding: 9rem 5% 5rem;
-    background: linear-gradient(175deg, #e8f0ff 0%, #f4f7ff 45%, #ffffff 100%);
-    position: relative; overflow: hidden;
-  }
-  .about-hero::before {
-    content: '';
-    position: absolute;
-    top: -120px; left: 50%; transform: translateX(-50%);
-    width: 900px; height: 500px;
-    background: radial-gradient(ellipse, rgba(74,124,246,.13) 0%, transparent 70%);
-    pointer-events: none;
-  }
-  .about-label {
-    display: inline-flex; align-items: center; gap: .5rem;
-    background: var(--blue); color: #fff;
-    font-size: 0.78rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
-    padding: .45rem 1.1rem; border-radius: 999px;
-    margin-bottom: 1.8rem;
-    box-shadow: 0 4px 14px rgba(74,124,246,.35);
-    animation: fadeUp .7s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(24px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .about-hero h1 {
-    font-family: var(--serif);
-    font-size: clamp(2.8rem, 6vw, 4.5rem);
-    line-height: 1.1; letter-spacing: -0.03em;
-    color: var(--ink); max-width: 620px;
-    animation: fadeUp .8s .1s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-  .about-hero h1 em { font-style: italic; color: var(--blue); }
-  .about-hero p {
-    font-size: 1.1rem; color: var(--muted); font-weight: 300;
-    max-width: 480px; margin: 1.2rem auto 0;
-    animation: fadeUp .8s .2s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
+   Z-index scale: -1 environment, 0-2 content, 90 scroll edge, 100 nav,
+   200 skip link, 300 checkout sheet, 310 toast.
+   ══════════════════════════════════════════════════════════════════════ */
 
-  /* FOUNDER SECTION */
-  .founder-section {
-    padding: 6rem 5%;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .founder-card {
-    background: var(--white);
-    border: 1.5px solid var(--border);
-    border-radius: 28px;
-    padding: 3rem;
-    max-width: 780px; width: 100%;
-    box-shadow: 0 20px 60px rgba(74,124,246,.08);
-    display: grid; grid-template-columns: auto 1fr;
-    gap: 2.5rem; align-items: start;
-    animation: fadeUp .8s .3s cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-  .founder-avatar {
-    width: 110px; height: 110px;
-    border-radius: 24px;
-    background: linear-gradient(135deg, #4a7cf6, #2851c8);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 2.8rem;
-    flex-shrink: 0;
-    box-shadow: 0 8px 24px rgba(74,124,246,.3);
-  }
-  .founder-info h2 {
-    font-family: var(--serif);
-    font-size: 2rem; letter-spacing: -0.02em;
-    color: var(--ink); margin-bottom: .3rem;
-  }
-  .founder-info h2 em { font-style: italic; color: var(--blue); }
-  .founder-role {
-    font-size: 0.85rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-    color: var(--blue); margin-bottom: 1.2rem;
-  }
-  .founder-bio {
-    font-size: 1rem; color: var(--muted); font-weight: 300;
-    line-height: 1.8; margin-bottom: 1.5rem;
-  }
-  .founder-tags { display: flex; flex-wrap: wrap; gap: .5rem; }
-  .founder-tag {
-    background: var(--blue-light); color: var(--blue);
-    font-size: 0.78rem; font-weight: 600;
-    padding: .3rem .85rem; border-radius: 999px;
-  }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* STORY SECTION */
-  .story-section {
-    background: var(--soft);
-    padding: 6rem 5%;
-    text-align: center;
-  }
-  .story-section h2 {
-    font-family: var(--serif);
-    font-size: clamp(2rem, 4vw, 3rem);
-    letter-spacing: -0.025em; color: var(--ink);
-    margin-bottom: 1.5rem;
-  }
-  .story-section h2 em { font-style: italic; color: var(--blue); }
-  .story-text {
-    font-size: 1.05rem; color: var(--muted); font-weight: 300;
-    max-width: 620px; margin: 0 auto; line-height: 1.9;
-  }
+:root {
+  --night: #0e142a;
+  --ink: #1a1d2e;
+  --ink-2: #2a3150;
+  --ink-3: #3b4363;
+  --paper: #f5f7fc;
+  --card: #fdfdff;
+  --line: #e2e8f4;
+  --line-strong: #c3cfe6;
+  --muted: #5b6378;
+  --blue: #4a7cf6;
+  --blue-btn: #3567e0;
+  --blue-deep: #2851c8;
+  --blue-soft: #e3ecff;
+  --blue-mist: #eef3ff;
+  --serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'DM Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  /* Fallbacks. The head script replaces them with real damped springs (as
+     `linear()` curves) wherever the browser can play one. */
+  --spring: cubic-bezier(.22, 1, .36, 1);        --spring-ms: 560ms;
+  --spring-fast: cubic-bezier(.22, 1, .36, 1);   --spring-fast-ms: 340ms;
+  --spring-slow: cubic-bezier(.16, 1, .3, 1);    --spring-slow-ms: 820ms;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --r-card: 22px;
+  --r-panel: 30px;
+  --glass-fill: linear-gradient(150deg, rgba(255, 255, 255, .66) 0%, rgba(255, 255, 255, .38) 52%, rgba(255, 255, 255, .5) 100%);
+  --glass-blur: blur(18px) saturate(185%);
+  --glass-edge: rgba(255, 255, 255, .62);
+  --glass-shadow: 0 1px 2px rgba(26, 40, 90, .05), 0 28px 56px -28px rgba(26, 40, 90, .36);
+  --glass-lip: inset 0 1.5px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(26, 40, 90, .05);
+  color-scheme: light;
+}
 
-  /* STATS */
-  .stats-section {
-    padding: 5rem 5%;
-    display: flex; justify-content: center;
-  }
-  .stats-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem; max-width: 680px; width: 100%;
-  }
-  .stat-card {
-    background: var(--white);
-    border: 1.5px solid var(--border);
-    border-radius: 20px; padding: 2rem;
-    text-align: center;
-    transition: transform .3s cubic-bezier(0.16,1,.3,1), box-shadow .3s;
-  }
-  .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(74,124,246,.1); }
-  .stat-card strong {
-    display: block; font-size: 2.2rem; font-weight: 700;
-    color: var(--blue); letter-spacing: -0.02em;
-  }
-  .stat-card span { font-size: 0.85rem; color: var(--muted); font-weight: 300; }
+/* overflow-x: clip, NOT hidden: `hidden` makes html/body scroll containers,
+   and a scroll container between a sticky element and the viewport stops it
+   sticking (the story heading on about.html is sticky). */
+html { scroll-behavior: smooth; overflow-x: clip; -webkit-text-size-adjust: 100%; scroll-padding-top: 96px; }
+body {
+  font-family: var(--sans); font-optical-sizing: auto;
+  color: var(--ink); background: var(--paper);
+  line-height: 1.6; overflow-x: clip;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility;
+}
+/* Instrument Serif has ONE weight; without the synthesis switch a stray
+   bold is a browser-faked smear. */
+h1, h2, h3, h4 { font-family: var(--serif); font-weight: 400; font-synthesis-weight: none; }
+img, svg { max-width: 100%; }
+a { color: inherit; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+ul { list-style: none; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2.5px solid var(--blue); outline-offset: 3px; }
+.glass.blue :focus-visible, .glass.night :focus-visible, .cta :focus-visible, .site-foot :focus-visible { outline-color: #fff; }
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.skip { position: absolute; left: 12px; top: -64px; z-index: 200; background: var(--ink); color: #fff; padding: .65rem 1rem; border-radius: 999px; text-decoration: none; font-weight: 600; transition: top .2s var(--ease-out); }
+.skip:focus { top: 12px; }
 
-  /* CTA */
-  .about-cta {
-    background: linear-gradient(135deg, #4a7cf6 0%, #3567e0 40%, #2851c8 100%);
-    color: #fff; text-align: center; padding: 6rem 5%;
-    position: relative; overflow: hidden;
-  }
-  .about-cta::before {
-    content: '';
-    position: absolute; inset: 0;
-    background-image: radial-gradient(circle, rgba(255,255,255,.1) 1px, transparent 1px);
-    background-size: 32px 32px;
-    pointer-events: none;
-  }
-  .about-cta h2 {
-    font-family: var(--serif);
-    font-size: clamp(2rem, 4vw, 3.2rem);
-    letter-spacing: -0.025em; margin-bottom: 1rem;
-    position: relative; z-index: 1;
-  }
-  .about-cta h2 em { font-style: italic; color: #c5d9ff; }
-  .about-cta p {
-    color: rgba(255,255,255,.7); font-size: 1rem;
-    margin-bottom: 2rem; position: relative; z-index: 1;
-  }
-  .btn-white {
-    background: #fff; color: var(--blue);
-    padding: .9rem 2.2rem; border-radius: 12px;
-    font-family: var(--sans); font-size: 1rem; font-weight: 700;
-    border: none; cursor: pointer; text-decoration: none;
-    display: inline-block; position: relative; z-index: 1;
-    transition: transform .2s, box-shadow .2s;
-    box-shadow: 0 4px 20px rgba(0,0,0,.15);
-  }
-  .btn-white:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,.2); }
+/* ── ENVIRONMENT: the page is a notebook (kept from index.html) ──
+   Ruled lines, the blue margin rule and a drifting glow, fixed behind
+   everything. Fixed, so glass scrolls OVER it and what it refracts changes. */
+.env { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.env::before {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(74, 124, 246, .07) 31px, rgba(74, 124, 246, .07) 32px);
+}
+.env::after { content: ""; position: absolute; top: 0; bottom: 0; left: max(22px, 3.2vw); width: 1.5px; background: rgba(74, 124, 246, .15); }
+.grain { position: absolute; inset: 0; pointer-events: none; background-image: var(--grain); background-size: 180px 180px; opacity: .045; }
+.env-glow {
+  position: absolute; left: 50%; top: 50%; width: 80vmax; height: 80vmax; border-radius: 50%;
+  background: radial-gradient(circle, rgba(74, 124, 246, .10) 0%, rgba(74, 124, 246, 0) 62%);
+  transform: translate(-70%, -60%);
+  animation: envDrift 96s ease-in-out -30s infinite alternate;
+}
+@keyframes envDrift {
+  0% { transform: translate(-85%, -70%); }
+  50% { transform: translate(-25%, -35%); }
+  100% { transform: translate(-60%, -85%); }
+}
+@media (max-width: 720px) { .env::after { display: none; } }
 
-  /* FOOTER */
-  footer {
-    background: var(--ink); color: rgba(255,255,255,.4);
-    text-align: center; padding: 2.5rem 5%;
-    font-size: 0.83rem;
-  }
-  footer strong { color: rgba(255,255,255,.7); }
+/* The light the glass refracts: three soft blue fields, one slow drift.
+   Radial gradients, not blurred shapes: no filter cost. A gradient that runs
+   past its box is cut off flat, which shows as a hard seam across the page,
+   so the box fades out top and bottom (sideways it overhangs the viewport). */
+.aura {
+  position: absolute; z-index: -1; pointer-events: none; inset: -14% -8%;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 24%, #000 76%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 24%, #000 76%, transparent 100%);
+  background:
+    radial-gradient(38% 42% at 18% 30%, rgba(74, 124, 246, .30), rgba(74, 124, 246, 0) 70%),
+    radial-gradient(34% 38% at 82% 24%, rgba(53, 103, 224, .22), rgba(53, 103, 224, 0) 70%),
+    radial-gradient(44% 40% at 50% 80%, rgba(143, 176, 255, .42), rgba(143, 176, 255, 0) 72%);
+  animation: auraDrift 32s ease-in-out infinite alternate;
+}
+@keyframes auraDrift {
+  from { transform: translate3d(-1.5%, -1%, 0) scale(1); }
+  to { transform: translate3d(1.5%, 1.2%, 0) scale(1.06); }
+}
 
-  @media (max-width: 640px) {
-    .founder-card { grid-template-columns: 1fr; text-align: center; }
-    .founder-tags { justify-content: center; }
-    .stats-grid { grid-template-columns: 1fr; }
-    nav a:not(.nav-cta) { display: none; }
+/* ── LAYOUT ── */
+.wrap { max-width: 1160px; margin-inline: auto; }
+.center { text-align: center; }
+.sec { position: relative; isolation: isolate; padding-block: clamp(3.5rem, 8vw, 6rem); padding-inline: max(16px, 5vw); }
+
+/* ── NAV: floating glass capsules (kept from index.html) ──
+   Every floating control is its own capsule with its own light material, so
+   each stays legible over whatever scrolls under it: paper, the blue band or
+   the ink footer. `backwards`, not `both`: a finished animation still "in
+   effect" makes the nav a backdrop root and the capsules then blur nothing. */
+nav.site-nav {
+  position: fixed; z-index: 100; top: calc(.7rem + env(safe-area-inset-top, 0px)); left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: .6rem;
+  padding: 0 max(16px, 2rem); pointer-events: none;
+  animation: navIn .8s var(--ease-out) backwards;
+}
+@keyframes navIn { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
+.nav-logo, .nav-pill, .nav-dashboard {
+  background: rgba(253, 253, 255, .66);
+  -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, .72);
+  box-shadow: 0 2px 20px rgba(26, 40, 90, .10), inset 0 1.5px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(26, 40, 90, .05);
+  border-radius: 999px; pointer-events: auto;
+}
+.nav-logo { display: inline-flex; align-items: center; text-decoration: none; padding: .26rem .85rem .26rem .4rem; }
+.nav-logo svg { width: 138px; height: 34px; display: block; }
+.logo-study { fill: var(--ink); }
+.nav-pill {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: .15rem; padding: .38rem .45rem;
+}
+.nav-pill a {
+  position: relative; z-index: 1; font-size: .84rem; font-weight: 500; color: var(--ink-3); text-decoration: none;
+  padding: .42rem .85rem; border-radius: 999px; white-space: nowrap; transition: color .2s;
+}
+.nav-pill a:hover, .nav-pill a[aria-current] { color: var(--blue-deep); }
+/* iOS 26 tab bars slide a lens to the selected tab. Same here: it rests under
+   the page you are on and follows your pointer or focus along the pill. */
+.nav-lens {
+  position: absolute; left: 0; top: .38rem; bottom: .38rem; width: var(--lw, 0px); border-radius: 999px; pointer-events: none;
+  transform: translateX(var(--lx, 0px)); opacity: var(--lo, 0);
+  background: var(--blue-soft); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .9), 0 1px 3px rgba(26, 40, 90, .1);
+}
+/* Transitions are switched on after the first placement, or the lens would
+   slide in from the left edge on every load. */
+.nav-pill.ready .nav-lens { transition: transform var(--spring-ms) var(--spring), width var(--spring-ms) var(--spring), opacity .25s ease; }
+.nav-right { display: flex; align-items: center; gap: .6rem; pointer-events: auto; }
+#nav-account { display: contents; }
+.nav-dashboard {
+  display: inline-flex; align-items: center; font-size: .84rem; font-weight: 600; white-space: nowrap;
+  color: var(--blue-deep); text-decoration: none; padding: .5rem 1.05rem;
+  transition: transform var(--spring-fast-ms) var(--spring-fast), background-color .2s, box-shadow .2s;
+}
+.nav-dashboard:hover { background: rgba(255, 255, 255, .92); }
+.nav-cta {
+  display: inline-flex; align-items: center; font-size: .84rem; font-weight: 700; white-space: nowrap;
+  color: #fff; background: var(--blue-btn); text-decoration: none;
+  padding: .52rem 1.15rem; border-radius: 999px;
+  /* The 1px white ring is what keeps a blue button findable over the blue band. */
+  box-shadow: 0 4px 16px -4px rgba(53, 103, 224, .55), inset 0 1px 0 rgba(255, 255, 255, .28), 0 0 0 1px rgba(255, 255, 255, .24);
+  transition: transform var(--spring-fast-ms) var(--spring-fast), background-color .2s;
+}
+.nav-cta:hover { background: var(--blue-deep); }
+.nav-cta:active, .nav-dashboard:active { transform: scale(.96); transition-duration: 80ms, .2s, .2s; transition-timing-function: ease-out; }
+@media (pointer: coarse) { .nav-cta, .nav-dashboard { min-height: 44px; } }
+@media (max-width: 1080px) { .nav-pill { display: none; } }
+/* On a phone there is room for one action. A signed-in learner gets the way
+   back to their dashboard (pricing used to have a Back button for exactly
+   this); a visitor gets the sign-up button. */
+@media (max-width: 640px) {
+  nav.site-nav[data-auth="in"] .nav-cta { display: none; }
+  nav.site-nav:not([data-auth="in"]) .nav-dashboard { display: none; }
+  .nav-logo svg { width: 124px; height: 32px; }
+}
+
+/* Scroll edge effect (instead of a hard bar): once the page has scrolled,
+   whatever passes under the capsules softens and fades, with no tint, so it
+   suits paper, blue and ink alike. Shown only when something is underneath. */
+.edge-top {
+  position: fixed; z-index: 90; top: 0; left: 0; right: 0; height: calc(92px + env(safe-area-inset-top, 0px));
+  pointer-events: none; opacity: 0; transition: opacity .35s ease;
+  -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 28%, transparent); mask-image: linear-gradient(to bottom, #000 28%, transparent);
+}
+.edge-top.on { opacity: 1; }
+
+/* ── TYPE ── tracking tightens as size grows (apple-design: typography) */
+.h1 { font-size: clamp(2.9rem, 6.8vw, 5.6rem); line-height: 1.01; letter-spacing: -.026em; text-wrap: balance; }
+.h2 { font-size: clamp(2.3rem, 4.8vw, 3.9rem); line-height: 1.04; letter-spacing: -.022em; text-wrap: balance; }
+.h1 em, .h2 em { font-style: italic; color: var(--blue); }
+.lede { color: var(--muted); font-size: 1.08rem; line-height: 1.7; max-width: 46ch; }
+.eyebrow { font-family: var(--mono); font-weight: 500; font-size: .74rem; line-height: 1; letter-spacing: .14em; text-transform: uppercase; color: var(--blue-deep); }
+
+/* ── BUTTONS ──
+   Feedback lives on the PRESS: :active fires on pointer-down and the release
+   springs back. Hover changes colour only (no lift, no pop: design system). */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  font-family: var(--sans); font-size: .95rem; font-weight: 600; letter-spacing: -.005em; line-height: 1;
+  padding: .95rem 1.55rem; border-radius: 999px; border: 1.5px solid transparent;
+  text-decoration: none; cursor: pointer; white-space: nowrap; user-select: none; -webkit-user-select: none;
+  transition: transform var(--spring-fast-ms) var(--spring-fast), background-color .2s, border-color .2s, color .2s, box-shadow .2s;
+}
+.btn:active { transform: scale(.97); transition-duration: 80ms, .2s, .2s, .2s, .2s; transition-timing-function: ease-out; }
+.btn-blue { background: var(--blue-btn); color: #fff; box-shadow: 0 8px 24px -8px rgba(53, 103, 224, .7), inset 0 1px 0 rgba(255, 255, 255, .26); }
+.btn-blue:hover { background: var(--blue-deep); }
+.btn-light { background: #f7f9ff; color: var(--blue-deep); box-shadow: 0 6px 24px -8px rgba(0, 0, 0, .4), inset 0 1px 0 #fff; }
+.btn-light:hover { background: var(--blue-soft); }
+.btn-outline { background: var(--card); color: var(--blue-deep); border-color: var(--line-strong); }
+.btn-outline:hover { border-color: var(--blue); }
+.btn-glass { background: rgba(255, 255, 255, .12); color: #fff; border-color: rgba(255, 255, 255, .42); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .3); }
+.btn-glass:hover { background: rgba(255, 255, 255, .22); border-color: rgba(255, 255, 255, .62); }
+@media (pointer: coarse) { .btn { min-height: 44px; } }
+
+/* A small capsule for a label that sits on the page's light, not on a card. */
+.chip-glass {
+  display: inline-flex; align-items: center; gap: .5rem; font-size: .8rem; font-weight: 600; color: var(--ink-2);
+  padding: .45rem 1rem; border-radius: 999px;
+  background: rgba(255, 255, 255, .62); border: 1px solid rgba(255, 255, 255, .8);
+  -webkit-backdrop-filter: blur(14px) saturate(180%); backdrop-filter: blur(14px) saturate(180%);
+  box-shadow: 0 1px 2px rgba(26, 40, 90, .06), 0 8px 20px -10px rgba(26, 40, 90, .28), inset 0 1.5px 0 rgba(255, 255, 255, .95);
+}
+.chip-glass svg { width: 14px; height: 14px; color: var(--blue); }
+
+/* ── THE MATERIAL ── */
+.glass {
+  position: relative; border-radius: var(--r-card);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-shadow), var(--glass-lip);
+  transition: border-color .25s ease;
+}
+/* The rim: a 1px ring that catches light at the top-left and bottom-right and
+   lets go in between, which is what makes the edge read as thick glass. */
+.glass::before {
+  content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(140deg, rgba(255, 255, 255, .95), rgba(255, 255, 255, .16) 32%, rgba(255, 255, 255, 0) 58%, rgba(255, 255, 255, .5));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.glass > :not(.sheen):not(.comet) { position: relative; z-index: 1; }
+@media (hover: hover) { .glass:hover { border-color: rgba(74, 124, 246, .55); } }
+
+/* Tinted glass. The fill stays deep enough that white text keeps 4.5:1 even
+   where the light field behind it is at its brightest. */
+.glass.blue {
+  color: #fff; border-color: rgba(255, 255, 255, .3);
+  background: linear-gradient(165deg, rgba(53, 103, 224, .93) 0%, rgba(40, 81, 200, .94) 100%);
+  -webkit-backdrop-filter: blur(16px) saturate(165%); backdrop-filter: blur(16px) saturate(165%);
+  box-shadow: 0 36px 66px -26px rgba(40, 81, 200, .7), 0 1px 2px rgba(10, 20, 80, .2), inset 0 1.5px 0 rgba(255, 255, 255, .5), inset 0 -1px 0 rgba(10, 20, 90, .3);
+}
+.glass.night {
+  color: #fff; border-color: rgba(143, 176, 255, .22);
+  background: linear-gradient(165deg, rgba(26, 29, 46, .92) 0%, rgba(31, 40, 80, .9) 100%);
+  box-shadow: 0 32px 62px -28px rgba(14, 20, 42, .75), 0 1px 2px rgba(0, 0, 0, .25), inset 0 1.5px 0 rgba(255, 255, 255, .2), inset 0 -1px 0 rgba(0, 0, 0, .35);
+}
+@media (hover: hover) {
+  .glass.blue:hover { border-color: rgba(255, 255, 255, .6); }
+  .glass.night:hover { border-color: rgba(143, 176, 255, .6); }
+}
+
+/* The light that follows you. JS adds .sheen to .live panels (fine pointers,
+   motion allowed): a soft highlight tracks the pointer like a specular glint.
+   It moves with `transform`, so it costs no repaint of the panel. It sits
+   UNDER the content, so it never washes out text. */
+.sheen { position: absolute; inset: 0; z-index: 0; border-radius: inherit; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity .4s ease; }
+.glass:hover > .sheen { opacity: 1; }
+.sheen i {
+  position: absolute; left: 0; top: 0; width: 380px; height: 380px; margin: -190px 0 0 -190px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, .6), rgba(255, 255, 255, .16) 55%, rgba(255, 255, 255, 0));
+  transform: translate3d(var(--sx, 0px), var(--sy, 0px), 0);
+  transition: transform .3s var(--spring-fast); will-change: transform;
+}
+.glass.blue .sheen i, .glass.night .sheen i { background: radial-gradient(closest-side, rgba(255, 255, 255, .16), rgba(255, 255, 255, .05) 55%, rgba(255, 255, 255, 0)); }
+
+/* Materialize, don't just fade: a glass surface arrives as a material, so its
+   blur radius and scale come up together with its opacity. Only under .js, so
+   a page whose script failed is complete at rest. */
+.js [data-reveal="up"]:not(.in) { opacity: 0; transform: translate3d(0, 26px, 0); }
+.js [data-reveal="up"] { transition: opacity .7s ease var(--rd, 0s), transform var(--spring-slow-ms) var(--spring-slow) var(--rd, 0s); }
+.js [data-reveal="glass"]:not(.in) {
+  opacity: 0; transform: translate3d(0, 30px, 0) scale(.965);
+  -webkit-backdrop-filter: blur(0) saturate(100%); backdrop-filter: blur(0) saturate(100%);
+}
+.js [data-reveal="glass"] {
+  transition: opacity .6s ease var(--rd, 0s), transform var(--spring-slow-ms) var(--spring-slow) var(--rd, 0s),
+              -webkit-backdrop-filter .9s ease var(--rd, 0s), backdrop-filter .9s ease var(--rd, 0s), border-color .25s ease;
+}
+
+/* ── CLOSING BAND: saturated blue is where glass reads best ── */
+.cta {
+  position: relative; isolation: isolate; overflow: hidden; color: #fff;
+  background: linear-gradient(140deg, #4a7cf6 0%, #3567e0 40%, #2248b8 100%);
+  padding-block: clamp(5rem, 10vw, 8rem); padding-inline: max(16px, 5vw);
+}
+.cta::before { content: ""; position: absolute; z-index: -1; inset: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(255, 255, 255, .13) 1px, transparent 1.2px); background-size: 30px 30px; }
+.cta::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: var(--grain); background-size: 180px 180px; opacity: .09; }
+.cta-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: clamp(2rem, 5vw, 4rem); align-items: center; }
+.cta .chip-glass { color: #fff; background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .36); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .35); }
+.cta .chip-glass svg { color: #fff; }
+.cta h2 { font-size: clamp(2.5rem, 5.4vw, 4.4rem); line-height: 1.04; letter-spacing: -.022em; margin: 1.3rem 0 1rem; text-wrap: balance; }
+.cta h2 em { font-style: italic; color: #d6e3ff; }
+.cta p { color: rgba(255, 255, 255, .9); font-size: 1.08rem; max-width: 42ch; }
+.cta .row { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
+/* Three day cards in glass, dealt like a hand: each lies on the one before, so
+   a covered card shows its left edge. The float is the `translate` property,
+   which leaves `transform` free for the entrance. */
+.stack { position: relative; height: 390px; }
+.dcard { position: absolute; left: 50%; top: 50%; width: 214px; margin: -128px 0 0 -107px; transform: translate3d(calc((var(--i) - 1) * 104px), calc((var(--i) - 1) * -22px), 0) rotate(calc((var(--i) - 1) * 5deg)); }
+.dcard-in {
+  height: 256px; padding: 1.15rem 1.15rem 1rem; display: flex; flex-direction: column; border-radius: 20px; color: #fff;
+  background: linear-gradient(150deg, rgba(255, 255, 255, .28), rgba(255, 255, 255, .09));
+  border: 1px solid rgba(255, 255, 255, .36);
+  -webkit-backdrop-filter: blur(18px) saturate(170%); backdrop-filter: blur(18px) saturate(170%);
+  box-shadow: 0 28px 50px -24px rgba(8, 20, 70, .65), inset 0 1.5px 0 rgba(255, 255, 255, .55), inset 0 -1px 0 rgba(255, 255, 255, .1);
+}
+.js .cta:not(.in) .dcard-in { opacity: 0; transform: translate3d(0, 26px, 0) scale(.94); -webkit-backdrop-filter: blur(0) saturate(100%); backdrop-filter: blur(0) saturate(100%); }
+.js .dcard-in { transition: opacity .6s ease calc(var(--i) * 90ms), transform var(--spring-slow-ms) var(--spring-slow) calc(var(--i) * 90ms), -webkit-backdrop-filter .9s ease calc(var(--i) * 90ms), backdrop-filter .9s ease calc(var(--i) * 90ms); }
+.cta.in .dcard-in { animation: dcFloat 6.5s ease-in-out infinite; animation-delay: calc(var(--i) * -1.6s); }
+@keyframes dcFloat { 0%, 100% { translate: 0 0; } 50% { translate: 0 -11px; } }
+.dc-top { display: flex; justify-content: space-between; font-family: var(--mono); font-size: .7rem; letter-spacing: .08em; color: rgba(255, 255, 255, .92); }
+.dc-top span + span { color: rgba(255, 255, 255, .78); }
+.dcard h4 { font-size: 1.5rem; line-height: 1.1; letter-spacing: -.012em; margin: .55rem 0 .85rem; }
+.dcard ul { display: grid; gap: .45rem; font-size: .78rem; font-weight: 500; color: rgba(255, 255, 255, .9); }
+.dcard li { display: flex; gap: .45rem; align-items: center; }
+.dcard li::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .6); flex: none; }
+.dcard li.on::before { background: #fff; border-color: #fff; box-shadow: inset 0 0 0 2.5px #3567e0; }
+.dc-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; font-size: .78rem; font-weight: 600; border-top: 1px solid rgba(255, 255, 255, .26); padding-top: .6rem; }
+.dc-diff { display: flex; gap: 3px; }
+.dc-diff i { width: 8px; height: 8px; border-radius: 2px; background: rgba(255, 255, 255, .3); }
+.dc-diff i.on { background: #fff; }
+@media (max-width: 860px) {
+  .cta-grid { grid-template-columns: 1fr; }
+  .stack { height: 320px; order: -1; }
+  .dcard { width: 168px; margin: -102px 0 0 -84px; transform: translate3d(calc((var(--i) - 1) * 70px), calc((var(--i) - 1) * -16px), 0) rotate(calc((var(--i) - 1) * 5deg)); }
+  .dcard-in { height: 204px; padding: .95rem .95rem .85rem; }
+  .dcard h4 { font-size: 1.2rem; }
+}
+
+/* ── FOOTER: links, then the name set huge as the page's last word ── */
+.site-foot { position: relative; overflow: hidden; background: var(--ink); color: rgba(226, 233, 255, .72); padding: 4rem max(16px, 5vw) calc(1.8rem + env(safe-area-inset-bottom, 0px)); font-size: .9rem; }
+.site-foot::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: var(--grain); background-size: 180px 180px; opacity: .06; }
+.foot-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 2rem; }
+.foot-brand { display: grid; gap: 1rem; max-width: 30ch; }
+.foot-logo { display: inline-flex; width: max-content; }
+.foot-links { display: flex; flex-wrap: wrap; gap: .5rem 1.6rem; }
+.site-foot a { color: rgba(226, 233, 255, .8); text-decoration: none; transition: color .2s; }
+.site-foot a:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.foot-mark {
+  font-family: var(--serif); font-size: clamp(5.2rem, 22vw, 20rem); line-height: .8; letter-spacing: -.045em; white-space: nowrap;
+  text-align: center; margin: clamp(2.5rem, 6vw, 4rem) 0 clamp(1.5rem, 3vw, 2.2rem);
+  background: linear-gradient(180deg, rgba(160, 188, 255, .34) 10%, rgba(160, 188, 255, .03) 92%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  padding-bottom: .06em;
+}
+.foot-mark em { font-style: italic; }
+.foot-legal { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .8rem 1.4rem; padding-top: 1.4rem; border-top: 1px solid rgba(226, 233, 255, .12); font-size: .82rem; }
+.foot-legal nav { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; }
+
+/* Every loop pauses on a hidden tab. animation-play-state does not inherit,
+   so this has to hit every element and pseudo-element directly. */
+body.paused *, body.paused *::before, body.paused *::after { animation-play-state: paused !important; }
+
+/* ── ACCESSIBILITY: three independent signals (apple-design: reduced motion) ──
+   Reduced motion is not "no feedback": it is a gentler one. Slides and
+   springs become short cross-fades; nothing loops; the light stops following. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .env-glow, .aura, .cta.in .dcard-in { animation: none !important; }
+  .comet { display: none; }
+  nav.site-nav { animation: none; }
+  .js [data-reveal="up"]:not(.in), .js [data-reveal="glass"]:not(.in), .js .cta:not(.in) .dcard-in { transform: none; }
+  .js [data-reveal="up"], .js [data-reveal="glass"], .js .dcard-in { transition: opacity .25s ease; }
+  .nav-pill.ready .nav-lens { transition: opacity .2s ease; }
+  .btn:active, .nav-cta:active, .nav-dashboard:active { transform: none; }
+  .sheen { display: none; }
+}
+/* Translucency off: the same surfaces, frosted solid. Also what a browser
+   without backdrop-filter gets, so the page is never see-through-and-blurless. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .nav-logo, .nav-pill, .nav-dashboard, .chip-glass, .btn-glass, .dcard-in, .edge-top {
+    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
   }
+  .glass { background: var(--card); }
+  .glass.blue { background: var(--blue-btn); }
+  .glass.night { background: var(--ink); }
+  .nav-logo, .nav-pill, .nav-dashboard, .chip-glass { background: var(--card); }
+  .dcard-in { background: #2f5fd6; }
+  .btn-glass { background: #2f5fd6; }
+  .edge-top { display: none; }
+}
+@media (prefers-contrast: more) {
+  .glass { background: var(--card); border-color: var(--ink-3); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .glass.blue { background: var(--blue-deep); border-color: #fff; }
+  .glass.night { background: var(--ink); border-color: #fff; }
+  .nav-logo, .nav-pill, .nav-dashboard, .chip-glass { background: var(--card); border-color: var(--ink-3); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .lede, .glass:not(.blue):not(.night) .per, .glass:not(.blue):not(.night) .feats li.no { color: var(--ink); }
+  .dcard-in { background: #1d3fa8; border-color: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { background: rgba(253, 253, 255, .94); }
+  .glass.blue { background: var(--blue-btn); }
+  .glass.night { background: var(--ink); }
+  .nav-logo, .nav-pill, .nav-dashboard, .chip-glass { background: rgba(253, 253, 255, .95); }
+  .dcard-in, .btn-glass { background: #2f5fd6; }
+  .edge-top { display: none; }
+}
+
+
+/* ══════════════════════════════════════════
+   OUR STORY. The founder in one large panel of glass, the story as plain
+   reading, then the three ideas it leans on, and one strip of numbers.
+══════════════════════════════════════════ */
+.hero { position: relative; isolation: isolate; text-align: center; padding: clamp(8.4rem, 15vw, 11rem) max(16px, 5vw) clamp(1.6rem, 4vw, 2.8rem); }
+.hero .eyebrow { margin-bottom: 1.1rem; }
+.hero .h1 { max-width: 15ch; margin-inline: auto; }
+.hero .lede { margin: 1.3rem auto 0; }
+.hero .aura { inset: -40% -8% -30%; }
+
+/* Founder */
+.founder { padding-block: clamp(1rem, 3vw, 2rem) clamp(3rem, 7vw, 5rem); }
+.founder .aura {
+  inset: -24% -8% -30%;
+  background:
+    radial-gradient(34% 44% at 30% 40%, rgba(74, 124, 246, .30), rgba(74, 124, 246, 0) 72%),
+    radial-gradient(30% 42% at 72% 55%, rgba(143, 176, 255, .50), rgba(143, 176, 255, 0) 72%),
+    radial-gradient(26% 30% at 52% 92%, rgba(53, 103, 224, .22), rgba(53, 103, 224, 0) 72%);
+}
+.founder-card { max-width: 860px; margin-inline: auto; border-radius: var(--r-panel); padding: clamp(1.7rem, 4vw, 2.9rem); display: grid; grid-template-columns: auto minmax(0, 1fr); gap: clamp(1.4rem, 4vw, 2.6rem); align-items: start; }
+/* The same mark as the app: a tile of blue glass, lit from the top. */
+.avatar {
+  width: 116px; height: 116px; border-radius: 30px; display: grid; place-items: center;
+  font-family: var(--serif); font-size: 3.7rem; line-height: 1; color: #fff;
+  background: linear-gradient(145deg, #5b8df8 0%, #3567e0 55%, #2851c8 100%);
+  box-shadow: 0 20px 36px -14px rgba(40, 81, 200, .65), inset 0 1.5px 0 rgba(255, 255, 255, .5), inset 0 -1px 0 rgba(10, 20, 90, .3);
+}
+.founder-info h2 { font-size: clamp(2.3rem, 4.2vw, 3rem); line-height: 1.04; letter-spacing: -.02em; margin-top: .9rem; }
+.founder-info h2 em { font-style: italic; color: var(--blue); }
+.role { font-size: .8rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--blue-deep); margin: .6rem 0 1.2rem; }
+.bio { font-size: 1.03rem; line-height: 1.8; color: var(--ink-3); }
+.tags { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.5rem; }
+.tags li { font-size: .78rem; font-weight: 600; color: var(--blue-deep); background: var(--blue-soft); padding: .34rem .85rem; border-radius: 999px; }
+
+/* Story */
+.story { padding-block: clamp(2.5rem, 6vw, 4.5rem) clamp(3rem, 6vw, 4.5rem); }
+.story-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: clamp(2rem, 6vw, 5rem); align-items: start; }
+.story-side { position: sticky; top: 7rem; }
+.story-side .h2 { margin-top: 0; }
+.story-body p { font-size: 1.12rem; line-height: 1.85; color: var(--ink-3); }
+.story-body p + p { margin-top: 1.3rem; }
+/* The notebook's margin rule, once more: the one sentence the page leans on. */
+.pull { font-family: var(--serif); font-style: italic; font-size: clamp(1.9rem, 3.4vw, 2.7rem); line-height: 1.12; letter-spacing: -.018em; color: var(--ink); margin-top: 2rem; padding-left: 1.4rem; border-left: 2px solid var(--blue); text-wrap: balance; }
+
+/* The three ideas */
+.techs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.2rem; margin-top: clamp(3rem, 6vw, 4.5rem); }
+.techs-wrap { position: relative; }
+.techs-aura { inset: -10% -8% -30%; }
+.tech { padding: 1.6rem 1.55rem 1.8rem; }
+.tech-ico {
+  width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(145deg, #5b8df8, #2851c8);
+  box-shadow: 0 12px 22px -10px rgba(40, 81, 200, .6), inset 0 1.2px 0 rgba(255, 255, 255, .4);
+}
+.tech-ico svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tech h3 { font-size: 1.65rem; line-height: 1.1; letter-spacing: -.014em; margin: 1.2rem 0 .55rem; }
+.tech p { font-size: .96rem; line-height: 1.65; color: var(--ink-3); }
+
+/* Numbers: one strip of glass with hairlines between, not three cards. */
+.proof { padding-block: 0 clamp(4rem, 9vw, 7rem); }
+.proof .aura { inset: -60% -8% -40%; }
+.stats { max-width: 920px; margin-inline: auto; border-radius: var(--r-panel); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 2.3rem 1rem; }
+.stat { text-align: center; padding: .4rem 1.2rem; }
+.stat + .stat { border-left: 1px solid rgba(26, 40, 90, .1); box-shadow: -1px 0 0 rgba(255, 255, 255, .7); }
+.stat-n { font-family: var(--serif); font-size: clamp(3rem, 6vw, 4.4rem); line-height: 1; letter-spacing: -.02em; color: var(--ink); }
+.stat-l { font-size: .93rem; font-weight: 500; line-height: 1.5; color: var(--ink-3); margin: .55rem auto 0; max-width: 22ch; }
+
+.cta h2:first-child { margin-top: 0; }
+
+@media (max-width: 860px) {
+  .story-grid { grid-template-columns: minmax(0, 1fr); gap: 1.6rem; }
+  .story-side { position: static; }
+  .techs { grid-template-columns: minmax(0, 1fr); max-width: 520px; margin-inline: auto; }
+}
+@media (max-width: 640px) {
+  .founder-card { grid-template-columns: minmax(0, 1fr); text-align: center; justify-items: center; }
+  /* A paragraph this long is not read centred. */
+  .bio { text-align: left; }
+  .tags { justify-content: center; }
+  .stats { grid-template-columns: minmax(0, 1fr); padding: 1.4rem 1rem; }
+  .stat { padding: 1.1rem 1rem; }
+  .stat + .stat { border-left: 0; box-shadow: none; border-top: 1px solid rgba(26, 40, 90, .1); }
+}
 </style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="env" aria-hidden="true"><div class="env-glow"></div><div class="grain"></div></div>
+<div class="edge-top" id="edge-top" aria-hidden="true"></div>
 
-<!-- NAV -->
-<nav>
-  <a href="index.html" class="logo">Study<span>Flow</span></a>
-  <div>
-    <a href="index.html">Home</a>
-    <a href="#features">Features</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+</svg>
+
+<nav class="site-nav" aria-label="Main">
+  <a href="index.html" class="nav-logo" aria-label="StudyFlow home">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 146 44" aria-hidden="true">
+      <defs>
+        <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#5b8df8"/>
+          <stop offset="100%" style="stop-color:#2851c8"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#iconGrad)"/>
+      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
+      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
+      <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
+      <rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/>
+      <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
+      <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
+      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
+      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
+        <tspan class="logo-study">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
+      </text>
+    </svg>
+  </a>
+  <div class="nav-pill" id="nav-pill">
+    <span class="nav-lens" aria-hidden="true"></span>
+    <a href="index.html#how">How it works</a>
+    <a href="index.html#features">Features</a>
     <a href="pricing.html">Plans</a>
-    <a href="login.html" class="nav-cta">Start for free</a>
+    <a href="about.html" aria-current="page">Our story</a>
+    <a href="contact.html">Help</a>
+  </div>
+  <div class="nav-right">
+    <span id="nav-account"></span>
+    <a href="login.html?mode=signup" class="nav-cta">Build my plan →</a>
   </div>
 </nav>
 
-<!-- HERO -->
-<section class="about-hero">
-  <div class="about-label">✦ Meet the founder</div>
-  <h1>Built by a student, <em>for students.</em></h1>
-  <p>StudyFlow was created from firsthand experience — because studying shouldn't feel overwhelming.</p>
-</section>
+<main id="main" tabindex="-1">
 
-<!-- FOUNDER CARD -->
-<section class="founder-section">
-  <div class="founder-card">
-    <div class="founder-avatar">E</div>
+<header class="hero">
+  <div class="aura" aria-hidden="true"></div>
+  <p class="eyebrow" data-reveal="up">Our story</p>
+  <h1 class="h1" data-reveal="up" style="--rd:.06s">Built by a student, <em>for students.</em></h1>
+  <p class="lede" data-reveal="up" style="--rd:.14s">StudyFlow was created from firsthand experience — because studying shouldn't feel overwhelming.</p>
+</header>
+
+<!-- FOUNDER -->
+<section class="sec founder" aria-label="The founder">
+  <div class="aura" aria-hidden="true"></div>
+  <article class="founder-card glass live" data-reveal="glass">
+    <div class="avatar" aria-hidden="true">E</div>
     <div class="founder-info">
+      <p class="eyebrow">Meet the founder</p>
       <h2>Ethan <em>Hwang</em></h2>
-      <div class="founder-role">Founder & Creator — StudyFlow</div>
-      <p class="founder-bio">
-        Ethan is a student at Punahou School in Honolulu, Hawaii. Frustrated by the lack of genuinely effective study tools, he built StudyFlow from scratch — combining AI with real cognitive science research to create something that actually helps students learn, not just memorize. What started as a personal project became a fully working product used by students across Hawaii.
-      </p>
-      <div class="founder-tags">
-        <span class="founder-tag">Honolulu, Hawaii</span>
-        <span class="founder-tag">Builder</span>
-        <span class="founder-tag">Punahou School</span>
-        <span class="founder-tag">Student founder</span>
-      </div>
+      <p class="role">Founder &amp; Creator — StudyFlow</p>
+      <p class="bio">Ethan is a student at Punahou School in Honolulu, Hawaii. Frustrated by the lack of genuinely effective study tools, he built StudyFlow from scratch — combining AI with real cognitive science research to create something that actually helps students learn, not just memorize. What started as a personal project became a fully working product used by students across Hawaii.</p>
+      <ul class="tags">
+        <li>Honolulu, Hawaii</li>
+        <li>Builder</li>
+        <li>Punahou School</li>
+        <li>Student founder</li>
+      </ul>
     </div>
-  </div>
+  </article>
 </section>
 
 <!-- STORY -->
-<section class="story-section">
-  <h2>Why we built <em>StudyFlow</em></h2>
-  <p class="story-text">
-    Every student knows the feeling — staring at a pile of notes before an exam, not knowing where to start. Most study tools just digitize the same old approach. StudyFlow is different. By combining AI with real cognitive science — spaced repetition, active recall, the Feynman technique — we built something that doesn't just organize your notes. It tells you exactly what to study, when, and in what order. Because students deserve better than guessing.
-  </p>
-</section>
+<section class="sec story" aria-labelledby="why-h">
+  <div class="wrap story-grid">
+    <div class="story-side">
+      <h2 class="h2" id="why-h" data-reveal="up">Why we built <em>StudyFlow</em></h2>
+    </div>
+    <div class="story-body" data-reveal="up" style="--rd:.08s">
+      <p>Every student knows the feeling — staring at a pile of notes before an exam, not knowing where to start. Most study tools just digitize the same old approach.</p>
+      <p>StudyFlow is different. By combining AI with real cognitive science — spaced repetition, active recall, the Feynman technique — we built something that doesn't just organize your notes. It tells you exactly what to study, when, and in what order.</p>
+      <blockquote class="pull">Because students deserve better than guessing.</blockquote>
+    </div>
+  </div>
 
-<!-- STATS -->
-<section class="stats-section">
-  <div class="stats-grid">
-    <div class="stat-card">
-      <strong>7+</strong>
-      <span>learning science techniques built in</span>
-    </div>
-    <div class="stat-card">
-      <strong>200%</strong>
-      <span>better retention with spaced repetition</span>
-    </div>
-    <div class="stat-card">
-      <strong>Free</strong>
-      <span>to start — no credit card needed</span>
+  <div class="wrap techs-wrap">
+    <div class="aura techs-aura" aria-hidden="true"></div>
+    <div class="techs">
+      <article class="tech glass live" data-reveal="glass">
+        <div class="tech-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16"/><path d="M20 20v-4h-4"/></svg></div>
+        <h3>Spaced repetition</h3>
+        <p>Questions you get wrong come back automatically, right when each idea needs another look.</p>
+      </article>
+      <article class="tech glass live" data-reveal="glass" style="--rd:.09s">
+        <div class="tech-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.2 1-1.2 1.9"/><path d="M12 17.2h.01"/></svg></div>
+        <h3>Active recall</h3>
+        <p>You practice pulling answers from memory instead of rereading your notes.</p>
+      </article>
+      <article class="tech glass live" data-reveal="glass" style="--rd:.18s">
+        <div class="tech-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div>
+        <h3>The Feynman technique</h3>
+        <p>Explain an idea in your own words and the AI tells you exactly what you missed.</p>
+      </article>
     </div>
   </div>
 </section>
 
-<!-- CTA -->
-<section class="about-cta">
-  <h2>Ready to study <em>smarter?</em></h2>
-  <p>Create your first AI study plan in under a minute. Free forever.</p>
-  <a href="login.html" class="btn-white">Build my study plan →</a>
+<!-- NUMBERS -->
+<section class="sec proof" aria-label="StudyFlow in numbers">
+  <div class="aura" aria-hidden="true"></div>
+  <div class="stats glass live" data-reveal="glass">
+    <div class="stat"><p class="stat-n">7+</p><p class="stat-l">learning science techniques built in</p></div>
+    <div class="stat"><p class="stat-n">200%</p><p class="stat-l">better retention with spaced repetition</p></div>
+    <div class="stat"><p class="stat-n">Free</p><p class="stat-l">to start — no credit card needed</p></div>
+  </div>
 </section>
 
-<!-- FOOTER -->
-<footer>
-  <p>© 2026 <strong>StudyFlow</strong> · Built for students who want to stop guessing and start learning.</p>
-  <p style="margin-top:.5rem;font-size:0.78rem;opacity:.5;">
-    <a href="privacy.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin-right:1rem;">Privacy Policy</a>
-    <a href="terms.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin-right:1rem;">Terms of Service</a>
-    <a href="contact.html" style="color:rgba(255,255,255,.6);text-decoration:none;">Contact</a>
-  </p>
+<!-- CLOSING BAND -->
+<section class="cta" data-reveal="section">
+  <div class="wrap cta-grid">
+    <div>
+      <h2>Ready to study <em>smarter?</em></h2>
+      <p>Create your first AI study plan in under a minute. Free forever.</p>
+      <div class="row">
+        <a href="login.html?mode=signup" class="btn btn-light">Build my study plan →</a>
+        <a href="pricing.html" class="btn btn-glass">See plans</a>
+      </div>
+    </div>
+    <div class="stack" aria-hidden="true">
+      <div class="dcard" style="--i:0"><div class="dcard-in"><div class="dc-top"><span>DAY 1</span><span>MON</span></div><h4>Mitosis overview</h4><ul><li class="on">Lesson</li><li class="on">Practice questions</li><li class="on">Recap</li></ul><div class="dc-foot"><span>45 min</span><span class="dc-diff"><i class="on"></i><i></i><i></i><i></i></span></div></div></div>
+      <div class="dcard" style="--i:1"><div class="dcard-in"><div class="dc-top"><span>DAY 2</span><span>TUE</span></div><h4>Meiosis and variation</h4><ul><li class="on">Lesson</li><li>Practice questions</li><li>Recap</li></ul><div class="dc-foot"><span>50 min</span><span class="dc-diff"><i class="on"></i><i class="on"></i><i></i><i></i></span></div></div></div>
+      <div class="dcard" style="--i:2"><div class="dcard-in"><div class="dc-top"><span>DAY 3</span><span>WED</span></div><h4>Flashcards and practice</h4><ul><li>Lesson</li><li>Practice questions</li><li>Recap</li></ul><div class="dc-foot"><span>40 min</span><span class="dc-diff"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></div></div></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap foot-top">
+    <div class="foot-brand">
+      <a href="index.html" class="foot-logo" aria-label="StudyFlow home">
+        <svg viewBox="0 0 40 44" width="34" height="37" aria-hidden="true"><rect x="0" y="2" width="40" height="40" rx="10" fill="#3567e0"/><rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/><rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/><rect x="14" y="10" width="17" height="22" rx="3" fill="white"/><rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/><rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/><rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/></svg>
+      </a>
+      <p>Built for students who want to stop guessing and start learning.</p>
+    </div>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="index.html#how">How it works</a>
+      <a href="index.html#features">Features</a>
+      <a href="pricing.html">Plans</a>
+      <a href="about.html">Our story</a>
+      <a href="contact.html">Help</a>
+    </nav>
+  </div>
+  <div class="foot-mark" aria-hidden="true"><span>Study</span><em>Flow</em></div>
+  <div class="wrap foot-legal">
+    <span>© 2026 StudyFlow</span>
+    <nav aria-label="Legal">
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms of Service</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </div>
 </footer>
 
+<script>
+(function () {
+  'use strict';
+  /* ── helpers shared by both pages ── */
+  var RM = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+
+  /* Nav: the right dashboard for whoever is signed in (the same rule as
+     index.html). Storage can throw in a private window, so it is read
+     defensively. */
+  (function () {
+    var teacher = null, student = null;
+    try { teacher = localStorage.getItem('studyflow_teacher'); student = localStorage.getItem('studyflow_user'); } catch (e) {}
+    var nav = document.querySelector('nav.site-nav'), slot = document.getElementById('nav-account');
+    var href = teacher ? 'teacher.html' : (student ? 'dashboard.html' : 'login.html');
+    if (slot) slot.innerHTML = '<a href="' + href + '" class="nav-dashboard">My Dashboard</a>';
+    /* On a phone the nav has room for one action (see the CSS). */
+    if (nav && (student || teacher)) nav.setAttribute('data-auth', 'in');
+    /* "Build my plan" opens sign-up for a visitor. A signed-in student goes
+       straight to building one instead of through a form they do not need. */
+    if (student && !teacher) {
+      var ctas = document.querySelectorAll('a[href="login.html?mode=signup"]');
+      for (var i = 0; i < ctas.length; i++) ctas[i].setAttribute('href', 'app.html');
+    }
+  })();
+
+  /* Nav lens: rests under the current page, follows the pointer and keyboard
+     focus along the pill, and returns when they leave. */
+  (function () {
+    var pill = document.getElementById('nav-pill');
+    if (!pill) return;
+    var links = [].slice.call(pill.querySelectorAll('a')), current = pill.querySelector('[aria-current]');
+    function put(a) {
+      if (!a) { pill.style.setProperty('--lo', '0'); return; }
+      pill.style.setProperty('--lx', a.offsetLeft + 'px');
+      pill.style.setProperty('--lw', a.offsetWidth + 'px');
+      pill.style.setProperty('--lo', '1');
+    }
+    function home() { put(current); }
+    links.forEach(function (a) {
+      a.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') put(a); });
+      a.addEventListener('focus', function () { put(a); });
+      a.addEventListener('blur', home);
+    });
+    pill.addEventListener('pointerleave', home);
+    window.addEventListener('resize', home);
+    home();
+    /* The pill is measured in the fallback font until the web fonts land. */
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(home);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { pill.classList.add('ready'); }); });
+  })();
+
+  /* Scroll edge: only once something is actually underneath the capsules. */
+  (function () {
+    var edge = document.getElementById('edge-top');
+    if (!edge) return;
+    function update() { edge.classList.toggle('on', (window.pageYOffset || document.documentElement.scrollTop) > 12); }
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+  })();
+
+  /* Reveals: once, in reading order. */
+  (function () {
+    var els = [].slice.call(document.querySelectorAll('[data-reveal]'));
+    function show(el) { el.classList.add('in'); }
+    if (!('IntersectionObserver' in window)) { els.forEach(show); return; }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) { show(e.target); io.unobserve(e.target); } });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+    els.forEach(function (el) { io.observe(el); });
+  })();
+
+  /* The light that follows the pointer (fine pointers, motion allowed). The
+     highlight is an element moved by `transform`, so tracking never repaints
+     the panel; requestAnimationFrame keeps it to one update a frame. */
+  (function () {
+    if (RM.matches || !window.matchMedia || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    [].slice.call(document.querySelectorAll('.live')).forEach(function (el) {
+      var s = document.createElement('span');
+      s.className = 'sheen'; s.setAttribute('aria-hidden', 'true'); s.innerHTML = '<i></i>';
+      el.insertBefore(s, el.firstChild);
+      var raf = 0, px = 0, py = 0;
+      el.addEventListener('pointermove', function (e) {
+        var r = el.getBoundingClientRect(); px = e.clientX - r.left; py = e.clientY - r.top;
+        if (!raf) raf = requestAnimationFrame(function () {
+          raf = 0; el.style.setProperty('--sx', px + 'px'); el.style.setProperty('--sy', py + 'px');
+        });
+      });
+    });
+  })();
+
+  /* Hidden tab: pause every loop. */
+  document.addEventListener('visibilitychange', function () { document.body.classList.toggle('paused', document.hidden); });
+})();
+</script>
 </body>
 </html>

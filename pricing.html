@@ -1,84 +1,643 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>StudyFlow — Plans</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>StudyFlow · Plans and pricing</title>
+<meta name="description" content="Simple, honest pricing. Start free, upgrade when you want more, cancel anytime." />
+<meta name="theme-color" content="#f5f7fc" />
+<meta property="og:title" content="StudyFlow plans and pricing" />
+<meta property="og:description" content="Start free. Upgrade when you want more. Cancel anytime." />
+<meta property="og:url" content="https://studyflow-ten-vert.vercel.app/pricing.html" />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNWI4ZGY4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzI4NTFjOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0idXJsKCNnKSIvPgogIDxyZWN0IHg9IjciIHk9IjgiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNyIgcng9IjIuNSIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMjUiLz4KICA8cmVjdCB4PSIxMCIgeT0iOCIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3IiByeD0iMi41IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC45Ii8+CiAgPHJlY3QgeD0iMTMiIHk9IjEzIiB3aWR0aD0iNyIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSIjMzU2N2UwIi8+CiAgPHJlY3QgeD0iMTMiIHk9IjE2LjUiIHdpZHRoPSI1IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMzNTY3ZTAiIG9wYWNpdHk9IjAuNyIvPgogIDxyZWN0IHg9IjEzIiB5PSIyMCIgd2lkdGg9IjYiIGhlaWdodD0iMS41IiByeD0iMC43NSIgZmlsbD0iIzRhN2NmNiIgb3BhY2l0eT0iMC41Ii8+Cjwvc3ZnPg=="/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400&family=DM+Mono:wght@400;500&family=Inter:wght@700&display=swap" rel="stylesheet">
+<script>
+  /* Runs before the first paint. `js` gates the reveal states, so a page whose
+     script fails still shows everything. The springs: CSS cannot run a spring,
+     but `linear()` can replay one. The curve is a damped spring (Apple's two
+     parameters, damping ratio and response, not stiffness and mass) sampled
+     into points; its duration is the time it takes to settle. Same maths as
+     dashboard.html. Browsers without linear() keep the cubic-bezier
+     fallbacks declared in :root. */
+  (function () {
+    var d = document.documentElement;
+    d.className += ' js';
+    function curve(zeta, response) {
+      var w = 2 * Math.PI / response, k = w * w, c = 2 * zeta * w;
+      var h = 1 / 1200, x = 0, v = 0, t = 0, end = 3, a;
+      for (t = h; t < 3; t += h) {
+        a = -k * (x - 1) - c * v; v += a * h; x += v * h;
+        if (Math.abs(x - 1) < 0.0008 && Math.abs(v) < 0.01) { end = t; break; }
+      }
+      var n = Math.max(24, Math.min(64, Math.round(end * 70))), pts = [], step = end / n;
+      x = 0; v = 0; t = 0;
+      for (var i = 0; i <= n; i++) {
+        while (t < i * step) { a = -k * (x - 1) - c * v; v += a * h; x += v * h; t += h; }
+        pts.push(i === n ? 1 : +x.toFixed(4));
+      }
+      return { e: 'linear(' + pts.join(', ') + ')', ms: Math.round(end * 1000) };
+    }
+    try {
+      if (window.CSS && CSS.supports && CSS.supports('transition-timing-function', 'linear(0, 1)')) {
+        var specs = { '': [1, 0.42], '-fast': [1, 0.26], '-slow': [1, 0.62] };
+        for (var key in specs) {
+          var s = curve(specs[key][0], specs[key][1]);
+          d.style.setProperty('--spring' + key, s.e);
+          d.style.setProperty('--spring' + key + '-ms', s.ms + 'ms');
+        }
+      }
+    } catch (e) {}
+  })();
+</script>
 <style>
-  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-  :root { --ink:#1a1d2e; --muted:#6b7280; --soft:#f4f6fb; --blue:#4a7cf6; --blue-light:#dce8ff; --white:#fff; --border:#e8ecf4; --green:#38bfa1; --sans:'DM Sans',sans-serif; --serif:'Instrument Serif',Georgia,serif; }
-  body { font-family:var(--sans); color:var(--ink); background:var(--soft); min-height:100vh; }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+/* ══════════════════════════════════════════════════════════════════════
+   LIQUID GLASS. This block is shared by about.html and pricing.html and
+   sits beside index.html (same tokens, same nav, same footer). Each page
+   keeps its own copy so it stays self-contained like the rest of the site:
+   a change here has to be made in both files.
 
-  nav { background:#fff; border-bottom:1px solid var(--border); padding:.85rem 2rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
-  .logo { text-decoration:none; }
-  .btn-back { font-size:0.85rem; color:var(--muted); background:none; border:1.5px solid var(--border); border-radius:8px; padding:.4rem .9rem; cursor:pointer; font-family:var(--sans); text-decoration:none; transition:all .2s; }
-  .btn-back:hover { border-color:var(--blue); color:var(--blue); }
+   What "glass" means on these pages (apple-design skill, materials):
+   - A translucent layer over something worth seeing through. Glass sits on
+     the page's blue light (.aura) or on the blue band, never on flat paper,
+     or it reads as a white card.
+   - A bright specular edge: a 1.5px highlight along the top (inset shadow)
+     and a 1px rim that runs white, clear, white (.glass::before).
+   - Weight encodes hierarchy: panels blur more and cast deeper shadows than
+     chips. Pro and VIP are tinted glass, not a different kind of card.
+   - Never light glass on light glass: buttons inside a card are solid.
+   - Text on glass is --ink-3 at weight 500 or darker, not a flat grey.
+   - NEVER put an opacity transition or animation on an ancestor of glass.
+     An element with opacity < 1 is a backdrop root: the glass inside can
+     only blur what is inside that ancestor (nothing), so it flashes flat
+     until the fade ends. Reveals go on the glass itself, or on leaves.
 
-  .hero { text-align:center; padding:4rem 2rem 2rem; animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both; }
-  .hero h1 { font-family:var(--serif); font-size:clamp(2rem,4vw,3rem); letter-spacing:-0.03em; margin-bottom:.75rem; }
-  .hero h1 em { font-style:italic; color:var(--blue); }
-  .hero p { color:var(--muted); font-size:0.95rem; font-weight:300; max-width:480px; margin:0 auto; }
+   Z-index scale: -1 environment, 0-2 content, 90 scroll edge, 100 nav,
+   200 skip link, 300 checkout sheet, 310 toast.
+   ══════════════════════════════════════════════════════════════════════ */
 
-  .plans-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem; max-width:900px; margin:2.5rem auto; padding:0 1.5rem 4rem; animation:fadeUp .5s .1s cubic-bezier(0.16,1,.3,1) both; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .plan-card { background:#fff; border:1.5px solid var(--border); border-radius:24px; padding:2rem; position:relative; transition:border-color .2s; }
-  .plan-card:hover { border-color:var(--blue); }
-  .plan-card.popular { background:linear-gradient(135deg,#4a7cf6,#2851c8); border:none; box-shadow:0 16px 48px rgba(74,124,246,.3); }
-  .popular-badge { position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#f59e0b; color:#fff; font-size:0.72rem; font-weight:700; padding:.3rem .9rem; border-radius:999px; white-space:nowrap; }
+:root {
+  --night: #0e142a;
+  --ink: #1a1d2e;
+  --ink-2: #2a3150;
+  --ink-3: #3b4363;
+  --paper: #f5f7fc;
+  --card: #fdfdff;
+  --line: #e2e8f4;
+  --line-strong: #c3cfe6;
+  --muted: #5b6378;
+  --blue: #4a7cf6;
+  --blue-btn: #3567e0;
+  --blue-deep: #2851c8;
+  --blue-soft: #e3ecff;
+  --blue-mist: #eef3ff;
+  --serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'DM Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  /* Fallbacks. The head script replaces them with real damped springs (as
+     `linear()` curves) wherever the browser can play one. */
+  --spring: cubic-bezier(.22, 1, .36, 1);        --spring-ms: 560ms;
+  --spring-fast: cubic-bezier(.22, 1, .36, 1);   --spring-fast-ms: 340ms;
+  --spring-slow: cubic-bezier(.16, 1, .3, 1);    --spring-slow-ms: 820ms;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --r-card: 22px;
+  --r-panel: 30px;
+  --glass-fill: linear-gradient(150deg, rgba(255, 255, 255, .66) 0%, rgba(255, 255, 255, .38) 52%, rgba(255, 255, 255, .5) 100%);
+  --glass-blur: blur(18px) saturate(185%);
+  --glass-edge: rgba(255, 255, 255, .62);
+  --glass-shadow: 0 1px 2px rgba(26, 40, 90, .05), 0 28px 56px -28px rgba(26, 40, 90, .36);
+  --glass-lip: inset 0 1.5px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(26, 40, 90, .05);
+  color-scheme: light;
+}
 
-  .plan-label { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:.75rem; }
-  .plan-card.popular .plan-label { color:rgba(255,255,255,.7); }
-  .plan-price { font-size:2.5rem; font-weight:700; color:var(--ink); letter-spacing:-0.03em; line-height:1; }
-  .plan-card.popular .plan-price { color:#fff; }
-  .plan-period { font-size:0.82rem; color:var(--muted); margin-bottom:1.5rem; }
-  .plan-card.popular .plan-period { color:rgba(255,255,255,.7); }
+/* overflow-x: clip, NOT hidden: `hidden` makes html/body scroll containers,
+   and a scroll container between a sticky element and the viewport stops it
+   sticking (the story heading on about.html is sticky). */
+html { scroll-behavior: smooth; overflow-x: clip; -webkit-text-size-adjust: 100%; scroll-padding-top: 96px; }
+body {
+  font-family: var(--sans); font-optical-sizing: auto;
+  color: var(--ink); background: var(--paper);
+  line-height: 1.6; overflow-x: clip;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility;
+}
+/* Instrument Serif has ONE weight; without the synthesis switch a stray
+   bold is a browser-faked smear. */
+h1, h2, h3, h4 { font-family: var(--serif); font-weight: 400; font-synthesis-weight: none; }
+img, svg { max-width: 100%; }
+a { color: inherit; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+ul { list-style: none; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2.5px solid var(--blue); outline-offset: 3px; }
+.glass.blue :focus-visible, .glass.night :focus-visible, .cta :focus-visible, .site-foot :focus-visible { outline-color: #fff; }
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.skip { position: absolute; left: 12px; top: -64px; z-index: 200; background: var(--ink); color: #fff; padding: .65rem 1rem; border-radius: 999px; text-decoration: none; font-weight: 600; transition: top .2s var(--ease-out); }
+.skip:focus { top: 12px; }
 
-  .plan-features { list-style:none; display:flex; flex-direction:column; gap:.7rem; margin-bottom:1.8rem; }
-  .plan-features li { display:flex; gap:.6rem; font-size:0.88rem; color:var(--ink); align-items:flex-start; }
-  .plan-card.popular .plan-features li { color:#fff; }
-  .plan-features li .check { color:var(--green); font-weight:700; flex-shrink:0; }
-  .plan-card.popular .plan-features li .check { color:#93ffdb; }
-  .plan-features li .cross { color:var(--border); font-weight:700; flex-shrink:0; }
+/* ── ENVIRONMENT: the page is a notebook (kept from index.html) ──
+   Ruled lines, the blue margin rule and a drifting glow, fixed behind
+   everything. Fixed, so glass scrolls OVER it and what it refracts changes. */
+.env { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.env::before {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(74, 124, 246, .07) 31px, rgba(74, 124, 246, .07) 32px);
+}
+.env::after { content: ""; position: absolute; top: 0; bottom: 0; left: max(22px, 3.2vw); width: 1.5px; background: rgba(74, 124, 246, .15); }
+.grain { position: absolute; inset: 0; pointer-events: none; background-image: var(--grain); background-size: 180px 180px; opacity: .045; }
+.env-glow {
+  position: absolute; left: 50%; top: 50%; width: 80vmax; height: 80vmax; border-radius: 50%;
+  background: radial-gradient(circle, rgba(74, 124, 246, .10) 0%, rgba(74, 124, 246, 0) 62%);
+  transform: translate(-70%, -60%);
+  animation: envDrift 96s ease-in-out -30s infinite alternate;
+}
+@keyframes envDrift {
+  0% { transform: translate(-85%, -70%); }
+  50% { transform: translate(-25%, -35%); }
+  100% { transform: translate(-60%, -85%); }
+}
+@media (max-width: 720px) { .env::after { display: none; } }
 
-  .btn-plan { width:100%; padding:.9rem; border-radius:12px; font-family:var(--sans); font-size:0.95rem; font-weight:700; cursor:pointer; transition:all .2s; border:none; }
-  .btn-plan.free { background:var(--soft); color:var(--ink); border:1.5px solid var(--border); }
-  .btn-plan.free:hover { border-color:var(--blue); }
-  .btn-plan.pro { background:#fff; color:var(--blue); box-shadow:0 4px 14px rgba(0,0,0,.15); }
-  .btn-plan.pro:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(0,0,0,.2); }
-  .btn-plan.vip { background:linear-gradient(135deg,#c77dff,#8b5cf6); color:#fff; box-shadow:0 4px 14px rgba(139,92,246,.4); }
-  .btn-plan.vip:hover { transform:translateY(-1px); }
-  .btn-plan.classroom { background:linear-gradient(135deg,#4a7cf6,#2851c8); color:#fff; box-shadow:0 4px 14px rgba(74,124,246,.4); }
-  .btn-plan.classroom:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(74,124,246,.5); }
+/* The light the glass refracts: three soft blue fields, one slow drift.
+   Radial gradients, not blurred shapes: no filter cost. A gradient that runs
+   past its box is cut off flat, which shows as a hard seam across the page,
+   so the box fades out top and bottom (sideways it overhangs the viewport). */
+.aura {
+  position: absolute; z-index: -1; pointer-events: none; inset: -14% -8%;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 24%, #000 76%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 24%, #000 76%, transparent 100%);
+  background:
+    radial-gradient(38% 42% at 18% 30%, rgba(74, 124, 246, .30), rgba(74, 124, 246, 0) 70%),
+    radial-gradient(34% 38% at 82% 24%, rgba(53, 103, 224, .22), rgba(53, 103, 224, 0) 70%),
+    radial-gradient(44% 40% at 50% 80%, rgba(143, 176, 255, .42), rgba(143, 176, 255, 0) 72%);
+  animation: auraDrift 32s ease-in-out infinite alternate;
+}
+@keyframes auraDrift {
+  from { transform: translate3d(-1.5%, -1%, 0) scale(1); }
+  to { transform: translate3d(1.5%, 1.2%, 0) scale(1.06); }
+}
 
-  .loading-overlay { display:none; position:fixed; inset:0; background:rgba(26,29,46,.5); backdrop-filter:blur(4px); z-index:999; align-items:center; justify-content:center; flex-direction:column; gap:1rem; }
-  .loading-overlay.show { display:flex; }
-  .loading-overlay p { color:#fff; font-weight:600; font-size:1rem; }
-  .spinner { width:40px; height:40px; border:3px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; }
-  @keyframes spin { to{transform:rotate(360deg)} }
+/* ── LAYOUT ── */
+.wrap { max-width: 1160px; margin-inline: auto; }
+.center { text-align: center; }
+.sec { position: relative; isolation: isolate; padding-block: clamp(3.5rem, 8vw, 6rem); padding-inline: max(16px, 5vw); }
 
-  .current-plan-badge { display:inline-block; background:var(--blue-light); color:var(--blue); font-size:0.72rem; font-weight:700; padding:.2rem .7rem; border-radius:999px; margin-left:.5rem; vertical-align:middle; }
+/* ── NAV: floating glass capsules (kept from index.html) ──
+   Every floating control is its own capsule with its own light material, so
+   each stays legible over whatever scrolls under it: paper, the blue band or
+   the ink footer. `backwards`, not `both`: a finished animation still "in
+   effect" makes the nav a backdrop root and the capsules then blur nothing. */
+nav.site-nav {
+  position: fixed; z-index: 100; top: calc(.7rem + env(safe-area-inset-top, 0px)); left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: .6rem;
+  padding: 0 max(16px, 2rem); pointer-events: none;
+  animation: navIn .8s var(--ease-out) backwards;
+}
+@keyframes navIn { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
+.nav-logo, .nav-pill, .nav-dashboard {
+  background: rgba(253, 253, 255, .66);
+  -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, .72);
+  box-shadow: 0 2px 20px rgba(26, 40, 90, .10), inset 0 1.5px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(26, 40, 90, .05);
+  border-radius: 999px; pointer-events: auto;
+}
+.nav-logo { display: inline-flex; align-items: center; text-decoration: none; padding: .26rem .85rem .26rem .4rem; }
+.nav-logo svg { width: 138px; height: 34px; display: block; }
+.logo-study { fill: var(--ink); }
+.nav-pill {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: .15rem; padding: .38rem .45rem;
+}
+.nav-pill a {
+  position: relative; z-index: 1; font-size: .84rem; font-weight: 500; color: var(--ink-3); text-decoration: none;
+  padding: .42rem .85rem; border-radius: 999px; white-space: nowrap; transition: color .2s;
+}
+.nav-pill a:hover, .nav-pill a[aria-current] { color: var(--blue-deep); }
+/* iOS 26 tab bars slide a lens to the selected tab. Same here: it rests under
+   the page you are on and follows your pointer or focus along the pill. */
+.nav-lens {
+  position: absolute; left: 0; top: .38rem; bottom: .38rem; width: var(--lw, 0px); border-radius: 999px; pointer-events: none;
+  transform: translateX(var(--lx, 0px)); opacity: var(--lo, 0);
+  background: var(--blue-soft); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .9), 0 1px 3px rgba(26, 40, 90, .1);
+}
+/* Transitions are switched on after the first placement, or the lens would
+   slide in from the left edge on every load. */
+.nav-pill.ready .nav-lens { transition: transform var(--spring-ms) var(--spring), width var(--spring-ms) var(--spring), opacity .25s ease; }
+.nav-right { display: flex; align-items: center; gap: .6rem; pointer-events: auto; }
+#nav-account { display: contents; }
+.nav-dashboard {
+  display: inline-flex; align-items: center; font-size: .84rem; font-weight: 600; white-space: nowrap;
+  color: var(--blue-deep); text-decoration: none; padding: .5rem 1.05rem;
+  transition: transform var(--spring-fast-ms) var(--spring-fast), background-color .2s, box-shadow .2s;
+}
+.nav-dashboard:hover { background: rgba(255, 255, 255, .92); }
+.nav-cta {
+  display: inline-flex; align-items: center; font-size: .84rem; font-weight: 700; white-space: nowrap;
+  color: #fff; background: var(--blue-btn); text-decoration: none;
+  padding: .52rem 1.15rem; border-radius: 999px;
+  /* The 1px white ring is what keeps a blue button findable over the blue band. */
+  box-shadow: 0 4px 16px -4px rgba(53, 103, 224, .55), inset 0 1px 0 rgba(255, 255, 255, .28), 0 0 0 1px rgba(255, 255, 255, .24);
+  transition: transform var(--spring-fast-ms) var(--spring-fast), background-color .2s;
+}
+.nav-cta:hover { background: var(--blue-deep); }
+.nav-cta:active, .nav-dashboard:active { transform: scale(.96); transition-duration: 80ms, .2s, .2s; transition-timing-function: ease-out; }
+@media (pointer: coarse) { .nav-cta, .nav-dashboard { min-height: 44px; } }
+@media (max-width: 1080px) { .nav-pill { display: none; } }
+/* On a phone there is room for one action. A signed-in learner gets the way
+   back to their dashboard (pricing used to have a Back button for exactly
+   this); a visitor gets the sign-up button. */
+@media (max-width: 640px) {
+  nav.site-nav[data-auth="in"] .nav-cta { display: none; }
+  nav.site-nav:not([data-auth="in"]) .nav-dashboard { display: none; }
+  .nav-logo svg { width: 124px; height: 32px; }
+}
 
-  @media(max-width:768px) { .plans-grid{grid-template-columns:1fr;} }
+/* Scroll edge effect (instead of a hard bar): once the page has scrolled,
+   whatever passes under the capsules softens and fades, with no tint, so it
+   suits paper, blue and ink alike. Shown only when something is underneath. */
+.edge-top {
+  position: fixed; z-index: 90; top: 0; left: 0; right: 0; height: calc(92px + env(safe-area-inset-top, 0px));
+  pointer-events: none; opacity: 0; transition: opacity .35s ease;
+  -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 28%, transparent); mask-image: linear-gradient(to bottom, #000 28%, transparent);
+}
+.edge-top.on { opacity: 1; }
 
-  /* ── GLOBAL TYPOGRAPHY STANDARD ── */
-  nav { min-height:60px; }
-  nav .logo-svg { width:140px; height:34px; }
-  h1,h2,h3 { font-family:var(--serif); letter-spacing:-0.02em; }
-  body, p, span, div, button, input, textarea, select, label { font-family:var(--sans); }
+/* ── TYPE ── tracking tightens as size grows (apple-design: typography) */
+.h1 { font-size: clamp(2.9rem, 6.8vw, 5.6rem); line-height: 1.01; letter-spacing: -.026em; text-wrap: balance; }
+.h2 { font-size: clamp(2.3rem, 4.8vw, 3.9rem); line-height: 1.04; letter-spacing: -.022em; text-wrap: balance; }
+.h1 em, .h2 em { font-style: italic; color: var(--blue); }
+.lede { color: var(--muted); font-size: 1.08rem; line-height: 1.7; max-width: 46ch; }
+.eyebrow { font-family: var(--mono); font-weight: 500; font-size: .74rem; line-height: 1; letter-spacing: .14em; text-transform: uppercase; color: var(--blue-deep); }
 
-  </style>
+/* ── BUTTONS ──
+   Feedback lives on the PRESS: :active fires on pointer-down and the release
+   springs back. Hover changes colour only (no lift, no pop: design system). */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  font-family: var(--sans); font-size: .95rem; font-weight: 600; letter-spacing: -.005em; line-height: 1;
+  padding: .95rem 1.55rem; border-radius: 999px; border: 1.5px solid transparent;
+  text-decoration: none; cursor: pointer; white-space: nowrap; user-select: none; -webkit-user-select: none;
+  transition: transform var(--spring-fast-ms) var(--spring-fast), background-color .2s, border-color .2s, color .2s, box-shadow .2s;
+}
+.btn:active { transform: scale(.97); transition-duration: 80ms, .2s, .2s, .2s, .2s; transition-timing-function: ease-out; }
+.btn-blue { background: var(--blue-btn); color: #fff; box-shadow: 0 8px 24px -8px rgba(53, 103, 224, .7), inset 0 1px 0 rgba(255, 255, 255, .26); }
+.btn-blue:hover { background: var(--blue-deep); }
+.btn-light { background: #f7f9ff; color: var(--blue-deep); box-shadow: 0 6px 24px -8px rgba(0, 0, 0, .4), inset 0 1px 0 #fff; }
+.btn-light:hover { background: var(--blue-soft); }
+.btn-outline { background: var(--card); color: var(--blue-deep); border-color: var(--line-strong); }
+.btn-outline:hover { border-color: var(--blue); }
+.btn-glass { background: rgba(255, 255, 255, .12); color: #fff; border-color: rgba(255, 255, 255, .42); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .3); }
+.btn-glass:hover { background: rgba(255, 255, 255, .22); border-color: rgba(255, 255, 255, .62); }
+@media (pointer: coarse) { .btn { min-height: 44px; } }
+
+/* A small capsule for a label that sits on the page's light, not on a card. */
+.chip-glass {
+  display: inline-flex; align-items: center; gap: .5rem; font-size: .8rem; font-weight: 600; color: var(--ink-2);
+  padding: .45rem 1rem; border-radius: 999px;
+  background: rgba(255, 255, 255, .62); border: 1px solid rgba(255, 255, 255, .8);
+  -webkit-backdrop-filter: blur(14px) saturate(180%); backdrop-filter: blur(14px) saturate(180%);
+  box-shadow: 0 1px 2px rgba(26, 40, 90, .06), 0 8px 20px -10px rgba(26, 40, 90, .28), inset 0 1.5px 0 rgba(255, 255, 255, .95);
+}
+.chip-glass svg { width: 14px; height: 14px; color: var(--blue); }
+
+/* ── THE MATERIAL ── */
+.glass {
+  position: relative; border-radius: var(--r-card);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-shadow), var(--glass-lip);
+  transition: border-color .25s ease;
+}
+/* The rim: a 1px ring that catches light at the top-left and bottom-right and
+   lets go in between, which is what makes the edge read as thick glass. */
+.glass::before {
+  content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(140deg, rgba(255, 255, 255, .95), rgba(255, 255, 255, .16) 32%, rgba(255, 255, 255, 0) 58%, rgba(255, 255, 255, .5));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.glass > :not(.sheen):not(.comet) { position: relative; z-index: 1; }
+@media (hover: hover) { .glass:hover { border-color: rgba(74, 124, 246, .55); } }
+
+/* Tinted glass. The fill stays deep enough that white text keeps 4.5:1 even
+   where the light field behind it is at its brightest. */
+.glass.blue {
+  color: #fff; border-color: rgba(255, 255, 255, .3);
+  background: linear-gradient(165deg, rgba(53, 103, 224, .93) 0%, rgba(40, 81, 200, .94) 100%);
+  -webkit-backdrop-filter: blur(16px) saturate(165%); backdrop-filter: blur(16px) saturate(165%);
+  box-shadow: 0 36px 66px -26px rgba(40, 81, 200, .7), 0 1px 2px rgba(10, 20, 80, .2), inset 0 1.5px 0 rgba(255, 255, 255, .5), inset 0 -1px 0 rgba(10, 20, 90, .3);
+}
+.glass.night {
+  color: #fff; border-color: rgba(143, 176, 255, .22);
+  background: linear-gradient(165deg, rgba(26, 29, 46, .92) 0%, rgba(31, 40, 80, .9) 100%);
+  box-shadow: 0 32px 62px -28px rgba(14, 20, 42, .75), 0 1px 2px rgba(0, 0, 0, .25), inset 0 1.5px 0 rgba(255, 255, 255, .2), inset 0 -1px 0 rgba(0, 0, 0, .35);
+}
+@media (hover: hover) {
+  .glass.blue:hover { border-color: rgba(255, 255, 255, .6); }
+  .glass.night:hover { border-color: rgba(143, 176, 255, .6); }
+}
+
+/* The light that follows you. JS adds .sheen to .live panels (fine pointers,
+   motion allowed): a soft highlight tracks the pointer like a specular glint.
+   It moves with `transform`, so it costs no repaint of the panel. It sits
+   UNDER the content, so it never washes out text. */
+.sheen { position: absolute; inset: 0; z-index: 0; border-radius: inherit; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity .4s ease; }
+.glass:hover > .sheen { opacity: 1; }
+.sheen i {
+  position: absolute; left: 0; top: 0; width: 380px; height: 380px; margin: -190px 0 0 -190px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, .6), rgba(255, 255, 255, .16) 55%, rgba(255, 255, 255, 0));
+  transform: translate3d(var(--sx, 0px), var(--sy, 0px), 0);
+  transition: transform .3s var(--spring-fast); will-change: transform;
+}
+.glass.blue .sheen i, .glass.night .sheen i { background: radial-gradient(closest-side, rgba(255, 255, 255, .16), rgba(255, 255, 255, .05) 55%, rgba(255, 255, 255, 0)); }
+
+/* Materialize, don't just fade: a glass surface arrives as a material, so its
+   blur radius and scale come up together with its opacity. Only under .js, so
+   a page whose script failed is complete at rest. */
+.js [data-reveal="up"]:not(.in) { opacity: 0; transform: translate3d(0, 26px, 0); }
+.js [data-reveal="up"] { transition: opacity .7s ease var(--rd, 0s), transform var(--spring-slow-ms) var(--spring-slow) var(--rd, 0s); }
+.js [data-reveal="glass"]:not(.in) {
+  opacity: 0; transform: translate3d(0, 30px, 0) scale(.965);
+  -webkit-backdrop-filter: blur(0) saturate(100%); backdrop-filter: blur(0) saturate(100%);
+}
+.js [data-reveal="glass"] {
+  transition: opacity .6s ease var(--rd, 0s), transform var(--spring-slow-ms) var(--spring-slow) var(--rd, 0s),
+              -webkit-backdrop-filter .9s ease var(--rd, 0s), backdrop-filter .9s ease var(--rd, 0s), border-color .25s ease;
+}
+
+/* ── CLOSING BAND: saturated blue is where glass reads best ── */
+.cta {
+  position: relative; isolation: isolate; overflow: hidden; color: #fff;
+  background: linear-gradient(140deg, #4a7cf6 0%, #3567e0 40%, #2248b8 100%);
+  padding-block: clamp(5rem, 10vw, 8rem); padding-inline: max(16px, 5vw);
+}
+.cta::before { content: ""; position: absolute; z-index: -1; inset: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(255, 255, 255, .13) 1px, transparent 1.2px); background-size: 30px 30px; }
+.cta::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: var(--grain); background-size: 180px 180px; opacity: .09; }
+.cta-grid { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: clamp(2rem, 5vw, 4rem); align-items: center; }
+.cta .chip-glass { color: #fff; background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .36); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .35); }
+.cta .chip-glass svg { color: #fff; }
+.cta h2 { font-size: clamp(2.5rem, 5.4vw, 4.4rem); line-height: 1.04; letter-spacing: -.022em; margin: 1.3rem 0 1rem; text-wrap: balance; }
+.cta h2 em { font-style: italic; color: #d6e3ff; }
+.cta p { color: rgba(255, 255, 255, .9); font-size: 1.08rem; max-width: 42ch; }
+.cta .row { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
+/* Three day cards in glass, dealt like a hand: each lies on the one before, so
+   a covered card shows its left edge. The float is the `translate` property,
+   which leaves `transform` free for the entrance. */
+.stack { position: relative; height: 390px; }
+.dcard { position: absolute; left: 50%; top: 50%; width: 214px; margin: -128px 0 0 -107px; transform: translate3d(calc((var(--i) - 1) * 104px), calc((var(--i) - 1) * -22px), 0) rotate(calc((var(--i) - 1) * 5deg)); }
+.dcard-in {
+  height: 256px; padding: 1.15rem 1.15rem 1rem; display: flex; flex-direction: column; border-radius: 20px; color: #fff;
+  background: linear-gradient(150deg, rgba(255, 255, 255, .28), rgba(255, 255, 255, .09));
+  border: 1px solid rgba(255, 255, 255, .36);
+  -webkit-backdrop-filter: blur(18px) saturate(170%); backdrop-filter: blur(18px) saturate(170%);
+  box-shadow: 0 28px 50px -24px rgba(8, 20, 70, .65), inset 0 1.5px 0 rgba(255, 255, 255, .55), inset 0 -1px 0 rgba(255, 255, 255, .1);
+}
+.js .cta:not(.in) .dcard-in { opacity: 0; transform: translate3d(0, 26px, 0) scale(.94); -webkit-backdrop-filter: blur(0) saturate(100%); backdrop-filter: blur(0) saturate(100%); }
+.js .dcard-in { transition: opacity .6s ease calc(var(--i) * 90ms), transform var(--spring-slow-ms) var(--spring-slow) calc(var(--i) * 90ms), -webkit-backdrop-filter .9s ease calc(var(--i) * 90ms), backdrop-filter .9s ease calc(var(--i) * 90ms); }
+.cta.in .dcard-in { animation: dcFloat 6.5s ease-in-out infinite; animation-delay: calc(var(--i) * -1.6s); }
+@keyframes dcFloat { 0%, 100% { translate: 0 0; } 50% { translate: 0 -11px; } }
+.dc-top { display: flex; justify-content: space-between; font-family: var(--mono); font-size: .7rem; letter-spacing: .08em; color: rgba(255, 255, 255, .92); }
+.dc-top span + span { color: rgba(255, 255, 255, .78); }
+.dcard h4 { font-size: 1.5rem; line-height: 1.1; letter-spacing: -.012em; margin: .55rem 0 .85rem; }
+.dcard ul { display: grid; gap: .45rem; font-size: .78rem; font-weight: 500; color: rgba(255, 255, 255, .9); }
+.dcard li { display: flex; gap: .45rem; align-items: center; }
+.dcard li::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .6); flex: none; }
+.dcard li.on::before { background: #fff; border-color: #fff; box-shadow: inset 0 0 0 2.5px #3567e0; }
+.dc-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; font-size: .78rem; font-weight: 600; border-top: 1px solid rgba(255, 255, 255, .26); padding-top: .6rem; }
+.dc-diff { display: flex; gap: 3px; }
+.dc-diff i { width: 8px; height: 8px; border-radius: 2px; background: rgba(255, 255, 255, .3); }
+.dc-diff i.on { background: #fff; }
+@media (max-width: 860px) {
+  .cta-grid { grid-template-columns: 1fr; }
+  .stack { height: 320px; order: -1; }
+  .dcard { width: 168px; margin: -102px 0 0 -84px; transform: translate3d(calc((var(--i) - 1) * 70px), calc((var(--i) - 1) * -16px), 0) rotate(calc((var(--i) - 1) * 5deg)); }
+  .dcard-in { height: 204px; padding: .95rem .95rem .85rem; }
+  .dcard h4 { font-size: 1.2rem; }
+}
+
+/* ── FOOTER: links, then the name set huge as the page's last word ── */
+.site-foot { position: relative; overflow: hidden; background: var(--ink); color: rgba(226, 233, 255, .72); padding: 4rem max(16px, 5vw) calc(1.8rem + env(safe-area-inset-bottom, 0px)); font-size: .9rem; }
+.site-foot::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: var(--grain); background-size: 180px 180px; opacity: .06; }
+.foot-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 2rem; }
+.foot-brand { display: grid; gap: 1rem; max-width: 30ch; }
+.foot-logo { display: inline-flex; width: max-content; }
+.foot-links { display: flex; flex-wrap: wrap; gap: .5rem 1.6rem; }
+.site-foot a { color: rgba(226, 233, 255, .8); text-decoration: none; transition: color .2s; }
+.site-foot a:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
+.foot-mark {
+  font-family: var(--serif); font-size: clamp(5.2rem, 22vw, 20rem); line-height: .8; letter-spacing: -.045em; white-space: nowrap;
+  text-align: center; margin: clamp(2.5rem, 6vw, 4rem) 0 clamp(1.5rem, 3vw, 2.2rem);
+  background: linear-gradient(180deg, rgba(160, 188, 255, .34) 10%, rgba(160, 188, 255, .03) 92%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  padding-bottom: .06em;
+}
+.foot-mark em { font-style: italic; }
+.foot-legal { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .8rem 1.4rem; padding-top: 1.4rem; border-top: 1px solid rgba(226, 233, 255, .12); font-size: .82rem; }
+.foot-legal nav { display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; }
+
+/* Every loop pauses on a hidden tab. animation-play-state does not inherit,
+   so this has to hit every element and pseudo-element directly. */
+body.paused *, body.paused *::before, body.paused *::after { animation-play-state: paused !important; }
+
+/* ── ACCESSIBILITY: three independent signals (apple-design: reduced motion) ──
+   Reduced motion is not "no feedback": it is a gentler one. Slides and
+   springs become short cross-fades; nothing loops; the light stops following. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .env-glow, .aura, .cta.in .dcard-in { animation: none !important; }
+  .comet { display: none; }
+  nav.site-nav { animation: none; }
+  .js [data-reveal="up"]:not(.in), .js [data-reveal="glass"]:not(.in), .js .cta:not(.in) .dcard-in { transform: none; }
+  .js [data-reveal="up"], .js [data-reveal="glass"], .js .dcard-in { transition: opacity .25s ease; }
+  .nav-pill.ready .nav-lens { transition: opacity .2s ease; }
+  .btn:active, .nav-cta:active, .nav-dashboard:active { transform: none; }
+  .sheen { display: none; }
+}
+/* Translucency off: the same surfaces, frosted solid. Also what a browser
+   without backdrop-filter gets, so the page is never see-through-and-blurless. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .nav-logo, .nav-pill, .nav-dashboard, .chip-glass, .btn-glass, .dcard-in, .edge-top {
+    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  }
+  .glass { background: var(--card); }
+  .glass.blue { background: var(--blue-btn); }
+  .glass.night { background: var(--ink); }
+  .nav-logo, .nav-pill, .nav-dashboard, .chip-glass { background: var(--card); }
+  .dcard-in { background: #2f5fd6; }
+  .btn-glass { background: #2f5fd6; }
+  .edge-top { display: none; }
+}
+@media (prefers-contrast: more) {
+  .glass { background: var(--card); border-color: var(--ink-3); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .glass.blue { background: var(--blue-deep); border-color: #fff; }
+  .glass.night { background: var(--ink); border-color: #fff; }
+  .nav-logo, .nav-pill, .nav-dashboard, .chip-glass { background: var(--card); border-color: var(--ink-3); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .lede, .glass:not(.blue):not(.night) .per, .glass:not(.blue):not(.night) .feats li.no { color: var(--ink); }
+  .dcard-in { background: #1d3fa8; border-color: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass { background: rgba(253, 253, 255, .94); }
+  .glass.blue { background: var(--blue-btn); }
+  .glass.night { background: var(--ink); }
+  .nav-logo, .nav-pill, .nav-dashboard, .chip-glass { background: rgba(253, 253, 255, .95); }
+  .dcard-in, .btn-glass { background: #2f5fd6; }
+  .edge-top { display: none; }
+}
+
+
+/* ══════════════════════════════════════════
+   PRICING. Three plans in glass over the page's blue light; Pro and VIP are
+   the same glass tinted, not different cards. Classroom is its own wide
+   panel: it is for teachers, and four cards in a three-column grid left it
+   orphaned on a second row.
+══════════════════════════════════════════ */
+.hero { position: relative; isolation: isolate; text-align: center; padding: clamp(8.4rem, 15vw, 11rem) max(16px, 5vw) clamp(2.4rem, 5vw, 3.6rem); }
+.hero .eyebrow { margin-bottom: 1.1rem; }
+.hero .lede { margin: 1.2rem auto 0; }
+.hero .aura { inset: -40% -8% -30%; }
+
+.plans { position: relative; isolation: isolate; padding: 0 max(16px, 5vw) clamp(3.5rem, 7vw, 5.5rem); }
+/* One field of light behind each column, so every card has something to
+   refract: pale blue behind Free, brand blue behind Pro, deeper behind VIP. */
+.plans .aura {
+  inset: -8% -6% -6%; animation-duration: 44s;
+  background:
+    radial-gradient(22% 32% at 25% 38%, rgba(143, 176, 255, .55), rgba(143, 176, 255, 0) 72%),
+    radial-gradient(24% 36% at 50% 34%, rgba(74, 124, 246, .42), rgba(74, 124, 246, 0) 72%),
+    radial-gradient(22% 32% at 75% 42%, rgba(79, 100, 200, .34), rgba(79, 100, 200, 0) 72%),
+    radial-gradient(42% 24% at 50% 96%, rgba(143, 176, 255, .40), rgba(143, 176, 255, 0) 72%);
+}
+.pgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.4rem; max-width: 1060px; margin-inline: auto; align-items: stretch; }
+.plan { display: flex; flex-direction: column; padding: 2rem 1.9rem 1.9rem; }
+.plan-head { display: flex; align-items: center; justify-content: space-between; gap: .6rem; min-height: 1.9rem; }
+.pname { font-family: var(--mono); font-size: .76rem; font-weight: 500; line-height: 1; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.pill { font-size: .72rem; font-weight: 700; letter-spacing: .02em; line-height: 1; padding: .4rem .8rem; border-radius: 999px; background: var(--ink); color: #fff; white-space: nowrap; }
+.price { font-family: var(--serif); font-size: clamp(3.2rem, 5vw, 3.9rem); line-height: 1; letter-spacing: -.02em; margin-top: 1.1rem; }
+.per { font-size: .9rem; font-weight: 500; color: var(--ink-3); margin: .4rem 0 1.6rem; }
+.feats { display: grid; gap: .72rem; margin-bottom: 2rem; font-size: .94rem; font-weight: 500; }
+.feats li { display: flex; gap: .65rem; align-items: flex-start; }
+.feats svg { width: 17px; height: 17px; flex: none; margin-top: .22rem; stroke: var(--blue-btn); fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.feats li.no { color: var(--muted); font-weight: 400; }
+.feats li.no svg { stroke: var(--line-strong); }
+.plan .btn { margin-top: auto; width: 100%; }
+
+/* Pro: blue glass, with a slow light running round its edge. */
+.glass.blue .pname { color: rgba(255, 255, 255, .88); }
+.glass.blue .per { color: rgba(255, 255, 255, .88); }
+.glass.blue .feats svg { stroke: #d2e0ff; }
+.glass.blue .feats li.no { color: rgba(255, 255, 255, .72); }
+.glass.blue .feats li.no svg { stroke: rgba(255, 255, 255, .4); }
+.glass.blue .pill, .glass.night .pill { background: #f7f9ff; color: var(--blue-deep); }
+/* VIP: smoked glass. */
+.glass.night .pname, .glass.night .per { color: rgba(214, 226, 255, .82); }
+.glass.night .feats svg { stroke: #8fb0ff; }
+.glass.night .feats li.no { color: rgba(214, 226, 255, .62); }
+.glass.night .feats li.no svg { stroke: rgba(255, 255, 255, .3); }
+.comet {
+  position: absolute; inset: 0; z-index: 1; border-radius: inherit; padding: 1.5px; pointer-events: none;
+  background: conic-gradient(from var(--ang, 0deg), transparent 0deg, transparent 270deg, rgba(210, 225, 255, .95) 320deg, transparent 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+@property --ang { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+.glass.blue.in .comet { animation: comet 6s linear infinite; }
+@keyframes comet { to { --ang: 360deg; } }
+
+/* The plan you are on. */
+.plan.is-current { border-color: rgba(74, 124, 246, .7); }
+.btn.is-current { opacity: .84; cursor: default; }
+.btn.is-current.locked { pointer-events: none; }
+
+/* Classroom */
+.room { max-width: 1060px; margin: 1.4rem auto 0; border-radius: var(--r-panel); padding: 2.2rem 2.4rem; display: grid; grid-template-columns: minmax(0, .72fr) minmax(0, 1.6fr) auto; gap: 1.6rem 2.2rem; align-items: center; }
+.room .plan-head { justify-content: flex-start; gap: .8rem; }
+.room .price { margin-top: 1rem; font-size: clamp(2.8rem, 4.4vw, 3.3rem); }
+.room .per { margin-bottom: 0; }
+.room .feats { margin: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .72rem 2rem; }
+.room-act .btn { width: auto; }
+
+/* Checkout: a modal task dims the page and a sheet of glass takes focus. The
+   sheet is near-opaque, since it sits on a moving scrim and must stay legible. */
+.sheet-scrim {
+  position: fixed; inset: 0; z-index: 300; display: grid; place-items: center; padding: 1rem;
+  background: rgba(14, 20, 42, .4); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  opacity: 0; visibility: hidden; transition: opacity .3s ease, visibility 0s linear .3s;
+}
+.sheet-scrim.show { opacity: 1; visibility: visible; transition: opacity .3s ease; }
+.sheet {
+  display: flex; align-items: center; gap: .95rem; padding: 1.15rem 1.6rem; border-radius: 24px; font-weight: 600; color: var(--ink);
+  background: rgba(253, 253, 255, .86);
+  transform: translate3d(0, 10px, 0) scale(.94); transition: transform var(--spring-ms) var(--spring);
+}
+.sheet-scrim.show .sheet { transform: none; }
+.spin { width: 22px; height: 22px; border-radius: 50%; border: 3px solid rgba(53, 103, 224, .2); border-top-color: var(--blue-btn); animation: spin .8s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.toast {
+  position: fixed; z-index: 310; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  width: max-content; max-width: min(92vw, 440px); padding: .85rem 1.25rem; border-radius: 18px;
+  font-size: .92rem; font-weight: 500; line-height: 1.45; color: #fff;
+  background: rgba(20, 26, 52, .86); border: 1px solid rgba(255, 255, 255, .14);
+  -webkit-backdrop-filter: blur(18px) saturate(170%); backdrop-filter: blur(18px) saturate(170%);
+  box-shadow: 0 18px 40px -16px rgba(5, 8, 20, .6), inset 0 1.5px 0 rgba(255, 255, 255, .2);
+  transform: translate3d(-50%, 24px, 0) scale(.96); opacity: 0; visibility: hidden; pointer-events: none;
+  transition: transform var(--spring-ms) var(--spring), opacity .3s ease, visibility 0s linear .3s;
+}
+.toast.show { transform: translate3d(-50%, 0, 0); opacity: 1; visibility: visible; pointer-events: auto; transition: transform var(--spring-ms) var(--spring), opacity .3s ease; }
+.toast a { color: #cfe0ff; font-weight: 600; text-underline-offset: 3px; }
+
+/* Three columns need about 270px each: below 960px they stack. The Classroom
+   panel stacks earlier, when its feature columns would start to wrap. */
+@media (max-width: 1020px) {
+  .room { grid-template-columns: minmax(0, 1fr); padding: 1.9rem 1.6rem; gap: 1.4rem; }
+}
+@media (max-width: 960px) {
+  .pgrid { grid-template-columns: minmax(0, 1fr); max-width: 460px; gap: 1.3rem; }
+  .room { max-width: 460px; }
+  .room-act .btn { width: 100%; }
+  .room .feats { grid-template-columns: minmax(0, 1fr); }
+  .plans .aura { background:
+    radial-gradient(60% 18% at 50% 12%, rgba(143, 176, 255, .5), rgba(143, 176, 255, 0) 72%),
+    radial-gradient(64% 18% at 50% 42%, rgba(74, 124, 246, .4), rgba(74, 124, 246, 0) 72%),
+    radial-gradient(60% 18% at 50% 72%, rgba(79, 100, 200, .32), rgba(79, 100, 200, 0) 72%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin { animation: none; border-top-color: rgba(53, 103, 224, .2); border-right-color: var(--blue-btn); }
+  .sheet { transform: none; transition: opacity .2s ease; }
+  .toast, .toast.show { transform: translateX(-50%); transition: opacity .2s ease; }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .sheet-scrim, .toast { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .toast { background: var(--ink); }
+  .sheet { background: var(--card); }
+}
+</style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="env" aria-hidden="true"><div class="env-glow"></div><div class="grain"></div></div>
+<div class="edge-top" id="edge-top" aria-hidden="true"></div>
 
-<nav>
-  <a href="dashboard.html" class="logo">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
-      <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
-      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+</svg>
+
+<nav class="site-nav" aria-label="Main">
+  <a href="index.html" class="nav-logo" aria-label="StudyFlow home">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 146 44" aria-hidden="true">
+      <defs>
+        <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#5b8df8"/>
+          <stop offset="100%" style="stop-color:#2851c8"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#iconGrad)"/>
       <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
       <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
       <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
@@ -86,142 +645,358 @@
       <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
       <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
       <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
-      <text x="48" y="28" font-family="Inter,sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3"><tspan fill="var(--ink)">Study</tspan><tspan fill="#4a7cf6">Flow</tspan></text>
+      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
+        <tspan class="logo-study">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
+      </text>
     </svg>
   </a>
-  <a href="dashboard.html" class="btn-back">← Back to dashboard</a>
+  <div class="nav-pill" id="nav-pill">
+    <span class="nav-lens" aria-hidden="true"></span>
+    <a href="index.html#how">How it works</a>
+    <a href="index.html#features">Features</a>
+    <a href="pricing.html" aria-current="page">Plans</a>
+    <a href="about.html">Our story</a>
+    <a href="contact.html">Help</a>
+  </div>
+  <div class="nav-right">
+    <span id="nav-account"></span>
+    <a href="login.html?mode=signup" class="nav-cta">Build my plan →</a>
+  </div>
 </nav>
 
-<div class="hero">
-  <h1>Simple, honest <em>pricing</em></h1>
-  <p>Start free. Upgrade when you want more. Cancel anytime.</p>
-</div>
+<main id="main" tabindex="-1">
 
-<div class="plans-grid">
+<header class="hero">
+  <div class="aura" aria-hidden="true"></div>
+  <p class="eyebrow" data-reveal="up">Plans</p>
+  <h1 class="h1" data-reveal="up" style="--rd:.06s">Simple, honest <em>pricing</em></h1>
+  <p class="lede" data-reveal="up" style="--rd:.14s">Start free. Upgrade when you want more. Cancel anytime.</p>
+</header>
 
-  <!-- FREE -->
-  <div class="plan-card">
-    <div class="plan-label">Free</div>
-    <div class="plan-price">$0</div>
-    <div class="plan-period">forever free</div>
-    <ul class="plan-features">
-      <li><span class="check">✓</span> 7-day study plans</li>
-      <li><span class="check">✓</span> AI questions + hints</li>
-      <li><span class="check">✓</span> Progress tracking</li>
-      <li><span class="check">✓</span> Streak counter</li>
-      <li><span class="cross">✕</span> Fill-in-the-blank</li>
-      <li><span class="cross">✕</span> AI chat assistant</li>
-      <li><span class="cross">✕</span> 14-day plans</li>
-    </ul>
-    <button class="btn-plan free" id="btn-free" onclick="selectFree()">Current plan</button>
-  </div>
+<section class="plans" id="plans" aria-label="Plans">
+  <div class="aura" aria-hidden="true"></div>
 
-  <!-- PRO -->
-  <div class="plan-card popular">
-    <div class="popular-badge">Most popular</div>
-    <div class="plan-label">Pro</div>
-    <div class="plan-price">$7.99</div>
-    <div class="plan-period">per month</div>
-    <ul class="plan-features">
-      <li><span class="check">✓</span> Everything in Free</li>
-      <li><span class="check">✓</span> 14-day study plans</li>
-      <li><span class="check">✓</span> Fill-in-the-blank questions</li>
-      <li><span class="check">✓</span> Advanced analytics</li>
-      <li><span class="check">✓</span> Priority support</li>
-      <li><span class="cross">✕</span> AI chat assistant</li>
-    </ul>
-    <button class="btn-plan pro" onclick="checkout('price_1TTxA2FFG0oviXd9TJGT1aAJ', 'pro')">Upgrade to Pro →</button>
-  </div>
+  <div class="pgrid">
+    <!-- FREE -->
+    <article class="plan glass live" data-plan="free" data-reveal="glass" aria-labelledby="n-free">
+      <div class="plan-head"><h2 class="pname" id="n-free">Free</h2></div>
+      <p class="price">$0</p>
+      <p class="per">Forever free</p>
+      <ul class="feats">
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>1 study plan a month</li>
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>Plans up to 7 days long</li>
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>PDF and notes upload</li>
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>AI questions and hints</li>
+        <li class="no"><svg aria-hidden="true"><use href="#i-x"/></svg><span class="sr-only">Not included: </span>14-day plans</li>
+        <li class="no"><svg aria-hidden="true"><use href="#i-x"/></svg><span class="sr-only">Not included: </span>AI chat assistant</li>
+      </ul>
+      <a class="btn btn-outline" id="free-signup" href="login.html?mode=signup">Start free →</a>
+      <button class="btn btn-outline" id="btn-free" type="button" hidden>Current plan</button>
+    </article>
 
-  <!-- VIP -->
-  <div class="plan-card">
-    <div class="plan-label">VIP</div>
-    <div class="plan-price">$14.99</div>
-    <div class="plan-period">per month</div>
-    <ul class="plan-features">
-      <li><span class="check">✓</span> Everything in Pro</li>
-      <li><span class="check">✓</span> Unlimited-day plans</li>
-      <li><span class="check">✓</span> AI chat assistant</li>
-      <li><span class="check">✓</span> Feynman teach-it-back</li>
-      <li><span class="check">✓</span> SM-2 spaced repetition</li>
-      <li><span class="check">✓</span> VIP support</li>
-    </ul>
-    <button class="btn-plan vip" onclick="checkout('price_1TTxAOFFG0oviXd97LZFacnr', 'vip')">Upgrade to VIP →</button>
+    <!-- PRO -->
+    <article class="plan glass blue live" data-plan="pro" data-reveal="glass" style="--rd:.09s" aria-labelledby="n-pro">
+      <span class="comet" aria-hidden="true"></span>
+      <div class="plan-head"><h2 class="pname" id="n-pro">Pro</h2><span class="pill">Most popular</span></div>
+      <p class="price">$7.99</p>
+      <p class="per">per month</p>
+      <ul class="feats">
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>5 study plans a month</li>
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>Plans up to 14 days long</li>
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>Fill-in-the-blank questions</li>
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>Advanced analytics</li>
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>Priority support</li>
+        <li class="no"><svg aria-hidden="true"><use href="#i-x"/></svg><span class="sr-only">Not included: </span>AI chat assistant</li>
+      </ul>
+      <button class="btn btn-light" type="button" data-checkout="pro">Upgrade to Pro →</button>
+    </article>
+
+    <!-- VIP -->
+    <article class="plan glass night live" data-plan="vip" data-reveal="glass" style="--rd:.18s" aria-labelledby="n-vip">
+      <div class="plan-head"><h2 class="pname" id="n-vip">VIP</h2></div>
+      <p class="price">$14.99</p>
+      <p class="per">per month</p>
+      <ul class="feats">
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>Everything in Pro</li>
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>Unlimited plans, any length</li>
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>AI chat assistant</li>
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>Feynman teach-it-back</li>
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>SM-2 spaced repetition</li>
+        <li><svg aria-hidden="true"><use href="#i-check"/></svg>VIP support</li>
+      </ul>
+      <button class="btn btn-blue" type="button" data-checkout="vip">Upgrade to VIP →</button>
+    </article>
   </div>
 
   <!-- CLASSROOM -->
-  <div class="plan-card">
-    <div class="plan-label">Classroom</div>
-    <div class="plan-price">$79.99</div>
-    <div class="plan-period">per month</div>
-    <ul class="plan-features">
-      <li><span class="check">✓</span> Everything in VIP</li>
-      <li><span class="check">✓</span> Up to 5 students</li>
-      <li><span class="check">✓</span> Teacher dashboard</li>
-      <li><span class="check">✓</span> Assign study topics</li>
-      <li><span class="check">✓</span> Track student progress</li>
-      <li><span class="check">✓</span> Priority support</li>
+  <section class="room glass live" data-plan="classroom" data-reveal="glass" style="--rd:.1s" aria-labelledby="n-room">
+    <div class="room-lead">
+      <div class="plan-head"><h2 class="pname" id="n-room">Classroom</h2><span class="pill">For teachers</span></div>
+      <p class="price">$79.99</p>
+      <p class="per">per month</p>
+    </div>
+    <ul class="feats">
+      <li><svg aria-hidden="true"><use href="#i-check"/></svg>Everything in VIP</li>
+      <li><svg aria-hidden="true"><use href="#i-check"/></svg>Up to 5 students</li>
+      <li><svg aria-hidden="true"><use href="#i-check"/></svg>Teacher dashboard</li>
+      <li><svg aria-hidden="true"><use href="#i-check"/></svg>Assign study topics</li>
+      <li><svg aria-hidden="true"><use href="#i-check"/></svg>Track student progress</li>
+      <li><svg aria-hidden="true"><use href="#i-check"/></svg>Priority support</li>
     </ul>
-    <button class="btn-plan classroom" onclick="checkout('price_1TTxArFFG0oviXd9Nl39k8ZM', 'classroom')">Get Classroom →</button>
+    <div class="room-act"><button class="btn btn-blue" type="button" data-checkout="classroom">Get Classroom →</button></div>
+  </section>
+</section>
+
+<!-- CLOSING BAND -->
+<section class="cta" id="start" data-reveal="section">
+  <div class="wrap cta-grid">
+    <div>
+      <span class="chip-glass">Free to start, no credit card</span>
+      <h2>Your next exam is <em>already closer</em> than you think.</h2>
+      <p>Build your study plan in under a minute. Free forever, and you only upgrade if you want more.</p>
+      <div class="row">
+        <a href="login.html?mode=signup" class="btn btn-light">Build my study plan →</a>
+        <a href="#plans" class="btn btn-glass">See plans</a>
+      </div>
+    </div>
+    <div class="stack" aria-hidden="true">
+      <div class="dcard" style="--i:0"><div class="dcard-in"><div class="dc-top"><span>DAY 1</span><span>MON</span></div><h4>Mitosis overview</h4><ul><li class="on">Lesson</li><li class="on">Practice questions</li><li class="on">Recap</li></ul><div class="dc-foot"><span>45 min</span><span class="dc-diff"><i class="on"></i><i></i><i></i><i></i></span></div></div></div>
+      <div class="dcard" style="--i:1"><div class="dcard-in"><div class="dc-top"><span>DAY 2</span><span>TUE</span></div><h4>Meiosis and variation</h4><ul><li class="on">Lesson</li><li>Practice questions</li><li>Recap</li></ul><div class="dc-foot"><span>50 min</span><span class="dc-diff"><i class="on"></i><i class="on"></i><i></i><i></i></span></div></div></div>
+      <div class="dcard" style="--i:2"><div class="dcard-in"><div class="dc-top"><span>DAY 3</span><span>WED</span></div><h4>Flashcards and practice</h4><ul><li>Lesson</li><li>Practice questions</li><li>Recap</li></ul><div class="dc-foot"><span>40 min</span><span class="dc-diff"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></div></div></div>
+    </div>
   </div>
+</section>
 
-</div>
+</main>
 
-<!-- LOADING OVERLAY -->
-<div class="loading-overlay" id="loading-overlay">
-  <div class="spinner"></div>
-  <p>Taking you to secure checkout...</p>
+<footer class="site-foot">
+  <div class="wrap foot-top">
+    <div class="foot-brand">
+      <a href="index.html" class="foot-logo" aria-label="StudyFlow home">
+        <svg viewBox="0 0 40 44" width="34" height="37" aria-hidden="true"><rect x="0" y="2" width="40" height="40" rx="10" fill="#3567e0"/><rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/><rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/><rect x="14" y="10" width="17" height="22" rx="3" fill="white"/><rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/><rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/><rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/></svg>
+      </a>
+      <p>Built for students who want to stop guessing and start learning.</p>
+    </div>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="index.html#how">How it works</a>
+      <a href="index.html#features">Features</a>
+      <a href="pricing.html">Plans</a>
+      <a href="about.html">Our story</a>
+      <a href="contact.html">Help</a>
+    </nav>
+  </div>
+  <div class="foot-mark" aria-hidden="true"><span>Study</span><em>Flow</em></div>
+  <div class="wrap foot-legal">
+    <span>© 2026 StudyFlow</span>
+    <nav aria-label="Legal">
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms of Service</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+  </div>
+</footer>
+
+<!-- CHECKOUT: dims the page while the secure checkout opens -->
+<div class="sheet-scrim" id="loading-overlay" role="status" aria-live="polite" aria-hidden="true">
+  <div class="sheet glass"><span class="spin" aria-hidden="true"></span><span>Taking you to secure checkout...</span></div>
 </div>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>
-  var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
+(function () {
+  'use strict';
+  /* ── helpers shared by both pages ── */
+  var RM = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
 
-  // Show current plan
-  var currentTier = user.tier || 'free';
-  if (currentTier === 'pro') {
-    document.getElementById('btn-free').textContent = 'Downgrade';
-    var proBtn = document.querySelector('.plan-card.popular .btn-plan');
-    if (proBtn) { proBtn.textContent = 'Current plan ✓'; proBtn.style.opacity = '0.7'; proBtn.style.pointerEvents = 'none'; }
-  } else if (currentTier === 'vip') {
-    var vipBtn = document.querySelectorAll('.btn-plan')[2];
-    if (vipBtn) { vipBtn.textContent = 'Current plan ✓'; vipBtn.style.opacity = '0.7'; vipBtn.style.pointerEvents = 'none'; }
+  /* Nav: the right dashboard for whoever is signed in (the same rule as
+     index.html). Storage can throw in a private window, so it is read
+     defensively. */
+  (function () {
+    var teacher = null, student = null;
+    try { teacher = localStorage.getItem('studyflow_teacher'); student = localStorage.getItem('studyflow_user'); } catch (e) {}
+    var nav = document.querySelector('nav.site-nav'), slot = document.getElementById('nav-account');
+    var href = teacher ? 'teacher.html' : (student ? 'dashboard.html' : 'login.html');
+    if (slot) slot.innerHTML = '<a href="' + href + '" class="nav-dashboard">My Dashboard</a>';
+    /* On a phone the nav has room for one action (see the CSS). */
+    if (nav && (student || teacher)) nav.setAttribute('data-auth', 'in');
+    /* "Build my plan" opens sign-up for a visitor. A signed-in student goes
+       straight to building one instead of through a form they do not need. */
+    if (student && !teacher) {
+      var ctas = document.querySelectorAll('a[href="login.html?mode=signup"]');
+      for (var i = 0; i < ctas.length; i++) ctas[i].setAttribute('href', 'app.html');
+    }
+  })();
+
+  /* Nav lens: rests under the current page, follows the pointer and keyboard
+     focus along the pill, and returns when they leave. */
+  (function () {
+    var pill = document.getElementById('nav-pill');
+    if (!pill) return;
+    var links = [].slice.call(pill.querySelectorAll('a')), current = pill.querySelector('[aria-current]');
+    function put(a) {
+      if (!a) { pill.style.setProperty('--lo', '0'); return; }
+      pill.style.setProperty('--lx', a.offsetLeft + 'px');
+      pill.style.setProperty('--lw', a.offsetWidth + 'px');
+      pill.style.setProperty('--lo', '1');
+    }
+    function home() { put(current); }
+    links.forEach(function (a) {
+      a.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') put(a); });
+      a.addEventListener('focus', function () { put(a); });
+      a.addEventListener('blur', home);
+    });
+    pill.addEventListener('pointerleave', home);
+    window.addEventListener('resize', home);
+    home();
+    /* The pill is measured in the fallback font until the web fonts land. */
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(home);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { pill.classList.add('ready'); }); });
+  })();
+
+  /* Scroll edge: only once something is actually underneath the capsules. */
+  (function () {
+    var edge = document.getElementById('edge-top');
+    if (!edge) return;
+    function update() { edge.classList.toggle('on', (window.pageYOffset || document.documentElement.scrollTop) > 12); }
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+  })();
+
+  /* Reveals: once, in reading order. */
+  (function () {
+    var els = [].slice.call(document.querySelectorAll('[data-reveal]'));
+    function show(el) { el.classList.add('in'); }
+    if (!('IntersectionObserver' in window)) { els.forEach(show); return; }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) { show(e.target); io.unobserve(e.target); } });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 });
+    els.forEach(function (el) { io.observe(el); });
+  })();
+
+  /* The light that follows the pointer (fine pointers, motion allowed). The
+     highlight is an element moved by `transform`, so tracking never repaints
+     the panel; requestAnimationFrame keeps it to one update a frame. */
+  (function () {
+    if (RM.matches || !window.matchMedia || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    [].slice.call(document.querySelectorAll('.live')).forEach(function (el) {
+      var s = document.createElement('span');
+      s.className = 'sheen'; s.setAttribute('aria-hidden', 'true'); s.innerHTML = '<i></i>';
+      el.insertBefore(s, el.firstChild);
+      var raf = 0, px = 0, py = 0;
+      el.addEventListener('pointermove', function (e) {
+        var r = el.getBoundingClientRect(); px = e.clientX - r.left; py = e.clientY - r.top;
+        if (!raf) raf = requestAnimationFrame(function () {
+          raf = 0; el.style.setProperty('--sx', px + 'px'); el.style.setProperty('--sy', py + 'px');
+        });
+      });
+    });
+  })();
+
+  /* Hidden tab: pause every loop. */
+  document.addEventListener('visibilitychange', function () { document.body.classList.toggle('paused', document.hidden); });
+
+  /* ── pricing ── */
+  var PRICES = {
+    pro: 'price_1TTxA2FFG0oviXd9TJGT1aAJ',
+    vip: 'price_1TTxAOFFG0oviXd97LZFacnr',
+    classroom: 'price_1TTxArFFG0oviXd9Nl39k8ZM'
+  };
+  var user = {}, signedIn = false;
+  try {
+    var raw = localStorage.getItem('studyflow_user');
+    signedIn = !!raw;
+    user = JSON.parse(raw || '{}') || {};
+  } catch (e) {}
+
+  /* Back from checkout with ?upgraded=<plan>: record the plan and go on to
+     the dashboard (kept from the old page; the Stripe success URL itself
+     lands on the dashboard directly). */
+  var upgraded = new URLSearchParams(window.location.search).get('upgraded');
+  if (upgraded) {
+    user.tier = upgraded;
+    try { localStorage.setItem('studyflow_user', JSON.stringify(user)); } catch (e) {}
+    window.location.href = 'dashboard.html?upgraded=' + encodeURIComponent(upgraded);
+    return;
   }
 
-  function selectFree() {
-    alert('You are on the Free plan. Upgrade to Pro or VIP for more features!');
+  var toastEl = document.getElementById('toast'), toastTimer = 0;
+  /* Text goes in as text, never markup: an error message comes from the server. */
+  function toast(message, linkHref, linkText) {
+    toastEl.textContent = message;
+    if (linkHref) {
+      toastEl.appendChild(document.createTextNode(' '));
+      var a = document.createElement('a');
+      a.href = linkHref; a.textContent = linkText;
+      toastEl.appendChild(a);
+    }
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 5200);
   }
 
+  var overlay = document.getElementById('loading-overlay'), busy = false;
+  function setBusy(on) {
+    busy = on;
+    overlay.classList.toggle('show', on);
+    overlay.setAttribute('aria-hidden', on ? 'false' : 'true');
+  }
   function checkout(priceId, plan) {
-    document.getElementById('loading-overlay').classList.add('show');
+    if (busy) return;
+    setBusy(true);
     fetch('api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ priceId: priceId, plan: plan, email: user.email || '' })
     })
-    .then(function(r){ return r.json(); })
-    .then(function(data) {
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        document.getElementById('loading-overlay').classList.remove('show');
-        alert('Error: ' + (data.error || 'Could not start checkout'));
+        setBusy(false);
+        toast('Error: ' + (data.error || 'Could not start checkout'));
       }
     })
-    .catch(function(err) {
-      document.getElementById('loading-overlay').classList.remove('show');
-      alert('Error: ' + err.message);
+    .catch(function (err) {
+      setBusy(false);
+      toast('Error: ' + err.message);
     });
   }
+  /* Press Back from Stripe and the browser may restore this page exactly as
+     it was left, with the dimmed sheet still up. */
+  window.addEventListener('pageshow', function (e) { if (e.persisted) setBusy(false); });
 
-  // Handle successful upgrade redirect
-  var params = new URLSearchParams(window.location.search);
-  var upgraded = params.get('upgraded');
-  if (upgraded) {
-    var user = JSON.parse(localStorage.getItem('studyflow_user') || '{}');
-    user.tier = upgraded;
-    localStorage.setItem('studyflow_user', JSON.stringify(user));
-    window.location.href = 'dashboard.html?upgraded=' + upgraded;
+  [].slice.call(document.querySelectorAll('[data-checkout]')).forEach(function (b) {
+    b.addEventListener('click', function () {
+      var plan = b.getAttribute('data-checkout');
+      checkout(PRICES[plan], plan);
+    });
+  });
+
+  /* Which plan is yours. Only the Free button changes meaning: for a visitor
+     it is the sign-up link, for a signed-in learner it says where they are. */
+  var tier = typeof user.tier === 'string' && user.tier ? user.tier : 'free';
+  var freeLink = document.getElementById('free-signup'), freeBtn = document.getElementById('btn-free');
+  if (signedIn) {
+    freeLink.hidden = true; freeBtn.hidden = false;
+    if (tier !== 'free') freeBtn.textContent = 'Downgrade';
+    else { freeBtn.classList.add('is-current'); freeBtn.setAttribute('aria-disabled', 'true'); }
+    freeBtn.addEventListener('click', function () {
+      if (tier === 'free') toast('You are on the Free plan. Upgrade to Pro or VIP for more features!');
+      else toast('To downgrade or cancel, contact us.', 'contact.html', 'Contact us');
+    });
   }
+  /* Compared, not interpolated into a selector: the tier comes from storage. */
+  var mine = [].slice.call(document.querySelectorAll('[data-plan]')).filter(function (c) { return c.getAttribute('data-plan') === tier; })[0];
+  if (mine && signedIn) {
+    mine.classList.add('is-current');
+    var head = mine.querySelector('.plan-head'), pill = head && head.querySelector('.pill');
+    if (head && !pill) { pill = document.createElement('span'); pill.className = 'pill'; head.appendChild(pill); }
+    if (pill) pill.textContent = 'Your plan';
+    var cta = mine.querySelector('[data-checkout]');
+    if (cta) { cta.textContent = 'Current plan ✓'; cta.classList.add('is-current', 'locked'); cta.setAttribute('aria-disabled', 'true'); cta.tabIndex = -1; }
+  }
+})();
 </script>
 </body>
 </html>
