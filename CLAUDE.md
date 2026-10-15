@@ -30,9 +30,10 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `app.html` | ~292 KB | Plan builder: the lesson upload, one question per screen, then generation. Subject detection, AI prompt, question schemas, validators |
 | `lesson.html` | ~1.2 MB | The session runtime. Card queue, all question renderers, the whiteboard. Restyled Oct 2026 - see "The session's look and motion" |
 | `dashboard.html` | ~150 KB | Plan list and progress. Redesigned Oct 2026 - see "The dashboard" |
-| `about.html` / `pricing.html` | ~52 / ~60 KB | "Our story" and the plans page, redesigned Oct 2026 in Liquid Glass to match `index.html` - see "Our story and Plans". Each carries its own copy of the shared glass CSS, nav and footer |
+| `about.html` / `pricing.html` | ~52 / ~60 KB | "Our story" and the plans page, redesigned Oct 2026 in Liquid Glass to match `index.html` - see "Our story and Plans". Each carries its own copy of the shared glass CSS and footer; the nav is `sf-nav.js` |
 | `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
 | `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
+| `sf-nav.js` | ~13 KB | **The site nav.** Terms, Help, Privacy, the Parent view, Our story and Plans load it as the first thing in `<body>`; it is `index.html`'s nav in its light state. `index.html` keeps its own copy - see "The site nav" |
 | `sf-auth.js` | ~5 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html` — see "The classroom" |
 | `teacher-login.html` / `teacher.html` | ~21 / ~41 KB | Teacher sign-in (Firebase Auth) and the class dashboard |
 | `api/class.js` | ~20 KB | The classroom API. Checks a Firebase ID token on every call |
@@ -2857,11 +2858,11 @@ test reads.
 ## Our story and Plans (`about.html`, `pricing.html`) — Liquid Glass, Oct 2026
 
 The apple-design pass on the two marketing pages still on the old white-bar
-look. They now share `index.html`'s notebook paper, floating nav, fonts, one
-blue and footer, and add its glass. The pages are self-contained, so **both
-carry the same block of CSS, the same nav and footer markup and the same
-shared script** (head spring curves, signed-in nav, lens, scroll edge,
-reveals, pointer light). A change to that block is a change to both files.
+look. They share `index.html`'s notebook paper, fonts, one blue and footer,
+and add its glass. The pages are self-contained, so **both carry the same
+block of CSS, the same footer markup and the same shared script** (head spring
+curves, reveals, pointer light). A change to that block is a change to both
+files. **The nav is not in that block**: it is `sf-nav.js`, see "The site nav".
 
 - **What "glass" is here** (`.glass`): `backdrop-filter` blur 18px + saturate,
   a 1.5px inset highlight along the top, a 1px rim ring (`::before`, a masked
@@ -2879,26 +2880,12 @@ reveals, pointer light). A change to that block is a change to both files.
   An element with opacity < 1 is a *backdrop root*: glass inside it blurs only
   what is inside it, which is nothing, so it flashes flat until the fade ends.
   Reveals (`data-reveal="glass"`) therefore sit on the glass itself and bring
-  its blur and scale up with its opacity. For the same reason the nav fades
-  with `backwards`, not `both`. The CTA's day cards float with the `translate`
-  property so `transform` stays free for their entrance.
+  its blur and scale up with its opacity. For the same reason `index.html`'s
+  nav fades in with `backwards`, not `both`. The CTA's day cards float with the
+  `translate` property so `transform` stays free for their entrance.
 - **Never light glass on light glass.** Buttons inside a card are solid
   (`.btn-outline`, `.btn-light`, `.btn-blue`), chips inside a card are solid
   `--blue-soft`, and text on glass is `--ink-3` at weight 500, not a flat grey.
-- **Every floating control is its own capsule** (logo, pill, My Dashboard)
-  with its own light material, so each stays legible over paper, the blue band
-  or the ink footer. The nav's blue CTA has a 1px white ring so it can be found
-  over the blue band. Once the page scrolls, `.edge-top` softens what passes
-  under them: a blur with a mask and NO tint (a tinted fade is wrong over blue
-  and ink).
-- **The nav lens** rests under the current page and follows pointer or
-  keyboard focus along the pill. It is placed first with no transition
-  (`.ready` is added after), or it slides in from the left on every load, and
-  it is placed again when the web fonts land. The pill hides at 1080px and
-  below, as on the landing: beside the other two capsules it needs about
-  1070px. On a phone the nav has room for one action - "My Dashboard" when
-  signed in (the old pricing page had a Back button for this), "Build my plan"
-  when not (`data-auth` on the nav).
 - **The light that follows the pointer** (`.live` panels, fine pointers,
   motion allowed): a highlight moved with `transform`, UNDER the content, so
   tracking never repaints the panel and never washes out text.
@@ -2927,6 +2914,56 @@ reveals, pointer light). A change to that block is a change to both files.
 - **The browser pane throttles frames while hidden** (about 1 fps), so reveals
   finish late in screenshots. Add `.in` to every `[data-reveal]` and wait, or
   check values in JS.
+
+## The site nav (`sf-nav.js`) — one nav, Oct 2026
+
+Terms, Help, Privacy, the Parent view, Our story and Plans each had their own
+top bar - white bars of three kinds, and a capsule variant - so every click
+changed the nav. **`sf-nav.js` is now the nav for all of them.** A page loads
+it as the first thing in `<body>`, `<script src="sf-nav.js"></script>`, and the
+nav appears where the tag is (after the skip link, on pages that have one).
+
+- **It is `index.html`'s nav in the state that page shows once you scroll past
+  the hero**: the bare logo, the light glass pill with the lens under the
+  current page, "My Dashboard", the blue "Build my plan", all on the frosted
+  bar. Checked by measuring, not by eye: load `index.html` and `terms.html` in
+  iframes at the same width, force index's nav into its light state (`on-light`
+  on the nav, `lit` on the logo, pill, dashboard link and button, transitions
+  off) and compare every part's rectangle and computed style. They matched on
+  17 measurements at 1280px, and on position, size and colour at 1000 and
+  390px. Do it again after changing either file.
+- **`index.html` keeps its own copy.** Its nav turns from white-on-navy into
+  this one as the 3D hero scrolls away, and its script drives that, so it was
+  not moved. **Change the nav in `sf-nav.js` AND in `index.html`.**
+- **It is a script, not a stylesheet**, so the CSS lands in the same moment as
+  the markup: a `<link>` added by a script is not render-blocking and the nav
+  would flash unstyled. It carries its own fonts - Terms and Privacy never
+  loaded Inter, so the logo fell back to the system font, and no old page
+  loaded DM Sans 700 - and pins everything it draws (font, size, line-height,
+  colours), because the pages have their own `nav {}` and `a {}` rules and
+  different body line-heights (Terms is 1.7). A page must not keep its own
+  `nav {}` rule: delete it, or it leaks into this one.
+- **A page clears the nav itself.** It is `position: fixed`, so it takes no
+  room; the page leaves about 57px at the top (the Terms card moved from
+  `margin: 3rem` to `6.5rem`, Help's hero got more top padding).
+- **It does not animate in.** `index.html`'s nav slides in once on arrival; on a
+  page you clicked to, a nav that re-enters every time reads as a different nav.
+- **The current page** comes from the address, or from `data-current` on the
+  tag (Help, Our story and Plans set it). Terms and Privacy are footer links,
+  not pill links, so they get no lens.
+- A signed-in student's "Build my plan" goes straight to `app.html`, for every
+  such link on the page, once the page has loaded: the script runs before the
+  page's own buttons exist.
+- **Not on**: `login.html` and `teacher-login.html` (split-screen sign-in with
+  their own logo) and the screens inside the app - `app.html`, `dashboard.html`,
+  `lesson.html`, `teacher.html`. Their top bars carry controls this nav does
+  not: the session timer and score, the theme switch, the account menu, Sign
+  out, and a dark theme. Putting the marketing nav on them means deciding where
+  those controls go first.
+- **On a phone the nav is just the logo and "Build my plan"**, exactly as on
+  `index.html`, so a signed-in learner has no link back to the dashboard from
+  these pages (the old Pricing, Terms and Privacy bars had one). Fixing that
+  is a change to both files.
 
 ## The teach-it-back card
 

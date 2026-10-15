@@ -54,7 +54,8 @@
 <style>
 /* ══════════════════════════════════════════════════════════════════════
    LIQUID GLASS. This block is shared by about.html and pricing.html and
-   sits beside index.html (same tokens, same nav, same footer). Each page
+   sits beside index.html (same tokens and footer; the nav is sf-nav.js, one
+   file for every page). Each page
    keeps its own copy so it stays self-contained like the rest of the site:
    a change here has to be made in both files.
 
@@ -73,7 +74,7 @@
      only blur what is inside that ancestor (nothing), so it flashes flat
      until the fade ends. Reveals go on the glass itself, or on leaves.
 
-   Z-index scale: -1 environment, 0-2 content, 90 scroll edge, 100 nav,
+   Z-index scale: -1 environment, 0-2 content, 100 nav (sf-nav.js),
    200 skip link, 300 checkout sheet, 310 toast.
    ══════════════════════════════════════════════════════════════════════ */
 
@@ -185,86 +186,7 @@ ul { list-style: none; }
 .center { text-align: center; }
 .sec { position: relative; isolation: isolate; padding-block: clamp(3.5rem, 8vw, 6rem); padding-inline: max(16px, 5vw); }
 
-/* ── NAV: floating glass capsules (kept from index.html) ──
-   Every floating control is its own capsule with its own light material, so
-   each stays legible over whatever scrolls under it: paper, the blue band or
-   the ink footer. `backwards`, not `both`: a finished animation still "in
-   effect" makes the nav a backdrop root and the capsules then blur nothing. */
-nav.site-nav {
-  position: fixed; z-index: 100; top: calc(.7rem + env(safe-area-inset-top, 0px)); left: 0; right: 0;
-  display: flex; align-items: center; justify-content: space-between; gap: .6rem;
-  padding: 0 max(16px, 2rem); pointer-events: none;
-  animation: navIn .8s var(--ease-out) backwards;
-}
-@keyframes navIn { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
-.nav-logo, .nav-pill, .nav-dashboard {
-  background: rgba(253, 253, 255, .66);
-  -webkit-backdrop-filter: blur(22px) saturate(180%); backdrop-filter: blur(22px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, .72);
-  box-shadow: 0 2px 20px rgba(26, 40, 90, .10), inset 0 1.5px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(26, 40, 90, .05);
-  border-radius: 999px; pointer-events: auto;
-}
-.nav-logo { display: inline-flex; align-items: center; text-decoration: none; padding: .26rem .85rem .26rem .4rem; }
-.nav-logo svg { width: 138px; height: 34px; display: block; }
-.logo-study { fill: var(--ink); }
-.nav-pill {
-  position: absolute; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: .15rem; padding: .38rem .45rem;
-}
-.nav-pill a {
-  position: relative; z-index: 1; font-size: .84rem; font-weight: 500; color: var(--ink-3); text-decoration: none;
-  padding: .42rem .85rem; border-radius: 999px; white-space: nowrap; transition: color .2s;
-}
-.nav-pill a:hover, .nav-pill a[aria-current] { color: var(--blue-deep); }
-/* iOS 26 tab bars slide a lens to the selected tab. Same here: it rests under
-   the page you are on and follows your pointer or focus along the pill. */
-.nav-lens {
-  position: absolute; left: 0; top: .38rem; bottom: .38rem; width: var(--lw, 0px); border-radius: 999px; pointer-events: none;
-  transform: translateX(var(--lx, 0px)); opacity: var(--lo, 0);
-  background: var(--blue-soft); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .9), 0 1px 3px rgba(26, 40, 90, .1);
-}
-/* Transitions are switched on after the first placement, or the lens would
-   slide in from the left edge on every load. */
-.nav-pill.ready .nav-lens { transition: transform var(--spring-ms) var(--spring), width var(--spring-ms) var(--spring), opacity .25s ease; }
-.nav-right { display: flex; align-items: center; gap: .6rem; pointer-events: auto; }
-#nav-account { display: contents; }
-.nav-dashboard {
-  display: inline-flex; align-items: center; font-size: .84rem; font-weight: 600; white-space: nowrap;
-  color: var(--blue-deep); text-decoration: none; padding: .5rem 1.05rem;
-  transition: transform var(--spring-fast-ms) var(--spring-fast), background-color .2s, box-shadow .2s;
-}
-.nav-dashboard:hover { background: rgba(255, 255, 255, .92); }
-.nav-cta {
-  display: inline-flex; align-items: center; font-size: .84rem; font-weight: 700; white-space: nowrap;
-  color: #fff; background: var(--blue-btn); text-decoration: none;
-  padding: .52rem 1.15rem; border-radius: 999px;
-  /* The 1px white ring is what keeps a blue button findable over the blue band. */
-  box-shadow: 0 4px 16px -4px rgba(53, 103, 224, .55), inset 0 1px 0 rgba(255, 255, 255, .28), 0 0 0 1px rgba(255, 255, 255, .24);
-  transition: transform var(--spring-fast-ms) var(--spring-fast), background-color .2s;
-}
-.nav-cta:hover { background: var(--blue-deep); }
-.nav-cta:active, .nav-dashboard:active { transform: scale(.96); transition-duration: 80ms, .2s, .2s; transition-timing-function: ease-out; }
-@media (pointer: coarse) { .nav-cta, .nav-dashboard { min-height: 44px; } }
-@media (max-width: 1080px) { .nav-pill { display: none; } }
-/* On a phone there is room for one action. A signed-in learner gets the way
-   back to their dashboard (pricing used to have a Back button for exactly
-   this); a visitor gets the sign-up button. */
-@media (max-width: 640px) {
-  nav.site-nav[data-auth="in"] .nav-cta { display: none; }
-  nav.site-nav:not([data-auth="in"]) .nav-dashboard { display: none; }
-  .nav-logo svg { width: 124px; height: 32px; }
-}
-
-/* Scroll edge effect (instead of a hard bar): once the page has scrolled,
-   whatever passes under the capsules softens and fades, with no tint, so it
-   suits paper, blue and ink alike. Shown only when something is underneath. */
-.edge-top {
-  position: fixed; z-index: 90; top: 0; left: 0; right: 0; height: calc(92px + env(safe-area-inset-top, 0px));
-  pointer-events: none; opacity: 0; transition: opacity .35s ease;
-  -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px);
-  -webkit-mask-image: linear-gradient(to bottom, #000 28%, transparent); mask-image: linear-gradient(to bottom, #000 28%, transparent);
-}
-.edge-top.on { opacity: 1; }
+/* ── NAV ── is sf-nav.js: one file, the same on every page. Nothing for it here. */
 
 /* ── TYPE ── tracking tightens as size grows (apple-design: typography) */
 .h1 { font-size: clamp(2.9rem, 6.8vw, 5.6rem); line-height: 1.01; letter-spacing: -.026em; text-wrap: balance; }
@@ -451,32 +373,29 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   html { scroll-behavior: auto; }
   .env-glow, .aura, .cta.in .dcard-in { animation: none !important; }
   .comet { display: none; }
-  nav.site-nav { animation: none; }
   .js [data-reveal="up"]:not(.in), .js [data-reveal="glass"]:not(.in), .js .cta:not(.in) .dcard-in { transform: none; }
   .js [data-reveal="up"], .js [data-reveal="glass"], .js .dcard-in { transition: opacity .25s ease; }
-  .nav-pill.ready .nav-lens { transition: opacity .2s ease; }
-  .btn:active, .nav-cta:active, .nav-dashboard:active { transform: none; }
+  .btn:active { transform: none; }
   .sheen { display: none; }
 }
 /* Translucency off: the same surfaces, frosted solid. Also what a browser
    without backdrop-filter gets, so the page is never see-through-and-blurless. */
 @media (prefers-reduced-transparency: reduce) {
-  .glass, .nav-logo, .nav-pill, .nav-dashboard, .chip-glass, .btn-glass, .dcard-in, .edge-top {
+  .glass, .chip-glass, .btn-glass, .dcard-in {
     -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
   }
   .glass { background: var(--card); }
   .glass.blue { background: var(--blue-btn); }
   .glass.night { background: var(--ink); }
-  .nav-logo, .nav-pill, .nav-dashboard, .chip-glass { background: var(--card); }
+  .chip-glass { background: var(--card); }
   .dcard-in { background: #2f5fd6; }
   .btn-glass { background: #2f5fd6; }
-  .edge-top { display: none; }
 }
 @media (prefers-contrast: more) {
   .glass { background: var(--card); border-color: var(--ink-3); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .glass.blue { background: var(--blue-deep); border-color: #fff; }
   .glass.night { background: var(--ink); border-color: #fff; }
-  .nav-logo, .nav-pill, .nav-dashboard, .chip-glass { background: var(--card); border-color: var(--ink-3); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .chip-glass { background: var(--card); border-color: var(--ink-3); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .lede, .glass:not(.blue):not(.night) .per, .glass:not(.blue):not(.night) .feats li.no { color: var(--ink); }
   .dcard-in { background: #1d3fa8; border-color: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
@@ -484,9 +403,8 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   .glass { background: rgba(253, 253, 255, .94); }
   .glass.blue { background: var(--blue-btn); }
   .glass.night { background: var(--ink); }
-  .nav-logo, .nav-pill, .nav-dashboard, .chip-glass { background: rgba(253, 253, 255, .95); }
+  .chip-glass { background: rgba(253, 253, 255, .95); }
   .dcard-in, .btn-glass { background: #2f5fd6; }
-  .edge-top { display: none; }
 }
 
 
@@ -577,50 +495,13 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+<script src="sf-nav.js" data-current="about"></script>
 <div class="env" aria-hidden="true"><div class="env-glow"></div><div class="grain"></div></div>
-<div class="edge-top" id="edge-top" aria-hidden="true"></div>
-
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
   <symbol id="i-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
 </svg>
-
-<nav class="site-nav" aria-label="Main">
-  <a href="index.html" class="nav-logo" aria-label="StudyFlow home">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 146 44" aria-hidden="true">
-      <defs>
-        <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#5b8df8"/>
-          <stop offset="100%" style="stop-color:#2851c8"/>
-        </linearGradient>
-      </defs>
-      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#iconGrad)"/>
-      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
-      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
-      <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
-      <rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/>
-      <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
-      <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
-      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
-      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
-        <tspan class="logo-study">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
-      </text>
-    </svg>
-  </a>
-  <div class="nav-pill" id="nav-pill">
-    <span class="nav-lens" aria-hidden="true"></span>
-    <a href="index.html#how">How it works</a>
-    <a href="index.html#features">Features</a>
-    <a href="pricing.html">Plans</a>
-    <a href="about.html" aria-current="page">Our story</a>
-    <a href="contact.html">Help</a>
-  </div>
-  <div class="nav-right">
-    <span id="nav-account"></span>
-    <a href="login.html?mode=signup" class="nav-cta">Build my plan →</a>
-  </div>
-</nav>
 
 <main id="main" tabindex="-1">
 
@@ -747,62 +628,8 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 <script>
 (function () {
   'use strict';
-  /* ── helpers shared by both pages ── */
+  /* ── shared by both pages (the nav is sf-nav.js) ── */
   var RM = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
-
-  /* Nav: the right dashboard for whoever is signed in (the same rule as
-     index.html). Storage can throw in a private window, so it is read
-     defensively. */
-  (function () {
-    var teacher = null, student = null;
-    try { teacher = localStorage.getItem('studyflow_teacher'); student = localStorage.getItem('studyflow_user'); } catch (e) {}
-    var nav = document.querySelector('nav.site-nav'), slot = document.getElementById('nav-account');
-    var href = teacher ? 'teacher.html' : (student ? 'dashboard.html' : 'login.html');
-    if (slot) slot.innerHTML = '<a href="' + href + '" class="nav-dashboard">My Dashboard</a>';
-    /* On a phone the nav has room for one action (see the CSS). */
-    if (nav && (student || teacher)) nav.setAttribute('data-auth', 'in');
-    /* "Build my plan" opens sign-up for a visitor. A signed-in student goes
-       straight to building one instead of through a form they do not need. */
-    if (student && !teacher) {
-      var ctas = document.querySelectorAll('a[href="login.html?mode=signup"]');
-      for (var i = 0; i < ctas.length; i++) ctas[i].setAttribute('href', 'app.html');
-    }
-  })();
-
-  /* Nav lens: rests under the current page, follows the pointer and keyboard
-     focus along the pill, and returns when they leave. */
-  (function () {
-    var pill = document.getElementById('nav-pill');
-    if (!pill) return;
-    var links = [].slice.call(pill.querySelectorAll('a')), current = pill.querySelector('[aria-current]');
-    function put(a) {
-      if (!a) { pill.style.setProperty('--lo', '0'); return; }
-      pill.style.setProperty('--lx', a.offsetLeft + 'px');
-      pill.style.setProperty('--lw', a.offsetWidth + 'px');
-      pill.style.setProperty('--lo', '1');
-    }
-    function home() { put(current); }
-    links.forEach(function (a) {
-      a.addEventListener('pointerenter', function (e) { if (e.pointerType === 'mouse') put(a); });
-      a.addEventListener('focus', function () { put(a); });
-      a.addEventListener('blur', home);
-    });
-    pill.addEventListener('pointerleave', home);
-    window.addEventListener('resize', home);
-    home();
-    /* The pill is measured in the fallback font until the web fonts land. */
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(home);
-    requestAnimationFrame(function () { requestAnimationFrame(function () { pill.classList.add('ready'); }); });
-  })();
-
-  /* Scroll edge: only once something is actually underneath the capsules. */
-  (function () {
-    var edge = document.getElementById('edge-top');
-    if (!edge) return;
-    function update() { edge.classList.toggle('on', (window.pageYOffset || document.documentElement.scrollTop) > 12); }
-    window.addEventListener('scroll', update, { passive: true });
-    update();
-  })();
 
   /* Reveals: once, in reading order. */
   (function () {
