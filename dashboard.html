@@ -258,6 +258,19 @@
   .assign .btn { background: #fff; color: #1a1d2e; }
   .assign .btn:hover { background: #e9efff; }
 
+  /* ── ASSIGNMENTS FROM THE TEACHER (Oct 2026) ─────────────────────────
+     One row per assignment: what it is, when it is due, where the student
+     is with it, and the one button that moves it on. */
+  .asg-card { margin-bottom: 22px; }
+  .asg-rows { display: grid; gap: 10px; }
+  .asg-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+             padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-2); }
+  .asg-row .asg-main { flex: 1; min-width: 180px; }
+  .asg-row .asg-title { font-weight: 600; color: var(--ink); line-height: 1.3; }
+  .asg-row .asg-meta { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+  .asg-row .asg-meta .late { color: var(--warn); font-weight: 600; }
+  .asg-row .pill.done { background: var(--blue-tint); color: var(--blue-ink); border-color: transparent; }
+
   /* ── HERO: the one thing to do next ───────────────────────────────────── */
   .hero {
     position: relative; overflow: hidden; isolation: isolate; color: #fff;
@@ -797,6 +810,16 @@
     <button class="btn" data-action="assignment">Start studying
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
     </button>
+  </section>
+
+  <!-- ASSIGNMENTS — the teacher's fixed-question assignments (Oct 2026).
+       Outside the plan view for the same reason as the banner above. -->
+  <section class="card asg-card rise" id="asg-card" hidden aria-labelledby="asg-head">
+    <div class="card-head">
+      <h3 id="asg-head">From your teacher</h3>
+      <span class="card-aside" id="asg-aside"></span>
+    </div>
+    <div class="asg-rows" id="asg-rows"></div>
   </section>
 
   <!-- NO PLAN YET -->
@@ -2509,6 +2532,133 @@
     leaveTo('app.html?from=assignment');
   }
 
+  // ── ASSIGNMENTS (Oct 2026) ──
+  /* The teacher's assignments: built in teacher-build.html, the same fixed
+     questions for everyone, run by lesson.html?assignment=<id>. The list
+     comes from api/class; the status is the server's, so it agrees on every
+     device. */
+  var asgRows = [];
+
+  function asgDueText(due) {
+    if (!due) return '';
+    var d = new Date(due.length === 10 ? due + 'T23:59' : due);
+    if (isNaN(d)) return '';
+    var opts = { weekday: 'short', day: 'numeric', month: 'short' };
+    var txt = d.toLocaleDateString(undefined, opts);
+    if (due.length > 10) txt += ', ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    return txt;
+  }
+  function asgIsLate(due) {
+    if (!due) return false;
+    var d = new Date(due.length === 10 ? due + 'T23:59' : due);
+    return !isNaN(d) && d < new Date();
+  }
+
+  function renderAssignments() {
+    var card = $('asg-card'), box = $('asg-rows');
+    if (!asgRows.length) { card.hidden = true; return; }
+    var todo = asgRows.filter(function (a) { return a.myStatus !== 'done'; }).length;
+    $('asg-aside').textContent = todo ? todo + ' to do' : 'All handed in';
+    box.innerHTML = asgRows.map(function (a) {
+      var st = a.myStatus || 'not_started';
+      var due = asgDueText(a.dueAt), late = st !== 'done' && asgIsLate(a.dueAt);
+      var meta = [];
+      if (due) meta.push(late ? '<span class="late">Was due ' + esc(due) + '</span>' : 'Due ' + esc(due));
+      if (a.minutes) meta.push('About ' + esc(a.minutes) + ' min');
+      if (a.questionCount) meta.push(esc(a.questionCount) + ' question' + (a.questionCount === 1 ? '' : 's'));
+      var right;
+      if (st === 'done') {
+        right = '<span class="pill done">Handed in' + (a.myScore != null ? ' · ' + esc(a.myScore) + '%' : '') + '</span>';
+      } else {
+        right = '<button class="btn btn-primary" data-asg="' + esc(a.id) + '">' + (st === 'in_progress' ? 'Continue' : 'Start') + '</button>';
+      }
+      return '<div class="asg-row"><div class="asg-main"><div class="asg-title">' + esc(a.title) + '</div>' +
+        '<div class="asg-meta">' + meta.join(' · ') + '</div></div>' + right + '</div>';
+    }).join('');
+    card.hidden = false;
+    reveal();
+  }
+
+  function loadAssignments(skipPending) {
+    var user = getUser();
+    if (!user.classCode || !window.SFAuth) return;
+    if (!skipPending) asgSendPending(user);
+    SFAuth.classFetch('api/class?classCode=' + encodeURIComponent(user.classCode) + '&type=assignments', {}, user.email)
+      .then(function (r) { return r.ok ? r.json() : { assignments: [] }; })
+      .then(function (d) {
+        asgRows = Array.isArray(d.assignments) ? d.assignments : [];
+        try { SFStore.setItem('studyflow_assignments_' + user.classCode, JSON.stringify(asgRows)); } catch (e) {}
+        renderAssignments();
+      })
+      .catch(function () {
+        asgRows = readJSON('studyflow_assignments_' + user.classCode, []) || [];
+        renderAssignments();
+      });
+  }
+
+  /* A hand-in the lesson page could not deliver waits under
+     studyflow_asg_pending_<id>. Sent again here, then the list is reloaded. */
+  function asgSendPending(user) {
+    var prefix = SFStore._ns ? SFStore._ns('studyflow_asg_pending_') : 'studyflow_asg_pending_';
+    var keys = [];
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf(prefix) === 0) keys.push(k);
+      }
+    } catch (e) { return; }
+    keys.forEach(function (k) {
+      var body = null;
+      try { body = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) {}
+      if (!body || body.action !== 'submit') { try { localStorage.removeItem(k); } catch (e2) {} return; }
+      SFAuth.classFetch('api/class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, user.email)
+        .then(function (r) {
+          if (r.ok) { try { localStorage.removeItem(k); } catch (e3) {} loadAssignments(true); }
+        }).catch(function () {});
+    });
+  }
+
+  /* Opening one: the assignment, whole, is turned into a one-day plan that
+     lesson.html reads from its own namespace (see ASSIGNMENT MODE there),
+     so the student's own plan is never touched. An assignment already
+     opened on this device keeps its saved copy - and with it the picture
+     drawn for its lesson. */
+  function openAssignment(id, btn) {
+    var user = getUser();
+    if (!/^[A-Z0-9]{12}$/.test(id)) return;
+    var ns = 'studyflow_asg_' + id + '__';
+    if (SFStore.getItem(ns + 'studyflow_plan')) { leaveTo('lesson.html?assignment=' + id); return; }
+    if (btn) { btn.setAttribute('aria-disabled', 'true'); btn.textContent = 'Opening…'; }
+    SFAuth.classFetch('api/class?classCode=' + encodeURIComponent(user.classCode) + '&type=assignment&id=' + id, {}, user.email)
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        var a = d && d.assignment;
+        if (!a || !Array.isArray(a.questions)) throw new Error('missing');
+        var L = a.lesson || {};
+        var p = {
+          id: 'asg_' + id,
+          subject: a.subject || a.title,
+          subjectType: a.subjectType || 'general',
+          assignment: { id: id, classCode: user.classCode, title: a.title, minutes: a.minutes || 20,
+                        settings: a.settings || {}, teacherName: a.teacherName || '' },
+          days: [{
+            title: L.title || a.title, microTopic: L.microTopic || '', briefing: L.briefing || '',
+            content: L.content || '', steps: L.steps || [], keyTerms: L.keyTerms || [],
+            concepts: L.concepts || [], misconceptions: L.misconceptions || [],
+            workedExample: L.workedExample || undefined,
+            questions: a.questions, duration: a.minutes || 20, isFinal: true, completed: false
+          }]
+        };
+        SFStore.setItem(ns + 'studyflow_plan', JSON.stringify(p));
+        SFStore.setItem(ns + 'studyflow_current_day', '0');
+        leaveTo('lesson.html?assignment=' + id);
+      })
+      .catch(function () {
+        if (btn) { btn.removeAttribute('aria-disabled'); btn.textContent = 'Try again'; }
+        toast('Couldn’t open the assignment. Check your connection.');
+      });
+  }
+
   // ── JOIN CLASS FROM DASHBOARD ──
   /* The button that opened this was looked up as #join-class-sidebar and
      never existed, so a student could not join a class from here at all.
@@ -2573,6 +2723,7 @@
         toast('You’re in ' + code + '.');
         // Check for assignment now that they've joined
         checkAssignment();
+        loadAssignments();
       }, 900);
     })
     .catch(function () {
@@ -2740,6 +2891,8 @@
     if (row) { if (row.getAttribute('aria-disabled') !== 'true') selectDay(Number(row.getAttribute('data-day'))); return; }
     var seg = e.target.closest('.seg button');
     if (seg) { setMinutes(Number(seg.getAttribute('data-min'))); return; }
+    var asg = e.target.closest('[data-asg]');
+    if (asg) { e.preventDefault(); openAssignment(asg.getAttribute('data-asg'), asg); return; }
     var a = e.target.closest('[data-action]');
     if (a && ACTIONS[a.getAttribute('data-action')]) { e.preventDefault(); ACTIONS[a.getAttribute('data-action')](a); }
   });
@@ -2768,6 +2921,7 @@
       $('main').getAnimations && $('main').getAnimations().forEach(function (a) { a.cancel(); });
       firstPaint = false;
       loadPlan();
+      loadAssignments();
     }
   });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (plan) layoutRail(false); });
@@ -2781,6 +2935,7 @@
   paintThemeButton();
   sfSyncReferralHost();
   checkAssignment();
+  loadAssignments();
   initJoinClassButton();
   loadPlan();
   if (SFStore.getItem('studyflow_notif_enabled') === '1') scheduleStudyReminder();

@@ -35,8 +35,11 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
 | `sf-nav.js` | ~13 KB | **The site nav.** Terms, Help, Privacy, the Parent view, Our story and Plans load it as the first thing in `<body>`; it is `index.html`'s nav in its light state. `index.html` keeps its own copy - see "The site nav" |
 | `sf-auth.js` | ~5 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html` — see "The classroom" |
-| `teacher-login.html` / `teacher.html` | ~21 / ~41 KB | Teacher sign-in (Firebase Auth) and the class dashboard |
-| `api/class.js` | ~20 KB | The classroom API. Checks a Firebase ID token on every call |
+| `teacher-login.html` / `teacher.html` | ~21 / ~60 KB | Teacher sign-in (Firebase Auth) and the class dashboard, whose first tab is now Assignments and their results - see "Assignments" |
+| `teacher-build.html` | ~78 KB | **The assignment builder** - `app.html` for a teacher: one question per screen, one call writes the lesson and a fixed set of questions, the teacher edits every one, then publishes |
+| `api/class.js` | ~35 KB | The classroom API. Checks a Firebase ID token on every call. Assignments and their submissions live here too |
+| `api/_firestore.js` | ~8 KB | Firestore as the service account, shared by `class.js` and `webhook.js`. The underscore keeps Vercel from serving it |
+| `sf-questions.js` | ~42 KB | **The question templates and validators** (`qtpl`, `buildQuestionSchema`, `tallyFor`, `sanitizeDayQuestions`, `repairJSON`), moved out of `app.html` byte for byte so the teacher builder uses the same ones. Loaded by `app.html` and `teacher-build.html` |
 | `firestore.rules` | | Deny-all. Paste into the Firebase console; only the service account reaches Firestore |
 | `draw-lab.html` / `api/draw-lab.js` / `lab/` | | **Internal.** Draws the same lessons with Haiku, Sonnet and Opus through the real lesson prompt, beside Servier Medical Art (CC BY 3.0), to decide which model draws for Pro. Linked from nothing. The endpoint is **locked**: 403 unless `DRAW_LAB_KEY` (12+ chars) is set in Vercel and sent as `x-lab-key`, so a deploy costs nothing. Delete all three when the comparison is done |
 | `sf-topics.js` | ~38 KB | **The subtopic skill.** Reads the notes of ANY subject into parts, groups them to fit the days, and composes each day's question mix. Loaded by `app.html`. See "Subtopics made from the notes" |
@@ -135,13 +138,18 @@ the fonts or the no-build-step stack.
 | Free | $0 | 1 plan/month, 7-day max |
 | Pro | $7.99/mo | 5 plans, 14 days |
 | VIP | $14.99/mo | Unlimited + AI chat |
-| Classroom | $79.99/mo | Teacher dashboard, up to 5 students (`api/class.js` `MAX_STUDENTS = 5`) |
+| Classroom | $79.99/mo | Teacher dashboard, assignments, **up to 30 students**. A teacher without it gets a free class of 5 (`api/class.js` `MAX_STUDENTS`, `CAP_BY_TIER`) |
 
 The pricing page sells all four; its feature lists are copied from the
-landing page's, so the two agree. **`index.html`'s Schools section does not
-agree on Classroom**: it says $79 and up to 30 students, plus a $299 School
-tier that has a Stripe price (in `api/checkout.js`'s allowlist) but no button
-on the pricing page. Unresolved - decide which is true and fix the other.
+landing page's, so the two agree. **The student count is settled (Oct 2026,
+the owner's decision): a paid Classroom holds 30**, a free class 5, as the
+landing page's Schools section always said. The cap is read on `join` from
+the teacher's `users/{email}.tier`, which `api/webhook.js` writes. Still not
+agreed: the landing page says **$79**, the pricing page $79.99, and the
+landing page sells a $299 School tier that has a Stripe price (in
+`api/checkout.js`'s allowlist) but no button on the pricing page.
+`CAP_BY_TIER.school` is 200, not unlimited: the roster is one Firestore
+document.
 
 ---
 
@@ -175,7 +183,9 @@ Keep the two lists identical.
 
 ### Subject → question type matrix
 
-10 subject types, **24 question types**. Schemas live in `app.html`.
+10 subject types, **24 question types**. Schemas live in `sf-questions.js`
+(moved out of `app.html` in Oct 2026; `app.html` calls them through wrappers
+of the same names).
 
 The original 12 are `mcq`, `truefalse`, `fill`, `write`, `classify`, `sequence`,
 `sentence`, `passage`, `errorspot`, `scenario`, `wordproblem`, `bigequation`.
@@ -212,10 +222,10 @@ Every type has a renderer (`renderFill`, `renderBigEquation`, `renderPassage`,
 **If you add a question type, you must touch eight places.** The old note said
 four; four is what the compiler would catch if this had one. The full list:
 
-1. `qtpl()` in `app.html` — the JSON fragment. Its shape must match the
+1. `qtpl()` in `sf-questions.js` — the JSON fragment. Its shape must match the
    renderer field for field.
-2. `QTYPE_NAME` in `app.html`, or the quota line prints a raw slug.
-3. A branch in `sanitizeDayQuestions` in `app.html`. Without one the type falls
+2. `QTYPE_NAME` in `sf-questions.js`, or the quota line prints a raw slug.
+3. A branch in `sanitizeDayQuestions` in `sf-questions.js`. Without one the type falls
    through to the unknown-type catch-all, which only checks that question text
    exists — so a malformed card reaches a renderer intact.
 4. `SPECIAL_TYPES` **and** `SPECIAL_TYPES_PRETEST` in `lesson.html`, identical.
@@ -2292,7 +2302,7 @@ that vanished with each session):
 bash .claude/skills/morning-check/scripts/run_all.sh /tmp/sf-morning
 ```
 
-27 checks on real page loads with `api/generate` mocked - parse, every card
+27 checks (plus the classroom suite, see "Assignments") on real page loads with `api/generate` mocked - parse, every card
 type answered wrong, walkthroughs, the picture budget, the labelling card,
 plan-time drawing, board text sizes, pictures drawing themselves, the icons
 and the layouts built on them, the subtopic skill (its rules exhaustively,
@@ -2761,6 +2771,108 @@ active day.
 **Setup on a new deployment:** Firebase console → Project settings → Service
 accounts → Generate new private key; paste the whole JSON into Vercel as
 `FIREBASE_SERVICE_ACCOUNT`; publish `firestore.rules` in Firestore → Rules.
+`api/webhook.js` uses the same service account now (see below), so
+`FIREBASE_SERVICE_KEY` is no longer read by anything.
+
+## Assignments (`teacher-build.html`, `api/class.js`, `lesson.html?assignment=`) — Oct 2026
+
+The class's homework: a short lesson and a **fixed set of questions every
+student answers**, approved by the teacher question by question, with each
+student's answers coming back. It replaces "Assign lesson" as the teacher
+dashboard's main job; that older flow (notes, from which each student builds
+their own plan) is still there as **Share notes**, and its banner still shows.
+
+```
+teacher-build.html                          api/class.js                      student
+material > for > grade > goals > misconceptions > length+due+formats > review
+   > ONE call writes lesson + questions > preview: edit / regenerate / delete / add
+   > save-assignment (draft) > publish-assignment ------------------>  dashboard "From your teacher"
+                                                                       > lesson.html?assignment=<id>
+teacher.html Assignments tab  <-- results  <-- submit (as they go, then "done")
+```
+
+- **The questions are fixed; the misses come back.** `buildAssignmentQueue`
+  is the opening (welcome, lesson, flashcards, worked example if any) and
+  then the teacher's questions in the teacher's order, once each - no
+  pre-test, no vocabulary match, no lesson-picture labelling card, no top-up
+  after the last one (`getNextCard` returns `done`). A missed question comes
+  back **about 3 cards later, then about 6**, at most twice, always before
+  the closing explain card (`asgBringBack`, from `asgRecord` at the card
+  boundary in `sfLogFlush`, so the self-grading cards return too; the usual
+  once-only retry in `handleResult` is off in assignment mode). One closing
+  teach-it-back card, unscored, when the teacher asked for no writing.
+- **The teacher's numbers count FIRST tries.** `asgRecord` keeps, per question
+  id (`aid`): first try right/wrong, what was answered (as words), seconds,
+  returns, and **recovered** (missed, then right when it came back). The
+  server keeps the first try as it first arrived (`mergeAnswers`): reopening
+  re-asks the questions, and that second go must not overwrite it.
+- **An assignment never touches the student's own plan.** The session keys
+  (`ASSIGN_KEYS`: plan, plans, current day, timer, minutes, missed-day review)
+  are redirected into `studyflow_asg_<id>__...` inside `SFStore`, and the
+  dashboard writes the assignment's one-day plan there before opening it.
+  `endSession` and half a dozen other places write `studyflow_plan` without
+  knowing which plan it is; without the redirect, homework overwrote the
+  student's study plan.
+- **Hand-in survives a bad connection.** Answers are sent 1.5s after each
+  card and on `pagehide`; the final send is kept in
+  `studyflow_asg_pending_<id>` until the server has it, and the dashboard
+  resends it. The results screen says "Handed in" or "Not handed in yet",
+  with Try again.
+- **A teacher's text reaches the whole class**, so the server neutralises
+  every string in an assignment (`cleanDeep` / `neutral`: `<` and `>` become
+  full-width look-alikes), whatever the builder did. A model's text only ever
+  reached the student who asked for it; several lesson.html renderers put
+  option and hint text into `innerHTML` as they are.
+- **Published means the questions are locked** (answers are keyed on their
+  ids); only the title and due date change after that.
+- The builder uses `sf-questions.js` - the plan builder's own shapes and
+  validators - so a card `app.html` would drop is dropped here, and an edit
+  that breaks a card is refused with the reason. Every question carries a
+  `goal` (`g1`...), and the results group by it. Default formats come from
+  the subject the goals call names (`MIX` in teacher-build.html): retrieval
+  and misconception probes first; maths keeps its solving mandate.
+- **Results** (`type=results`, teacher only): one row per student in the
+  class, so "not started" has names; done / in progress / not started; class
+  score (first tries, finished work); % of misses recovered; **by goal**,
+  with the weakest named in words; **question by question**, hardest first,
+  with the most common wrong answer ("5 of 7 who missed it answered
+  'Oxygen'") and every student's answer. One blue; no traffic-light colours
+  on students.
+
+API, all behind the ID token: `GET type=assignments` (teacher: drafts too,
+with started/done counts; student: published only, with their own status),
+`GET type=assignment&id=` (whole; a student only when published),
+`GET type=results&id=` (teacher), `POST save-assignment` / `publish-assignment`
+/ `delete-assignment` (teacher; delete removes every submission), `POST submit`
+(a student, their own document, only the assignment's own question ids,
+clamped). Stored at `classes/{code}/assignments/{id}` and
+`.../submissions/{uid}`. Ids are 12 characters and reach a path only through
+`ASSIGNMENT_ID_RE`.
+
+**The Stripe webhook never recorded a paid plan.** It wrote `users/{email}`
+with `Bearer ${FIREBASE_SERVICE_KEY}` - a fixed key where Firestore wants a
+short-lived OAuth token - and with `firestore.rules` denying all client
+access, the write could not land. It goes through `api/_firestore.js` as the
+service account now, lower-cased, which is what the 30-student cap reads.
+Not verified against live Stripe: the next real Classroom purchase should be
+checked in Firestore (`users/<email>.tier == "classroom"`).
+
+**Tests:** `.claude/skills/morning-check/browser/classroom.html` →
+`runClassroom()` - 116 checks. It loads the real `api/class.js` and
+`api/webhook.js` as source and answers their Google calls with an in-memory
+Firestore that speaks the REST shapes; then the real pages run in iframes
+with their `fetch` pointed at that same API: a teacher builds and publishes in
+`teacher-build.html`, students do it in `lesson.html`, the teacher reads it in
+`teacher.html`. It fails on the code before each fix it guards (shown by
+mutation: first try overwritten, the old queue, no key redirect).
+
+**Not done yet (Phase 2):** a mastery grid (students × goals), reteaching
+just the students who missed a goal, pre-test → assignment growth, reading
+the teach-it-back answers on the results page, a weekly digest, Google
+Classroom import/export, "Topics students struggle with" filled from
+assignment results. **Not seen from a real model:** the goals call and the
+assignment call have only been run against mocked replies - generate one on
+the live site and read every question before telling a teacher it works.
 
 ## The dashboard (`dashboard.html`) — redesigned Oct 2026
 

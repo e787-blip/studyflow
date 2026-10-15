@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<link rel="icon" type="image/png" href="/favicon.png"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StudyFlow — New assignment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<!--
+  THE ASSIGNMENT BUILDER (Oct 2026) - app.html, for a teacher.
+
+  One question per screen, and only questions whose answer changes what is
+  generated: the material, what the assignment is for, the class's grade
+  (asked once, remembered), the learning goals (proposed from the notes,
+  ticked and edited by the teacher), the misconceptions the teacher sees
+  every year, the length and the due date. Then ONE call writes a short
+  lesson and a fixed set of questions, every one tagged with the goal it
+  checks, and the teacher reviews them all - edit, regenerate, delete, add -
+  before anything reaches a student. Teachers do not trust AI questions they
+  have not read; this screen is why they can.
+
+  The question shapes and the validators are app.html's own, from
+  sf-questions.js, so a card dropped there is dropped here. Saved through
+  api/class (save-assignment, publish-assignment); students open it from
+  their dashboard, and lesson.html?assignment=<id> runs it.
+-->
+<style>
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  :root {
+    --ink:#1a1d2e; --ink-2:#464c63; --muted:#6b7280; --faint:#a0a6b6; --soft:#f4f6fb;
+    --blue:#4a7cf6; --blue-ink:#2f5fe0; --blue-tint:#eef3ff; --blue-light:#dce8ff;
+    --white:#fff; --border:#e3e7f0; --border-2:#d3d9e6;
+    --right:#1a9e80; --right-tint:#e7f7f2; --warn:#b45309;
+    --sans:'DM Sans',system-ui,sans-serif; --serif:'Instrument Serif',Georgia,serif;
+    --spring:cubic-bezier(.22,1,.36,1);
+  }
+  html, body { background:var(--soft); }
+  body { font-family:var(--sans); color:var(--ink); min-height:100vh; line-height:1.5; }
+  button, input, textarea, select { font:inherit; color:inherit; }
+  h1, h2, h3 { font-family:var(--serif); font-weight:400; font-synthesis-weight:none; letter-spacing:-0.015em; }
+
+  nav { background:#fff; border-bottom:1px solid var(--border); padding:.8rem 1.5rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; min-height:60px; }
+  .logo { text-decoration:none; display:flex; align-items:center; }
+  .nav-back { font-size:.86rem; font-weight:600; color:var(--muted); text-decoration:none; padding:.45rem .8rem; border-radius:10px; border:1px solid var(--border); background:#fff; }
+  .nav-back:hover { color:var(--blue-ink); border-color:var(--blue); }
+
+  .wrap { max-width:760px; margin:0 auto; padding:2rem 1rem 6rem; }
+  .crumbs { display:flex; gap:6px; margin-bottom:1.1rem; }
+  .crumbs span { height:4px; flex:1; border-radius:4px; background:var(--border); transition:background .3s; }
+  .crumbs span.on { background:var(--blue); }
+
+  .step { display:none; }
+  .step.active { display:block; animation:rise .4s var(--spring) both; }
+  @keyframes rise { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: reduce) { .step.active { animation:none; } }
+
+  .card { background:#fff; border:1px solid var(--border); border-radius:22px; padding:1.6rem; }
+  .kicker { font-size:.72rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--blue-ink); margin-bottom:.35rem; }
+  .step h1 { font-size:clamp(1.7rem,4vw,2.2rem); line-height:1.12; margin-bottom:.4rem; }
+  .lead { color:var(--muted); font-size:.95rem; margin-bottom:1.2rem; }
+
+  label.f { display:block; font-size:.78rem; font-weight:700; color:var(--ink-2); margin:1rem 0 .35rem; }
+  .inp, textarea.inp, select.inp { width:100%; border:1.5px solid var(--border); border-radius:12px; padding:.7rem .85rem; background:#fff; outline:none; font-size:.95rem; }
+  .inp:focus { border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-tint); }
+  textarea.inp { min-height:170px; resize:vertical; line-height:1.5; }
+  .hint { font-size:.78rem; color:var(--muted); margin-top:.35rem; }
+
+  .drop { margin-top:1rem; border:1.5px dashed var(--border-2); border-radius:14px; padding:1rem; text-align:center; color:var(--muted); font-size:.88rem; cursor:pointer; background:var(--soft); }
+  .drop:hover, .drop.over { border-color:var(--blue); color:var(--blue-ink); background:var(--blue-tint); }
+  .drop strong { color:var(--blue-ink); }
+  .sources { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; margin-top:.8rem; }
+  .src { display:flex; align-items:center; gap:10px; border:1px solid var(--border); border-radius:12px; padding:.6rem .8rem; font-size:.86rem; background:#fff; }
+  .src .nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+  .src .st { color:var(--muted); font-size:.78rem; white-space:nowrap; }
+  .src.fail .st { color:var(--warn); white-space:normal; }
+  .src button { border:none; background:none; color:var(--muted); cursor:pointer; font-size:1rem; line-height:1; padding:.2rem .3rem; }
+
+  .choices { display:grid; gap:10px; }
+  .choice { text-align:left; border:1.5px solid var(--border); border-radius:14px; background:#fff; padding:.9rem 1rem; cursor:pointer; display:flex; gap:12px; align-items:flex-start; transition:border-color .2s, background .2s, transform .12s; }
+  .choice:hover { border-color:var(--blue); }
+  .choice:active { transform:scale(.985); }
+  .choice[aria-pressed="true"] { border-color:var(--blue); background:var(--blue-tint); }
+  .choice .t { font-weight:700; }
+  .choice .d { font-size:.85rem; color:var(--muted); }
+  .choice .k { flex:none; width:24px; height:24px; border-radius:7px; border:1.5px solid var(--border-2); font-size:.74rem; font-weight:700; display:grid; place-items:center; color:var(--muted); margin-top:1px; }
+  .choice[aria-pressed="true"] .k { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { border:1.5px solid var(--border); border-radius:999px; background:#fff; padding:.45rem .9rem; font-size:.86rem; font-weight:600; cursor:pointer; transition:border-color .2s, background .2s; }
+  .chip:hover { border-color:var(--blue); }
+  .chip[aria-pressed="true"] { border-color:var(--blue); background:var(--blue); color:#fff; }
+
+  .goal { display:flex; gap:10px; align-items:flex-start; border:1px solid var(--border); border-radius:12px; padding:.55rem .7rem; margin-bottom:8px; background:#fff; }
+  .goal input[type=checkbox] { margin-top:.6rem; width:18px; height:18px; accent-color:var(--blue); flex:none; }
+  .goal textarea { flex:1; border:none; outline:none; resize:none; min-height:2.6em; line-height:1.4; padding:.35rem 0; font-size:.93rem; background:transparent; }
+  .goal .gid { font-size:.7rem; font-weight:700; color:var(--faint); margin-top:.65rem; }
+  .linkbtn { border:none; background:none; color:var(--blue-ink); font-weight:600; cursor:pointer; font-size:.88rem; padding:.3rem 0; }
+  .linkbtn:hover { text-decoration:underline; }
+
+  .foot { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:1.4rem; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:.45rem; height:44px; padding:0 20px; border-radius:999px; border:1px solid transparent; font-weight:700; font-size:.92rem; cursor:pointer; white-space:nowrap; transition:transform .12s, background .2s, border-color .2s, color .2s; }
+  .btn:active { transform:scale(.96); }
+  .btn-primary { background:var(--blue); color:#fff; }
+  .btn-primary:hover { background:var(--blue-ink); }
+  .btn-quiet { background:#fff; border-color:var(--border-2); color:var(--ink); }
+  .btn-quiet:hover { border-color:var(--blue); color:var(--blue-ink); }
+  .btn[disabled], .btn[aria-disabled="true"] { opacity:.5; pointer-events:none; }
+
+  .rev { display:grid; gap:2px; }
+  .rev-row { display:flex; gap:12px; align-items:baseline; padding:.65rem 0; border-bottom:1px solid var(--border); }
+  .rev-row:last-child { border-bottom:none; }
+  .rev-row .rk { width:130px; flex:none; font-size:.78rem; font-weight:700; color:var(--muted); }
+  .rev-row .rv { flex:1; min-width:0; font-size:.92rem; overflow-wrap:anywhere; }
+
+  .build { text-align:center; padding:2.4rem 1rem; }
+  .spinner { width:38px; height:38px; border-radius:50%; border:3px solid var(--blue-light); border-top-color:var(--blue); margin:0 auto 1rem; animation:spin .9s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation:none; } }
+  .note { background:var(--blue-tint); border:1px solid var(--blue-light); color:var(--ink-2); border-radius:14px; padding:.8rem 1rem; font-size:.88rem; margin-top:1rem; text-align:left; }
+  .err { background:#fff; border:1.5px solid var(--border-2); border-radius:14px; padding:1rem; margin-top:1rem; font-size:.9rem; }
+
+  /* ── PREVIEW AND EDIT ── */
+  .pv-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:1rem; }
+  .pv-meta { color:var(--muted); font-size:.88rem; }
+  .pv-goals { list-style:none; margin-top:.5rem; display:grid; gap:.2rem; }
+  .pv-goals b { color:var(--ink-2); margin-right:.3rem; }
+  .pv-lesson { margin-bottom:1rem; }
+  .pv-lesson summary { cursor:pointer; font-weight:700; font-size:.92rem; list-style:none; }
+  .pv-lesson summary::-webkit-details-marker { display:none; }
+  .pv-lesson summary::before { content:'▸ '; color:var(--muted); }
+  .pv-lesson[open] summary::before { content:'▾ '; }
+  .qcard { background:#fff; border:1px solid var(--border); border-radius:18px; padding:1rem 1.1rem; margin-bottom:10px; transition:border-color .2s; }
+  .qcard:hover { border-color:var(--blue-light); }
+  .qtop { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:.5rem; }
+  .qnum { font-weight:700; font-size:.82rem; color:var(--muted); }
+  .tag { display:inline-flex; align-items:center; height:22px; padding:0 8px; border-radius:999px; font-size:.72rem; font-weight:700; background:var(--blue-tint); color:var(--blue-ink); }
+  .tag.grey { background:var(--soft); color:var(--ink-2); }
+  .qstem { font-weight:600; font-size:.97rem; margin-bottom:.45rem; overflow-wrap:anywhere; white-space:pre-wrap; }
+  .qbody { font-size:.89rem; color:var(--ink-2); overflow-wrap:anywhere; }
+  .qbody ol, .qbody ul { padding-left:1.25rem; }
+  .qbody li { margin:.12rem 0; }
+  .qbody .ok { color:var(--right); font-weight:700; }
+  .qbody .ok::after { content:'  ✓'; }
+  .qbody .cols { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .qbody .colh { font-weight:700; color:var(--ink); }
+  .qexp { font-size:.83rem; color:var(--muted); margin-top:.5rem; border-top:1px dashed var(--border); padding-top:.45rem; }
+  .qtools { display:flex; gap:6px; margin-top:.7rem; flex-wrap:wrap; }
+  .qtools button { border:1px solid var(--border); background:#fff; border-radius:999px; padding:.3rem .8rem; font-size:.8rem; font-weight:600; cursor:pointer; color:var(--ink-2); }
+  .qtools button:hover { border-color:var(--blue); color:var(--blue-ink); }
+  .qcard.busy { opacity:.55; pointer-events:none; }
+  .qedit label.f { margin-top:.6rem; }
+  .qedit .optrow { display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+  .qedit .optrow input[type=radio] { accent-color:var(--right); width:18px; height:18px; flex:none; }
+  .qedit textarea.inp { min-height:70px; }
+  .qedit .msg { color:var(--warn); font-size:.82rem; margin-top:.4rem; }
+  .addbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:1rem 0; }
+  .addbar select { width:auto; }
+  .stickybar { position:sticky; bottom:0; background:rgba(244,246,251,.92); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-top:1px solid var(--border); padding:.8rem 0; margin-top:1rem; display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; align-items:center; }
+  .stickybar .saved { margin-right:auto; font-size:.82rem; color:var(--muted); }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--ink); color:#fff; padding:.7rem 1.1rem; border-radius:12px; font-size:.88rem; z-index:100; opacity:0; transition:opacity .2s; pointer-events:none; max-width:calc(100% - 32px); }
+  .toast.show { opacity:1; }
+
+  @media (max-width:560px) {
+    .card { padding:1.2rem; border-radius:18px; }
+    .rev-row { flex-direction:column; gap:2px; }
+    .rev-row .rk { width:auto; }
+    .qbody .cols { grid-template-columns:1fr; }
+    .foot .btn { flex:1; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="teacher.html" class="logo" aria-label="StudyFlow teacher dashboard">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34" aria-hidden="true">
+      <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
+      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
+      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
+      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
+      <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
+      <rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/>
+      <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
+      <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
+      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
+      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3"><tspan fill="#1a1d2e">Study</tspan><tspan fill="#4a7cf6">Flow</tspan></text>
+    </svg>
+  </a>
+  <a class="nav-back" href="teacher.html#assignments">Back to class</a>
+</nav>
+
+<main class="wrap">
+  <div class="crumbs" id="crumbs" aria-hidden="true"></div>
+
+  <!-- 1. MATERIAL -->
+  <section class="step card" data-step="material" aria-labelledby="h-material">
+    <div class="kicker">New assignment</div>
+    <h1 id="h-material">What are your students working on?</h1>
+    <p class="lead">Paste your notes or add the files you teach from. Every question will come from this material.</p>
+    <label class="f" for="a-title">Assignment title</label>
+    <input class="inp" id="a-title" maxlength="120" placeholder="e.g. Cell division — chapter 7"/>
+    <label class="f" for="a-notes">Your notes</label>
+    <textarea class="inp" id="a-notes" placeholder="Paste the lesson, a reading, your slides' text…"></textarea>
+    <div class="drop" id="drop" role="button" tabindex="0">Drop files here or <strong>choose files</strong><br><span style="font-size:.78rem">PDF, Word, PowerPoint, photos of pages, text</span></div>
+    <input type="file" id="file-in" multiple hidden accept=".pdf,.docx,.pptx,.txt,.md,.vtt,.srt,image/*"/>
+    <div class="sources" id="sources"></div>
+    <p class="hint" id="notes-count"></p>
+    <div class="foot"><span></span><button class="btn btn-primary" id="go-material">Continue</button></div>
+  </section>
+
+  <!-- 2. KIND -->
+  <section class="step card" data-step="kind" aria-labelledby="h-kind">
+    <div class="kicker">Step 2</div>
+    <h1 id="h-kind">What is it for?</h1>
+    <p class="lead">This sets how much teaching comes before the questions.</p>
+    <div class="choices" id="kind-choices"></div>
+    <div class="foot"><button class="btn btn-quiet" data-back>Back</button><span></span></div>
+  </section>
+
+  <!-- 3. GRADE -->
+  <section class="step card" data-step="grade" aria-labelledby="h-grade">
+    <div class="kicker">Step 3 · asked once</div>
+    <h1 id="h-grade">What grade do you teach this class?</h1>
+    <p class="lead">The same notes read differently in 6th grade and in AP. We'll remember it for next time.</p>
+    <div class="chips" id="grade-chips"></div>
+    <div class="foot"><button class="btn btn-quiet" data-back>Back</button><button class="btn btn-primary" id="go-grade">Continue</button></div>
+  </section>
+
+  <!-- 4. GOALS -->
+  <section class="step card" data-step="goals" aria-labelledby="h-goals">
+    <div class="kicker">Step 4</div>
+    <h1 id="h-goals">What should students be able to do?</h1>
+    <p class="lead">Suggested from your notes. Untick, edit, or add your own. Every question will check one of these, and your results are grouped by them.</p>
+    <div id="goals-box"></div>
+    <button class="linkbtn" id="add-goal" type="button">+ Add a goal</button>
+    <div class="foot"><button class="btn btn-quiet" data-back>Back</button><button class="btn btn-primary" id="go-goals">Continue</button></div>
+  </section>
+
+  <!-- 5. MISCONCEPTIONS -->
+  <section class="step card" data-step="misc" aria-labelledby="h-misc">
+    <div class="kicker">Step 5 · optional</div>
+    <h1 id="h-misc">What do students get wrong every year?</h1>
+    <p class="lead">These become the tempting wrong answers, so a student who believes one picks it, and you see who does.</p>
+    <textarea class="inp" id="a-misc" maxlength="1200" style="min-height:120px" placeholder="e.g. They think plants get their food from the soil."></textarea>
+    <div class="foot"><button class="btn btn-quiet" data-back>Back</button><button class="btn btn-primary" id="go-misc">Continue</button></div>
+  </section>
+
+  <!-- 6. LENGTH AND DUE -->
+  <section class="step card" data-step="length" aria-labelledby="h-length">
+    <div class="kicker">Step 6</div>
+    <h1 id="h-length">How long, and when is it due?</h1>
+    <p class="lead">Short and frequent beats long and rare for practice like this.</p>
+    <label class="f">Length</label>
+    <div class="chips" id="len-chips"></div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;">
+      <div><label class="f" for="a-date">Due date</label><input class="inp" type="date" id="a-date"/></div>
+      <div><label class="f" for="a-time">Time</label><input class="inp" type="time" id="a-time" value="08:00"/></div>
+    </div>
+    <label class="f">Hints</label>
+    <div class="chips" id="hint-chips"></div>
+    <label class="f">Question formats</label>
+    <div class="chips" id="fmt-chips"></div>
+    <p class="hint" id="fmt-note"></p>
+    <div class="foot"><button class="btn btn-quiet" data-back>Back</button><button class="btn btn-primary" id="go-length">Continue</button></div>
+  </section>
+
+  <!-- 7. REVIEW -->
+  <section class="step card" data-step="review" aria-labelledby="h-review">
+    <div class="kicker">Last check</div>
+    <h1 id="h-review">Ready to write it?</h1>
+    <p class="lead">Nothing goes to students yet. You'll read every question first.</p>
+    <div class="rev" id="rev"></div>
+    <div class="foot"><button class="btn btn-quiet" data-back>Back</button><button class="btn btn-primary" id="go-build">Write the assignment</button></div>
+  </section>
+
+  <!-- 8. BUILDING -->
+  <section class="step card" data-step="build" aria-live="polite">
+    <div class="build" id="build-box">
+      <div class="spinner"></div>
+      <h1 style="font-size:1.6rem">Writing your assignment…</h1>
+      <p class="lead" id="build-msg">This takes about 40 seconds.</p>
+    </div>
+  </section>
+
+  <!-- 9. PREVIEW AND EDIT -->
+  <section class="step" data-step="preview" aria-labelledby="h-preview">
+    <div class="pv-head">
+      <div>
+        <div class="kicker" id="pv-status">Draft · not visible to students</div>
+        <h1 id="h-preview" style="font-size:clamp(1.6rem,4vw,2.1rem)"></h1>
+        <div class="pv-meta" id="pv-meta"></div>
+      </div>
+    </div>
+    <details class="card pv-lesson" id="pv-lesson"><summary>The lesson before the questions</summary><div id="pv-lesson-body" style="margin-top:.8rem"></div></details>
+    <div id="qlist"></div>
+    <div class="addbar" id="addbar">
+      <select class="inp" id="add-type" aria-label="Format of the question to add"></select>
+      <button class="btn btn-quiet" id="add-q" type="button">Add a question</button>
+    </div>
+    <div class="stickybar">
+      <span class="saved" id="saved-note"></span>
+      <button class="btn btn-quiet" id="save-draft" type="button">Save draft</button>
+      <button class="btn btn-primary" id="publish" type="button">Publish to class</button>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="/sf-questions.js"></script>
+<script src="/sf-auth.js"></script>
+<script>
+  var teacher = {};
+  try { teacher = JSON.parse(localStorage.getItem('studyflow_teacher') || '{}') || {}; } catch (e) {}
+  if (!teacher.uid || !window.SFAuth || !window.SFQuestions) window.location.replace('teacher-login.html');
+
+  function $(id) { return document.getElementById(id); }
+  function esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove('show'); }, 3200);
+  }
+  function api(url, opts) {
+    return SFAuth.classFetch(url, opts, teacher.email).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (r.status === 401) {
+          try { localStorage.removeItem('studyflow_teacher'); } catch (e) {}
+          window.location.replace('teacher-login.html');
+          throw new Error('signed out');
+        }
+        d._status = r.status;
+        return d;
+      });
+    });
+  }
+
+  /* ── WHAT EACH ANSWER CHANGES ───────────────────────────────────────────
+     Each option's `p` is the sentence the model actually reads. */
+  var KINDS = [
+    { v: 'homework', t: 'Homework', d: 'A short lesson to remind them, then practice.',
+      p: 'This is HOMEWORK after the topic was taught in class: a brief lesson that reminds, then practice that makes them retrieve it.',
+      lesson: 'Write a SHORT reminder lesson: "content" 3-5 sentences, 3-4 steps, 4 key terms, 2 misconceptions.' },
+    { v: 'check', t: 'Quick check in class', d: 'Almost no lesson. Find out who has it.',
+      p: 'This is a QUICK CHECK in class: students go straight to questions; it exists to show the teacher who has understood.',
+      lesson: 'Write almost no lesson: "content" one or two sentences saying what the check covers. "steps", "keyTerms" and "misconceptions" empty arrays.' },
+    { v: 'review', t: 'Unit review', d: 'A summary of the whole unit, then mixed practice.',
+      p: 'This is a UNIT REVIEW before a test: it covers the whole of the notes, mixing every part, with harder questions than first practice.',
+      lesson: 'Write a REVIEW summary of the whole unit: "content" 5-7 sentences, up to 5 steps, 6 key terms, 3 misconceptions.' },
+    { v: 'preunit', t: 'Before the unit', d: 'No lesson. See what they already know.',
+      p: 'This is a PRE-UNIT CHECK, before any teaching: it probes what students already know and which misconceptions they arrive with. Questions must be answerable from everyday knowledge or earlier school years, never from details only the notes teach.',
+      lesson: 'Write NO lesson: "content" an empty string, and "steps", "keyTerms" and "misconceptions" empty arrays.' }
+  ];
+  var GRADES = ['3rd–5th', '6th', '7th', '8th', '9th–10th', '11th–12th', 'AP / honors', 'College'];
+  var LENGTHS = [{ m: 10, n: 6, t: '10 min · 6 questions' }, { m: 20, n: 10, t: '20 min · 10 questions' }, { m: 30, n: 14, t: '30 min · 14 questions' }];
+
+  /* The formats a teacher can ask for, and each subject's default order.
+     Every one grades itself on the device, so the teacher's numbers need no
+     model at answer time. The mix leads with retrieval (recall, fill) and
+     misconception probes (who's right, two-part), because a teacher's next
+     step is decided by WHICH wrong idea a student holds, and a multiple-
+     choice wrong answer built from a real misconception shows exactly that.
+     Maths keeps its solving mandate (CLAUDE.md, invariant 1). */
+  var FORMAT_NAME = {
+    mcq: 'Multiple choice', truefalse: 'True / false', fill: 'Fill the gap', whosright: 'Who’s right?',
+    twopart: 'Two-part (answer + reason)', recall: 'Name them all', sequence: 'Put in order', classify: 'Sort into groups',
+    matchpairs: 'Match pairs', scenario: 'Apply it to a case', write: 'Explain in writing', selfcheck: 'Explain, then check yourself',
+    highlight: 'Find the evidence', estimate: 'Estimate a number', bigequation: 'Solve', wordproblem: 'Word problem',
+    errorspot: 'Find the mistake', sentence: 'Build the sentence', tracetable: 'Trace the code'
+  };
+  var MIX = {
+    math:       ['bigequation', 'bigequation', 'bigequation', 'wordproblem', 'bigequation', 'errorspot', 'bigequation', 'bigequation', 'wordproblem', 'bigequation', 'bigequation', 'bigequation', 'errorspot', 'bigequation'],
+    science:    ['mcq', 'whosright', 'fill', 'twopart', 'recall', 'classify', 'mcq', 'sequence', 'fill', 'whosright', 'estimate', 'mcq', 'selfcheck', 'truefalse'],
+    psychology: ['mcq', 'scenario', 'whosright', 'fill', 'twopart', 'recall', 'scenario', 'mcq', 'matchpairs', 'whosright', 'fill', 'selfcheck', 'mcq', 'truefalse'],
+    geography:  ['mcq', 'fill', 'classify', 'whosright', 'sequence', 'recall', 'mcq', 'twopart', 'matchpairs', 'estimate', 'fill', 'mcq', 'whosright', 'truefalse'],
+    economics:  ['mcq', 'scenario', 'wordproblem', 'whosright', 'fill', 'twopart', 'scenario', 'estimate', 'mcq', 'recall', 'whosright', 'matchpairs', 'mcq', 'selfcheck'],
+    cs:         ['mcq', 'tracetable', 'errorspot', 'fill', 'sequence', 'whosright', 'mcq', 'recall', 'twopart', 'tracetable', 'matchpairs', 'mcq', 'errorspot', 'selfcheck'],
+    history:    ['mcq', 'sequence', 'whosright', 'fill', 'twopart', 'classify', 'recall', 'mcq', 'highlight', 'matchpairs', 'write', 'mcq', 'whosright', 'fill'],
+    english:    ['mcq', 'fill', 'twopart', 'whosright', 'highlight', 'recall', 'mcq', 'matchpairs', 'write', 'fill', 'mcq', 'twopart', 'whosright', 'selfcheck'],
+    language:   ['fill', 'matchpairs', 'sentence', 'mcq', 'fill', 'recall', 'sentence', 'mcq', 'fill', 'matchpairs', 'whosright', 'mcq', 'sentence', 'fill'],
+    general:    ['mcq', 'fill', 'whosright', 'twopart', 'recall', 'matchpairs', 'mcq', 'truefalse', 'fill', 'selfcheck', 'whosright', 'mcq', 'classify', 'sequence']
+  };
+  var FIELDS = ['math', 'science', 'psychology', 'geography', 'economics', 'cs', 'history', 'english', 'language', 'general'];
+  var NOTES_CAP = 8000;
+
+  var S = {
+    step: 'material', title: '', sources: [], kind: '', grade: teacher.grade || '', goals: [], goalsFor: '',
+    misc: '', minutes: 20, dueDate: '', dueTime: '08:00', hints: true, formats: null,
+    subject: '', subjectType: '', lesson: null, questions: [], id: '', status: '', dirty: false
+  };
+  var STEPS = ['material', 'kind', 'grade', 'goals', 'misc', 'length', 'review', 'build', 'preview'];
+
+  function allNotes() {
+    var parts = [$('a-notes').value.trim()];
+    S.sources.forEach(function (s) { if (s.status === 'ready' && s.text) parts.push('[' + s.name + ']\n' + s.text); });
+    return parts.filter(Boolean).join('\n\n');
+  }
+  function reading() { return S.sources.some(function (s) { return s.status === 'reading'; }); }
+
+  /* ── NAVIGATION ─────────────────────────────────────────────────────── */
+  function show(step, noPush) {
+    S.step = step;
+    Array.prototype.forEach.call(document.querySelectorAll('.step'), function (el) {
+      el.classList.toggle('active', el.getAttribute('data-step') === step);
+    });
+    var at = STEPS.indexOf(step), crumbs = '';
+    for (var i = 0; i < 7; i++) crumbs += '<span class="' + (i <= Math.min(at, 6) ? 'on' : '') + '"></span>';
+    $('crumbs').innerHTML = crumbs;
+    $('crumbs').style.display = step === 'preview' ? 'none' : '';
+    if (!noPush && step !== 'build') { try { history.pushState({ step: step }, '', location.href.split('#')[0]); } catch (e) {} }
+    if (step === 'goals') loadGoals();
+    if (step === 'length') paintLength();
+    if (step === 'review') paintReview();
+    window.scrollTo(0, 0);
+    var h = document.querySelector('.step.active h1');
+    if (h) { h.setAttribute('tabindex', '-1'); try { h.focus({ preventScroll: true }); } catch (e) {} }
+  }
+  function prevStep() {
+    var i = STEPS.indexOf(S.step) - 1;
+    if (STEPS[i] === 'grade' && teacher.grade && S.skippedGrade) i--;
+    if (i >= 0) show(STEPS[i]);
+  }
+  window.addEventListener('popstate', function (e) {
+    var st = e.state && e.state.step;
+    if (st && STEPS.indexOf(st) >= 0 && st !== 'build') show(st, true);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-back]'), function (b) { b.onclick = prevStep; });
+
+  /* ── 1. MATERIAL ────────────────────────────────────────────────────── */
+  function paintNotesCount() {
+    var n = allNotes().length;
+    var words = allNotes().split(/\s+/).filter(Boolean).length;
+    $('notes-count').textContent = n
+      ? words + ' words' + (n > NOTES_CAP ? ' — the first ' + Math.round(NOTES_CAP / 6) + ' or so are used, so put what matters most first.' : '')
+      : '';
+    $('go-material').textContent = reading() ? 'Reading your files…' : 'Continue';
+    $('go-material').disabled = reading();
+  }
+  $('a-notes').addEventListener('input', paintNotesCount);
+  $('go-material').onclick = function () {
+    S.title = $('a-title').value.trim();
+    var notes = allNotes();
+    if (!S.title) { $('a-title').focus(); toast('Give the assignment a title.'); return; }
+    if (notes.replace(/\s+/g, ' ').length < 80) { $('a-notes').focus(); toast('Add a little more material — a paragraph at least.'); return; }
+    show('kind');
+  };
+
+  function paintSources() {
+    $('sources').innerHTML = S.sources.map(function (s, i) {
+      if (s.removed) return '';
+      var st = s.status === 'reading' ? (s.progress || 'Reading…') : s.status === 'ready' ? s.meta : s.error;
+      return '<div class="src ' + (s.status === 'fail' ? 'fail' : '') + '"><span class="nm">' + esc(s.name) + '</span>' +
+        '<span class="st">' + esc(st) + '</span><button type="button" aria-label="Remove ' + esc(s.name) + '" data-rm="' + i + '">×</button></div>';
+    }).join('');
+    paintNotesCount();
+  }
+  $('sources').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-rm]');
+    if (!b) return;
+    var s = S.sources[Number(b.getAttribute('data-rm'))];
+    if (s) { s.removed = true; s.status = 'removed'; }
+    paintSources();
+  });
+
+  /* Reading files: the same routes as app.html, kept short. Photos and
+     scanned pages go to api/extract (Claude Vision), shrunk first - Vercel
+     refuses a request body over 4.5 MB. */
+  function loadLib(src, globalName) {
+    if (window[globalName]) return Promise.resolve(window[globalName]);
+    return new Promise(function (res, rej) {
+      var s = document.createElement('script'); s.src = src;
+      s.onload = function () { window[globalName] ? res(window[globalName]) : rej(new Error('lib')); };
+      s.onerror = function () { rej(new Error('lib')); };
+      document.head.appendChild(s);
+    });
+  }
+  function shrink(canvasOrImg, w, h) {
+    var k = Math.min(1, 1600 / Math.max(w, h));
+    var c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+    var ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(canvasOrImg, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.85).split(',')[1];
+  }
+  function vision(b64, name) {
+    return fetch('api/extract', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageData: b64, mediaType: 'image/jpeg', filename: name }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { return d && d.text ? String(d.text) : ''; });
+  }
+  function readImage(file) {
+    return new Promise(function (res, rej) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () { try { res(shrink(img, img.naturalWidth, img.naturalHeight)); } catch (e) { rej(e); } URL.revokeObjectURL(url); };
+      img.onerror = function () { URL.revokeObjectURL(url); rej(new Error('decode')); };
+      img.src = url;
+    }).then(function (b64) { return vision(b64, file.name); });
+  }
+  function readPdf(file, s) {
+    return file.arrayBuffer().then(function (buf) {
+      return loadLib('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', 'pdfjsLib').then(function (lib) {
+        lib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        return lib.getDocument({ data: new Uint8Array(buf) }).promise;
+      }).then(function (pdf) {
+        var pages = [];
+        for (var i = 1; i <= pdf.numPages; i++) pages.push(i);
+        return Promise.all(pages.map(function (n) {
+          return pdf.getPage(n).then(function (p) { return p.getTextContent(); })
+            .then(function (tc) { return tc.items.map(function (it) { return it.str; }).join(' '); });
+        })).then(function (texts) {
+          var text = texts.join('\n').replace(/[ \t]+/g, ' ').trim();
+          if (text.length >= 30) { s.meta = pdf.numPages + ' page' + (pdf.numPages === 1 ? '' : 's'); return text; }
+          /* A scan: read the pages as pictures, at most 12. */
+          var n = Math.min(12, pdf.numPages), out = [], chain = Promise.resolve();
+          for (var j = 1; j <= n; j++) (function (j) {
+            chain = chain.then(function () {
+              s.progress = 'Reading page ' + j + ' of ' + n + '…'; paintSources();
+              return pdf.getPage(j).then(function (page) {
+                var vp = page.getViewport({ scale: 1.6 }), c = document.createElement('canvas');
+                c.width = vp.width; c.height = vp.height;
+                var ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+                return page.render({ canvasContext: ctx, viewport: vp }).promise.then(function () {
+                  return vision(shrink(c, c.width, c.height), file.name + ' p' + j);
+                }).then(function (t) { if (t) out.push(t); });
+              });
+            });
+          })(j);
+          return chain.then(function () { s.meta = n + ' scanned page' + (n === 1 ? '' : 's') + ' read'; return out.join('\n\n'); });
+        });
+      });
+    });
+  }
+  function readDocx(file) {
+    return Promise.all([file.arrayBuffer(), loadLib('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js', 'mammoth')])
+      .then(function (r) { return r[1].extractRawText({ arrayBuffer: r[0] }); })
+      .then(function (out) { return out.value || ''; });
+  }
+  function readPptx(file) {
+    return Promise.all([file.arrayBuffer(), loadLib('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js', 'JSZip')])
+      .then(function (r) { return r[1].loadAsync(r[0]); })
+      .then(function (zip) {
+        /* Slides by NUMBER: as strings, slide10 sorts before slide2. */
+        var names = Object.keys(zip.files).filter(function (n) { return /^ppt\/slides\/slide\d+\.xml$/.test(n); })
+          .sort(function (a, b) { return parseInt(a.replace(/\D/g, ''), 10) - parseInt(b.replace(/\D/g, ''), 10); });
+        return Promise.all(names.map(function (n) { return zip.file(n).async('string'); }));
+      })
+      .then(function (xmls) {
+        return xmls.map(function (x) {
+          var runs = x.match(/<a:t>([^<]*)<\/a:t>/g) || [];
+          return runs.map(function (r) {
+            return r.replace(/<\/?a:t>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+          }).join(' ');
+        }).join('\n');
+      });
+  }
+  function addFiles(files) {
+    Array.prototype.forEach.call(files, function (file) {
+      var s = { name: file.name, status: 'reading', text: '', meta: '', error: '' };
+      S.sources.push(s); paintSources();
+      var n = file.name.toLowerCase(), job;
+      if (/\.(txt|md|vtt|srt)$/.test(n)) job = file.text().then(function (t) {
+        return /\.(vtt|srt)$/.test(n) ? t.replace(/^\d+\s*$/gm, '').replace(/^[\d:.,]+ --> [\d:.,]+.*$/gm, '').replace(/^WEBVTT.*$/m, '') : t;
+      });
+      else if (/\.pdf$/.test(n)) job = readPdf(file, s);
+      else if (/\.docx$/.test(n)) job = readDocx(file);
+      else if (/\.pptx$/.test(n)) job = readPptx(file);
+      else if (/^image\//.test(file.type) || /\.(jpe?g|png|webp|gif|heic)$/.test(n)) job = readImage(file);
+      else if (/\.(doc|ppt)$/.test(n)) job = Promise.reject(new Error('Save it as .docx / .pptx or PDF, then add it again.'));
+      else job = Promise.reject(new Error('That file type can’t be read. Try PDF, Word, PowerPoint or a photo.'));
+      job.then(function (text) {
+        text = String(text || '').replace(/\n{3,}/g, '\n\n').trim();
+        if (s.removed) return;
+        if (text.length < 20) { s.status = 'fail'; s.error = 'No readable text found in this file.'; }
+        else { s.status = 'ready'; s.text = text; s.meta = (s.meta ? s.meta + ' · ' : '') + text.split(/\s+/).length + ' words'; }
+        paintSources();
+      }).catch(function (err) {
+        s.status = 'fail';
+        s.error = err && /Save it|can’t be read/.test(err.message) ? err.message : 'Couldn’t read this file. Paste the text instead.';
+        paintSources();
+      });
+    });
+  }
+  $('drop').onclick = function () { $('file-in').click(); };
+  $('drop').onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('file-in').click(); } };
+  $('file-in').onchange = function () { addFiles(this.files); this.value = ''; };
+  /* A file dropped anywhere on the page is a source, never a page the
+     browser opens in place of this one. */
+  document.addEventListener('dragover', function (e) { e.preventDefault(); $('drop').classList.add('over'); });
+  document.addEventListener('dragleave', function (e) { if (!e.relatedTarget) $('drop').classList.remove('over'); });
+  document.addEventListener('drop', function (e) {
+    e.preventDefault(); $('drop').classList.remove('over');
+    if (S.step === 'material' && e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  });
+
+  /* ── 2. KIND ────────────────────────────────────────────────────────── */
+  $('kind-choices').innerHTML = KINDS.map(function (k, i) {
+    return '<button type="button" class="choice" data-kind="' + k.v + '" aria-pressed="false"><span class="k">' + (i + 1) + '</span>' +
+      '<span><span class="t">' + esc(k.t) + '</span><br><span class="d">' + esc(k.d) + '</span></span></button>';
+  }).join('');
+  $('kind-choices').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-kind]');
+    if (!b) return;
+    S.kind = b.getAttribute('data-kind');
+    paintPressed('kind-choices', 'data-kind', S.kind);
+    /* Long enough to see the tick, as on the student builder. */
+    setTimeout(function () {
+      if (teacher.grade) { S.skippedGrade = true; S.grade = teacher.grade; show('goals'); }
+      else show('grade');
+    }, 260);
+  });
+  function paintPressed(boxId, attr, val) {
+    Array.prototype.forEach.call($(boxId).querySelectorAll('[' + attr + ']'), function (el) {
+      el.setAttribute('aria-pressed', String(el.getAttribute(attr) === String(val)));
+    });
+  }
+
+  /* ── 3. GRADE ───────────────────────────────────────────────────────── */
+  $('grade-chips').innerHTML = GRADES.map(function (g) {
+    return '<button type="button" class="chip" data-grade="' + esc(g) + '" aria-pressed="false">' + esc(g) + '</button>';
+  }).join('');
+  $('grade-chips').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-grade]');
+    if (!b) return;
+    S.grade = b.getAttribute('data-grade');
+    paintPressed('grade-chips', 'data-grade', S.grade);
+  });
+  $('go-grade').onclick = function () {
+    if (!S.grade) { toast('Pick a grade.'); return; }
+    teacher.grade = S.grade;
+    try { localStorage.setItem('studyflow_teacher', JSON.stringify(teacher)); } catch (e) {}
+    S.skippedGrade = false;
+    show('goals');
+  };
+
+  /* ── 4. GOALS ───────────────────────────────────────────────────────── */
+  function notesForPrompt() { return allNotes().slice(0, NOTES_CAP); }
+
+  /* One short call: what the notes are about, which subject family that is,
+     and 3-5 goals worded as things a student can DO. The subject family
+     picks the default question formats; the teacher can change them. */
+  function goalsPrompt() {
+    return 'A teacher is assigning the notes below to a ' + S.grade + ' grade class. Read them and reply with JSON only.\n' +
+      'Shape: {"subject":"","field":"","goals":["","","",""]}\n' +
+      '- subject: a short name for what the notes teach (under 60 characters).\n' +
+      '- field: exactly one of ' + FIELDS.join(', ') + '. Use "general" only when nothing else fits.\n' +
+      '- goals: 3 to 5 learning goals, each one thing a ' + S.grade + ' grade student should be able to DO after this, ' +
+      'that a question could check. Start each with a verb (Explain, Identify, Solve, Compare, Describe, Use...). ' +
+      'Under 110 characters. Only what the notes actually teach. No numbering.\n\n' +
+      'NOTES:\n"""\n' + notesForPrompt() + '\n"""\n\nOUTPUT: ONLY the JSON object.';
+  }
+  function callModel(prompt) {
+    return fetch('api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: prompt }) })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) {
+        var raw = d && (d.result || d.plan) || '';
+        var obj = SFQuestions.repairJSON(String(raw));
+        if (!obj || typeof obj !== 'object') throw new Error('bad json');
+        return obj;
+      });
+  }
+  function loadGoals() {
+    var key = allNotes().slice(0, 2000) + '|' + S.grade;
+    if (S.goalsFor === key && S.goals.length) { paintGoals(); return; }
+    S.goalsFor = key;
+    $('goals-box').innerHTML = '<div class="note">Reading your notes for goals…</div>';
+    $('go-goals').disabled = true;
+    callModel(goalsPrompt()).then(function (o) {
+      S.subject = String(o.subject || '').replace(/[<>]/g, '').slice(0, 80);
+      S.subjectType = FIELDS.indexOf(o.field) >= 0 ? o.field : 'general';
+      var gs = (Array.isArray(o.goals) ? o.goals : []).map(function (g) { return String(g || '').replace(/[<>]/g, '').trim().slice(0, 160); })
+        .filter(Boolean).slice(0, 5);
+      S.goals = gs.map(function (g) { return { text: g, on: true }; });
+      S.formats = null;   // the subject decides the default mix again
+    }).catch(function () {
+      S.subjectType = S.subjectType || 'general';
+      if (!S.goals.length) toast('Couldn’t suggest goals. Add your own, or continue without.');
+    }).then(function () { $('go-goals').disabled = false; paintGoals(); });
+  }
+  function paintGoals() {
+    if (!S.goals.length) S.goals.push({ text: '', on: true });
+    $('goals-box').innerHTML = S.goals.map(function (g, i) {
+      return '<div class="goal"><input type="checkbox" data-gon="' + i + '"' + (g.on ? ' checked' : '') + ' aria-label="Use goal ' + (i + 1) + '"/>' +
+        '<textarea rows="2" data-gtext="' + i + '" maxlength="160" placeholder="Students can…">' + esc(g.text) + '</textarea></div>';
+    }).join('');
+  }
+  $('goals-box').addEventListener('input', function (e) {
+    var t = e.target;
+    if (t.hasAttribute('data-gtext')) S.goals[Number(t.getAttribute('data-gtext'))].text = t.value;
+    if (t.hasAttribute('data-gon')) S.goals[Number(t.getAttribute('data-gon'))].on = t.checked;
+  });
+  $('goals-box').addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.hasAttribute('data-gon')) S.goals[Number(t.getAttribute('data-gon'))].on = t.checked;
+  });
+  $('add-goal').onclick = function () {
+    if (S.goals.length >= 6) { toast('Six goals is the most one assignment can check well.'); return; }
+    S.goals.push({ text: '', on: true }); paintGoals();
+    var tas = $('goals-box').querySelectorAll('textarea'); tas[tas.length - 1].focus();
+  };
+  function activeGoals() {
+    return S.goals.filter(function (g) { return g.on && g.text.trim(); })
+      .map(function (g, i) { return { id: 'g' + (i + 1), text: g.text.trim() }; });
+  }
+  $('go-goals').onclick = function () { show('misc'); };
+
+  /* ── 5. MISCONCEPTIONS ──────────────────────────────────────────────── */
+  $('go-misc').onclick = function () { S.misc = $('a-misc').value.replace(/[<>]/g, ' ').trim().slice(0, 1200); show('length'); };
+
+  /* ── 6. LENGTH, DUE, HINTS, FORMATS ─────────────────────────────────── */
+  function count() { for (var i = 0; i < LENGTHS.length; i++) if (LENGTHS[i].m === S.minutes) return LENGTHS[i].n; return 10; }
+  function defaultFormats() {
+    var list = MIX[S.subjectType || 'general'] || MIX.general, seen = {}, out = [];
+    list.forEach(function (t) { if (!seen[t]) { seen[t] = 1; out.push(t); } });
+    return out;
+  }
+  /* The mix: the subject's order, kept to the formats the teacher left on,
+     cycled to the length. */
+  function typesFor(n) {
+    var on = {}, list = MIX[S.subjectType || 'general'] || MIX.general, out = [], i;
+    (S.formats || defaultFormats()).forEach(function (t) { on[t] = 1; });
+    var pool = list.filter(function (t) { return on[t]; });
+    (S.formats || []).forEach(function (t) { if (pool.indexOf(t) < 0) pool.push(t); });
+    if (!pool.length) pool = ['mcq'];
+    for (i = 0; out.length < n; i++) out.push(pool[i % pool.length]);
+    return out;
+  }
+  function paintLength() {
+    if (!S.formats) S.formats = defaultFormats().slice(0, 8);
+    $('len-chips').innerHTML = LENGTHS.map(function (l) {
+      return '<button type="button" class="chip" data-len="' + l.m + '" aria-pressed="' + (l.m === S.minutes) + '">' + esc(l.t) + '</button>';
+    }).join('');
+    $('hint-chips').innerHTML = '<button type="button" class="chip" data-hint="1" aria-pressed="' + S.hints + '">Allow hints</button>' +
+      '<button type="button" class="chip" data-hint="0" aria-pressed="' + !S.hints + '">No hints</button>';
+    var all = defaultFormats();
+    Object.keys(FORMAT_NAME).forEach(function (t) {
+      if (all.indexOf(t) < 0 && S.formats.indexOf(t) >= 0) all.push(t);
+    });
+    $('fmt-chips').innerHTML = all.map(function (t) {
+      return '<button type="button" class="chip" data-fmt="' + t + '" aria-pressed="' + (S.formats.indexOf(t) >= 0) + '">' + esc(FORMAT_NAME[t] || t) + '</button>';
+    }).join('');
+    $('fmt-note').textContent = S.subjectType === 'math'
+      ? 'Maths stays mostly solving: equations, a couple of word problems, a find-the-mistake.'
+      : 'Suggested for ' + (S.subject || 'this subject') + '. Turn formats off or on.';
+    if (!S.dueDate) {
+      var d = new Date(Date.now() + 2 * 86400000);
+      S.dueDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    $('a-date').value = S.dueDate; $('a-time').value = S.dueTime;
+  }
+  document.querySelector('[data-step="length"]').addEventListener('click', function (e) {
+    var l = e.target.closest('[data-len]'), h = e.target.closest('[data-hint]'), f = e.target.closest('[data-fmt]');
+    if (l) { S.minutes = Number(l.getAttribute('data-len')); paintLength(); }
+    if (h) { S.hints = h.getAttribute('data-hint') === '1'; paintLength(); }
+    if (f) {
+      var t = f.getAttribute('data-fmt'), at = S.formats.indexOf(t);
+      if (at >= 0) { if (S.formats.length > 1) S.formats.splice(at, 1); else toast('Keep at least one format.'); }
+      else S.formats.push(t);
+      paintLength();
+    }
+  });
+  $('go-length').onclick = function () {
+    S.dueDate = $('a-date').value; S.dueTime = $('a-time').value || '08:00';
+    if (!S.dueDate) { toast('Pick a due date.'); return; }
+    show('review');
+  };
+
+  /* ── 7. REVIEW ──────────────────────────────────────────────────────── */
+  function tallyText(types) {
+    var c = {}, order = [];
+    types.forEach(function (t) { if (!c[t]) { c[t] = 0; order.push(t); } c[t]++; });
+    return order.map(function (t) { return c[t] + ' ' + (FORMAT_NAME[t] || t).toLowerCase(); }).join(', ');
+  }
+  function kindOf() { for (var i = 0; i < KINDS.length; i++) if (KINDS[i].v === S.kind) return KINDS[i]; return KINDS[0]; }
+  function dueText() {
+    if (!S.dueDate) return 'No due date';
+    var d = new Date(S.dueDate + 'T' + (S.dueTime || '08:00'));
+    return d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }) + ', ' +
+      d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+  function paintReview() {
+    var g = activeGoals();
+    var rows = [
+      ['Title', S.title, 'material'],
+      ['Material', allNotes().split(/\s+/).filter(Boolean).length + ' words' + (S.sources.filter(function (s) { return s.status === 'ready'; }).length ? ' · ' + S.sources.filter(function (s) { return s.status === 'ready'; }).length + ' file(s)' : ''), 'material'],
+      ['For', kindOf().t, 'kind'],
+      ['Grade', S.grade, 'grade'],
+      ['Goals', g.length ? '<ol style="padding-left:1.1rem">' + g.map(function (x) { return '<li>' + esc(x.text) + '</li>'; }).join('') + '</ol>' : 'None — questions will cover the notes evenly', 'goals', true],
+      ['Misconceptions', S.misc || 'None given', 'misc'],
+      ['Questions', tallyText(typesFor(count())), 'length'],
+      ['Due', dueText() + (S.hints ? '' : ' · no hints'), 'length']
+    ];
+    $('rev').innerHTML = rows.map(function (r) {
+      return '<div class="rev-row"><span class="rk">' + esc(r[0]) + '</span><span class="rv">' + (r[3] ? r[1] : esc(r[1])) + '</span>' +
+        '<button class="linkbtn" type="button" data-goto="' + r[2] + '">Change</button></div>';
+    }).join('');
+  }
+  $('rev').addEventListener('click', function (e) { var b = e.target.closest('[data-goto]'); if (b) show(b.getAttribute('data-goto')); });
+
+  /* ── 8. WRITING IT ──────────────────────────────────────────────────── */
+  /* Each question carries the goal it checks; the fragment shapes are
+     app.html's own (sf-questions.js qtpl). */
+  function schemaFor(types) {
+    return SFQuestions.buildQuestionSchema(types, 'Medium').replace(/\{"type":/g, '{"goal":"","type":');
+  }
+  function sharedRules(goals) {
+    var k = kindOf();
+    var out = 'CLASS: ' + S.grade + ' grade. Write every word for that age: their vocabulary, their sentence length.\n' +
+      'ASSIGNMENT: "' + S.title.replace(/"/g, '\'') + '". ' + k.p + '\n' +
+      (S.subject ? 'SUBJECT: ' + S.subject + '\n' : '');
+    if (goals.length) {
+      out += 'LEARNING GOALS (each question checks exactly ONE; put its id, e.g. "g1", in that question\'s "goal"):\n' +
+        goals.map(function (g) { return g.id + ': ' + g.text; }).join('\n') + '\n' +
+        'Spread the questions across the goals as evenly as the notes allow.\n';
+    } else {
+      out += 'There are no goals: leave every "goal" as "". Spread the questions across the whole of the notes.\n';
+    }
+    if (S.misc) {
+      out += 'MISCONCEPTIONS THIS TEACHER SEES EVERY YEAR (use them, in the students\' own words, as the wrong answers in who\'s-right claims, ' +
+        'two-part reasons and multiple-choice options, so a student who holds one picks it and the teacher sees who does):\n' + S.misc + '\n';
+    }
+    out += 'RULES FOR EVERY QUESTION:\n' +
+      '- Everything comes from the notes below. Nothing the notes do not support.\n' +
+      '- Every wrong option is a mistake a real ' + S.grade + ' grade student makes, never a joke and never obviously wrong.\n' +
+      '- The explanation says, in one or two sentences, why the right answer is right AND why the most tempting wrong answer is wrong.\n' +
+      '- The hint points toward the idea without giving the answer.\n' +
+      '- Set "difficulty" per question: about a third Easy, half Medium, the rest Hard.\n' +
+      '- No question gives away another question\'s answer, and no two questions ask the same thing.\n' +
+      '- Rotate where the right answer sits; do not keep it in one position.\n';
+    return out;
+  }
+  function assignmentPrompt(types, goals) {
+    return 'You are writing a teacher\'s assignment: a short lesson and a FIXED set of questions that every student in the class will answer. ' +
+      'The teacher reads and approves every question before students see it.\n\n' +
+      sharedRules(goals) +
+      'LESSON: ' + kindOf().lesson + ' The lesson must not answer the questions outright: teach the ideas, not the items.\n' +
+      'QUESTIONS: exactly ' + types.length + ' - ' + tallyText(types) + '. Return them in the order of the schema below, every field filled.\n\n' +
+      'NOTES:\n"""\n' + notesForPrompt() + '\n"""\n\n' +
+      'OUTPUT: ONLY valid compact JSON. No markdown. Replace ALL empty strings with REAL content.\n\n' +
+      '{"title":"","briefing":"","content":"","steps":[],"keyTerms":[{"term":"","definition":""}],' +
+      '"misconceptions":[{"believe":"","actually":"","why":""}],"questions":[' + schemaFor(types) + ']}';
+  }
+  function onePrompt(type, goals, avoid) {
+    return 'You are writing ONE more question for a teacher\'s assignment.\n\n' + sharedRules(goals) +
+      (avoid.length ? 'It must not repeat or overlap these questions already in the assignment:\n- ' + avoid.join('\n- ') + '\n' : '') +
+      '\nNOTES:\n"""\n' + notesForPrompt() + '\n"""\n\n' +
+      'OUTPUT: ONLY valid compact JSON. No markdown. Replace ALL empty strings with REAL content.\n\n' +
+      '{"questions":[' + schemaFor([type]) + ']}';
+  }
+
+  /* The plan builder's own validators, then a goal that names a real goal,
+     then an id. A card they drop would have reached a student broken. */
+  function vetQuestions(list, goals) {
+    var ids = {};
+    goals.forEach(function (g) { ids[g.id] = 1; });
+    var day = SFQuestions.sanitizeDayQuestions({ questions: (list || []).filter(function (q) { return q && typeof q === 'object'; }) });
+    return day.questions.filter(function (q) { return FORMAT_NAME[q.type]; }).map(function (q) {
+      if (!ids[q.goal]) q.goal = '';
+      if (!q.aid) q.aid = newAid();
+      return q;
+    });
+  }
+  function newAid() {
+    var s = 'q', a = 'abcdefghijkmnpqrstuvwxyz23456789';
+    for (var i = 0; i < 7; i++) s += a[Math.floor(Math.random() * a.length)];
+    return s;
+  }
+  function cleanLesson(o) {
+    function str(v, n) { return String(v == null ? '' : v).replace(/[<>]/g, ' ').trim().slice(0, n); }
+    var L = {
+      title: str(o.title, 120) || S.title, briefing: str(o.briefing, 300), content: str(o.content, 2400),
+      steps: (Array.isArray(o.steps) ? o.steps : []).map(function (x) { return str(typeof x === 'object' && x ? (x.text || x.step || x.title) : x, 240); }).filter(Boolean).slice(0, 6),
+      keyTerms: (Array.isArray(o.keyTerms) ? o.keyTerms : []).filter(function (t) { return t && typeof t === 'object' && t.term; })
+        .map(function (t) { return { term: str(t.term, 60), definition: str(t.definition, 240) }; }).slice(0, 8),
+      misconceptions: (Array.isArray(o.misconceptions) ? o.misconceptions : []).filter(function (m) { return m && typeof m === 'object' && m.believe; })
+        .map(function (m) { return { believe: str(m.believe, 200), actually: str(m.actually, 200), why: str(m.why, 240) }; }).slice(0, 4)
+    };
+    if (S.kind === 'preunit') { L.content = ''; L.steps = []; L.keyTerms = []; L.misconceptions = []; }
+    return L;
+  }
+
+  $('go-build').onclick = function () { build(); };
+  function build() {
+    show('build');
+    var goals = activeGoals(), types = typesFor(count());
+    $('build-box').innerHTML = '<div class="spinner"></div><h1 style="font-size:1.6rem">Writing your assignment…</h1>' +
+      '<p class="lead">' + esc(tallyText(types)) + '. This takes about 40 seconds.</p>' +
+      '<div class="note">While you wait: every question is tagged with the goal it checks, so your results will say which goal the class is weakest on, not just who scored what.</div>';
+    var tries = 0;
+    (function attempt() {
+      tries++;
+      callModel(assignmentPrompt(types, goals)).then(function (o) {
+        var qs = vetQuestions(o.questions, goals);
+        if (!qs.length) throw new Error('no questions survived');
+        S.lesson = cleanLesson(o);
+        S.questions = qs;
+        S.dirty = true;
+        save(false).then(function () { show('preview'); paintPreview(); if (qs.length < types.length) toast((types.length - qs.length) + ' question' + (types.length - qs.length === 1 ? '' : 's') + ' couldn’t be graded as written and were left out. Add more below.'); });
+      }).catch(function (err) {
+        if (tries < 2) { setTimeout(attempt, 2500); return; }
+        $('build-box').innerHTML = '<h1 style="font-size:1.6rem">That didn’t work</h1>' +
+          '<p class="lead">The writer didn’t answer in time. Your answers are all still here.</p>' +
+          '<div class="foot" style="justify-content:center"><button class="btn btn-quiet" type="button" id="b-back">Change something</button>' +
+          '<button class="btn btn-primary" type="button" id="b-retry">Try again</button></div>';
+        $('b-retry').onclick = build;
+        $('b-back').onclick = function () { show('review'); };
+      });
+    })();
+  }
+
+  /* ── 9. PREVIEW AND EDIT ────────────────────────────────────────────── */
+  function goalText(id) {
+    var g = (S.goalsSaved || activeGoals()).filter(function (x) { return x.id === id; })[0];
+    return g ? g.text : '';
+  }
+  function list(arr, cls) { return '<ol>' + (arr || []).map(function (x, i) { return '<li' + (cls && cls(i) ? ' class="ok"' : '') + '>' + esc(x) + '</li>'; }).join('') + '</ol>'; }
+  function optText(o) { return typeof o === 'object' && o ? (o.text || o.label || '') : o; }
+
+  /* What a teacher needs to judge a card: the question, every option with
+     the right one marked, and why. Escaped throughout - it is model text. */
+  function qBody(q) {
+    var t = q.type, h = '';
+    if (q.passage) h += '<blockquote style="border-left:3px solid var(--border-2);padding-left:.7rem;margin-bottom:.5rem">' + esc(q.passage) + '</blockquote>';
+    if (q.scenario && t === 'wordproblem') h += '<p>' + esc(q.scenario) + '</p>';
+    if (q.code) h += '<pre style="background:var(--soft);padding:.5rem;border-radius:8px;overflow:auto">' + esc(q.code) + '</pre>';
+    if (t === 'mcq' || t === 'scenario' || t === 'passage' || t === 'corroborate') {
+      if (q.sourceA) h += '<p><b>' + esc(q.sourceA.label) + ':</b> ' + esc(q.sourceA.text) + '</p><p><b>' + esc(q.sourceB.label) + ':</b> ' + esc(q.sourceB.text) + '</p>';
+      h += list((q.options || []).map(optText), function (i) { return i === q.correctIndex; });
+    } else if (t === 'twopart') {
+      h += '<p class="colh">Part A</p>' + list((q.options || []).map(optText), function (i) { return i === q.correctIndex; }) +
+        '<p class="colh">Part B — ' + esc(q.reasonPrompt || 'Why?') + '</p>' + list((q.reasons || []).map(optText), function (i) { return i === q.reasonIndex; });
+    } else if (t === 'truefalse') h += '<p>Answer: <span class="ok">' + esc(q.correct) + '</span></p>';
+    else if (t === 'fill' || t === 'bigequation' || t === 'wordproblem' || t === 'estimate') {
+      if (q.equation) h += '<p style="font-size:1.05rem">' + esc(q.equation) + '</p>';
+      if (t === 'wordproblem' && Array.isArray(q.steps)) h += list(q.steps.map(function (s) { return (s.prompt || '') + ' → ' + (s.answer || '') + (s.unit ? ' ' + s.unit : ''); }));
+      h += '<p>Answer: <span class="ok">' + esc(q.answer) + (t === 'estimate' ? ' (±' + esc(q.tolerance) + ') ' + esc(q.unit || '') : '') + '</span></p>';
+    } else if (t === 'whosright') {
+      h += '<ul>' + (q.claims || []).map(function (c) { return '<li' + (c.right ? ' class="ok"' : '') + '>“' + esc(c.says) + '”<br><span style="color:var(--muted);font-weight:400">' + esc(c.why) + '</span></li>'; }).join('') + '</ul>';
+    } else if (t === 'recall') h += '<p>Accepts:</p>' + list(q.items || []) + (q.need ? '<p>Needs ' + esc(q.need) + '</p>' : '');
+    else if (t === 'sequence') h += '<p>Right order:</p>' + list(q.items || []);
+    else if (t === 'classify') h += '<div class="cols"><div><p class="colh">' + esc(q.categoryA) + '</p>' + list(q.itemsA) + '</div><div><p class="colh">' + esc(q.categoryB) + '</p>' + list(q.itemsB) + '</div></div>';
+    else if (t === 'matchpairs') h += '<ul>' + (q.pairs || []).map(function (p) { return '<li>' + esc(p.left) + ' → <b>' + esc(p.right) + '</b></li>'; }).join('') + '</ul>';
+    else if (t === 'errorspot') h += list((q.steps || []).map(function (s) { return s.text; }), function (i) { return q.steps[i] && q.steps[i].hasError; }) + '<p style="font-size:.78rem">✓ marks the step with the mistake</p>';
+    else if (t === 'highlight') h += list(q.sentences || [], function (i) { return i === q.correctIndex; });
+    else if (t === 'selfcheck') h += '<p>Ideas a full answer has:</p>' + list(q.ideas || []);
+    else if (t === 'write') h += q.modelAnswer ? '<p>A strong answer: ' + esc(q.modelAnswer) + '</p>' : '<p>Not scored — students explain in their own words.</p>';
+    else if (t === 'sentence') h += '<p>Sentence: <span class="ok">' + esc((q.words || []).join(' ')) + '</span></p>' + (q.translation ? '<p>' + esc(q.translation) + '</p>' : '');
+    else if (t === 'tracetable') {
+      h += '<p>' + esc(q.setup || '') + '</p><table style="border-collapse:collapse">' +
+        '<tr>' + (q.columns || []).map(function (c) { return '<th style="padding:2px 8px;text-align:left">' + esc(c) + '</th>'; }).join('') + '</tr>' +
+        (q.rows || []).map(function (r) { return '<tr>' + r.map(function (c, ci) { return '<td style="padding:2px 8px"' + (ci === q.blankCol ? ' class="ok"' : '') + '>' + esc(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</table>';
+    }
+    return h;
+  }
+  function qCard(q, i) {
+    var stem = q.type === 'wordproblem' ? (q.question || '') : (q.question || '');
+    return '<article class="qcard" data-qi="' + i + '" id="qc-' + i + '">' +
+      '<div class="qtop"><span class="qnum">' + (i + 1) + '</span><span class="tag">' + esc(FORMAT_NAME[q.type] || q.type) + '</span>' +
+      '<span class="tag grey">' + esc(q.difficulty || 'Medium') + '</span>' +
+      (q.goal ? '<span class="tag grey" title="' + esc(goalText(q.goal)) + '">' + esc(q.goal.replace('g', 'Goal ')) + '</span>' : '') + '</div>' +
+      '<div class="qstem">' + esc(stem) + '</div><div class="qbody">' + qBody(q) + '</div>' +
+      (q.explanation ? '<div class="qexp"><b>Why:</b> ' + esc(q.explanation) + '</div>' : '') +
+      (S.status === 'published' ? '' :
+        '<div class="qtools"><button type="button" data-act="edit">Edit</button><button type="button" data-act="regen">Write a different one</button>' +
+        (i > 0 ? '<button type="button" data-act="up" aria-label="Move up">↑</button>' : '') +
+        '<button type="button" data-act="del">Delete</button></div>') +
+      '</article>';
+  }
+  function paintPreview() {
+    $('h-preview').textContent = S.title;
+    var g = S.goalsSaved || activeGoals();
+    $('pv-meta').innerHTML = esc(S.questions.length + ' questions · ' + kindOf().t + ' · ' + S.grade + ' grade · due ' + dueText()) +
+      (g.length ? '<ul class="pv-goals">' + g.map(function (x) { return '<li><b>' + esc(x.id.replace('g', 'Goal ')) + '</b> ' + esc(x.text) + '</li>'; }).join('') + '</ul>' : '');
+    var L = S.lesson || {};
+    $('pv-lesson').style.display = L.content ? '' : 'none';
+    $('pv-lesson-body').innerHTML = '<p>' + esc(L.content) + '</p>' +
+      (L.steps && L.steps.length ? '<ol style="padding-left:1.2rem;margin-top:.5rem">' + L.steps.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol>' : '') +
+      (L.keyTerms && L.keyTerms.length ? '<p style="margin-top:.5rem"><b>Key terms:</b> ' + L.keyTerms.map(function (t) { return esc(t.term); }).join(', ') + '</p>' : '');
+    $('qlist').innerHTML = S.questions.map(qCard).join('');
+    var pub = S.status === 'published';
+    $('pv-status').textContent = pub ? 'Published · students can see it' : 'Draft · not visible to students';
+    $('addbar').style.display = pub ? 'none' : '';
+    $('save-draft').style.display = pub ? 'none' : '';
+    $('publish').textContent = pub ? 'Back to class' : 'Publish to class';
+    $('add-type').innerHTML = Object.keys(FORMAT_NAME).filter(function (t) { return t !== 'bigequation' || S.subjectType === 'math'; })
+      .map(function (t) { return '<option value="' + t + '">' + esc(FORMAT_NAME[t]) + '</option>'; }).join('');
+    paintSaved();
+  }
+  function paintSaved() {
+    $('saved-note').textContent = S.saving ? 'Saving…' : S.dirty ? 'Unsaved changes' : (S.id ? 'Saved' : '');
+  }
+
+  $('qlist').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]'); if (!b) return;
+    var card = b.closest('[data-qi]'), i = Number(card.getAttribute('data-qi')), act = b.getAttribute('data-act');
+    if (act === 'del') {
+      if (S.questions.length <= 1) { toast('An assignment needs at least one question.'); return; }
+      var gone = S.questions.splice(i, 1)[0];
+      S.dirty = true; paintPreview();
+      toast('Question deleted.');
+      S.lastDeleted = { q: gone, i: i };
+    } else if (act === 'up' && i > 0) {
+      var q = S.questions.splice(i, 1)[0]; S.questions.splice(i - 1, 0, q); S.dirty = true; paintPreview();
+    } else if (act === 'regen') {
+      regenerate(i, S.questions[i].type, card);
+    } else if (act === 'edit') {
+      openEditor(i, card);
+    } else if (act === 'save-edit') {
+      applyEdit(i, card);
+    } else if (act === 'cancel-edit') {
+      paintPreview();
+    }
+  });
+
+  function writeOne(type, avoidIdx) {
+    var goals = S.goalsSaved || activeGoals();
+    var avoid = S.questions.filter(function (q, j) { return j !== avoidIdx; }).map(function (q) { return String(q.question || '').slice(0, 120); });
+    return callModel(onePrompt(type, goals, avoid)).then(function (o) {
+      var qs = vetQuestions(o.questions || (o.type ? [o] : []), goals);
+      if (!qs.length) throw new Error('none');
+      return qs[0];
+    });
+  }
+  function regenerate(i, type, card) {
+    card.classList.add('busy');
+    writeOne(type, i).then(function (q) {
+      S.questions[i] = q; S.dirty = true; paintPreview();
+      var c = $('qc-' + i); if (c) c.scrollIntoView({ block: 'nearest' });
+    }).catch(function () { card.classList.remove('busy'); toast('Couldn’t write a new one. Try again.'); });
+  }
+  $('add-q').onclick = function () {
+    if (S.questions.length >= 30) { toast('Thirty questions is the limit.'); return; }
+    var btn = this; btn.disabled = true; btn.textContent = 'Writing…';
+    writeOne($('add-type').value, -1).then(function (q) {
+      S.questions.push(q); S.dirty = true; paintPreview();
+      var c = $('qc-' + (S.questions.length - 1)); if (c) c.scrollIntoView({ block: 'center' });
+    }).catch(function () { toast('Couldn’t write that one. Try again, or pick another format.'); })
+      .then(function () { btn.disabled = false; btn.textContent = 'Add a question'; });
+  };
+
+  /* The editor covers the fields most cards are made of: the question, the
+     options and which is right, a single answer, the explanation and the
+     hint. Whatever else a format carries (pairs, claims, steps) is kept as
+     written, and "Write a different one" replaces it whole. The edited card
+     goes back through the same validators before it is accepted. */
+  function openEditor(i, card) {
+    var q = S.questions[i], h = '<div class="qedit">';
+    h += '<label class="f">Question</label><textarea class="inp" data-e="question">' + esc(q.question || '') + '</textarea>';
+    if (Array.isArray(q.options) && (q.type === 'mcq' || q.type === 'scenario' || q.type === 'twopart' || q.type === 'passage')) {
+      h += '<label class="f">Options — tick the right one</label>';
+      q.options.forEach(function (o, oi) {
+        h += '<div class="optrow"><input type="radio" name="ok-' + i + '" value="' + oi + '"' + (oi === q.correctIndex ? ' checked' : '') + ' aria-label="Option ' + (oi + 1) + ' is right"/>' +
+          '<input class="inp" data-opt="' + oi + '" value="' + esc(optText(o)) + '"/></div>';
+      });
+    }
+    if (q.type === 'truefalse') {
+      h += '<label class="f">Answer</label><select class="inp" data-e="correct"><option' + (q.correct === 'True' ? ' selected' : '') + '>True</option><option' + (q.correct === 'False' ? ' selected' : '') + '>False</option></select>';
+    }
+    if (typeof q.answer === 'string' || typeof q.answer === 'number') {
+      h += '<label class="f">Answer</label><input class="inp" data-e="answer" value="' + esc(q.answer) + '"/>';
+    }
+    h += '<label class="f">Why (shown after they answer)</label><textarea class="inp" data-e="explanation">' + esc(q.explanation || '') + '</textarea>';
+    h += '<label class="f">Hint</label><input class="inp" data-e="hint" value="' + esc(q.hint || '') + '"/>';
+    var gs = S.goalsSaved || activeGoals();
+    if (gs.length) {
+      h += '<label class="f">Checks goal</label><select class="inp" data-e="goal"><option value="">None</option>' +
+        gs.map(function (g) { return '<option value="' + g.id + '"' + (q.goal === g.id ? ' selected' : '') + '>' + esc(g.id.replace('g', 'Goal ') + ': ' + g.text.slice(0, 60)) + '</option>'; }).join('') + '</select>';
+    }
+    h += '<label class="f">Difficulty</label><select class="inp" data-e="difficulty">' + ['Easy', 'Medium', 'Hard'].map(function (d) { return '<option' + (q.difficulty === d ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select>';
+    h += '<div class="msg" data-msg></div><div class="qtools"><button type="button" data-act="save-edit">Done</button><button type="button" data-act="cancel-edit">Cancel</button></div></div>';
+    card.querySelector('.qbody').innerHTML = h;
+    var ex = card.querySelector('.qexp'); if (ex) ex.style.display = 'none';
+    var tl = card.querySelector('.qtools'); if (tl && !tl.closest('.qedit')) tl.style.display = 'none';
+    card.querySelector('.qstem').style.display = 'none';
+    card.querySelector('textarea').focus();
+  }
+  function applyEdit(i, card) {
+    var q = JSON.parse(JSON.stringify(S.questions[i]));
+    Array.prototype.forEach.call(card.querySelectorAll('[data-e]'), function (el) {
+      var k = el.getAttribute('data-e'), v = el.value.replace(/[<>]/g, function (c) { return c === '<' ? '＜' : '＞'; });
+      if (k === 'answer' && typeof q.answer === 'number') { var n = parseFloat(v); q.answer = isFinite(n) ? n : v; }
+      else q[k] = v.trim();
+    });
+    var opts = card.querySelectorAll('[data-opt]');
+    if (opts.length) {
+      q.options = Array.prototype.map.call(opts, function (el) { return el.value.replace(/</g, '＜').replace(/>/g, '＞').trim(); });
+      var picked = card.querySelector('input[type=radio]:checked');
+      q.correctIndex = picked ? Number(picked.value) : q.correctIndex;
+    }
+    var ok = vetQuestions([q], S.goalsSaved || activeGoals());
+    if (!ok.length) {
+      card.querySelector('[data-msg]').textContent = 'This can’t be graded as written. A gap-fill needs a sentence with one blank and a short answer; options need at least two filled in.';
+      return;
+    }
+    ok[0].aid = S.questions[i].aid;
+    S.questions[i] = ok[0]; S.dirty = true; paintPreview();
+  }
+
+  /* ── SAVING AND PUBLISHING ──────────────────────────────────────────── */
+  function payload() {
+    var goals = S.goalsSaved || activeGoals();
+    return {
+      id: S.id || undefined, title: S.title, kind: S.kind || 'homework',
+      dueAt: S.dueDate ? S.dueDate + 'T' + (S.dueTime || '08:00') : '', minutes: S.minutes,
+      grade: S.grade, subject: S.subject || S.title, subjectType: S.subjectType || 'general',
+      goals: goals, settings: { hints: S.hints }, lesson: S.lesson || {}, questions: S.questions
+    };
+  }
+  function save(quiet) {
+    S.saving = true; paintSaved();
+    return api('api/class', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save-assignment', classCode: teacher.classCode, assignment: payload() }) })
+      .then(function (d) {
+        S.saving = false;
+        if (!d.assignment || !d.assignment.id) throw new Error(d.message || d.error || 'save');
+        S.id = d.assignment.id;
+        S.status = d.assignment.status || S.status;
+        S.goalsSaved = d.assignment.goals || S.goalsSaved;
+        if (Array.isArray(d.assignment.questions) && !d.lockedQuestions) S.questions = d.assignment.questions;
+        S.dirty = false;
+        try { history.replaceState({ step: S.step }, '', 'teacher-build.html?id=' + S.id); } catch (e) {}
+        paintSaved();
+        if (!quiet && S.step === 'preview') toast('Draft saved.');
+        return d.assignment;
+      })
+      .catch(function (err) {
+        S.saving = false; paintSaved();
+        toast(err && err.message && err.message.length < 120 && !/^save$/.test(err.message) ? err.message : 'Couldn’t save. Check your connection and try again.');
+        throw err;
+      });
+  }
+  $('save-draft').onclick = function () { save(false).catch(function () {}); };
+  $('publish').onclick = function () {
+    if (S.status === 'published') { window.location.href = 'teacher.html#assignments'; return; }
+    var btn = this; btn.disabled = true; btn.textContent = 'Publishing…';
+    (S.dirty || !S.id ? save(true) : Promise.resolve()).then(function () {
+      return api('api/class', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'publish-assignment', classCode: teacher.classCode, id: S.id }) });
+    }).then(function (d) {
+      if (!d.assignment || d.assignment.status !== 'published') throw new Error(d.message || 'publish');
+      window.location.href = 'teacher.html?published=' + encodeURIComponent(S.id) + '#assignments';
+    }).catch(function (err) {
+      btn.disabled = false; btn.textContent = 'Publish to class';
+      if (err && err.message !== 'signed out') toast(err && err.message && err.message !== 'publish' ? err.message : 'Couldn’t publish. Try again.');
+    });
+  };
+  window.addEventListener('beforeunload', function (e) {
+    if (S.dirty && S.step === 'preview') { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  /* ── OPENING AN EXISTING ONE ────────────────────────────────────────── */
+  function openExisting(id) {
+    show('build', true);
+    $('build-box').innerHTML = '<div class="spinner"></div><p class="lead">Opening the assignment…</p>';
+    api('api/class?classCode=' + encodeURIComponent(teacher.classCode) + '&type=assignment&id=' + encodeURIComponent(id)).then(function (d) {
+      var a = d.assignment;
+      if (!a) throw new Error('missing');
+      S.id = id; S.status = a.status; S.title = a.title; S.kind = a.kind; S.grade = a.grade || teacher.grade || '';
+      S.minutes = a.minutes || 20; S.subject = a.subject || ''; S.subjectType = a.subjectType || 'general';
+      S.hints = !(a.settings && a.settings.hints === false);
+      var due = String(a.dueAt || ''); S.dueDate = due.slice(0, 10); S.dueTime = due.slice(11, 16) || '08:00';
+      S.goalsSaved = a.goals || []; S.lesson = a.lesson || {}; S.questions = a.questions || [];
+      S.dirty = false;
+      show('preview', true); paintPreview();
+    }).catch(function (err) {
+      if (err && err.message === 'signed out') return;
+      $('build-box').innerHTML = '<h1 style="font-size:1.6rem">Couldn’t open that assignment</h1><p class="lead">It may have been deleted.</p>' +
+        '<div class="foot" style="justify-content:center"><a class="btn btn-primary" href="teacher.html#assignments">Back to class</a></div>';
+    });
+  }
+
+  (function boot() {
+    var m = /[?&]id=([A-Z0-9]{12})(?:&|$)/.exec(location.search);
+    if (m) { openExisting(m[1]); return; }
+    try { history.replaceState({ step: 'material' }, '', location.href.split('#')[0]); } catch (e) {}
+    show('material', true);
+    paintNotesCount();
+  })();
+</script>
+</body>
+</html>

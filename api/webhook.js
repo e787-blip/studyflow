@@ -1,4 +1,5 @@
 'use strict';
+const { serviceAccount, makeDb } = require('./_firestore');
 const FETCH_TIMEOUT_MS = 10000;
 const REPLAY_WINDOW_SECS = 300; // 5 minutes — Stripe standard
 
@@ -115,28 +116,18 @@ async function updateUserTier(customerId, tier) {
     return;
   }
 
-  // Update tier in Firestore
-  const firebaseUrl = `https://firestore.googleapis.com/v1/projects/studyflow-e59ef/databases/(default)/documents/users/${encodeURIComponent(email)}`;
-  const fbResp = await fetchWithTimeout(`${firebaseUrl}?updateMask.fieldPaths=tier`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.FIREBASE_SERVICE_KEY}`
-    },
-    body: JSON.stringify({
-      fields: {
-        tier:      { stringValue: tier },
-        email:     { stringValue: email },
-        updatedAt: { stringValue: new Date().toISOString() }
-      }
-    })
+  /* Written as the service account (api/_firestore.js). This used to send
+     `Bearer ${FIREBASE_SERVICE_KEY}` - a fixed key where Firestore wants a
+     short-lived OAuth token - so with the database denying all client
+     access the tier never landed, and api/class.js could not see that a
+     teacher had paid for Classroom. Lower-cased, because that is how
+     class.js looks the account up. */
+  const sa = serviceAccount();
+  if (!sa) throw new Error('Missing FIREBASE_SERVICE_ACCOUNT');
+  const key = String(email).toLowerCase().trim();
+  await makeDb(sa).patch(`users/${encodeURIComponent(key)}`, {
+    tier, email: key, updatedAt: new Date().toISOString()
   });
-
-  if (!fbResp.ok) {
-    const err = await fbResp.json().catch(() => ({}));
-    console.error('[webhook.js] Firebase update failed:', err);
-    throw new Error('Firebase update failed');
-  }
 
   console.log(`[webhook.js] Updated ${email} → ${tier}`);
 }

@@ -1101,6 +1101,11 @@
     border-radius:999px; padding:.05rem .45rem; margin-left:.25rem; white-space:nowrap; }
   body.dark { --ring-track:#222a44; }
   body.dark .r-note { background:rgba(74,124,246,.1); border-color:rgba(74,124,246,.28); }
+  /* An assignment's hand-in line, and the teacher's "no hints" setting. */
+  .asg-handin[data-ok="0"] { background:var(--soft, #f4f6fb); border-color:var(--border, #e3e7f0); }
+  .asg-retry { margin-left:.4rem; font:inherit; font-weight:600; color:#2f5fe0; background:none; border:none; padding:0; cursor:pointer; text-decoration:underline; }
+  body.dark .asg-retry { color:#9dbcff; }
+  body.asg-nohints .hint-row, body.asg-nohints .hint-btn { display:none !important; }
   body.dark .r-note strong, body.dark .r-kicker { color:#8fb0ff; }
   .results-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:.8rem; margin-bottom:1.2rem; }
   .r-stat { background:#fff; border:1px solid var(--border); border-radius:18px; padding:1.1rem; text-align:center; }
@@ -1711,6 +1716,35 @@
      and progress. SFStore transparently prefixes user-scoped keys with the
      signed-in account's email. Device-level preferences (dark mode, sidebar,
      onboarding) and shared class data stay global on purpose. */
+  /* ── ASSIGNMENT MODE (Oct 2026) ──────────────────────────────────────
+     lesson.html?assignment=<id> runs a teacher's assignment: a short lesson
+     and a FIXED set of questions every student in the class answers, built
+     in teacher-build.html and opened from the student's dashboard. It is the
+     same session runtime with three differences - see buildAssignmentQueue,
+     asgRecord and getNextCard:
+
+       - the queue is the teacher's questions in the teacher's order, with no
+         pre-test, no synthetic cards and no endless top-up after them;
+       - a question missed comes back, about three cards later and then
+         about six, at most twice; the teacher's numbers count the FIRST
+         try, and "recovered" when a return is answered right;
+       - every answer is sent to api/class (action "submit") as it happens.
+
+     The session keys are redirected into the assignment's own namespace
+     (ASSIGN_KEYS), so an assignment can never overwrite the student's own
+     plan, its timer or its missed-question review: endSession and half a
+     dozen other places write studyflow_plan without knowing which plan this
+     is. dashboard.html writes the assignment's one-day plan under that same
+     namespace before it opens this page. */
+  var SF_ASSIGN_ID = (function () {
+    try {
+      var m = /[?&]assignment=([A-Z0-9]{12})(?:&|$)/.exec(window.location.search);
+      return m ? m[1] : '';
+    } catch (e) { return ''; }
+  })();
+  var ASSIGN_KEYS = /^studyflow_(plan|plans|current_day|seconds_left|timer_day|minutes|missed_day_\d+)$/;
+  var assignMode = false;
+
   var SFStore = (function () {
     var GLOBAL_KEYS = {
       studyflow_user: 1, studyflow_dark: 1, studyflow_onboarded: 1,
@@ -1727,6 +1761,7 @@
     }
     function nsKey(key) {
       if (GLOBAL_KEYS[key]) return key;
+      if (SF_ASSIGN_ID && ASSIGN_KEYS.test(key)) key = 'studyflow_asg_' + SF_ASSIGN_ID + '__' + key;
       if (String(key).indexOf('studyflow_class_') === 0) return key; // shared with teacher
       var id = currentUid();
       return id ? ('sfu:' + id + '|' + key) : key;
@@ -1861,6 +1896,16 @@
     day = plan.days[dayIndex];
     if (!day) { window.location.href = 'dashboard.html'; return; }
     day = JSON.parse(JSON.stringify(day)); // deep copy
+
+    /* An assignment carries its own length. The timer is the teacher's
+       minutes three times over (45 to 120): a countdown that ran out would
+       hand the work in half done, and homework is not a race. */
+    assignMode = !!(SF_ASSIGN_ID && plan.assignment && plan.assignment.id === SF_ASSIGN_ID);
+    if (SF_ASSIGN_ID && !assignMode) { window.location.href = 'dashboard.html'; return; }
+    if (assignMode) {
+      totalMinutes = Math.max(45, Math.min(120, (parseInt(plan.assignment.minutes, 10) || 20) * 3));
+      if (plan.assignment.settings && plan.assignment.settings.hints === false) document.body.classList.add('asg-nohints');
+    }
 
     // Restore timer
     var savedSeconds = SFStore.getItem('studyflow_seconds_left');
@@ -2076,7 +2121,10 @@
       'stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
     var head = everything ? 'All lessons finished!' : 'Today\u2019s lesson is done';
-    var sub = everything
+    if (assignMode) head = 'Assignment handed in';
+    var sub = assignMode
+      ? 'You already finished this assignment, and your teacher has your answers.'
+      : everything
       ? 'You have completed every day in this plan. Nothing left to grind \u2014 come back when you add a new one.'
       : 'You already worked through this one. Re-answering questions you have been graded on would not teach you much; come back tomorrow for the next day.';
 
@@ -2256,6 +2304,7 @@
   }
 
   function buildQueue() {
+    if (assignMode) { buildAssignmentQueue(); return; }
     // If generation stripped every question, rebuild from the day's own
     // content BEFORE the queue is assembled, so the session has real
     // practice cards instead of ending right after the lesson card.
@@ -2963,6 +3012,8 @@
 
   function getNextCard() {
     if (cardIndex < sessionCards.length) return sessionCards[cardIndex];
+    /* An assignment is the teacher's questions and nothing after them. */
+    if (assignMode) return { type: 'done' };
 
     var questions = day.questions || [];
     if (!questions.length) {
@@ -3401,7 +3452,8 @@
   var sfLogMark = null;
   var SF_LOG_KEY = 'studyflow_answer_log', SF_LOG_MAX = 800;
   function sfLogStart() {
-    sfLogMark = { t: totalAnswered, c: correctCount, card: window.currentCard || null };
+    sfLogMark = { t: totalAnswered, c: correctCount, card: window.currentCard || null,
+                  w: wrongItems.length, at: Date.now() };
   }
   function sfLogFlush() {
     var m = sfLogMark;
@@ -3409,6 +3461,7 @@
     if (!m || !m.card || m.card.isPretest) return;
     var n = totalAnswered - m.t, k = correctCount - m.c;
     if (n <= 0) return;
+    if (assignMode) { try { asgRecord(m, n, k); } catch (eA) { /* never cost the session */ } }
     try {
       var q = m.card.q || window.currentQuestion || {};
       var log = JSON.parse(SFStore.getItem(SF_LOG_KEY) || '[]');
@@ -3424,6 +3477,154 @@
       if (log.length > SF_LOG_MAX) log = log.slice(log.length - SF_LOG_MAX);
       SFStore.setItem(SF_LOG_KEY, JSON.stringify(log));
     } catch (e) { /* storage full or off: the session never pays for it */ }
+  }
+
+  /* ── AN ASSIGNMENT'S QUEUE, ANSWERS AND RETURNS ────────────────────────
+     See "ASSIGNMENT MODE" at the top of this block. */
+
+  /* The opening is the ordinary one - welcome, lesson, flashcards, the
+     worked example when there is one - and then the teacher's questions in
+     the teacher's order, each once. Nothing is added to them that the
+     teacher did not see: no pre-test (its three questions would be asked
+     twice, and the first try is what the teacher's numbers count), no
+     vocabulary match built from the key terms, no labelling card made from
+     the lesson's picture, no top-up after the last question. One closing
+     teach-it-back card, unscored, when the teacher asked for no writing. */
+  function buildAssignmentQueue() {
+    if (Object.prototype.toString.call(day.questions) !== '[object Array]') day.questions = [];
+    var questions = normalizeQuestions(day.questions);
+    day.questions = questions;
+    var openingBoard = [];
+    try { openingBoard = buildOpeningBoard() || []; } catch (eB) { openingBoard = []; }
+
+    sessionCards.push({ type: 'welcome' });
+    if (day.content) sessionCards.push({ type: 'lesson' });
+    if (deckItems(day).length) sessionCards.push({ type: 'flashcards' });
+    for (var ob = 0; ob < openingBoard.length; ob++) sessionCards.push(openingBoard[ob]);
+
+    var hasWrite = false;
+    questions.forEach(function (q) {
+      if (!q || !q.type) return;
+      if (q.type === 'write') hasWrite = true;
+      sessionCards.push({ type: cardTypeFor(q), q: q, asgCore: true });
+    });
+    if (!hasWrite && questions.length >= 2) {
+      sessionCards.push({
+        type: 'write', feynmanPass: 2, asgClosing: true,
+        q: {
+          type: 'write',
+          question: 'To finish: explain ' + (feynmanTopic(day) || 'what you practised') +
+            ' in your own words, as if to a classmate who missed the lesson.',
+          modelAnswer: fmStr(day && day.content).slice(0, 400),
+          hint: 'Use the simplest words you can. If you still need jargon, that part is not finished.'
+        }
+      });
+    }
+    asgPost(false);    // the teacher sees "in progress" from the first card
+    try {
+      window.addEventListener('pagehide', function () { if (sessionActive) asgPost(false); });
+    } catch (eP) { /* the end-of-session send still runs */ }
+  }
+
+  var ASG = { answers: {}, returns: {}, timer: null, status: '' };
+
+  /* Called from sfLogFlush when a graded card is left: n marks, k right.
+     A card is right only when every mark on it is. */
+  function asgRecord(m, n, k) {
+    var card = m.card, q = card && card.q;
+    var aid = q && fmStr(q.aid);
+    if (!aid || !/^[a-z0-9]{1,12}$/.test(aid)) return;
+    var right = k >= n ? 1 : 0;
+    var a = ASG.answers[aid] || (ASG.answers[aid] = {});
+    if (card.asgReturn) {
+      a.r = (a.r || 0) + 1;
+      if (right && a.f === 0) a.rc = true;
+    } else if (a.f === undefined) {
+      var said = wrongItems.length > m.w ? fmStr(wrongItems[wrongItems.length - 1].userAns) : '';
+      if (!said && !right) { try { said = answerFromCard(); } catch (eS) { said = ''; } }
+      if (said === '—') said = '';
+      a.f = right;
+      a.a = said.slice(0, 160);
+      a.t = Math.max(0, Math.round((Date.now() - m.at) / 1000));
+    }
+    if (!right) asgBringBack(q, aid);
+    asgSend(false);
+  }
+
+  /* A missed question comes back: about three cards later, and if it is
+     missed again, about six after that - twice at most, so a learner who
+     cannot get it is not held on it. Spacing the second return further out
+     is the point: right straight away can be memory of the answer just
+     shown. Always before the closing explain card, which stays last. */
+  function asgBringBack(q, aid) {
+    var done = ASG.returns[aid] || 0;
+    if (done >= 2 || q.type === 'write') return;
+    ASG.returns[aid] = done + 1;
+    var at = Math.min(cardIndex + (done ? 6 : 3), sessionCards.length);
+    for (var i = cardIndex; i < sessionCards.length; i++) {
+      if (sessionCards[i] && sessionCards[i].asgClosing) { at = Math.min(at, i); break; }
+    }
+    sessionCards.splice(at, 0, { type: cardTypeFor(q), q: q, isSpacedRepeat: true, asgReturn: true });
+  }
+
+  /* Sent as the learner goes, a moment after each answer, so a closed tab
+     loses nothing; the server keeps the first try at each question, whatever
+     a later visit sends. The last send is immediate and says "done". */
+  function asgSend(final) {
+    if (!assignMode) return;
+    if (ASG.timer) { clearTimeout(ASG.timer); ASG.timer = null; }
+    if (final) { asgPost(true); return; }
+    ASG.timer = setTimeout(function () { ASG.timer = null; asgPost(false); }, 1500);
+  }
+
+  function asgPost(final) {
+    if (!assignMode || !plan || !plan.assignment) return null;
+    var a = plan.assignment;
+    var body = {
+      action: 'submit', classCode: a.classCode, id: a.id, answers: ASG.answers,
+      timeSecs: Math.max(0, Math.round((Date.now() - sessionStartTime) / 1000)),
+      status: final ? 'done' : 'in_progress'
+    };
+    var pendingKey = 'studyflow_asg_pending_' + a.id;
+    /* Kept until the server has it: the dashboard sends anything left here
+       the next time it opens, so a hand-in made offline still arrives. */
+    if (final) { try { SFStore.setItem(pendingKey, JSON.stringify(body)); } catch (eK) {} }
+    if (!window.SFAuth) { if (final) asgHandIn(false); return null; }
+    var user = {};
+    try { user = JSON.parse(SFStore.getItem('studyflow_user') || '{}'); } catch (eU) {}
+    ASG.status = 'sending';
+    return SFAuth.classFetch('api/class', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body), keepalive: true
+    }, user.email).then(function (r) {
+      ASG.status = r.ok ? 'saved' : 'failed';
+      if (final) {
+        if (r.ok) { try { SFStore.removeItem(pendingKey); } catch (eR) {} }
+        asgHandIn(r.ok);
+      }
+    }).catch(function () {
+      ASG.status = 'failed';
+      if (final) asgHandIn(false);
+    });
+  }
+
+  /* A line at the top of the results: handed in, or not yet - with a way to
+     try again rather than a silent loss. */
+  function asgHandIn(ok) {
+    var wrap = document.getElementById('results-wrap');
+    if (!wrap) return;
+    var el = document.getElementById('asg-handin');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'asg-handin';
+      el.className = 'r-note asg-handin';
+      wrap.insertBefore(el, wrap.firstChild);
+    }
+    el.setAttribute('data-ok', ok ? '1' : '0');
+    el.innerHTML = ok
+      ? '<strong>Handed in.</strong> Your teacher can see your answers.'
+      : '<strong>Not handed in yet</strong> — we couldn’t reach the server. Your answers are saved on this device and will be sent next time you open your dashboard. ' +
+        '<button type="button" class="asg-retry" onclick="asgPost(true)">Try again</button>';
   }
 
   /* ── THE LEAVING CARD (Oct 2026) ───────────────────────────────────────
@@ -11194,7 +11395,9 @@
          same pins - the wrong pins already corrected in place on the first
          try, so the retry asked for what had just been shown. */
       var isLabel = !!wrongQ && (wrongQ.fromLesson || fmStr(wrongQ.type).toLowerCase() === 'labeldiagram');
-      if (wrongQ && !isLabel && prevCard && !prevCard.isReview && !prevCard.isPretest && !prevCard.isSpacedRepeat) {
+      /* Not in an assignment: there every missed question comes back through
+         asgRecord, the self-grading cards included, and twice over. */
+      if (!assignMode && wrongQ && !isLabel && prevCard && !prevCard.isReview && !prevCard.isPretest && !prevCard.isSpacedRepeat) {
         var reinjectAt = cardIndex + 4;
         if (reinjectAt < sessionCards.length) {
           sessionCards.splice(reinjectAt, 0, { type: cardTypeFor(wrongQ), q: wrongQ, isSpacedRepeat: true });
@@ -11604,6 +11807,7 @@
   /* ── END SESSION ── */
   function endSession() {
     sfLogFlush();
+    if (assignMode) asgSend(true);
     /* Persist completion here rather than only on the way to the dashboard:
        a learner who closes the tab has still finished the lesson. */
     try {

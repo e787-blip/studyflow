@@ -169,6 +169,58 @@
 
   @media(max-width:768px) { .stats-row{grid-template-columns:1fr 1fr;} .assign-form{grid-template-columns:1fr;} .insights-grid{grid-template-columns:1fr;} .code-right{flex-direction:column;} }
 
+  /* ── ASSIGNMENTS AND RESULTS (Oct 2026) ─────────────────────────────
+     One blue for data; no traffic-light colours on students. A weak spot
+     is said in words ("Weakest goal"), so it reads without colour. */
+  .asg-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+  .asg-head h3 { font-size:1.5rem; font-weight:400; }
+  .asg-head p { color:var(--muted); font-size:.88rem; max-width:560px; }
+  .asg-new { display:inline-flex; align-items:center; height:42px; padding:0 18px; border-radius:999px; background:var(--blue); color:#fff; font-weight:700; font-size:.9rem; text-decoration:none; white-space:nowrap; }
+  .asg-new:hover { background:#2f5fe0; }
+  .asg-item { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; background:#fff; border:1.5px solid var(--border); border-radius:18px; padding:1rem 1.2rem; margin-bottom:.6rem; cursor:pointer; transition:border-color .2s; }
+  .asg-item:hover, .asg-item:focus-visible { border-color:var(--blue); outline:none; }
+  .asg-item .ai-main { flex:1; min-width:200px; }
+  .asg-item .ai-title { font-weight:700; }
+  .asg-item .ai-meta { font-size:.8rem; color:var(--muted); margin-top:.15rem; }
+  .asg-item .ai-prog { min-width:150px; font-size:.8rem; color:var(--muted); }
+  .bar { height:6px; background:var(--soft); border-radius:4px; overflow:hidden; margin-top:.3rem; }
+  .bar > span { display:block; height:100%; background:var(--blue); border-radius:4px; }
+  .chip-s { display:inline-flex; align-items:center; height:22px; padding:0 9px; border-radius:999px; font-size:.72rem; font-weight:700; background:var(--soft); color:var(--muted); }
+  .chip-s.pub { background:var(--blue-light); color:#2f5fe0; }
+  .res-back { border:none; background:none; color:var(--muted); font-weight:600; cursor:pointer; font-size:.86rem; padding:.2rem 0; margin-bottom:.6rem; }
+  .res-back:hover { color:var(--blue); }
+  .res-top { display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; align-items:flex-start; margin-bottom:1rem; }
+  .res-top h3 { font-size:1.7rem; font-weight:400; }
+  .res-top .meta { color:var(--muted); font-size:.86rem; }
+  .res-actions { display:flex; gap:.5rem; flex-wrap:wrap; }
+  .res-actions a, .res-actions button { display:inline-flex; align-items:center; height:38px; padding:0 14px; border-radius:999px; border:1.5px solid var(--border); background:#fff; font-weight:600; font-size:.84rem; color:var(--ink); cursor:pointer; text-decoration:none; }
+  .res-actions a:hover, .res-actions button:hover { border-color:var(--blue); color:var(--blue); }
+  .res-actions .primary { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .res-actions .primary:hover { color:#fff; background:#2f5fe0; }
+  .res-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:.8rem; margin-bottom:1rem; }
+  .res-card { background:#fff; border:1.5px solid var(--border); border-radius:18px; padding:1.1rem 1.2rem; margin-bottom:1rem; }
+  .res-card h4 { font-size:.95rem; font-weight:700; margin-bottom:.2rem; }
+  .res-card .sub { font-size:.8rem; color:var(--muted); margin-bottom:.8rem; }
+  .goal-row { margin-bottom:.8rem; }
+  .goal-row .gl { display:flex; justify-content:space-between; gap:1rem; font-size:.86rem; }
+  .goal-row .gl b { font-weight:700; }
+  .flag { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#2f5fe0; margin-left:.4rem; }
+  .qrow { border-top:1px solid var(--border); padding:.8rem 0; }
+  .qrow:first-of-type { border-top:none; }
+  .qrow .qh { display:flex; gap:1rem; align-items:flex-start; justify-content:space-between; }
+  .qrow .qs { font-size:.9rem; font-weight:600; flex:1; min-width:0; overflow-wrap:anywhere; }
+  .qrow .qp { font-size:1.05rem; font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .qrow .qm { font-size:.8rem; color:var(--muted); margin-top:.2rem; }
+  .qrow .wrong { margin-top:.4rem; font-size:.84rem; background:var(--soft); border-radius:10px; padding:.5rem .7rem; }
+  .qrow details summary { cursor:pointer; font-size:.8rem; color:var(--blue); font-weight:600; margin-top:.4rem; }
+  .qrow details ul { list-style:none; margin-top:.4rem; font-size:.82rem; }
+  .qrow details li { display:flex; justify-content:space-between; gap:1rem; padding:.2rem 0; border-bottom:1px dashed var(--border); }
+  .mark { font-weight:700; }
+  .mark.r { color:#1a9e80; }
+  .mark.w { color:var(--muted); }
+  .names { font-size:.82rem; color:var(--muted); margin-top:.3rem; }
+  @media(max-width:768px) { .res-grid { grid-template-columns:1fr 1fr; } }
+
   /* ── GLOBAL TYPOGRAPHY STANDARD ── */
   nav { min-height:60px; }
   nav .logo-svg { width:140px; height:34px; }
@@ -249,10 +301,11 @@
 
   <!-- TABS -->
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('roster',this)">Roster</button>
-    <button class="tab-btn" onclick="switchTab('leaderboard',this)">Leaderboard</button>
-    <button class="tab-btn" onclick="switchTab('insights',this)">Insights</button>
-    <button class="tab-btn" onclick="switchTab('assign',this)">Assign lesson</button>
+    <button class="tab-btn active" data-tab="assignments" onclick="switchTab('assignments',this)">Assignments</button>
+    <button class="tab-btn" data-tab="roster" onclick="switchTab('roster',this)">Roster</button>
+    <button class="tab-btn" data-tab="insights" onclick="switchTab('insights',this)">Insights</button>
+    <button class="tab-btn" data-tab="leaderboard" onclick="switchTab('leaderboard',this)">Leaderboard</button>
+    <button class="tab-btn" data-tab="assign" onclick="switchTab('assign',this)">Share notes</button>
   </div>
 
   <!-- LEADERBOARD TAB -->
@@ -274,7 +327,23 @@
   </div>
 
   <!-- ROSTER TAB -->
-  <div class="tab-content active" id="tab-roster">
+  <!-- ASSIGNMENTS TAB (Oct 2026): fixed-question assignments, built in
+       teacher-build.html, and what each student answered. -->
+  <div class="tab-content active" id="tab-assignments">
+    <div id="asg-listview">
+      <div class="asg-head">
+        <div>
+          <h3>Assignments</h3>
+          <p>The same questions for every student. You see who has done it, what each question shows, and which goal needs reteaching.</p>
+        </div>
+        <a class="asg-new" href="teacher-build.html">+ New assignment</a>
+      </div>
+      <div id="asg-list"><div class="empty-state"><p>Loading…</p></div></div>
+    </div>
+    <div id="asg-results" hidden></div>
+  </div>
+
+  <div class="tab-content" id="tab-roster">
     <div class="table-card">
       <div class="table-header">
         <h3>Student roster</h3>
@@ -342,8 +411,8 @@
       <div style="font-size:0.8rem;color:var(--muted);margin-top:.2rem;" id="active-assignment-meta"></div>
     </div>
     <div class="assign-card">
-      <h3>Assign <em>a lesson to your class</em></h3>
-      <p>Paste your lesson notes once and every student in your class sees it on their dashboard — one tap and they get a personalized study plan built from your material.</p>
+      <h3>Share notes <em>for their own study plans</em></h3>
+      <p>Paste your lesson notes once and every student in your class sees it on their dashboard — one tap and they get a personalized study plan built from your material. Each student gets different questions; for the same questions for everyone, and their answers, make an <a href="teacher-build.html">assignment</a>.</p>
       <div class="assign-form">
         <div class="form-field">
           <label class="form-label">Lesson / Unit name</label>
@@ -439,6 +508,7 @@
           showCode();
           loadFromFirestore();
           loadActiveAssignment();
+          loadAssignments();
         }
         try { localStorage.setItem('studyflow_teacher', JSON.stringify(teacher)); } catch (e) {}
       } else if (d._status === 200) {
@@ -450,6 +520,15 @@
     renderAll();
     loadFromFirestore();
     loadActiveAssignment();
+    loadAssignments();
+    var tab = (location.hash || '').replace('#', '');
+    var tb = tab && document.querySelector('.tab-btn[data-tab="' + tab.replace(/[^a-z]/g, '') + '"]');
+    if (tb) switchTab(tab, tb);
+    var pm = /[?&]published=([A-Z0-9]{12})/.exec(location.search);
+    if (pm) {
+      try { history.replaceState(null, '', 'teacher.html#assignments'); } catch (e) {}
+      setTimeout(function () { openResults(pm[1]); }, 0);
+    }
   }
 
   function renderAll() {
@@ -712,6 +791,211 @@
     api('api/class?classCode=' + encodeURIComponent(teacher.classCode) + '&type=assignment')
       .then(function (data) { if (data.assignment && data.assignment.topic) showActiveAssignment(data.assignment); })
       .catch(function () {});
+  }
+
+  /* ── ASSIGNMENTS (Oct 2026) ──────────────────────────────────────────
+     The list, and one assignment's results. Built from api/class's
+     "assignments" and "results"; every name and answer is a student's own
+     text and goes through esc(). The numbers count FIRST tries: a missed
+     question comes back during the session, and "recovered" is a miss that
+     was answered right when it came back. */
+  var asgCache = [];
+  var asgStudents = 0;
+  var FORMAT_LABEL = { mcq: 'Multiple choice', truefalse: 'True / false', fill: 'Fill the gap', whosright: 'Who’s right?',
+    twopart: 'Two-part', recall: 'Name them all', sequence: 'Put in order', classify: 'Sort', matchpairs: 'Match pairs',
+    scenario: 'Apply it', write: 'Explain in writing', selfcheck: 'Explain, then check', highlight: 'Find the evidence',
+    estimate: 'Estimate', bigequation: 'Solve', wordproblem: 'Word problem', errorspot: 'Find the mistake',
+    sentence: 'Build the sentence', tracetable: 'Trace the code' };
+
+  function fmtDue(due) {
+    if (!due) return 'No due date';
+    var d = new Date(due.length === 10 ? due + 'T23:59' : due);
+    if (isNaN(d)) return due;
+    return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) +
+      (due.length > 10 ? ', ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : '');
+  }
+  function isPast(due) {
+    if (!due) return false;
+    var d = new Date(due.length === 10 ? due + 'T23:59' : due);
+    return !isNaN(d) && d < new Date();
+  }
+
+  function loadAssignments() {
+    if (!teacher.classCode) return;
+    api('api/class?classCode=' + encodeURIComponent(teacher.classCode) + '&type=assignments').then(function (d) {
+      if (d.error === 'classroom_not_configured') {
+        document.getElementById('asg-list').innerHTML = '<div class="empty-state"><h4>Classrooms aren’t switched on yet</h4><p>Try again later.</p></div>';
+        return;
+      }
+      asgCache = Array.isArray(d.assignments) ? d.assignments : [];
+      asgStudents = d.studentCount || 0;
+      renderAssignmentList();
+    }).catch(function (err) {
+      if (err && err.message === 'signed out') return;
+      document.getElementById('asg-list').innerHTML = '<div class="empty-state"><h4>Couldn’t load assignments</h4><p>Check your connection and refresh.</p></div>';
+    });
+  }
+
+  function renderAssignmentList() {
+    var box = document.getElementById('asg-list');
+    if (!asgCache.length) {
+      box.innerHTML = '<div class="empty-state"><h4>No assignments yet</h4><p>Make one from your notes: a short lesson and questions you approve, for homework or a quick check in class.</p></div>';
+      return;
+    }
+    box.innerHTML = asgCache.map(function (a) {
+      var pub = a.status === 'published';
+      var done = a.done || 0, total = Math.max(asgStudents, a.started || 0);
+      var prog = pub
+        ? '<div class="ai-prog">' + done + ' of ' + total + ' done' + (a.started > done ? ' · ' + (a.started - done) + ' in progress' : '') +
+          '<div class="bar"><span style="width:' + (total ? Math.round(100 * done / total) : 0) + '%"></span></div></div>'
+        : '<div class="ai-prog">Not published</div>';
+      return '<div class="asg-item" tabindex="0" role="button" data-asg="' + esc(a.id) + '">' +
+        '<div class="ai-main"><div class="ai-title">' + esc(a.title) + '</div>' +
+        '<div class="ai-meta"><span class="chip-s' + (pub ? ' pub' : '') + '">' + (pub ? 'Published' : 'Draft') + '</span> · ' +
+        'Due ' + esc(fmtDue(a.dueAt)) + ' · ' + esc(a.questionCount || 0) + ' questions</div></div>' + prog + '</div>';
+    }).join('');
+  }
+  document.addEventListener('click', function (e) {
+    var it = e.target.closest && e.target.closest('.asg-item[data-asg]');
+    if (it) openResults(it.getAttribute('data-asg'));
+  });
+  document.addEventListener('keydown', function (e) {
+    var it = e.target.closest && e.target.closest('.asg-item[data-asg]');
+    if (it && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openResults(it.getAttribute('data-asg')); }
+  });
+
+  function closeResults() {
+    document.getElementById('asg-results').hidden = true;
+    document.getElementById('asg-listview').hidden = false;
+    loadAssignments();
+  }
+
+  function openResults(id) {
+    var row = asgCache.filter(function (a) { return a.id === id; })[0];
+    if (row && row.status !== 'published') { window.location.href = 'teacher-build.html?id=' + encodeURIComponent(id); return; }
+    var box = document.getElementById('asg-results');
+    document.getElementById('asg-listview').hidden = true;
+    box.hidden = false;
+    box.innerHTML = '<button class="res-back" onclick="closeResults()">← All assignments</button><div class="empty-state"><p>Loading results…</p></div>';
+    api('api/class?classCode=' + encodeURIComponent(teacher.classCode) + '&type=results&id=' + encodeURIComponent(id)).then(function (d) {
+      if (!d.assignment) throw new Error('missing');
+      box.innerHTML = resultsHtml(d.assignment, d.students || []);
+    }).catch(function (err) {
+      if (err && err.message === 'signed out') return;
+      box.innerHTML = '<button class="res-back" onclick="closeResults()">← All assignments</button><div class="empty-state"><h4>Couldn’t load the results</h4><p>Check your connection and try again.</p></div>';
+    });
+  }
+
+  /* Everything the results page says, computed from first tries. */
+  function analyse(a, students) {
+    var qs = Array.isArray(a.questions) ? a.questions : [];
+    var graded = qs.filter(function (q) { return q.type !== 'write'; });
+    var done = students.filter(function (s) { return s.status === 'done'; });
+    var prog = students.filter(function (s) { return s.status === 'in_progress'; });
+    var none = students.filter(function (s) { return s.status === 'not_started' && !s.left; });
+    var perQ = qs.map(function (q) {
+      var n = 0, k = 0, missed = 0, rec = 0, wrong = {}, who = [];
+      students.forEach(function (s) {
+        var ans = s.answers && s.answers[q.aid];
+        if (!ans || (ans.f !== 0 && ans.f !== 1)) return;
+        n++; k += ans.f;
+        if (ans.f === 0) {
+          missed++; if (ans.rc) rec++;
+          var key = String(ans.a || '').trim().toLowerCase();
+          if (key) { wrong[key] = wrong[key] || { text: ans.a, count: 0 }; wrong[key].count++; }
+        }
+        who.push({ name: s.name, right: ans.f === 1, said: ans.a || '', rc: !!ans.rc });
+      });
+      var top = Object.keys(wrong).map(function (x) { return wrong[x]; }).sort(function (x, y) { return y.count - x.count; })[0] || null;
+      return { q: q, n: n, k: k, pct: n ? Math.round(100 * k / n) : null, missed: missed, rec: rec, top: top, who: who };
+    });
+    var goals = (a.goals || []).map(function (g) {
+      var n = 0, k = 0;
+      perQ.forEach(function (p) { if (p.q.goal === g.id) { n += p.n; k += p.k; } });
+      return { id: g.id, text: g.text, n: n, pct: n ? Math.round(100 * k / n) : null };
+    });
+    var scores = done.map(function (s) { return s.score; }).filter(function (x) { return typeof x === 'number'; });
+    var avg = scores.length ? Math.round(scores.reduce(function (x, y) { return x + y; }, 0) / scores.length) : null;
+    var totalMiss = 0, totalRec = 0;
+    perQ.forEach(function (p) { totalMiss += p.missed; totalRec += p.rec; });
+    return { qs: qs, graded: graded, done: done, prog: prog, none: none, perQ: perQ, goals: goals, avg: avg,
+             recPct: totalMiss ? Math.round(100 * totalRec / totalMiss) : null };
+  }
+
+  function stat(label, value, sub) {
+    return '<div class="stat-card"><div class="stat-label">' + esc(label) + '</div><div class="stat-value">' + esc(value) + '</div><div class="stat-sub">' + esc(sub) + '</div></div>';
+  }
+  function resultsHtml(a, students) {
+    var R = analyse(a, students), h = '';
+    var total = R.done.length + R.prog.length + R.none.length;
+    h += '<button class="res-back" onclick="closeResults()">← All assignments</button>';
+    h += '<div class="res-top"><div><h3>' + esc(a.title) + '</h3><div class="meta">Due ' + esc(fmtDue(a.dueAt)) +
+      (isPast(a.dueAt) ? ' (past)' : '') + ' · ' + R.qs.length + ' questions</div></div>' +
+      '<div class="res-actions"><a href="teacher-build.html?id=' + esc(a.id) + '">See the questions</a>' +
+      '<button type="button" onclick="deleteAssignment(\'' + esc(a.id) + '\')">Delete</button></div></div>';
+
+    h += '<div class="res-grid">' +
+      stat('Done', R.done.length + ' / ' + total, R.prog.length ? R.prog.length + ' still working' : 'handed in') +
+      stat('Class score', R.avg == null ? '—' : R.avg + '%', 'first tries, finished work') +
+      stat('Recovered', R.recPct == null ? '—' : R.recPct + '%', 'of misses fixed when they came back') +
+      stat('Not started', String(R.none.length), isPast(a.dueAt) && R.none.length ? 'and it is past due' : 'yet') + '</div>';
+
+    if (R.none.length || R.prog.length) {
+      h += '<div class="res-card"><h4>Still to do</h4>' +
+        (R.none.length ? '<div class="names"><b>Not started:</b> ' + R.none.map(function (s) { return esc(s.name); }).join(', ') + '</div>' : '') +
+        (R.prog.length ? '<div class="names"><b>In progress:</b> ' + R.prog.map(function (s) { return esc(s.name); }).join(', ') + '</div>' : '') + '</div>';
+    }
+
+    var gs = R.goals.filter(function (g) { return g.pct != null; });
+    if (gs.length) {
+      var low = gs.slice().sort(function (x, y) { return x.pct - y.pct; })[0];
+      h += '<div class="res-card"><h4>By goal</h4><div class="sub">How often a first try was right on the questions that check each goal.</div>' +
+        R.goals.map(function (g) {
+          return '<div class="goal-row"><div class="gl"><span><b>' + esc(g.id.replace('g', 'Goal ')) + '</b> ' + esc(g.text) +
+            (gs.length > 1 && g === low ? '<span class="flag">Weakest goal</span>' : '') + '</span><span>' + (g.pct == null ? '—' : g.pct + '%') + '</span></div>' +
+            '<div class="bar"><span style="width:' + (g.pct || 0) + '%"></span></div></div>';
+        }).join('') + '</div>';
+    }
+
+    h += '<div class="res-card"><h4>Question by question</h4><div class="sub">Hardest first. The most common wrong answer usually names the misconception.</div>';
+    var order = R.perQ.slice().sort(function (x, y) {
+      if (x.pct == null) return 1; if (y.pct == null) return -1; return x.pct - y.pct;
+    });
+    h += order.map(function (p) {
+      var q = p.q, stem = q.question || q.scenario || '';
+      var meta = [FORMAT_LABEL[q.type] || q.type];
+      if (q.goal) meta.push(q.goal.replace('g', 'Goal '));
+      if (p.n) meta.push(p.k + ' of ' + p.n + ' right first time');
+      if (p.missed) meta.push(p.rec + ' of ' + p.missed + ' recovered');
+      var wrong = p.top && p.top.count >= 2
+        ? '<div class="wrong"><b>' + p.top.count + ' of ' + p.missed + '</b> who missed it answered “' + esc(p.top.text) + '”</div>' : '';
+      var list = p.who.length
+        ? '<details><summary>Every answer</summary><ul>' + p.who.map(function (w) {
+            return '<li><span>' + esc(w.name) + (w.said && !w.right ? ' — “' + esc(w.said) + '”' : '') + '</span>' +
+              '<span class="mark ' + (w.right ? 'r' : 'w') + '">' + (w.right ? 'Right' : (w.rc ? 'Missed, then fixed' : 'Missed')) + '</span></li>';
+          }).join('') + '</ul></details>' : '';
+      return '<div class="qrow"><div class="qh"><div class="qs">' + esc(stem) + '</div><div class="qp">' +
+        (q.type === 'write' ? '<span style="font-size:.78rem;color:var(--muted)">Not scored</span>' : (p.pct == null ? '—' : p.pct + '%')) + '</div></div>' +
+        '<div class="qm">' + esc(meta.join(' · ')) + '</div>' + wrong + list + '</div>';
+    }).join('') + '</div>';
+
+    h += '<div class="res-card"><h4>Students</h4><div class="table-scroll"><table><thead><tr><th>Student</th><th>Status</th><th>Score</th><th>Time</th></tr></thead><tbody>' +
+      students.map(function (s) {
+        var st = s.status === 'done' ? 'Done' : s.status === 'in_progress' ? 'In progress' : 'Not started';
+        if (s.left) st += ' (left the class)';
+        var mins = s.timeSecs ? Math.max(1, Math.round(s.timeSecs / 60)) + ' min' : '—';
+        return '<tr><td><div class="student-name">' + esc(s.name) + '</div><div class="student-email">' + esc(s.email) + '</div></td>' +
+          '<td>' + esc(st) + '</td><td>' + (typeof s.score === 'number' ? esc(s.score) + '%' : '—') + '</td><td>' + esc(mins) + '</td></tr>';
+      }).join('') + '</tbody></table></div></div>';
+    return h;
+  }
+
+  function deleteAssignment(id) {
+    if (!confirm('Delete this assignment and every student’s answers to it? This can’t be undone.')) return;
+    api('api/class', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete-assignment', classCode: teacher.classCode, id: id }) })
+      .then(function (d) { if (!d.success) throw new Error('delete'); closeResults(); })
+      .catch(function (err) { if (err && err.message !== 'signed out') alert('Couldn’t delete it. Try again.'); });
   }
 
   function logout() {
