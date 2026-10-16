@@ -33,7 +33,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `about.html` / `pricing.html` | ~52 / ~60 KB | "Our story" and the plans page, redesigned Oct 2026 in Liquid Glass to match `index.html` - see "Our story and Plans". Each carries its own copy of the shared glass CSS and footer; the nav is `sf-nav.js` |
 | `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
 | `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
-| `sf-nav.js` | ~13 KB | **The site nav.** Terms, Help, Privacy, the Parent view, Our story and Plans load it as the first thing in `<body>`; it is `index.html`'s nav in its light state. `index.html` keeps its own copy - see "The site nav" |
+| `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** Site pages (Terms, Help, Privacy, Parent view, Our story, Plans, both sign-ins) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `lesson`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. `index.html` keeps its own copy - see "The site nav" |
 | `sf-auth.js` | ~5 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html` — see "The classroom" |
 | `teacher-login.html` / `teacher.html` | ~21 / ~60 KB | Teacher sign-in (Firebase Auth) and the class dashboard, whose first tab is now Assignments and their results - see "Assignments" |
 | `teacher-build.html` | ~78 KB | **The assignment builder** - `app.html` for a teacher: one question per screen, one call writes the lesson and a fixed set of questions, the teacher edits every one, then publishes |
@@ -2948,10 +2948,12 @@ The apple-design pass, after the dashboard. Styles, the top bar's markup and
 a few small functions changed; no renderer, no queue logic, no class or id a
 test reads.
 
-- **One translucent session bar** (`nav.sbar`) replaced the logo nav and the
-  time bar under it (~100px of chrome): exit, time left, score, streak,
-  theme. Still a `<nav>`, and the time bar keeps `.time-bar-wrap` - two tests
-  pin both with `position:static`. The critical time bar no longer pulses.
+- **One session bar** - since Oct 2026 it is `sf-nav.js` in app mode (id
+  `sbar`), the same bar as every page: logo (to the dashboard), time left in
+  the middle, score, streak, theme, "Dashboard" (hidden on a phone, where the
+  logo is the way out). Still a `<nav>`, and the time bar keeps
+  `.time-bar-wrap` - two tests pin both with `position:static`. The critical
+  time bar no longer pulses.
 - **Cards move like a stack.** `.session-card` arrives from the right
   (`sfCardIn`, a spring); the card you finished leaves to the left. The
   leaving card is a copy in a **shadow root** on `document.body`
@@ -3040,7 +3042,7 @@ files. **The nav is not in that block**: it is `sf-nav.js`, see "The site nav".
   finish late in screenshots. Add `.in` to every `[data-reveal]` and wait, or
   check values in JS.
 
-## The site nav (`sf-nav.js`) — one nav, Oct 2026
+## The site nav (`sf-nav.js`) — one bar on every page, Oct 2026
 
 Terms, Help, Privacy, the Parent view, Our story and Plans each had their own
 top bar - white bars of three kinds, and a capsule variant - so every click
@@ -3079,12 +3081,40 @@ nav appears where the tag is (after the skip link, on pages that have one).
 - A signed-in student's "Build my plan" goes straight to `app.html`, for every
   such link on the page, once the page has loaded: the script runs before the
   page's own buttons exist.
-- **Not on**: `login.html` and `teacher-login.html` (split-screen sign-in with
-  their own logo) and the screens inside the app - `app.html`, `dashboard.html`,
-  `lesson.html`, `teacher.html`. Their top bars carry controls this nav does
-  not: the session timer and score, the theme switch, the account menu, Sign
-  out, and a dark theme. Putting the marketing nav on them means deciding where
-  those controls go first.
+- **The sign-in pages load it too** (site mode). Their own logos (the
+  night panel's, and its "Home" pill) are gone - the bar's logo goes home -
+  and the form side and the panels start below the bar.
+- **The app pages use it in app mode** (`app.html`, `dashboard.html`,
+  `lesson.html`, `teacher.html`, `teacher-build.html`). Their four bars had
+  four logo sizes, three colours and a different button on each. Now:
+
+  ```html
+  <template id="sf-nav-controls"> ...the page's own buttons... </template>
+  <script src="sf-nav.js" data-mode="app" data-home="dashboard.html" data-id="topbar"></script>
+  ```
+
+  Same frosted bar, logo, height and padding as the site pages (measured
+  equal on all of them at 1280, 375 and 320), but **sticky**, so it takes
+  room. The template's children are MOVED onto the right before the page's
+  script runs - ids, inline `onclick` and delegated `data-action` still
+  work; one marked `data-sf-slot="mid"` goes between the logo and them (the
+  session's time bar). `data-home` is where the logo goes (the dashboard, so
+  a learner mid-session does not land on the marketing page); `data-id` is
+  the id the page's script already looks up (`topbar`, `sbar`).
+- **Controls use the nav's button styles, not their own**: `.nav-dashboard`
+  (outlined pill), `.nav-cta` (solid), `.nav-icon` (38px round), `.nav-chip`,
+  and `.nav-wide` for anything to hide on a phone. Page CSS cannot override
+  them on equal specificity - the nav's `<style>` comes later in `<head>` -
+  which is why the Teacher chip uses `.nav-wide` rather than a page rule.
+  A page must not style `nav` itself: every app page's `nav {}`,
+  `body.dark nav` and `.logo` rules were deleted.
+- **Dark mode** follows `body.dark` (app, lesson) or `html.dark` (dashboard,
+  teacher pages): the same bar, night-coloured.
+- **The logo keeps its mark and drops its word** only where the controls
+  need the room: on a phone when there is a mid slot (the lesson, so the
+  timer fits), and at 360px or less on any app page.
+- **What is not on it**: `draw-lab.html` (internal) and `index.html`'s hero
+  state (white on navy until you scroll - its own copy, deliberately).
 - **On a phone the nav is just the logo and "Build my plan"**, exactly as on
   `index.html`, so a signed-in learner has no link back to the dashboard from
   these pages (the old Pricing, Terms and Privacy bars had one). Fixing that

@@ -156,25 +156,7 @@
   .icon-btn:hover { background: var(--surface); border-color: var(--line); color: var(--ink); }
   .icon-btn:active { transform: scale(.92); transition-duration: 80ms; }
 
-  /* ── TOP BAR — a translucent layer the page scrolls under ───────────── */
-  .topbar {
-    position: sticky; top: 0; z-index: 50;
-    background: var(--material);
-    -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
-  }
-  /* A soft fade where content meets the bar, shown only once something is
-     actually underneath it - not a hairline that is always there. */
-  .topbar::after {
-    content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 18px; pointer-events: none;
-    background: linear-gradient(var(--edge), transparent); opacity: 0; transition: opacity .3s ease;
-  }
-  .topbar.scrolled::after { opacity: 1; }
-  .topbar-in { max-width: 1180px; margin: 0 auto; padding: 10px var(--gutter); display: flex; align-items: center; gap: 10px; min-height: 64px; }
-  .logo { display: flex; align-items: center; text-decoration: none; margin-right: auto; border-radius: 10px; }
-  .logo svg { width: 132px; height: 32px; }
-  .upgrade-link { color: var(--blue-ink); font-size: .86rem; font-weight: 600; padding: 0 12px; height: 36px; border-radius: 999px;
-                  display: inline-flex; align-items: center; gap: .35rem; text-decoration: none; transition: background-color .2s; }
-  .upgrade-link:hover { background: var(--blue-tint); }
+  /* ── TOP BAR: sf-nav.js (app mode), the same bar as every page ──── */
   .avatar {
     width: 38px; height: 38px; border-radius: 999px; border: 0; display: grid; place-items: center;
     background: linear-gradient(145deg, #5b8df8, #2851c8); color: #fff; font-weight: 600; font-size: .9rem;
@@ -663,8 +645,6 @@
     .stack { height: 220px; order: -1; }
   }
   @media (max-width: 720px) {
-    .topbar-in { min-height: 56px; padding-top: 8px; padding-bottom: 8px; }
-    .logo svg { width: 118px; height: 29px; }
     .hide-phone { display: none !important; }
     .page { padding-top: 8px; padding-bottom: calc(118px + env(safe-area-inset-bottom)); }
     .page-head { margin-bottom: 16px; }
@@ -739,60 +719,43 @@
     .layer.as-pop, .dialog { filter: none !important; }
   }
   @media (prefers-reduced-transparency: reduce) {
-    .topbar, .tabbar { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .tabbar { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
     .tabbar { background: var(--surface); }
   }
   @media (prefers-contrast: more) {
     :root { --line: #b9c0cf; --line-2: #9aa3b5; --muted: #4b5263; }
     html.dark { --line: #46506a; --line-2: #5a6582; --muted: #b0b9cf; }
-    .topbar, .tabbar { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .tabbar { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
     .facts li { background: rgba(10,25,90,.45); }
   }
   @media print {
-    .topbar, .tabbar, .tab-fade, .toast, .head-actions { display: none !important; }
+    #topbar, .tabbar, .tab-fade, .toast, .head-actions { display: none !important; }
   }
 </style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to your plan</a>
 
-<!-- ── TOP BAR ── -->
-<header class="topbar" id="topbar">
-  <div class="topbar-in">
-    <a href="index.html" class="logo" aria-label="StudyFlow home">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34" aria-hidden="true">
-        <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
-        <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
-        <rect x="8" y="10" width="17" height="22" rx="3" fill="#dce8ff" opacity="1"/>
-        <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
-        <rect x="14" y="10" width="17" height="22" rx="3" fill="#f0f4ff"/>
-        <rect x="17" y="16" width="11" height="2" rx="1" fill="#3567e0"/>
-        <rect x="17" y="21" width="8" height="2" rx="1" fill="#3567e0" opacity="0.7"/>
-        <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
-        <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="#f0f4ff"/>
-        <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
-          <tspan fill="var(--ink)">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
-        </text>
-      </svg>
-    </a>
-    <a href="pricing.html" class="upgrade-link hide-phone" id="upgrade-link" hidden>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Upgrade
-    </a>
-    <a href="app.html" class="btn btn-primary hide-phone" id="btn-new-plan">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>New plan</span>
-    </a>
-    <button class="icon-btn" id="theme-btn" data-action="theme" aria-label="Switch to dark mode">
-      <svg class="theme-ico" viewBox="0 0 24 24" aria-hidden="true">
-        <defs><mask id="moon-mask"><rect x="-4" y="-4" width="32" height="32" fill="#fff"/><circle class="cut" cx="24" cy="4" r="7" fill="#000"/></mask></defs>
-        <circle class="core" cx="12" cy="12" r="5" fill="currentColor" mask="url(#moon-mask)"/>
-        <g class="rays" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <path d="M12 1.5v2.2M12 20.3v2.2M1.5 12h2.2M20.3 12h2.2M4.6 4.6l1.5 1.5M17.9 17.9l1.5 1.5M4.6 19.4l1.5-1.5M17.9 6.1l1.5-1.5"/>
-        </g>
-      </svg>
-    </button>
-    <button class="avatar" id="user-avatar" data-action="account" aria-haspopup="menu" aria-expanded="false" aria-controls="user-menu" aria-label="Account">S</button>
-  </div>
-</header>
+<!-- ── TOP BAR: sf-nav.js builds it, and these go on its right ── -->
+<template id="sf-nav-controls">
+  <a href="pricing.html" class="nav-dashboard hide-phone" id="upgrade-link" hidden>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Upgrade
+  </a>
+  <a href="app.html" class="nav-cta hide-phone" id="btn-new-plan">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>New plan</span>
+  </a>
+  <button class="nav-icon" id="theme-btn" data-action="theme" aria-label="Switch to dark mode">
+    <svg class="theme-ico" viewBox="0 0 24 24" aria-hidden="true">
+      <defs><mask id="moon-mask"><rect x="-4" y="-4" width="32" height="32" fill="#fff"/><circle class="cut" cx="24" cy="4" r="7" fill="#000"/></mask></defs>
+      <circle class="core" cx="12" cy="12" r="5" fill="currentColor" mask="url(#moon-mask)"/>
+      <g class="rays" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 1.5v2.2M12 20.3v2.2M1.5 12h2.2M20.3 12h2.2M4.6 4.6l1.5 1.5M17.9 17.9l1.5 1.5M4.6 19.4l1.5-1.5M17.9 6.1l1.5-1.5"/>
+      </g>
+    </svg>
+  </button>
+  <button class="avatar" id="user-avatar" data-action="account" aria-haspopup="menu" aria-expanded="false" aria-controls="user-menu" aria-label="Account">S</button>
+</template>
+<script src="sf-nav.js" data-mode="app" data-home="dashboard.html" data-id="topbar"></script>
 
 <main class="page" id="main" tabindex="-1">
 

@@ -97,30 +97,16 @@
   h1, h2, h3 { font-family:var(--serif); font-weight:400; font-synthesis-weight:none; letter-spacing:-0.015em; }
   :focus-visible { outline:2px solid var(--blue); outline-offset:2px; border-radius:8px; }
 
-  /* ── THE BAR: a material, content scrolls under it ── */
-  nav {
-    position:sticky; top:0; z-index:100; min-height:60px;
-    display:flex; align-items:center; justify-content:space-between; gap:1rem;
-    padding:.6rem max(var(--gutter, 24px), env(safe-area-inset-left)) .6rem max(24px, env(safe-area-inset-right));
-    background:var(--material);
-    -webkit-backdrop-filter:blur(20px) saturate(180%); backdrop-filter:blur(20px) saturate(180%);
-    box-shadow:0 1px 0 var(--line);
-  }
-  .logo { text-decoration:none; display:flex; align-items:center; }
-  nav .logo-svg { width:132px; height:32px; }
-  .nav-right { display:flex; align-items:center; gap:.6rem; }
-  .nav-badge { font-size:.72rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+  /* The bar is sf-nav.js (app mode), the same bar as every page. */
   .nav-avatar { width:32px; height:32px; border-radius:50%; background:var(--blue); display:grid; place-items:center; color:#fff; font-weight:700; font-size:.82rem; }
-  .btn-logout { height:34px; padding:0 14px; border-radius:999px; border:1px solid var(--line-2); background:var(--surface); color:var(--ink-2); font-size:.84rem; font-weight:600; cursor:pointer; }
-  .btn-logout:hover { border-color:var(--blue); color:var(--blue-ink); }
 
   .container { max-width:1100px; margin:0 auto; padding:2.2rem 24px 5rem; }
 
   /* Press, not hover: every control answers on pointer-down and springs back. */
-  .press, .btn, .btn-logout, .tab-btn, .filter-btn, .btn-assign, .asg-new, .asg-item, .res-actions a, .res-actions button {
+  .press, .btn, .tab-btn, .filter-btn, .btn-assign, .asg-new, .asg-item, .res-actions a, .res-actions button {
     transition:transform var(--spring-fast-ms) var(--spring-fast), background-color .2s, border-color .2s, color .2s, box-shadow .2s;
   }
-  .btn:active, .btn-logout:active, .tab-btn:active, .filter-btn:active, .btn-assign:active, .asg-new:active, .res-actions a:active, .res-actions button:active {
+  .btn:active, .tab-btn:active, .filter-btn:active, .btn-assign:active, .asg-new:active, .res-actions a:active, .res-actions button:active {
     transform:scale(.96); transition-duration:80ms; transition-timing-function:ease-out;
   }
   .asg-item:active { transform:scale(.99); transition-duration:80ms; }
@@ -304,8 +290,6 @@
 
   @media (max-width:768px) {
     .container { padding:1.6rem 16px 4rem; }
-    nav { padding-left:16px; padding-right:16px; }
-    .nav-badge { display:none; }
     .stats-row, .res-grid { grid-template-columns:1fr 1fr; }
     .assign-form, .insights-grid { grid-template-columns:1fr; }
     .page-header { align-items:flex-start; }
@@ -320,43 +304,19 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation:none !important; transition-duration:.01ms !important; }
   }
-  @media (prefers-reduced-transparency: reduce) {
-    nav { background:var(--surface); -webkit-backdrop-filter:none; backdrop-filter:none; }
-  }
-  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    nav { background:var(--surface); }
-  }
   @media (prefers-contrast: more) {
-    nav { background:var(--surface); box-shadow:0 1px 0 var(--line-2); }
     .stat-card, .table-card, .insight-card, .asg-item, .res-card, .class-code-card { border-color:var(--line-2); }
   }
 </style>
 </head>
 <body>
 
-<nav>
-  <a href="index.html" class="logo">
-    <svg class="logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="132" height="32" aria-label="StudyFlow">
-      <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
-      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
-      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
-      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
-      <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
-      <rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/>
-      <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
-      <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
-      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
-      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">
-        <tspan fill="var(--ink)">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>
-      </text>
-    </svg>
-  </a>
-  <div class="nav-right">
-    <span class="nav-badge">Teacher</span>
-    <div class="nav-avatar" id="teacher-avatar">T</div>
-    <button class="btn-logout" onclick="logout()">Sign out</button>
-  </div>
-</nav>
+<template id="sf-nav-controls">
+  <span class="nav-chip nav-wide">Teacher</span>
+  <div class="nav-avatar" id="teacher-avatar">T</div>
+  <button class="nav-dashboard" onclick="logout()">Sign out</button>
+</template>
+<script src="sf-nav.js" data-mode="app" data-home="teacher.html"></script>
 
 <div class="container">
 

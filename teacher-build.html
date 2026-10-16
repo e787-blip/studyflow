@@ -47,21 +47,17 @@
     --right:#4cc9a6; --right-tint:rgba(76,201,166,.14); --material:rgba(12,15,22,.72);
     color-scheme:dark;
   }
-  html.dark nav text tspan:first-child { fill:#e9eeff; }
-  .btn-quiet:active, .chip:active, .qtools button:active, .nav-back:active { transform:scale(.96); }
-  .chip, .qtools button, .nav-back { transition:transform .12s, background .2s, border-color .2s, color .2s; }
+  .btn-quiet:active, .chip:active, .qtools button:active { transform:scale(.96); }
+  .chip, .qtools button { transition:transform .12s, background .2s, border-color .2s, color .2s; }
   @media (prefers-reduced-transparency: reduce) {
-    nav, .stickybar { background:var(--soft); -webkit-backdrop-filter:none; backdrop-filter:none; }
+    .stickybar { background:var(--soft); -webkit-backdrop-filter:none; backdrop-filter:none; }
   }
   html, body { background:var(--soft); }
   body { font-family:var(--sans); color:var(--ink); min-height:100vh; line-height:1.5; }
   button, input, textarea, select { font:inherit; color:inherit; }
   h1, h2, h3 { font-family:var(--serif); font-weight:400; font-synthesis-weight:none; letter-spacing:-0.015em; }
 
-  nav { background:var(--material); -webkit-backdrop-filter:blur(20px) saturate(180%); backdrop-filter:blur(20px) saturate(180%); box-shadow:0 1px 0 var(--border); padding:.8rem 1.5rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; min-height:60px; }
-  .logo { text-decoration:none; display:flex; align-items:center; }
-  .nav-back { font-size:.86rem; font-weight:600; color:var(--muted); text-decoration:none; padding:.45rem .8rem; border-radius:10px; border:1px solid var(--border); background:var(--surface); }
-  .nav-back:hover { color:var(--blue-ink); border-color:var(--blue); }
+  /* The top bar is sf-nav.js (app mode), the same bar as every page. */
 
   .wrap { max-width:760px; margin:0 auto; padding:2rem 1rem 6rem; }
   .crumbs { display:flex; gap:6px; margin-bottom:1.1rem; }
@@ -189,23 +185,10 @@
 </head>
 <body>
 
-<nav>
-  <a href="teacher.html" class="logo" aria-label="StudyFlow teacher dashboard">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34" aria-hidden="true">
-      <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
-      <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
-      <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
-      <rect x="11" y="10" width="17" height="22" rx="3" fill="white" opacity="0.35"/>
-      <rect x="14" y="10" width="17" height="22" rx="3" fill="white"/>
-      <rect x="17" y="16" width="11" height="2" rx="1" fill="#4a7cf6"/>
-      <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
-      <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
-      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>
-      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3"><tspan fill="#1a1d2e">Study</tspan><tspan fill="#4a7cf6">Flow</tspan></text>
-    </svg>
-  </a>
-  <a class="nav-back" href="teacher.html#assignments">Back to class</a>
-</nav>
+<template id="sf-nav-controls">
+  <a class="nav-dashboard" href="teacher.html#assignments">Back to class</a>
+</template>
+<script src="sf-nav.js" data-mode="app" data-home="teacher.html"></script>
 
 <main class="wrap">
   <div class="crumbs" id="crumbs" aria-hidden="true"></div>

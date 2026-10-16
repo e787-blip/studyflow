@@ -39,10 +39,29 @@
    page, once the page has loaded, because this script runs before the page's
    own buttons exist.
 
-   NOT used on login.html, teacher-login.html (split-screen sign-in), or the
-   screens inside the app - app.html, dashboard.html, lesson.html, teacher.html
-   - whose top bars carry controls this nav does not: the session timer and
-   score, the theme switch, the account menu, Sign out. */
+   ONE BAR ON EVERY PAGE. The screens inside the app use it too, in "app"
+   mode, because their bars had drifted the same way (four logos at three
+   sizes, three bar colours, a different button on each):
+
+       <template id="sf-nav-controls"> ...the page's own buttons... </template>
+       <script src="sf-nav.js" data-mode="app" data-home="dashboard.html" data-id="topbar"></script>
+
+   App mode is the same frosted bar, the same logo at the same size and the
+   same padding, but it takes room in the page (sticky, not fixed) and swaps
+   the site links for the page's controls: the template's children go on the
+   right, and one marked data-sf-slot="mid" goes between the logo and them
+   (the session's time bar). They are moved, not copied, before the page's
+   own script runs, so ids and inline handlers work as they did. The nav
+   offers the button styles the controls use - .nav-dashboard (outlined
+   pill), .nav-cta (solid pill), .nav-icon (round icon button), .nav-chip -
+   so a page does not style its own; .nav-wide is hidden on a phone. Dark mode follows body.dark or
+   html.dark, whichever the page uses. The logo drops its word and keeps its mark
+   only where the controls need the room: on a phone when there is a mid
+   slot (the session), and under 360px on any app page.
+
+   data-home is where the logo goes (a learner mid-session should not land
+   on the marketing page); data-id gives the nav the id the page's script
+   already looks for. */
 (function () {
   'use strict';
   if (document.querySelector('nav.site-nav')) return;   // index.html builds its own
@@ -116,6 +135,49 @@
     '  nav.site-nav .nav-dashboard { display: none; }',
     '  nav.site-nav .nav-logo svg { width: 132px; height: 34px; }',
     '}',
+    /* ── App mode: the same bar, holding the page's own controls ── */
+    'nav.site-nav.is-app { position: sticky; top: 0; padding-top: calc(.6rem + env(safe-area-inset-top, 0px)); padding-bottom: .6rem; gap: .75rem; }',
+    'nav.site-nav.is-app::before { top: 0; bottom: 0; }',
+    'nav.site-nav.is-app .nav-logo { flex-shrink: 0; }',
+    'nav.site-nav .nav-mid { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; pointer-events: auto; }',
+    'nav.site-nav.is-app .nav-right { flex-shrink: 0; gap: .5rem; }',
+    'nav.site-nav button { font: inherit; }',
+    'nav.site-nav [hidden] { display: none !important; }',
+    'nav.site-nav .nav-icon {',
+    '  width: 38px; height: 38px; padding: 0; border: 0; border-radius: 999px; flex-shrink: 0;',
+    '  display: inline-grid; place-items: center; background: transparent; color: #1a1d2e; cursor: pointer;',
+    '  transition: background-color .2s, transform .18s var(--sfn-ease);',
+    '}',
+    'nav.site-nav .nav-icon:hover { background: #eef3ff; }',
+    'nav.site-nav .nav-icon:active, nav.site-nav .nav-dashboard:active, nav.site-nav .nav-cta:active { transform: scale(.94); transition-duration: 80ms; }',
+    'nav.site-nav .nav-dashboard, nav.site-nav .nav-cta { gap: .35rem; cursor: pointer; font-family: inherit; }',
+    'nav.site-nav button.nav-dashboard, nav.site-nav button.nav-cta { border-style: solid; }',
+    'nav.site-nav button.nav-cta { border: 0; }',
+    'nav.site-nav .nav-chip {',
+    '  display: inline-flex; align-items: center; height: 28px; padding: 0 .75rem; border-radius: 999px;',
+    '  font-size: .74rem; font-weight: 600; line-height: 1; color: #2851c8; background: rgba(74, 124, 246, .08);',
+    '}',
+    'nav.site-nav button:focus-visible { outline: 2.5px solid #4a7cf6; outline-offset: 3px; }',
+    '@media (max-width: 640px) {',
+    '  nav.site-nav.is-app .nav-dashboard { display: inline-flex; }',
+    '  nav.site-nav.is-app { gap: .5rem; }',
+    '  nav.site-nav.has-mid .nav-logo { width: 34px; overflow: hidden; }',
+    '  nav.site-nav.has-mid .nav-logo svg { width: 132px; height: 34px; flex-shrink: 0; }',
+    '  nav.site-nav .nav-wide { display: none !important; }',
+    '}',
+    '@media (max-width: 360px) {',
+    '  nav.site-nav.is-app .nav-logo { width: 34px; overflow: hidden; }',
+    '  nav.site-nav.is-app .nav-logo svg { width: 132px; height: 34px; flex-shrink: 0; }',
+    '}',
+    /* Dark: the same bar, night-coloured. Pages say dark on body or on html. */
+    'body.dark nav.site-nav::before, html.dark nav.site-nav::before { background: rgba(17, 20, 32, .9); border-bottom-color: rgba(255, 255, 255, .08); box-shadow: none; }',
+    'body.dark nav.site-nav .logo-study, html.dark nav.site-nav .logo-study { fill: #e9eeff; }',
+    'body.dark nav.site-nav .nav-icon, html.dark nav.site-nav .nav-icon { color: #e9eeff; }',
+    'body.dark nav.site-nav .nav-icon:hover, html.dark nav.site-nav .nav-icon:hover { background: rgba(255, 255, 255, .08); }',
+    'body.dark nav.site-nav .nav-dashboard, html.dark nav.site-nav .nav-dashboard { color: #a9c1ff; background: rgba(74, 124, 246, .14); border-color: rgba(122, 160, 255, .3); }',
+    'body.dark nav.site-nav .nav-chip, html.dark nav.site-nav .nav-chip { color: #a9c1ff; background: rgba(74, 124, 246, .16); }',
+    'body.dark nav.site-nav .nav-pill, html.dark nav.site-nav .nav-pill { background: rgba(30, 34, 52, .85); border-color: rgba(255, 255, 255, .08); }',
+    'body.dark nav.site-nav .nav-pill a, html.dark nav.site-nav .nav-pill a { color: #b7bfd6; }',
     '@media (prefers-reduced-motion: reduce) { nav.site-nav, nav.site-nav * { transition: none !important; } }',
     /* Translucency off, and more contrast: the same nav, solid. */
     '@media (prefers-reduced-transparency: reduce) {',
@@ -176,10 +238,41 @@
   style.textContent = CSS;
   document.head.appendChild(style);
 
+  var mode = self && self.getAttribute('data-mode') === 'app' ? 'app' : 'site';
+  var html = HTML;
+  if (mode === 'app') {
+    /* Same bar and logo; the page's controls take the place of the links. */
+    html = HTML.slice(0, HTML.indexOf('  <div class="nav-pill"')) +
+      '  <div class="nav-mid" id="sfn-mid"></div>\n  <div class="nav-right" id="sfn-right"></div>\n</nav>';
+    html = html.replace('<nav class="site-nav"', '<nav class="site-nav is-app"');
+    var home = self.getAttribute('data-home');
+    if (home && /^[a-z-]+\.html(#[a-z-]*)?$/.test(home)) html = html.replace('href="index.html" class="nav-logo"', 'href="' + home + '" class="nav-logo"');
+  }
+
   /* Where the tag is. Without a current script (it cannot happen for a plain
      <script src>, but a loader might) the top of the body is the fallback. */
-  if (self && self.parentNode) self.insertAdjacentHTML('beforebegin', HTML);
-  else document.body.insertAdjacentHTML('afterbegin', HTML);
+  if (self && self.parentNode) self.insertAdjacentHTML('beforebegin', html);
+  else document.body.insertAdjacentHTML('afterbegin', html);
+
+  var navId = self && self.getAttribute('data-id');
+  if (navId && /^[a-z-]+$/.test(navId)) {
+    var navs = document.querySelectorAll('nav.site-nav');
+    navs[navs.length - 1].id = navId;
+  }
+
+  if (mode === 'app') {
+    var tpl = document.getElementById('sf-nav-controls');
+    var mid = document.getElementById('sfn-mid'), right = document.getElementById('sfn-right');
+    if (tpl && tpl.content) {
+      var frag = document.importNode(tpl.content, true), kids = [];
+      for (var k = frag.firstChild; k; k = k.nextSibling) if (k.nodeType === 1) kids.push(k);
+      for (var j = 0; j < kids.length; j++) (kids[j].getAttribute('data-sf-slot') === 'mid' ? mid : right).appendChild(kids[j]);
+      tpl.parentNode.removeChild(tpl);
+    }
+    if (!mid.firstChild) mid.parentNode.removeChild(mid);
+    else mid.parentNode.classList.add('has-mid');
+    return;
+  }
 
   /* The right dashboard for whoever is signed in (index.html's rule). Storage
      can throw in a private window, so it is read defensively. */
