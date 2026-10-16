@@ -3,237 +3,340 @@
 <head>
 <meta charset="UTF-8"/>
 <link rel="icon" type="image/png" href="/favicon.png"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>StudyFlow — Teacher Dashboard</title>
+<meta name="theme-color" content="#f4f6fb"/>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,400&family=Inter:wght@700&display=swap" rel="stylesheet">
+<script>
+  /* The same boot as dashboard.html (Oct 2026): the theme before first
+     paint, and damped springs (Apple's damping ratio + response) sampled
+     into CSS linear() curves. Browsers without linear() keep the
+     cubic-bezier fallbacks in :root. */
+  (function () {
+    var d = document.documentElement;
+    d.className += ' js';
+    try { if (localStorage.getItem('studyflow_dark') === '1') d.className += ' dark'; } catch (e) {}
+    function curve(zeta, response) {
+      var w = 2 * Math.PI / response, k = w * w, c = 2 * zeta * w;
+      var h = 1 / 1200, x = 0, v = 0, t = 0, end = 3, a;
+      for (t = h; t < 3; t += h) {
+        a = -k * (x - 1) - c * v; v += a * h; x += v * h;
+        if (Math.abs(x - 1) < 0.0008 && Math.abs(v) < 0.01) { end = t; break; }
+      }
+      var n = Math.max(24, Math.min(64, Math.round(end * 70))), pts = [], step = end / n;
+      x = 0; v = 0; t = 0;
+      for (var i = 0; i <= n; i++) {
+        while (t < i * step) { a = -k * (x - 1) - c * v; v += a * h; x += v * h; t += h; }
+        pts.push(i === n ? 1 : +x.toFixed(4));
+      }
+      return { e: 'linear(' + pts.join(', ') + ')', ms: Math.round(end * 1000) };
+    }
+    try {
+      if (window.CSS && CSS.supports && CSS.supports('transition-timing-function', 'linear(0, 1)')) {
+        var specs = { '': [1, 0.42], '-fast': [1, 0.26], '-slow': [1, 0.62] };
+        for (var key in specs) {
+          var s = curve(specs[key][0], specs[key][1]);
+          d.style.setProperty('--spring' + key, s.e);
+          d.style.setProperty('--spring' + key + '-ms', s.ms + 'ms');
+        }
+      }
+    } catch (e) {}
+  })();
+</script>
 <style>
+  /* ── THE TEACHER DASHBOARD, apple-design pass (Oct 2026) ────────────────
+     Matches dashboard.html: one blue, ink and greys, surfaces on a soft
+     ground, a translucent bar, feedback on the PRESS (no hover lifts), and
+     springs. No traffic-light colours on students and no gold/bronze/orange:
+     a rank is a numeral, a weak spot is said in words.
+
+     The old token names (--soft, --border, --blue-light, --green, --red,
+     --orange) are kept as aliases because the renderers below still write
+     them in inline styles; they all resolve into this palette. */
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
   :root {
-    --ink:#1a1d2e; --muted:#6b7280; --soft:#f4f6fb;
-    --blue:#4a7cf6; --blue-light:#dce8ff; --white:#fff; --border:#e8ecf4;
-    --green:#38bfa1; --orange:#f59e0b; --red:#ef4444;
-    --sans:'DM Sans',sans-serif; --serif:'Instrument Serif',Georgia,serif;
+    --ink:#1a1d2e; --ink-2:#464c63; --muted:#6b7280; --faint:#a0a6b6;
+    --bg:#f4f6fb; --surface:#fff; --surface-2:#f7f9fd;
+    --line:#e7ebf3; --line-2:#d8deea;
+    --blue:#4a7cf6; --blue-ink:#2f5fe0; --blue-deep:#2a52d4;
+    --blue-tint:#eef3ff; --blue-tint-2:#dce8ff;
+    --right:#1a9e80;
+    --material:rgba(255,255,255,.72);
+    --shadow-1:0 1px 2px rgba(26,29,46,.04), 0 2px 10px rgba(26,29,46,.035);
+    --shadow-2:0 1px 2px rgba(26,29,46,.05), 0 14px 34px -12px rgba(26,29,46,.16);
+    --r-lg:22px; --r-md:16px; --r-sm:12px;
+    --sans:'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --serif:'Instrument Serif', Georgia, 'Times New Roman', serif;
+    --spring:cubic-bezier(.22,1,.36,1); --spring-ms:560ms;
+    --spring-fast:cubic-bezier(.22,1,.36,1); --spring-fast-ms:340ms;
+    --spring-slow:cubic-bezier(.16,1,.3,1); --spring-slow-ms:820ms;
+    /* aliases for inline styles in the renderers */
+    --soft:var(--surface-2); --border:var(--line); --white:var(--surface);
+    --blue-light:var(--blue-tint-2); --green:var(--blue); --red:var(--ink-2); --orange:var(--ink-2);
+    color-scheme:light;
   }
-  body { font-family:var(--sans); color:var(--ink); background:var(--soft); min-height:100vh; }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+  html.dark {
+    --ink:#e9eeff; --ink-2:#b9c1d9; --muted:#8b95ae; --faint:#5d667e;
+    --bg:#0c0f16; --surface:#141925; --surface-2:#181e2c;
+    --line:#222a3b; --line-2:#2c3549;
+    --blue:#5b8af8; --blue-ink:#8db0ff; --blue-deep:#3f6fe8;
+    --blue-tint:rgba(91,138,248,.13); --blue-tint-2:rgba(91,138,248,.22);
+    --right:#4cc9a6;
+    --material:rgba(12,15,22,.7);
+    --shadow-1:0 1px 2px rgba(0,0,0,.3);
+    --shadow-2:0 1px 2px rgba(0,0,0,.35), 0 16px 36px -14px rgba(0,0,0,.6);
+    color-scheme:dark;
+  }
+  html, body { background:var(--bg); }
+  body { font-family:var(--sans); color:var(--ink); min-height:100vh; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  button, input, textarea, select { font:inherit; color:inherit; }
+  a { color:var(--blue-ink); }
+  /* Instrument Serif has one weight; never a faked bold. */
+  h1, h2, h3 { font-family:var(--serif); font-weight:400; font-synthesis-weight:none; letter-spacing:-0.015em; }
+  :focus-visible { outline:2px solid var(--blue); outline-offset:2px; border-radius:8px; }
 
+  /* ── THE BAR: a material, content scrolls under it ── */
   nav {
-    background:#fff; border-bottom:1px solid var(--border); padding:.85rem 2rem;
-    display:flex; align-items:center; justify-content:space-between;
-    position:sticky; top:0; z-index:100; box-shadow:0 1px 12px rgba(74,124,246,.07);
+    position:sticky; top:0; z-index:100; min-height:60px;
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+    padding:.6rem max(var(--gutter, 24px), env(safe-area-inset-left)) .6rem max(24px, env(safe-area-inset-right));
+    background:var(--material);
+    -webkit-backdrop-filter:blur(20px) saturate(180%); backdrop-filter:blur(20px) saturate(180%);
+    box-shadow:0 1px 0 var(--line);
   }
   .logo { text-decoration:none; display:flex; align-items:center; }
-  .nav-right { display:flex; align-items:center; gap:1rem; }
-  .nav-badge { background:var(--blue-light); color:var(--blue); font-size:0.75rem; font-weight:700; padding:.3rem .8rem; border-radius:999px; }
-  .nav-avatar { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#4a7cf6,#2851c8); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:0.85rem; }
-  .btn-logout { font-size:0.82rem; color:var(--muted); background:none; border:1.5px solid var(--border); border-radius:8px; padding:.35rem .8rem; cursor:pointer; font-family:var(--sans); transition:all .2s; }
-  .btn-logout:hover { color:var(--red); border-color:var(--red); }
+  nav .logo-svg { width:132px; height:32px; }
+  .nav-right { display:flex; align-items:center; gap:.6rem; }
+  .nav-badge { font-size:.72rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+  .nav-avatar { width:32px; height:32px; border-radius:50%; background:var(--blue); display:grid; place-items:center; color:#fff; font-weight:700; font-size:.82rem; }
+  .btn-logout { height:34px; padding:0 14px; border-radius:999px; border:1px solid var(--line-2); background:var(--surface); color:var(--ink-2); font-size:.84rem; font-weight:600; cursor:pointer; }
+  .btn-logout:hover { border-color:var(--blue); color:var(--blue-ink); }
 
-  .container { max-width:1100px; margin:0 auto; padding:2rem 1.5rem 5rem; }
+  .container { max-width:1100px; margin:0 auto; padding:2.2rem 24px 5rem; }
 
-  /* HEADER */
-  .page-header { margin-bottom:2rem; animation:fadeUp .5s cubic-bezier(0.16,1,.3,1) both; }
-  .page-header h1 { font-family:var(--serif); font-size:clamp(1.8rem,3vw,2.4rem); letter-spacing:-0.03em; color:var(--ink); margin-bottom:.3rem; }
+  /* Press, not hover: every control answers on pointer-down and springs back. */
+  .press, .btn, .btn-logout, .tab-btn, .filter-btn, .btn-assign, .asg-new, .asg-item, .res-actions a, .res-actions button {
+    transition:transform var(--spring-fast-ms) var(--spring-fast), background-color .2s, border-color .2s, color .2s, box-shadow .2s;
+  }
+  .btn:active, .btn-logout:active, .tab-btn:active, .filter-btn:active, .btn-assign:active, .asg-new:active, .res-actions a:active, .res-actions button:active {
+    transform:scale(.96); transition-duration:80ms; transition-timing-function:ease-out;
+  }
+  .asg-item:active { transform:scale(.99); transition-duration:80ms; }
+
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:.45rem; height:40px; padding:0 18px; border-radius:999px; border:1px solid transparent; font-weight:600; font-size:.9rem; letter-spacing:-.005em; white-space:nowrap; cursor:pointer; text-decoration:none; user-select:none; -webkit-user-select:none; }
+  .btn-primary { background:var(--blue); color:#fff; box-shadow:0 1px 0 rgba(255,255,255,.22) inset, 0 6px 16px -6px rgba(74,124,246,.6); }
+  .btn-primary:hover { background:var(--blue-ink); }
+  html.dark .btn-primary:hover { background:#6d97ff; }
+  .btn-quiet { background:var(--surface); color:var(--ink); border-color:var(--line-2); }
+  .btn-quiet:hover { border-color:var(--blue); color:var(--blue-ink); }
+
+  /* ── HEADER: who, and the one thing to do ── */
+  .page-header { display:flex; align-items:flex-end; justify-content:space-between; gap:1.2rem; flex-wrap:wrap; margin-bottom:1.6rem; }
+  .greet { font-size:.92rem; color:var(--muted); margin-bottom:.25rem; }
+  .page-header h1 { font-size:clamp(2rem,4.2vw,2.8rem); line-height:1.05; letter-spacing:-0.02em; }
   .page-header h1 em { font-style:italic; color:var(--blue); }
-  .page-header p { color:var(--muted); font-size:0.95rem; font-weight:300; }
+  .page-header p#teacher-welcome { color:var(--muted); font-size:.95rem; margin-top:.35rem; }
 
-  /* CLASS CODE CARD */
+  /* ── CLASS CODE: information, not a billboard ── */
   .class-code-card {
-    background:linear-gradient(135deg,#4a7cf6,#2851c8);
-    border-radius:24px; padding:2rem; margin-bottom:2rem;
-    display:flex; align-items:center; justify-content:space-between;
-    box-shadow:0 12px 40px rgba(74,124,246,.25); position:relative; overflow:hidden;
-    animation:fadeUp .5s .1s cubic-bezier(0.16,1,.3,1) both;
+    display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
+    padding:1.1rem 1.3rem; margin-bottom:1.1rem; box-shadow:var(--shadow-1);
   }
-  .class-code-card::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle,rgba(255,255,255,.1) 1px,transparent 1px); background-size:24px 24px; }
-  .code-left { position:relative; z-index:1; }
-  .code-label { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:rgba(255,255,255,.7); margin-bottom:.5rem; }
-  .code-value { font-size:2.2rem; font-weight:700; color:#fff; letter-spacing:.15em; font-family:'Inter',sans-serif; }
-  .code-sub { font-size:0.82rem; color:rgba(255,255,255,.7); margin-top:.4rem; }
-  .code-right { display:flex; gap:.75rem; position:relative; z-index:1; }
-  .btn-copy-code { background:rgba(255,255,255,.2); color:#fff; border:1.5px solid rgba(255,255,255,.3); padding:.7rem 1.3rem; border-radius:12px; font-family:var(--sans); font-size:0.88rem; font-weight:600; cursor:pointer; transition:all .2s; }
-  .btn-copy-code:hover { background:rgba(255,255,255,.3); }
-  .btn-share-code { background:#fff; color:var(--blue); border:none; padding:.7rem 1.3rem; border-radius:12px; font-family:var(--sans); font-size:0.88rem; font-weight:700; cursor:pointer; transition:all .2s; box-shadow:0 4px 14px rgba(0,0,0,.15); }
-  .btn-share-code:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(0,0,0,.2); }
+  .code-left { display:flex; align-items:baseline; gap:1rem; flex-wrap:wrap; }
+  .code-label { font-size:.7rem; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); }
+  .code-value { font-family:'Inter', var(--sans); font-size:1.6rem; font-weight:700; letter-spacing:.08em; color:var(--ink); font-variant-numeric:tabular-nums; }
+  .code-sub { font-size:.84rem; color:var(--muted); flex-basis:100%; margin-top:-.2rem; }
+  .code-right { display:flex; gap:.5rem; }
 
-  /* STATS ROW */
-  .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:2rem; animation:fadeUp .5s .15s cubic-bezier(0.16,1,.3,1) both; }
-  .stat-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.3rem; transition:border-color .2s; }
-  .stat-card:hover { border-color:var(--blue); }
-  .stat-label { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:.5rem; }
-  .stat-value { font-size:1.9rem; font-weight:700; color:var(--ink); letter-spacing:-0.02em; line-height:1; }
-  .stat-sub { font-size:0.72rem; color:var(--muted); margin-top:.3rem; }
+  /* ── NUMBERS ── */
+  .stats-row { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:.8rem; margin-bottom:1.8rem; }
+  .stat-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:1.05rem 1.2rem; box-shadow:var(--shadow-1); min-width:0; }
+  .stat-label { font-size:.7rem; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-bottom:.45rem; }
+  .stat-value { font-size:1.9rem; font-weight:700; letter-spacing:-.03em; line-height:1; font-variant-numeric:tabular-nums; color:var(--ink); }
+  .stat-sub { font-size:.76rem; color:var(--muted); margin-top:.35rem; }
 
-  /* TABS */
-  .tabs { display:flex; gap:.5rem; margin-bottom:1.5rem; background:#fff; border:1.5px solid var(--border); border-radius:16px; padding:.4rem; width:fit-content; animation:fadeUp .5s .2s cubic-bezier(0.16,1,.3,1) both; }
-  .tab-btn { padding:.6rem 1.2rem; border-radius:10px; border:none; background:none; font-family:var(--sans); font-size:0.88rem; font-weight:600; color:var(--muted); cursor:pointer; transition:all .2s; }
-  .tab-btn.active { background:var(--blue); color:#fff; box-shadow:0 3px 10px rgba(74,124,246,.3); }
-
-  /* STUDENT TABLE */
-  .table-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; overflow:hidden; animation:fadeUp .5s .25s cubic-bezier(0.16,1,.3,1) both; }
-  .table-header { padding:1.2rem 1.5rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
-  .table-header h3 { font-size:0.95rem; font-weight:700; color:var(--ink); }
-  .search-input { padding:.5rem 1rem; border:1.5px solid var(--border); border-radius:10px; font-family:var(--sans); font-size:0.85rem; outline:none; transition:border-color .2s; width:200px; }
-  .search-input:focus { border-color:var(--blue); }
-  table { width:100%; border-collapse:collapse; }
-  /* A roster table does not fit a phone and should not be squeezed into one:
-     give it its own horizontal scroll rather than pushing the page sideways.
-     The tab bar was width:fit-content, so four tabs measured 422px. */
-  .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  @media(max-width:768px){
-    .tabs { width:auto; flex-wrap:wrap; }
-    table { min-width:560px; }
-    /* The teacher nav carries the same row of controls the dashboard does,
-       and at 320px it ran 44px past the edge. Wrap it rather than shrink the
-       tap targets. min-width:0 lets a flex child actually give ground; without
-       it the row refuses to shrink below its content. */
-    nav { flex-wrap:wrap; gap:.5rem; }
-    .nav-right { gap:.4rem; flex-wrap:wrap; justify-content:flex-end; min-width:0; }
-    /* The scroll container must be allowed to be narrower than the table it
-       holds, or it simply grows and the page scrolls instead. */
-    .table-scroll { max-width:100%; min-width:0; }
-  }
-  th { padding:.9rem 1.5rem; text-align:left; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); border-bottom:1px solid var(--border); }
-  td { padding:1rem 1.5rem; border-bottom:1px solid var(--border); font-size:0.88rem; color:var(--ink); }
-  tr:last-child td { border-bottom:none; }
-  tr:hover td { background:var(--soft); }
-  .student-name { font-weight:600; color:var(--ink); }
-  .student-email { font-size:0.78rem; color:var(--muted); margin-top:.15rem; }
-  .score-pill { display:inline-block; padding:.2rem .65rem; border-radius:999px; font-size:0.75rem; font-weight:700; }
-  .score-pill.high { background:#d1faf0; color:#1a9e80; }
-  .score-pill.mid { background:var(--blue-light); color:var(--blue); }
-  .score-pill.low { background:#fff0e0; color:#c06b1a; }
-  .score-pill.none { background:var(--soft); color:var(--muted); }
-  .streak-badge { display:inline-flex; align-items:center; gap:.3rem; font-size:0.82rem; font-weight:600; color:var(--orange); }
-  .status-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:.4rem; }
-  .status-dot.active { background:var(--green); }
-  .status-dot.inactive { background:var(--border); }
-
-  /* LEADERBOARD */
-  .leaderboard-filters { display:flex; gap:.4rem; }
-  .filter-btn { padding:.4rem .9rem; border-radius:8px; border:1.5px solid var(--border); background:var(--soft); font-family:var(--sans); font-size:0.78rem; font-weight:600; color:var(--muted); cursor:pointer; transition:all .2s; }
-  .filter-btn:hover { border-color:var(--blue); color:var(--blue); }
-  .filter-btn.active { background:var(--blue); color:#fff; border-color:var(--blue); }
-
-  .lb-row { display:flex; align-items:center; gap:1rem; padding:1rem 1.5rem; border-bottom:1px solid var(--border); transition:background .15s; }
-  .lb-row:last-child { border:none; }
-  .lb-row:hover { background:var(--soft); }
-  .lb-rank { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.82rem; font-weight:700; flex-shrink:0; }
-  .lb-rank.gold { background:#fff8e0; color:#d97706; }
-  .lb-rank.silver { background:#f4f4f4; color:#6b7280; }
-  .lb-rank.bronze { background:#fff3eb; color:#c06b1a; }
-  .lb-rank.other { background:var(--soft); color:var(--muted); }
-  .lb-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#4a7cf6,#2851c8); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:0.88rem; flex-shrink:0; }
-  .lb-info { flex:1; min-width:0; }
-  .lb-name { font-size:0.9rem; font-weight:600; color:var(--ink); }
-  .lb-sub { font-size:0.75rem; color:var(--muted); margin-top:.1rem; }
-  .lb-stats { display:flex; gap:1rem; align-items:center; }
-  .lb-stat { text-align:center; }
-  .lb-stat-val { font-size:0.95rem; font-weight:700; color:var(--ink); }
-  .lb-stat-label { font-size:0.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
-  .lb-badge { padding:.2rem .6rem; border-radius:999px; font-size:0.72rem; font-weight:700; }
-  .lb-badge.streak { background:#fff8e0; color:#d97706; }
-  .lb-badge.top { background:#d1faf0; color:#1a9e80; }
-  .assign-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.8rem; animation:fadeUp .5s .3s cubic-bezier(0.16,1,.3,1) both; }
-  .assign-card h3 { font-family:var(--serif); font-size:1.3rem; color:var(--ink); margin-bottom:.3rem; }
-  .assign-card h3 em { font-style:italic; color:var(--blue); }
-  .assign-card p { color:var(--muted); font-size:0.88rem; font-weight:300; margin-bottom:1.5rem; }
-  .assign-form { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
-  .form-field { display:flex; flex-direction:column; gap:.4rem; }
-  .form-label { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--ink); }
-  .form-input { padding:.8rem 1rem; border:1.5px solid var(--border); border-radius:12px; font-family:var(--sans); font-size:0.9rem; color:var(--ink); background:var(--soft); outline:none; transition:border-color .2s; }
-  .form-input:focus { border-color:var(--blue); }
-  textarea.form-input { min-height:100px; resize:vertical; line-height:1.6; grid-column:1/-1; }
-  .btn-assign { grid-column:1/-1; padding:.9rem; background:var(--blue); color:#fff; border:none; border-radius:12px; font-family:var(--sans); font-size:0.92rem; font-weight:600; cursor:pointer; transition:all .3s; box-shadow:0 4px 14px rgba(74,124,246,.3); }
-  .btn-assign:hover { background:#3567e0; transform:translateY(-1px); }
-
-  /* INSIGHTS */
-  .insights-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
-  .insight-card { background:#fff; border:1.5px solid var(--border); border-radius:20px; padding:1.5rem; }
-  .insight-card h4 { font-size:0.88rem; font-weight:700; color:var(--ink); margin-bottom:1rem; }
-  .topic-bar { margin-bottom:.75rem; }
-  .topic-bar-label { display:flex; justify-content:space-between; font-size:0.82rem; color:var(--ink); margin-bottom:.3rem; }
-  .topic-bar-track { height:6px; background:var(--soft); border-radius:3px; overflow:hidden; }
-  .topic-bar-fill { height:100%; border-radius:3px; background:var(--blue); }
-  .topic-bar-fill.warn { background:var(--orange); }
-  .topic-bar-fill.danger { background:var(--red); }
-
-  /* EMPTY STATE */
-  .empty-state { text-align:center; padding:3rem 2rem; color:var(--muted); }
-  .empty-state h4 { font-size:1rem; font-weight:600; color:var(--ink); margin-bottom:.4rem; }
-  .empty-state p { font-size:0.88rem; font-weight:300; }
-
+  /* ── TABS: a segmented control; the thumb slides on a spring ── */
+  .tabs-wrap { margin-bottom:1.4rem; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .tabs-wrap::-webkit-scrollbar { display:none; }
+  .tabs { position:relative; display:inline-flex; gap:2px; padding:4px; border-radius:999px; background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); }
+  .tab-thumb { position:absolute; top:4px; left:0; height:calc(100% - 8px); width:0; border-radius:999px; background:var(--surface); box-shadow:0 1px 2px rgba(26,29,46,.08), 0 4px 12px -4px rgba(26,29,46,.14);
+               transition:transform var(--spring-ms) var(--spring), width var(--spring-ms) var(--spring); pointer-events:none; }
+  html.dark .tab-thumb { background:#232b3d; }
+  .tab-btn { position:relative; z-index:1; height:36px; padding:0 16px; border-radius:999px; border:none; background:none; font-size:.88rem; font-weight:600; color:var(--muted); cursor:pointer; white-space:nowrap; }
+  .tab-btn:hover { color:var(--ink); }
+  .tab-btn.active { color:var(--ink); }
   .tab-content { display:none; }
-  .tab-content.active { display:block; }
+  .tab-content.active { display:block; animation:tabIn var(--spring-ms) var(--spring) backwards; }
+  @keyframes tabIn { from { opacity:0; transform:translateY(6px); } }
 
-  @media(max-width:768px) { .stats-row{grid-template-columns:1fr 1fr;} .assign-form{grid-template-columns:1fr;} .insights-grid{grid-template-columns:1fr;} .code-right{flex-direction:column;} }
+  /* ── TABLES ── */
+  .table-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden; box-shadow:var(--shadow-1); }
+  .table-header { padding:1rem 1.3rem; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:.8rem; flex-wrap:wrap; }
+  .table-header h3 { font-size:1.4rem; line-height:1.1; }
+  .search-input { height:36px; padding:0 14px; border:1px solid var(--line-2); border-radius:999px; font-size:.86rem; background:var(--surface-2); outline:none; width:220px; max-width:100%; }
+  .search-input:focus { border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-tint); }
+  .icon-btn { height:36px; padding:0 14px; border-radius:999px; border:1px solid var(--line-2); background:var(--surface); display:inline-flex; align-items:center; gap:.4rem; font-size:.82rem; font-weight:600; color:var(--ink-2); cursor:pointer; }
+  .icon-btn:hover { border-color:var(--blue); color:var(--blue-ink); }
+  .icon-btn:active { transform:scale(.96); }
+  table { width:100%; border-collapse:collapse; }
+  th { padding:.75rem 1.3rem; text-align:left; font-size:.7rem; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--line); background:var(--surface-2); }
+  td { padding:.85rem 1.3rem; border-bottom:1px solid var(--line); font-size:.88rem; color:var(--ink); font-variant-numeric:tabular-nums; }
+  tr:last-child td { border-bottom:none; }
+  tbody tr:hover td { background:var(--surface-2); }
+  .student-name { font-weight:600; }
+  .student-email { font-size:.78rem; color:var(--muted); margin-top:.1rem; }
+  /* One score style: the number is the information. */
+  .score-pill { display:inline-flex; align-items:center; height:24px; padding:0 9px; border-radius:999px; font-size:.76rem; font-weight:600; background:var(--blue-tint); color:var(--blue-ink); }
+  .score-pill.none { background:var(--surface-2); color:var(--muted); }
+  .streak-badge { font-size:.84rem; font-weight:600; color:var(--ink-2); }
+  .status-dot { width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:.45rem; vertical-align:1px; }
+  .status-dot.active { background:var(--blue); }
+  .status-dot.inactive { background:var(--line-2); }
+  .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; min-width:0; }
+
+  /* ── LEADERBOARD: numerals, not medals ── */
+  .leaderboard-filters { display:flex; gap:4px; padding:3px; border-radius:999px; background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); flex-wrap:wrap; }
+  .filter-btn { height:30px; padding:0 12px; border-radius:999px; border:none; background:none; font-size:.8rem; font-weight:600; color:var(--muted); cursor:pointer; }
+  .filter-btn.active { background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgba(26,29,46,.08); }
+  html.dark .filter-btn.active { background:#232b3d; }
+  .lb-row { display:flex; align-items:center; gap:.9rem; padding:.8rem 1.3rem; border-bottom:1px solid var(--line); }
+  .lb-row:last-child { border:none; }
+  .lb-rank { width:28px; text-align:center; font-size:.9rem; font-weight:700; color:var(--muted); font-variant-numeric:tabular-nums; flex-shrink:0; }
+  .lb-rank.gold, .lb-rank.silver, .lb-rank.bronze { color:var(--ink); }
+  .lb-avatar { width:34px; height:34px; border-radius:50%; background:var(--blue-tint); color:var(--blue-ink); display:grid; place-items:center; font-weight:700; font-size:.86rem; flex-shrink:0; }
+  .lb-info { flex:1; min-width:0; }
+  .lb-name { font-size:.9rem; font-weight:600; }
+  .lb-sub { font-size:.76rem; color:var(--muted); }
+  .lb-stats { display:flex; gap:1.1rem; align-items:center; }
+  .lb-stat { text-align:center; min-width:44px; }
+  .lb-stat-val { font-size:.92rem; font-weight:700; font-variant-numeric:tabular-nums; }
+  .lb-stat-label { font-size:.62rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+  .lb-badge { display:inline-flex; align-items:center; height:20px; padding:0 8px; border-radius:999px; font-size:.7rem; font-weight:600; background:var(--blue-tint); color:var(--blue-ink); vertical-align:1px; }
+
+  /* ── SHARE NOTES ── */
+  .assign-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:1.5rem; box-shadow:var(--shadow-1); }
+  .assign-card h3 { font-size:1.5rem; line-height:1.1; margin-bottom:.35rem; }
+  .assign-card h3 em { font-style:italic; color:var(--blue); }
+  .assign-card p { color:var(--muted); font-size:.9rem; margin-bottom:1.3rem; max-width:640px; }
+  .assign-form { display:grid; grid-template-columns:1fr 1fr; gap:.9rem; }
+  .form-field { display:flex; flex-direction:column; gap:.35rem; }
+  .form-label { font-size:.78rem; font-weight:600; color:var(--ink-2); }
+  .form-input { padding:.7rem .9rem; border:1px solid var(--line-2); border-radius:var(--r-sm); font-size:.92rem; background:var(--surface-2); outline:none; transition:border-color .2s, box-shadow .2s; }
+  .form-input:focus { border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-tint); }
+  textarea.form-input { min-height:120px; resize:vertical; line-height:1.55; grid-column:1/-1; }
+  .btn-assign { grid-column:1/-1; justify-self:start; height:44px; padding:0 22px; background:var(--blue); color:#fff; border:none; border-radius:999px; font-size:.92rem; font-weight:600; cursor:pointer; }
+  .btn-assign:hover { background:var(--blue-ink); }
+  .active-assignment { display:none; background:var(--blue-tint); border-radius:var(--r-md); padding:.9rem 1.1rem; margin-bottom:1rem; }
+  .active-assignment .aa-k { font-size:.68rem; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:var(--blue-ink); margin-bottom:.2rem; }
+  .active-assignment .aa-t { font-weight:600; }
+  .active-assignment .aa-m { font-size:.8rem; color:var(--muted); margin-top:.15rem; }
+
+  /* ── INSIGHTS ── */
+  .insights-grid { display:grid; grid-template-columns:1fr 1fr; gap:.9rem; }
+  .insight-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:1.2rem 1.3rem; box-shadow:var(--shadow-1); min-width:0; }
+  .insight-card h4 { font-size:.92rem; font-weight:700; margin-bottom:.9rem; }
+  .topic-bar { margin-bottom:.7rem; }
+  .topic-bar-label { display:flex; justify-content:space-between; font-size:.82rem; margin-bottom:.3rem; }
+  .topic-bar-track { height:6px; background:var(--surface-2); border-radius:4px; overflow:hidden; box-shadow:inset 0 0 0 1px var(--line); }
+  .topic-bar-fill { height:100%; border-radius:4px; background:var(--blue); }
+
+  .empty-state { text-align:center; padding:2.6rem 1.5rem; color:var(--muted); }
+  .empty-state h4 { font-size:1rem; font-weight:600; color:var(--ink); margin-bottom:.35rem; }
+  .empty-state p { font-size:.88rem; max-width:420px; margin:0 auto; }
 
   /* ── ASSIGNMENTS AND RESULTS (Oct 2026) ─────────────────────────────
      One blue for data; no traffic-light colours on students. A weak spot
      is said in words ("Weakest goal"), so it reads without colour. */
-  .asg-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
-  .asg-head h3 { font-size:1.5rem; font-weight:400; }
-  .asg-head p { color:var(--muted); font-size:.88rem; max-width:560px; }
-  .asg-new { display:inline-flex; align-items:center; height:42px; padding:0 18px; border-radius:999px; background:var(--blue); color:#fff; font-weight:700; font-size:.9rem; text-decoration:none; white-space:nowrap; }
-  .asg-new:hover { background:#2f5fe0; }
-  .asg-item { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; background:#fff; border:1.5px solid var(--border); border-radius:18px; padding:1rem 1.2rem; margin-bottom:.6rem; cursor:pointer; transition:border-color .2s; }
-  .asg-item:hover, .asg-item:focus-visible { border-color:var(--blue); outline:none; }
+  .asg-head { display:flex; justify-content:space-between; align-items:flex-end; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+  .asg-head h3 { font-size:1.6rem; line-height:1.1; }
+  .asg-head p { color:var(--muted); font-size:.9rem; max-width:560px; margin-top:.25rem; }
+  .asg-new { display:inline-flex; align-items:center; height:40px; padding:0 18px; border-radius:999px; background:var(--blue); color:#fff; font-weight:600; font-size:.9rem; text-decoration:none; white-space:nowrap; box-shadow:0 1px 0 rgba(255,255,255,.22) inset, 0 6px 16px -6px rgba(74,124,246,.6); }
+  .asg-new:hover { background:var(--blue-ink); }
+  .asg-item { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; background:var(--surface); border:1px solid var(--line); border-radius:var(--r-md); padding:1rem 1.2rem; margin-bottom:.55rem; cursor:pointer; box-shadow:var(--shadow-1); }
+  .asg-item:hover { border-color:var(--blue); }
   .asg-item .ai-main { flex:1; min-width:200px; }
-  .asg-item .ai-title { font-weight:700; }
-  .asg-item .ai-meta { font-size:.8rem; color:var(--muted); margin-top:.15rem; }
-  .asg-item .ai-prog { min-width:150px; font-size:.8rem; color:var(--muted); }
-  .bar { height:6px; background:var(--soft); border-radius:4px; overflow:hidden; margin-top:.3rem; }
-  .bar > span { display:block; height:100%; background:var(--blue); border-radius:4px; }
-  .chip-s { display:inline-flex; align-items:center; height:22px; padding:0 9px; border-radius:999px; font-size:.72rem; font-weight:700; background:var(--soft); color:var(--muted); }
-  .chip-s.pub { background:var(--blue-light); color:#2f5fe0; }
-  .res-back { border:none; background:none; color:var(--muted); font-weight:600; cursor:pointer; font-size:.86rem; padding:.2rem 0; margin-bottom:.6rem; }
-  .res-back:hover { color:var(--blue); }
-  .res-top { display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; align-items:flex-start; margin-bottom:1rem; }
-  .res-top h3 { font-size:1.7rem; font-weight:400; }
-  .res-top .meta { color:var(--muted); font-size:.86rem; }
+  .asg-item .ai-title { font-weight:600; }
+  .asg-item .ai-meta { font-size:.8rem; color:var(--muted); margin-top:.2rem; }
+  .asg-item .ai-prog { min-width:160px; font-size:.8rem; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .bar { height:6px; background:var(--surface-2); border-radius:4px; overflow:hidden; margin-top:.35rem; box-shadow:inset 0 0 0 1px var(--line); }
+  .bar > span { display:block; height:100%; background:var(--blue); border-radius:4px; transform-origin:left; animation:barIn var(--spring-slow-ms) var(--spring-slow) backwards; }
+  @keyframes barIn { from { transform:scaleX(0); } }
+  .chip-s { display:inline-flex; align-items:center; height:20px; padding:0 8px; border-radius:999px; font-size:.7rem; font-weight:600; background:var(--surface-2); color:var(--muted); box-shadow:inset 0 0 0 1px var(--line); }
+  .chip-s.pub { background:var(--blue-tint); color:var(--blue-ink); box-shadow:none; }
+  .res-back { border:none; background:none; color:var(--muted); font-weight:600; cursor:pointer; font-size:.86rem; padding:.2rem 0; margin-bottom:.7rem; }
+  .res-back:hover { color:var(--blue-ink); }
+  .res-top { display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; align-items:flex-end; margin-bottom:1rem; }
+  .res-top h3 { font-size:1.9rem; line-height:1.05; }
+  .res-top .meta { color:var(--muted); font-size:.86rem; margin-top:.25rem; }
   .res-actions { display:flex; gap:.5rem; flex-wrap:wrap; }
-  .res-actions a, .res-actions button { display:inline-flex; align-items:center; height:38px; padding:0 14px; border-radius:999px; border:1.5px solid var(--border); background:#fff; font-weight:600; font-size:.84rem; color:var(--ink); cursor:pointer; text-decoration:none; }
-  .res-actions a:hover, .res-actions button:hover { border-color:var(--blue); color:var(--blue); }
-  .res-actions .primary { background:var(--blue); border-color:var(--blue); color:#fff; }
-  .res-actions .primary:hover { color:#fff; background:#2f5fe0; }
+  .res-actions a, .res-actions button { display:inline-flex; align-items:center; height:36px; padding:0 14px; border-radius:999px; border:1px solid var(--line-2); background:var(--surface); font-weight:600; font-size:.84rem; color:var(--ink); cursor:pointer; text-decoration:none; }
+  .res-actions a:hover, .res-actions button:hover { border-color:var(--blue); color:var(--blue-ink); }
   .res-grid { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:.8rem; margin-bottom:1rem; }
-  .res-card { background:#fff; border:1.5px solid var(--border); border-radius:18px; padding:1.1rem 1.2rem; margin-bottom:1rem; }
-  .res-card h4 { font-size:.95rem; font-weight:700; margin-bottom:.2rem; }
-  .res-card .sub { font-size:.8rem; color:var(--muted); margin-bottom:.8rem; }
-  .goal-row { margin-bottom:.8rem; }
-  .goal-row .gl { display:flex; justify-content:space-between; gap:1rem; font-size:.86rem; }
+  .res-card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:1.15rem 1.3rem; margin-bottom:.9rem; box-shadow:var(--shadow-1); }
+  .res-card h4 { font-size:.95rem; font-weight:700; margin-bottom:.15rem; }
+  .res-card .sub { font-size:.8rem; color:var(--muted); margin-bottom:.9rem; }
+  .goal-row { margin-bottom:.85rem; }
+  .goal-row .gl { display:flex; justify-content:space-between; gap:1rem; font-size:.87rem; }
+  .goal-row .gl > span:last-child { font-weight:700; font-variant-numeric:tabular-nums; }
   .goal-row .gl b { font-weight:700; }
-  .flag { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#2f5fe0; margin-left:.4rem; }
-  .qrow { border-top:1px solid var(--border); padding:.8rem 0; }
-  .qrow:first-of-type { border-top:none; }
+  .flag { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--blue-ink); margin-left:.45rem; white-space:nowrap; }
+  .qrow { border-top:1px solid var(--line); padding:.85rem 0; }
+  .qrow:first-of-type { border-top:none; padding-top:.2rem; }
   .qrow .qh { display:flex; gap:1rem; align-items:flex-start; justify-content:space-between; }
-  .qrow .qs { font-size:.9rem; font-weight:600; flex:1; min-width:0; overflow-wrap:anywhere; }
-  .qrow .qp { font-size:1.05rem; font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .qrow .qs { font-size:.92rem; font-weight:600; flex:1; min-width:0; overflow-wrap:anywhere; }
+  .qrow .qp { font-size:1.1rem; font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
   .qrow .qm { font-size:.8rem; color:var(--muted); margin-top:.2rem; }
-  .qrow .wrong { margin-top:.4rem; font-size:.84rem; background:var(--soft); border-radius:10px; padding:.5rem .7rem; }
-  .qrow details summary { cursor:pointer; font-size:.8rem; color:var(--blue); font-weight:600; margin-top:.4rem; }
-  .qrow details ul { list-style:none; margin-top:.4rem; font-size:.82rem; }
-  .qrow details li { display:flex; justify-content:space-between; gap:1rem; padding:.2rem 0; border-bottom:1px dashed var(--border); }
-  .mark { font-weight:700; }
-  .mark.r { color:#1a9e80; }
+  .qrow .wrong { margin-top:.5rem; font-size:.85rem; background:var(--blue-tint); color:var(--ink); border-radius:var(--r-sm); padding:.55rem .75rem; }
+  .qrow details summary { cursor:pointer; font-size:.8rem; color:var(--blue-ink); font-weight:600; margin-top:.45rem; list-style:none; }
+  .qrow details summary::-webkit-details-marker { display:none; }
+  .qrow details summary::before { content:'▸ '; }
+  .qrow details[open] summary::before { content:'▾ '; }
+  .qrow details ul { list-style:none; margin-top:.4rem; font-size:.83rem; }
+  .qrow details li { display:flex; justify-content:space-between; gap:1rem; padding:.3rem 0; border-bottom:1px dashed var(--line); }
+  .mark { font-weight:600; white-space:nowrap; }
+  .mark.r { color:var(--right); }
   .mark.w { color:var(--muted); }
-  .names { font-size:.82rem; color:var(--muted); margin-top:.3rem; }
-  @media(max-width:768px) { .res-grid { grid-template-columns:1fr 1fr; } }
+  .names { font-size:.85rem; color:var(--ink-2); margin-top:.3rem; }
+  .names b { color:var(--ink); }
 
-  /* ── GLOBAL TYPOGRAPHY STANDARD ── */
-  nav { min-height:60px; }
-  nav .logo-svg { width:140px; height:34px; }
-  h1,h2,h3 { font-family:var(--serif); letter-spacing:-0.02em; }
-  body, p, span, div, button, input, textarea, select, label { font-family:var(--sans); }
-
-  </style>
+  @media (max-width:768px) {
+    .container { padding:1.6rem 16px 4rem; }
+    nav { padding-left:16px; padding-right:16px; }
+    .nav-badge { display:none; }
+    .stats-row, .res-grid { grid-template-columns:1fr 1fr; }
+    .assign-form, .insights-grid { grid-template-columns:1fr; }
+    .page-header { align-items:flex-start; }
+    table { min-width:560px; }
+    .lb-stats .lb-stat:nth-child(n+3) { display:none; }
+    /* The tab row scrolls sideways on a phone; its edge fades instead of
+       cutting a word in half, so it reads as "there is more". */
+    .tabs-wrap { margin-right:-16px; padding-right:16px;
+      -webkit-mask-image:linear-gradient(90deg, #000 calc(100% - 40px), transparent);
+              mask-image:linear-gradient(90deg, #000 calc(100% - 40px), transparent); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation:none !important; transition-duration:.01ms !important; }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    nav { background:var(--surface); -webkit-backdrop-filter:none; backdrop-filter:none; }
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    nav { background:var(--surface); }
+  }
+  @media (prefers-contrast: more) {
+    nav { background:var(--surface); box-shadow:0 1px 0 var(--line-2); }
+    .stat-card, .table-card, .insight-card, .asg-item, .res-card, .class-code-card { border-color:var(--line-2); }
+  }
+</style>
 </head>
 <body>
 
 <nav>
   <a href="index.html" class="logo">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="140" height="34">
+    <svg class="logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" width="132" height="32" aria-label="StudyFlow">
       <defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#5b8df8"/><stop offset="100%" style="stop-color:#2851c8"/></linearGradient></defs>
       <rect x="0" y="2" width="40" height="40" rx="10" fill="url(#ig)"/>
       <rect x="8" y="10" width="17" height="22" rx="3" fill="white" opacity="0.25"/>
@@ -258,20 +361,28 @@
 <div class="container">
 
   <div class="page-header">
-    <h1>Good <span id="greeting-time">day</span>, <em id="teacher-name-heading">Teacher</em>.</h1>
-    <p id="teacher-welcome">Here's how your class is doing today.</p>
+    <div>
+      <p class="greet">Good <span id="greeting-time">day</span></p>
+      <h1><em id="teacher-name-heading">Teacher</em></h1>
+      <p id="teacher-welcome">Here's how your class is doing today.</p>
+    </div>
+    <a class="btn btn-primary" href="teacher-build.html">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      New assignment
+    </a>
   </div>
 
-  <!-- CLASS CODE -->
+  <!-- CLASS CODE: something a teacher reads out once a term, not the
+       headline of every visit. -->
   <div class="class-code-card">
     <div class="code-left">
-      <div class="code-label">Your class code</div>
+      <div class="code-label">Class code</div>
       <div class="code-value" id="class-code">SF-XXXX</div>
-      <div class="code-sub">Share this code with your students to join your class</div>
+      <div class="code-sub">Students join with this code.</div>
     </div>
     <div class="code-right">
-      <button class="btn-copy-code" onclick="copyCode()">Copy code</button>
-      <button class="btn-share-code" onclick="shareCode()">Share →</button>
+      <button class="btn btn-quiet btn-copy-code" onclick="copyCode()">Copy code</button>
+      <button class="btn btn-quiet btn-share-code" onclick="shareCode()">Share link</button>
     </div>
   </div>
 
@@ -290,7 +401,7 @@
     <div class="stat-card">
       <div class="stat-label">Class average</div>
       <div class="stat-value" id="stat-avg">—</div>
-      <div class="stat-sub">accuracy score</div>
+      <div class="stat-sub">across their study plans</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Avg streak</div>
@@ -299,13 +410,16 @@
     </div>
   </div>
 
-  <!-- TABS -->
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="assignments" onclick="switchTab('assignments',this)">Assignments</button>
-    <button class="tab-btn" data-tab="roster" onclick="switchTab('roster',this)">Roster</button>
-    <button class="tab-btn" data-tab="insights" onclick="switchTab('insights',this)">Insights</button>
-    <button class="tab-btn" data-tab="leaderboard" onclick="switchTab('leaderboard',this)">Leaderboard</button>
-    <button class="tab-btn" data-tab="assign" onclick="switchTab('assign',this)">Share notes</button>
+  <!-- TABS: a segmented control. The thumb is moved by placeTabThumb. -->
+  <div class="tabs-wrap">
+    <div class="tabs" role="tablist" aria-label="Class views">
+      <span class="tab-thumb" id="tab-thumb" aria-hidden="true"></span>
+      <button class="tab-btn active" role="tab" data-tab="assignments" onclick="switchTab('assignments',this)">Assignments</button>
+      <button class="tab-btn" role="tab" data-tab="roster" onclick="switchTab('roster',this)">Roster</button>
+      <button class="tab-btn" role="tab" data-tab="insights" onclick="switchTab('insights',this)">Insights</button>
+      <button class="tab-btn" role="tab" data-tab="leaderboard" onclick="switchTab('leaderboard',this)">Leaderboard</button>
+      <button class="tab-btn" role="tab" data-tab="assign" onclick="switchTab('assign',this)">Share notes</button>
+    </div>
   </div>
 
   <!-- LEADERBOARD TAB -->
@@ -336,7 +450,6 @@
           <h3>Assignments</h3>
           <p>The same questions for every student. You see who has done it, what each question shows, and which goal needs reteaching.</p>
         </div>
-        <a class="asg-new" href="teacher-build.html">+ New assignment</a>
       </div>
       <div id="asg-list"><div class="empty-state"><p>Loading…</p></div></div>
     </div>
@@ -348,8 +461,8 @@
       <div class="table-header">
         <h3>Student roster</h3>
         <div style="display:flex;gap:.6rem;align-items:center;">
-          <input class="search-input" placeholder="Search students..." oninput="filterStudents(this.value)" />
-          <button onclick="loadFromFirestore()" title="Refresh roster" style="background:var(--soft);border:1.5px solid var(--border);border-radius:10px;padding:.5rem .75rem;cursor:pointer;display:flex;align-items:center;gap:.4rem;font-size:0.8rem;font-weight:600;color:var(--muted);white-space:nowrap;">
+          <input class="search-input" type="search" aria-label="Search students" placeholder="Search students" oninput="filterStudents(this.value)" />
+          <button class="icon-btn" onclick="loadFromFirestore()" title="Refresh roster">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.95"/></svg>
             Refresh
           </button>
@@ -392,7 +505,7 @@
       </div>
       <div class="insight-card">
         <h4>Study activity this week</h4>
-        <div id="activity-chart" style="display:flex;align-items:flex-end;gap:.5rem;height:80px;margin-top:1rem;"></div>
+        <div id="activity-chart" style="display:flex;align-items:flex-end;gap:.5rem;height:96px;margin-top:.6rem;"></div>
       </div>
       <div class="insight-card">
         <h4>Top performers</h4>
@@ -405,10 +518,10 @@
 
   <!-- ASSIGN TAB -->
   <div class="tab-content" id="tab-assign">
-    <div id="active-assignment" style="display:none;background:#eef9f4;border:1.5px solid #38bfa1;border-radius:16px;padding:1rem 1.3rem;margin-bottom:1.2rem;">
-      <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#1a9e80;margin-bottom:.3rem;">Currently assigned</div>
-      <div style="font-weight:700;font-size:0.95rem;" id="active-assignment-topic"></div>
-      <div style="font-size:0.8rem;color:var(--muted);margin-top:.2rem;" id="active-assignment-meta"></div>
+    <div id="active-assignment" class="active-assignment">
+      <div class="aa-k">Currently shared</div>
+      <div class="aa-t" id="active-assignment-topic"></div>
+      <div class="aa-m" id="active-assignment-meta"></div>
     </div>
     <div class="assign-card">
       <h3>Share notes <em>for their own study plans</em></h3>
@@ -426,7 +539,7 @@
           <label class="form-label">Paste your lesson notes</label>
           <textarea class="form-input" id="assign-notes" placeholder="Paste your lesson notes here — students will get a study plan built from this content..."></textarea>
         </div>
-        <button class="btn-assign" onclick="assignNotes()">Assign to class →</button>
+        <button class="btn-assign" onclick="assignNotes()">Share with class</button>
       </div>
     </div>
   </div>
@@ -493,9 +606,8 @@
     document.getElementById('teacher-avatar').textContent = (teacher.name || 'T')[0].toUpperCase();
     var h = new Date().getHours();
     document.getElementById('greeting-time').textContent = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
-    var firstName = teacher.name ? teacher.name.split(' ')[0] : 'Teacher';
-    document.getElementById('teacher-name-heading').textContent = firstName;
-    document.getElementById('teacher-welcome').textContent = 'Here\'s how your class is doing today, ' + (teacher.name || 'Teacher') + '.';
+    document.getElementById('teacher-name-heading').textContent = displayName(teacher.name);
+    document.getElementById('teacher-welcome').textContent = 'Here\'s how your class is doing today.';
 
     /* The server's profile is the truth (the class is the same on every
        device); the cache only paints the first frame. */
@@ -521,6 +633,7 @@
     loadFromFirestore();
     loadActiveAssignment();
     loadAssignments();
+    placeTabThumb(null, true);
     var tab = (location.hash || '').replace('#', '');
     var tb = tab && document.querySelector('.tab-btn[data-tab="' + tab.replace(/[^a-z]/g, '') + '"]');
     if (tb) switchTab(tab, tb);
@@ -530,6 +643,31 @@
       setTimeout(function () { openResults(pm[1]); }, 0);
     }
   }
+
+  /* How the heading names the teacher. A teacher who signs up as
+     "Mr Okafor" is addressed that way - taking the first word gave
+     "Good evening, Mr." - and anyone else by their first name. */
+  function displayName(name) {
+    var parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return 'Teacher';
+    if (/^(mr|mrs|ms|miss|mx|dr|prof|sr|sra|srta|mme|mlle|herr|frau)\.?$/i.test(parts[0]) && parts.length > 1) return parts.join(' ');
+    return parts[0];
+  }
+
+  /* The segmented control's thumb: moved with transform, so the spring
+     curve on .tab-thumb carries it; placed instantly on the first paint. */
+  function placeTabThumb(btn, instant) {
+    var th = document.getElementById('tab-thumb');
+    btn = btn || document.querySelector('.tab-btn.active');
+    if (!th || !btn) return;
+    if (instant) th.style.transition = 'none';
+    th.style.width = btn.offsetWidth + 'px';
+    th.style.transform = 'translateX(' + btn.offsetLeft + 'px)';
+    if (instant) { void th.offsetWidth; th.style.transition = ''; }
+    if (btn.scrollIntoView && !instant) { try { btn.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' }); } catch (e) {} }
+  }
+  window.addEventListener('resize', function () { placeTabThumb(null, true); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { placeTabThumb(null, true); });
 
   function renderAll() {
     renderStats();
@@ -620,10 +758,11 @@
       var none = students.filter(function(s){ return !s.avgScore; }).length;
       var total = students.length || 1;
       [
-        { label: 'Excellent (80%+)', count: high, color: 'var(--green)' },
-        { label: 'Good (60-79%)', count: mid, color: 'var(--blue)' },
-        { label: 'Needs help (<60%)', count: low, color: 'var(--red)' },
-        { label: 'Not started', count: none, color: 'var(--border)' }
+        /* One blue, stepped down: a student is not red. */
+        { label: 'Excellent (80%+)', count: high, color: 'var(--blue)' },
+        { label: 'Good (60-79%)', count: mid, color: 'rgba(74,124,246,.6)' },
+        { label: 'Needs help (<60%)', count: low, color: 'rgba(74,124,246,.32)' },
+        { label: 'Not started', count: none, color: 'var(--line-2)' }
       ].forEach(function(item) {
         var pct = Math.round((item.count / total) * 100);
         scoreDistHtml += '<div class="topic-bar"><div class="topic-bar-label"><span>' + esc(item.label) + '</span><span>' + item.count + '</span></div>' +
@@ -688,7 +827,7 @@
     var html = '';
     sorted.forEach(function(s, i) {
       var rankClass = i < 3 ? rankClasses[i] : 'other';
-      var rankLabel = i === 0 ? '1st' : (i === 1 ? '2nd' : (i === 2 ? '3rd' : (i+1)+'th'));
+      var rankLabel = String(i + 1);
       var isActiveToday = s.lastActive === new Date().toDateString();
       var name = String(s.name || 'Student');
       var streak = Number(s.streak) || 0;
@@ -704,7 +843,7 @@
           '<div class="lb-stat"><div class="lb-stat-val">' + (s.avgScore ? (Number(s.avgScore) || 0) + '%' : '—') + '</div><div class="lb-stat-label">Accuracy</div></div>' +
           '<div class="lb-stat"><div class="lb-stat-val">' + (Number(s.questionsAnswered) || 0) + '</div><div class="lb-stat-label">Questions</div></div>' +
           '<div class="lb-stat"><div class="lb-stat-val">' + (s.timeStudied ? Math.round((Number(s.timeStudied) || 0)/60)+'m' : '—') + '</div><div class="lb-stat-label">Time</div></div>' +
-          (streak >= 7 ? '<span class="lb-badge streak"><svg width="11" height="11" viewBox="0 0 24 24" fill="#d97706" stroke="none" style="display:inline-block;vertical-align:-1px;margin-right:2px"><path d="M12 2C12 2 8 7 8 11c0 2.21 1.79 4 4 4s4-1.79 4-4c0-1.5-.8-2.8-2-3.5.5 1 .5 2 0 2.5C13.5 9 12 8 12 7c0 0-1 1.5-1 2.5 0 .55.45 1 1 1s1-.45 1-1V8c1.5 1 2.5 2.5 2.5 4.5C15.5 15 13.93 16.5 12 16.5S8.5 15 8.5 12.5C8.5 8.5 12 2 12 2Z"/></svg>On fire</span>' : '') +
+          (streak >= 7 ? '<span class="lb-badge">' + streak + '-day streak</span>' : '') +
         '</div>' +
         '</div>';
     });
@@ -714,7 +853,8 @@
   function switchTab(tab, btn) {
     document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
     document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('active'); });
-    if (btn) btn.classList.add('active');
+    if (btn) { btn.classList.add('active'); placeTabThumb(btn); }
+    document.querySelectorAll('.tab-btn').forEach(function (b) { b.setAttribute('aria-selected', String(b === btn)); });
     document.getElementById('tab-' + tab).classList.add('active');
   }
 
@@ -748,8 +888,8 @@
     if (!date) { alert('Please set an exam date.'); return; }
     var btn = document.querySelector('.btn-assign');
     btn.disabled = true;
-    btn.textContent = 'Assigning…';
-    var reset = function () { btn.disabled = false; btn.textContent = 'Assign to class →'; btn.style.background = 'var(--blue)'; };
+    btn.textContent = 'Sharing…';
+    var reset = function () { btn.disabled = false; btn.textContent = 'Share with class'; };
 
     api('api/class', {
       method: 'POST',
@@ -762,8 +902,7 @@
         return;
       }
       showActiveAssignment(d.assignment);
-      btn.textContent = 'Assigned!';
-      btn.style.background = 'var(--green)';
+      btn.textContent = 'Shared';
       setTimeout(function(){
         reset();
         document.getElementById('assign-topic').value = '';
@@ -839,7 +978,8 @@
   function renderAssignmentList() {
     var box = document.getElementById('asg-list');
     if (!asgCache.length) {
-      box.innerHTML = '<div class="empty-state"><h4>No assignments yet</h4><p>Make one from your notes: a short lesson and questions you approve, for homework or a quick check in class.</p></div>';
+      box.innerHTML = '<div class="empty-state"><h4>No assignments yet</h4><p>Make one from your notes: a short lesson and questions you approve, for homework or a quick check in class.</p>' +
+        '<p style="margin-top:1rem"><a class="btn btn-primary" href="teacher-build.html">New assignment</a></p></div>';
       return;
     }
     box.innerHTML = asgCache.map(function (a) {
@@ -852,7 +992,7 @@
       return '<div class="asg-item" tabindex="0" role="button" data-asg="' + esc(a.id) + '">' +
         '<div class="ai-main"><div class="ai-title">' + esc(a.title) + '</div>' +
         '<div class="ai-meta"><span class="chip-s' + (pub ? ' pub' : '') + '">' + (pub ? 'Published' : 'Draft') + '</span> · ' +
-        'Due ' + esc(fmtDue(a.dueAt)) + ' · ' + esc(a.questionCount || 0) + ' questions</div></div>' + prog + '</div>';
+        esc(a.dueAt ? 'Due ' + fmtDue(a.dueAt) : 'No due date') + ' · ' + esc(a.questionCount || 0) + ' questions</div></div>' + prog + '</div>';
     }).join('');
   }
   document.addEventListener('click', function (e) {
@@ -929,7 +1069,7 @@
     var R = analyse(a, students), h = '';
     var total = R.done.length + R.prog.length + R.none.length;
     h += '<button class="res-back" onclick="closeResults()">← All assignments</button>';
-    h += '<div class="res-top"><div><h3>' + esc(a.title) + '</h3><div class="meta">Due ' + esc(fmtDue(a.dueAt)) +
+    h += '<div class="res-top"><div><h3>' + esc(a.title) + '</h3><div class="meta">' + esc(a.dueAt ? 'Due ' + fmtDue(a.dueAt) : 'No due date') +
       (isPast(a.dueAt) ? ' (past)' : '') + ' · ' + R.qs.length + ' questions</div></div>' +
       '<div class="res-actions"><a href="teacher-build.html?id=' + esc(a.id) + '">See the questions</a>' +
       '<button type="button" onclick="deleteAssignment(\'' + esc(a.id) + '\')">Delete</button></div></div>';

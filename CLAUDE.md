@@ -144,9 +144,9 @@ The pricing page sells all four; its feature lists are copied from the
 landing page's, so the two agree. **The student count is settled (Oct 2026,
 the owner's decision): a paid Classroom holds 30**, a free class 5, as the
 landing page's Schools section always said. The cap is read on `join` from
-the teacher's `users/{email}.tier`, which `api/webhook.js` writes. Still not
-agreed: the landing page says **$79**, the pricing page $79.99, and the
-landing page sells a $299 School tier that has a Stripe price (in
+the teacher's `users/{email}.tier`, which `api/webhook.js` writes. The
+price is **$79.99** on both pages (the owner's decision, Oct 2026; the
+landing page said $79). Still not agreed: the landing page sells a $299 School tier that has a Stripe price (in
 `api/checkout.js`'s allowlist) but no button on the pricing page.
 `CAP_BY_TIER.school` is 200, not unlimited: the roster is one Firestore
 document.
@@ -2856,6 +2856,19 @@ access, the write could not land. It goes through `api/_firestore.js` as the
 service account now, lower-cased, which is what the 30-student cap reads.
 Not verified against live Stripe: the next real Classroom purchase should be
 checked in Firestore (`users/<email>.tier == "classroom"`).
+
+**The look (Oct 2026, `apple-design`)**: `teacher.html` shares
+`dashboard.html`'s tokens, spring curves (boot script in `<head>`) and dark
+mode (`studyflow_dark`), with a translucent bar, one primary action ("New
+assignment", top right - not repeated in the list), the class code as a
+quiet card, a segmented tab control whose thumb slides on a spring
+(`placeTabThumb`), and feedback on the press. No gold/silver/bronze ranks,
+no orange streak flame, no green/red score pills: ranks are numerals, the
+score distribution is one blue stepped down. The old token names
+(`--soft`, `--green`, `--red`, `--orange`) are aliases into that palette
+because the renderers still write them inline. `teacher-build.html` follows
+the same dark mode and bar. The heading greets "Mr Okafor" whole
+(`displayName`); taking the first word gave "Good evening, Mr."
 
 **Tests:** `.claude/skills/morning-check/browser/classroom.html` →
 `runClassroom()` - 116 checks. It loads the real `api/class.js` and
