@@ -21,17 +21,19 @@ async function open(opts) {
   });
   await page.goto((process.env.SF_BASE || 'http://localhost:8765/') + 'favicon.png');
   const plan = opts.plan || fx.plan;
-  await page.evaluate(({ plan, user, dark }) => {
+  // opts.day: the day to open (default 0); opts.seed: extra namespaced keys, {key: value}.
+  await page.evaluate(({ plan, user, dark, day, seed }) => {
     localStorage.clear();
     localStorage.setItem('studyflow_user', JSON.stringify(user));
     if (dark) localStorage.setItem('studyflow_dark', '1');
     const ns = 'sfu:' + user.email + '|';
     localStorage.setItem(ns + 'studyflow_plan', JSON.stringify(plan));
     localStorage.setItem(ns + 'studyflow_plans', JSON.stringify([plan]));
-    localStorage.setItem(ns + 'studyflow_current_day', '0');
+    localStorage.setItem(ns + 'studyflow_current_day', String(day || 0));
+    Object.keys(seed || {}).forEach(k => localStorage.setItem(ns + k, typeof seed[k] === 'string' ? seed[k] : JSON.stringify(seed[k])));
     localStorage.setItem(ns + 'studyflow_minutes', '30');
     localStorage.setItem('studyflow_onboarded', '1');
-  }, { plan, user: fx.user, dark: !!opts.dark });
+  }, { plan, user: fx.user, dark: !!opts.dark, day: opts.day || 0, seed: opts.seed || null });
   await page.goto((process.env.SF_BASE || 'http://localhost:8765/') + 'lesson.html?cb=' + Date.now(), { waitUntil: 'load' });
   await page.waitForTimeout(opts.settle || 1200);
   return { browser, page, calls, errors };

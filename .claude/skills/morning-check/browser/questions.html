@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Question review</title>
+<style>
+  :root { --ink:#1a1d2e; --muted:#5b6275; --rule:#e3e7f0; --blue:#4a7cf6; --soft:#eef3ff; --bad:#c2410c; --paper:#fff; }
+  body { margin:0; font:15px/1.5 system-ui, sans-serif; color:var(--ink); background:#f7f9fe; }
+  main { max-width:860px; margin:0 auto; padding:24px 16px 80px; }
+  h1 { font-size:1.4rem; margin:0 0 4px; } p.lede { color:var(--muted); margin:0 0 16px; }
+  textarea { width:100%; box-sizing:border-box; min-height:140px; font:12px/1.4 ui-monospace, monospace; border:1px solid var(--rule); border-radius:10px; padding:10px; }
+  button { font:inherit; padding:8px 16px; border-radius:999px; border:0; background:var(--blue); color:#fff; cursor:pointer; margin-top:8px; }
+  .sum { margin:18px 0; padding:12px 14px; background:var(--paper); border:1px solid var(--rule); border-radius:12px; }
+  .day { margin-top:28px; } .day h2 { font-size:1.05rem; margin:0 0 8px; }
+  .q { background:var(--paper); border:1px solid var(--rule); border-radius:12px; padding:12px 14px; margin:10px 0; }
+  .q.drop { border-color:#f3c7ad; background:#fffaf6; }
+  .meta { font-size:12px; color:var(--muted); display:flex; gap:8px; flex-wrap:wrap; }
+  .chip { background:var(--soft); color:#2b4fb8; padding:1px 8px; border-radius:999px; }
+  .chip.bad { background:#fdeadf; color:var(--bad); }
+  .stem { margin:6px 0; font-weight:600; }
+  ol { margin:4px 0 0 20px; padding:0; } li.key { color:#0f6b4f; font-weight:600; }
+  .exp { color:var(--muted); font-size:13px; margin-top:6px; }
+  pre { white-space:pre-wrap; font-size:12px; margin:6px 0 0; color:var(--muted); }
+</style></head>
+<body><main>
+<h1>Question review</h1>
+<p class="lede">Paste a raw model answer for one day, an array of days, or a saved plan
+(<code>studyflow_plan</code> from localStorage). Each question goes through the plan builder's
+real validator (<code>sf-questions.js</code>); kept cards show their key and lint flags, dropped
+cards show why. Read every one: the lint is necessary, not sufficient.</p>
+<textarea id="in" placeholder='{"days":[{"title":"...","questions":[...]}]}'></textarea>
+<button id="go">Review</button>
+<div id="out"></div>
+</main>
+<script src="/sf-questions.js"></script>
+<script>
+(function () {
+  var Q = window.SFQuestions;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function daysOf(v) {
+    if (Array.isArray(v)) return v[0] && v[0].type ? [{ title: 'Questions', questions: v }] : v;
+    if (v && Array.isArray(v.days)) return v.days;
+    if (v && Array.isArray(v.questions)) return [v];
+    return [];
+  }
+  function why(q) {
+    var c = JSON.parse(JSON.stringify(q)), o = c.options || [];
+    if (/^(mcq|scenario|passage)$/.test(c.type)) {
+      if (!(typeof c.correctIndex === 'number' && String(o[c.correctIndex] || '').trim()) && !c.correctLetter && !c.answer && !c.correctAnswer) return 'no answer key';
+      if (/(all|none|both|neither)\s+of\s+the/i.test(String(o[c.correctIndex] || ''))) return 'the key is "all/none of the above"';
+      return 'no usable distractors (empty, placeholder, or the same as the answer)';
+    }
+    if (c.type === 'truefalse') return 'no True/False key';
+    return 'refused by the ' + esc(c.type) + ' validator';
+  }
+  function card(q, drop, reason) {
+    var s = '<div class="q' + (drop ? ' drop' : '') + '"><div class="meta"><span class="chip">' + esc(q.type) + '</span>';
+    if (q.difficulty) s += '<span class="chip">' + esc(q.difficulty) + '</span>';
+    if (!drop && typeof q.correctIndex === 'number' && q.options) s += '<span class="chip">key ' + 'ABCDEFGH'.charAt(q.correctIndex) + '</span>';
+    (q._lint || []).forEach(function (f) { s += '<span class="chip bad">' + esc(f) + '</span>'; });
+    if (drop) s += '<span class="chip bad">dropped: ' + esc(reason) + '</span>';
+    s += '</div><div class="stem">' + esc(q.question || q.scenario || '(no question text)') + '</div>';
+    if (Array.isArray(q.options) && q.options.length) {
+      s += '<ol type="A">' + q.options.map(function (o, i) { return '<li' + (!drop && i === q.correctIndex ? ' class="key"' : '') + '>' + esc(typeof o === 'object' ? JSON.stringify(o) : o) + '</li>'; }).join('') + '</ol>';
+    } else if (q.type === 'truefalse') s += '<div>Answer: <b>' + esc(q.correct) + '</b></div>';
+    else if (q.answer != null && q.answer !== '') s += '<div>Answer: <b>' + esc(q.answer) + '</b></div>';
+    else {
+      var rest = {}; for (var k in q) if (!/^(type|question|difficulty|hint|explanation|_lint)$/.test(k)) rest[k] = q[k];
+      s += '<pre>' + esc(JSON.stringify(rest, null, 1)).slice(0, 900) + '</pre>';
+    }
+    if (q.explanation) s += '<div class="exp">' + esc(q.explanation) + '</div>';
+    return s + '</div>';
+  }
+  document.getElementById('go').onclick = function () {
+    var out = document.getElementById('out'), raw = document.getElementById('in').value, v;
+    try { v = JSON.parse(raw); } catch (e) { v = Q.repairJSON(raw); }
+    var days = daysOf(v);
+    if (!days.length) { out.innerHTML = '<div class="sum">Nothing that looks like questions.</div>'; return; }
+    var html = '', kept = 0, dropped = 0, flagged = 0, keys = [0, 0, 0, 0, 0, 0];
+    days.forEach(function (d, di) {
+      var qs = Array.isArray(d.questions) ? d.questions : [];
+      var res = Q.sanitizeDayQuestions({ questions: JSON.parse(JSON.stringify(qs)), keyTerms: [] }).questions;
+      html += '<section class="day"><h2>Day ' + (di + 1) + ': ' + esc(d.title || '') + ' &middot; ' + res.length + ' of ' + qs.length + ' kept</h2>';
+      res.forEach(function (q) { kept++; if (q._lint && q._lint.length) flagged++; if (typeof q.correctIndex === 'number' && q.options) keys[q.correctIndex]++; html += card(q, false); });
+      qs.forEach(function (q) {
+        var alone = Q.sanitizeDayQuestions({ questions: [JSON.parse(JSON.stringify(q))], keyTerms: [] }).questions;
+        if (!alone.length) { dropped++; html += card(q, true, why(q)); }
+      });
+      html += '</section>';
+    });
+    out.innerHTML = '<div class="sum"><b>' + kept + '</b> kept, <b>' + dropped + '</b> dropped, <b>' + flagged + '</b> flagged. ' +
+      'Keys after shuffling: A ' + keys[0] + ' &middot; B ' + keys[1] + ' &middot; C ' + keys[2] + ' &middot; D ' + keys[3] + '</div>' + html;
+  };
+})();
+</script>
+</body></html>

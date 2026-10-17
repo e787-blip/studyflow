@@ -853,10 +853,13 @@
 
   /* The plan builder's own validators, then a goal that names a real goal,
      then an id. A card they drop would have reached a student broken. */
-  function vetQuestions(list, goals) {
+  /* edit: a teacher's own change to one card - the validator checks it can be
+     graded but keeps their option order and wording (no shuffle, and an
+     "All of the above" they wrote stays). Model output is shuffled. */
+  function vetQuestions(list, goals, edit) {
     var ids = {};
     goals.forEach(function (g) { ids[g.id] = 1; });
-    var day = SFQuestions.sanitizeDayQuestions({ questions: (list || []).filter(function (q) { return q && typeof q === 'object'; }) });
+    var day = SFQuestions.sanitizeDayQuestions({ questions: (list || []).filter(function (q) { return q && typeof q === 'object'; }) }, { edit: !!edit });
     return day.questions.filter(function (q) { return FORMAT_NAME[q.type]; }).map(function (q) {
       if (!ids[q.goal]) q.goal = '';
       if (!q.aid) q.aid = newAid();
@@ -1090,7 +1093,7 @@
       var picked = card.querySelector('input[type=radio]:checked');
       q.correctIndex = picked ? Number(picked.value) : q.correctIndex;
     }
-    var ok = vetQuestions([q], S.goalsSaved || activeGoals());
+    var ok = vetQuestions([q], S.goalsSaved || activeGoals(), true);
     if (!ok.length) {
       card.querySelector('[data-msg]').textContent = 'This can’t be graded as written. A gap-fill needs a sentence with one blank and a short answer; options need at least two filled in.';
       return;

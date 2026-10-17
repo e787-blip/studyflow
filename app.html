@@ -3625,6 +3625,11 @@
         'Do NOT use any other type, even if the notes contain numbers, dates, steps or formulas.\n' +
         'A question that involves counting or arithmetic is still a question about THIS subject - ask it as one of the\n' +
         'types listed above, not as a "wordproblem" or "bigequation", unless those types appear in the list.\n' +
+        /* What a multiple-choice card needs, said once (Oct 2026). The
+           validator now drops a card with no key and strips "all of the
+           above", so asking for neither is cheaper than losing the card;
+           a much-longest right answer it can only flag. */
+        'OPTIONS: every mcq, scenario and passage card has exactly ONE right option and a correctIndex. Wrong options are mistakes a real learner makes, about as long as the right one. Never "all of the above", "none of the above" or "both A and B".\n' +
         /* THE TYPE LOCK WAS NOT ENOUGH, and this is the half it was missing.
            Locking the type stops a science day returning {"type":"wordproblem"};
            it does not stop the same day returning an mcq or an estimate whose

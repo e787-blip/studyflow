@@ -1680,6 +1680,7 @@
      file fails to load. -->
 <script src="/sf-icons.js"></script>
 <script src="/sf-draw.js"></script>
+<script src="/sf-questions.js"></script>
 <script src="/sf-auth.js"></script>
 <script src="/whiteboard.js"></script>
 <script>
@@ -1808,6 +1809,11 @@
   }
 
   function updateSM2(q, isCorrect) {
+    /* Homework is the teacher's, not the learner's own schedule: an
+       assignment's answers were landing in the account's SM-2 records (they
+       are not in ASSIGN_KEYS) and would have come back as "due" in the
+       learner's own plan. */
+    if (assignMode) return getSM2Data(q);
     var key = 'studyflow_sm2_' + getQuestionHash(q);
     var data = getSM2Data(q);
     var grade = isCorrect ? 5 : 2; // SM-2 uses 0-5 scale
@@ -1836,6 +1842,51 @@
       return new Date(data.nextReview) <= now;
     });
   } // { q, reinjectAt } — reinject at specific cardIndex
+
+  /* ── DUE FOR REVIEW (Oct 2026) ────────────────────────────────────────
+     Every answer has updated an SM-2 record since TIER 3 went in, and
+     getDueQuestions had no caller: the schedule was computed and never read.
+     The only questions that ever came back were yesterday's misses
+     (studyflow_missed_day_<i-1>) and, every third day, older misses - so a
+     question answered right on day 1 was never seen again, which is exactly
+     the forgetting spaced review exists to stop.
+
+     This returns up to `limit` questions from EARLIER days of this plan whose
+     review date has passed, least-learnt first (fewest correct repetitions),
+     then most overdue. buildQueue spreads them through the practice run as
+     review cards. Copies, so a renderer never mutates the earlier day.
+     Not in an assignment (its queue is the teacher's), not on day 0, never
+     a question already in the session. Only types that render whole on
+     their own card: no teach-it-back, no lesson-picture labelling card, no
+     reading set. */
+  var DUE_TYPES = { mcq:1, truefalse:1, fill:1, scenario:1, whosright:1, recall:1, classify:1,
+                    sequence:1, estimate:1, bigequation:1, wordproblem:1, errorspot:1, matchpairs:1 };
+  function sfDueReview(limit) {
+    if (assignMode || !plan || Object.prototype.toString.call(plan.days) !== '[object Array]' || !(dayIndex > 0)) return [];
+    var queued = {}, cands = [], d, i;
+    sessionCards.forEach(function (c) { if (c && c.q && c.q.question) queued[fmStr(c.q.question).toLowerCase()] = 1; });
+    for (d = 0; d < dayIndex && d < plan.days.length; d++) {
+      var qs = plan.days[d] && plan.days[d].questions;
+      if (Object.prototype.toString.call(qs) !== '[object Array]') continue;
+      for (i = 0; i < qs.length; i++) {
+        var q = qs[i], k = q && fmStr(q.question).toLowerCase();
+        if (!k || !DUE_TYPES[fmStr(q.type)] || q.fromLesson || queued[k]) continue;
+        queued[k] = 1;
+        cands.push(q);
+      }
+    }
+    var now = Date.now(), due;
+    try { due = getDueQuestions(cands); } catch (e) { return []; }
+    return due.map(function (q) {
+      var sm = getSM2Data(q);
+      return { q: q, reps: sm.repetitions || 0, late: now - Date.parse(sm.nextReview) };
+    }).sort(function (a, b) { return (a.reps - b.reps) || (b.late - a.late); })
+      .slice(0, limit).map(function (p) {
+        var c = JSON.parse(JSON.stringify(p.q));
+        try { normalizeQuestion(c); } catch (eN) { /* stored shape is already normal */ }
+        return c;
+      });
+  }
 
   /* ── INIT ── */
   function init() {
@@ -2777,6 +2828,18 @@
       }
     }
   
+    /* Questions from earlier days whose review date has come round (see
+       sfDueReview). Spread, never bunched, and tagged isReview so they are
+       badged "Review Question", are never re-queued as a same-session retry,
+       and stay invisible to applyFeynmanOrder's scan for where practice
+       begins. Before the reading sets, which must go last. */
+    var dueCards = [];
+    try { dueCards = sfDueReview(3); } catch (eDue) { dueCards = []; }
+    dueCards.forEach(function (q, i) {
+      sessionCards.splice(injectSpread(i, dueCards.length, 2), 0,
+        { type: cardTypeFor(q), q: q, isReview: true, isDue: true });
+    });
+
     /* The Feynman loop is applied last, once every other card is in place, so
        it can see where teaching ends and practice begins. */
     /* A reading set expands into several cards that must stay together: the
@@ -3038,7 +3101,7 @@
 
     // Use buffered AI-generated question if available
     if (questionBuffer.length > 0) {
-      var q = questionBuffer.shift();
+      var q = questionBuffer.splice(sfPickByLevel(questionBuffer), 1)[0];
       /* Buffered questions arrive straight from the API and used to bypass both
          normalisation and format enforcement, so mid-session practice drifted
          back to whatever the model felt like returning. Run them through the
@@ -3056,6 +3119,12 @@
     });
     if (available.length === 0) { recentlyShown = []; available = questions; }
 
+    /* At a pushed or eased level, pick among that difficulty when the day has
+       any (see sfAdapt); otherwise any of them, as before. */
+    if (sfLevel) {
+      var atLevel = available.filter(function (aq) { return sfDiff(aq) === sfLevel; });
+      if (atLevel.length) available = atLevel;
+    }
     var picked = available[Math.floor(Math.random() * available.length)];
     recentlyShown.push(picked.question);
     if (recentlyShown.length > 20) recentlyShown.shift();
@@ -3195,8 +3264,10 @@
       '5. Each question must cover a DIFFERENT concept or angle within the topic.\n' +
       '6. Do NOT repeat or closely resemble any of these already-used questions: ' + recentList + '\n' +
       formatRule +
-      '   Vary difficulty: some easy, some medium, some hard.\n' +
-      '8. Hints must be specific facts about this topic, not generic advice.\n\n' +
+      sfLevelRule() +
+      '8. Hints must be specific facts about this topic, not generic advice.\n' +
+      '   Every mcq: exactly one right option; wrong options a real learner might pick, about as long as the right one; never "all of the above" or "none of the above".\n' +
+      sfWeakLine() + '\n' +
       'FINAL CHECK: reread every question. Delete any that is not about "' + lockLine + '".\n\n' +
       'Return ONLY a JSON array, no markdown:\n' +
       schema;
@@ -3219,6 +3290,13 @@
           var qt = (q.question || '').trim();
           if (qt.length < 5) return false;
           if (/^\[.*\]$/.test(qt)) return false;
+          /* The plan builder's own lint (sf-questions.js): no keyless card,
+             no "all of the above", no near-duplicate options. The top-up
+             never ran the day validator, so these reached the learner from
+             question 11 on. Absent file = the old behaviour.
+             BEFORE normalizeQuestion, which sets a missing key to 0 and so
+             would make a keyless card look graded. */
+          if (window.SFQuestions && SFQuestions.lintQuestion && !SFQuestions.lintQuestion(q)) return false;
           if (q.type === 'mcq') {
             var opts = (q.options || []).filter(function(o){ return o && String(o).trim(); });
             if (opts.length < 2) return false;
@@ -3235,6 +3313,8 @@
            The prompt above asks for the right formats; this is what makes
            it true. */
         newQs = holdToPalette(newQs, lockType, day);
+        /* Shuffle the options and spread the keys across A-D. */
+        if (window.SFQuestions && SFQuestions.lintDay) { try { newQs = SFQuestions.lintDay(newQs); } catch (eL) { /* keep them as they are */ } }
         questionBuffer = questionBuffer.concat(newQs);
       }
       generatingNew = false;
@@ -3436,21 +3516,108 @@
     var n = totalAnswered - m.t, k = correctCount - m.c;
     if (n <= 0) return;
     if (assignMode) { try { asgRecord(m, n, k); } catch (eA) { /* never cost the session */ } }
+    else { try { sfAdapt(k >= n); } catch (eL) { /* never cost the session */ } }
     try {
       var q = m.card.q || window.currentQuestion || {};
       var log = JSON.parse(SFStore.getItem(SF_LOG_KEY) || '[]');
       if (!Array.isArray(log)) log = [];
-      log.push({
+      var entry = {
         p: plan && plan.id != null ? String(plan.id) : '',
         d: dayIndex,
         q: fmStr(q.question || q.prompt || '').slice(0, 80),
         y: fmStr(q.type || m.card.type || '').split(':')[0],
         n: n, k: Math.max(0, Math.min(n, k)),
         at: Date.now()
-      });
+      };
+      /* What they answered, and what was right, on a miss (Oct 2026). The
+         log kept only "missed", so the top-up could never be told WHICH
+         confusion to probe (sfWeakLine). Same reading as asgRecord. */
+      if (k < n) {
+        var said = sfSaid(m);
+        if (said) entry.w = said.slice(0, 80);
+        var rt = '';
+        try { rt = fmStr(correctAnswerText(q)); } catch (eR) { rt = ''; }
+        if (rt && rt !== '\u2014') entry.r = rt.slice(0, 80);
+      }
+      log.push(entry);
       if (log.length > SF_LOG_MAX) log = log.slice(log.length - SF_LOG_MAX);
       SFStore.setItem(SF_LOG_KEY, JSON.stringify(log));
     } catch (e) { /* storage full or off: the session never pays for it */ }
+  }
+
+  /* What the learner answered on the card just left, as words. */
+  function sfSaid(m) {
+    var said = wrongItems.length > m.w ? fmStr(wrongItems[wrongItems.length - 1].userAns) : '';
+    if (!said) { try { said = answerFromCard(); } catch (eS) { said = ''; } }
+    return said === '\u2014' ? '' : said;
+  }
+
+  /* ── PITCH FOLLOWS THE LEARNER (Oct 2026) ─────────────────────────────
+     sfLevel is -1 (ease off), 0, or +1 (push): three cards right in a row
+     raise it a step, two missed in a row lower it a step, so a learner who
+     recovers climbs back. Fed from sfLogFlush, so every graded card counts - the
+     self-grading ones included, which never reach handleResult - and the
+     pre-test does not. It changes WHICH question comes next (sfPickByLevel,
+     among the buffered or the day's own) and what the top-up asks for; it
+     never changes a type, so the maths mix (invariant 1) is untouched. The
+     queue built at the start of the session is not reordered: those
+     positions carry the opening, the injectors' spacing and the pre-test.
+     Not in an assignment, whose questions are fixed. */
+  var sfLevel = 0, sfRunRight = 0, sfRunWrong = 0;
+  function sfAdapt(right) {
+    if (assignMode) return;
+    if (right) { sfRunRight++; sfRunWrong = 0; } else { sfRunWrong++; sfRunRight = 0; }
+    if (sfRunRight >= 3) { sfLevel = Math.min(1, sfLevel + 1); sfRunRight = 0; }
+    else if (sfRunWrong >= 2) { sfLevel = Math.max(-1, sfLevel - 1); sfRunWrong = 0; }
+  }
+  function sfDiff(q) {
+    var d = fmStr(q && q.difficulty).toLowerCase();
+    return d === 'easy' ? -1 : d === 'hard' ? 1 : d === 'medium' ? 0 : null;
+  }
+  /* Index of the best match for the current level: the exact difficulty if
+     there is one, else the nearest, else the first. */
+  function sfPickByLevel(list) {
+    if (!list || !list.length || !sfLevel) return 0;
+    var best = 0, bestGap = 9;
+    for (var i = 0; i < list.length; i++) {
+      var d = sfDiff(list[i]);
+      if (d === null) continue;
+      var gap = Math.abs(d - sfLevel);
+      if (gap < bestGap) { best = i; bestGap = gap; if (!gap) break; }
+    }
+    return best;
+  }
+  function sfLevelRule() {
+    if (sfLevel > 0) return '   This learner is getting everything right: make most of them HARD - apply it to a new case, two steps, or a close distractor. A few medium.\n';
+    if (sfLevel < 0) return '   This learner is struggling: make most of them EASY - one idea each, plain wording, the core facts first. A few medium.\n';
+    return '   Vary difficulty: some easy, some medium, some hard.\n';
+  }
+
+  /* ── WHAT THIS LEARNER KEEPS MISSING (Oct 2026) ───────────────────────
+     One line for the top-up, from the answer log: this plan's misses, most
+     recent first, as "asked X, answered Y, right was Z". The model is asked
+     to probe the same confusions from a NEW angle - never to repeat the
+     question. Capped at 600 characters; quotes and newlines flattened, as
+     plan.focus is. Empty when there is nothing to say. */
+  function sfWeakLine() {
+    var log;
+    try { log = JSON.parse(SFStore.getItem(SF_LOG_KEY) || '[]'); } catch (e) { return ''; }
+    if (!Array.isArray(log) || !plan) return '';
+    var pid = plan.id != null ? String(plan.id) : '', seen = {}, bits = [], used = 0;
+    function flat(v) { return fmStr(v).replace(/[\r\n"]+/g, ' ').replace(/\s{2,}/g, ' ').trim(); }
+    for (var i = log.length - 1; i >= 0 && bits.length < 4; i--) {
+      var e = log[i];
+      if (!e || e.p !== pid || !(e.k < e.n) || !e.q || seen[e.q]) continue;
+      seen[e.q] = 1;
+      var b = '"' + flat(e.q).slice(0, 70) + '"' + (e.w ? ' - they answered ' + flat(e.w).slice(0, 50) : '') +
+              (e.r ? ' (right: ' + flat(e.r).slice(0, 50) + ')' : '');
+      if (used + b.length > 560) break;
+      used += b.length + 3;
+      bits.push(b);
+    }
+    if (!bits.length) return '';
+    return '9. This learner recently missed: ' + bits.join(' | ') +
+      '. Include 2-3 questions that test the SAME ideas from a different angle (never the same question), and use their wrong answers as distractors where they fit.\n';
   }
 
   /* ── AN ASSIGNMENT'S QUEUE, ANSWERS AND RETURNS ────────────────────────
@@ -7118,7 +7285,7 @@
     if (!fb) return;
     fb.style.display = 'block';
     if (isCorrect) {
-      correctCount++; currentStreak++;
+      correctCount++; currentStreak++; recordRight();
       fb.className = 'feedback-box show correct-fb';
       fb.innerHTML = '<div class="feedback-label">✓ Correct!</div><div class="feedback-text">' + (gs.explanation || 'The y-intercept is where the line crosses the y-axis.') + '</div>';
       spawnConfetti();
@@ -8142,7 +8309,7 @@
 
     currentAnswered = true;
     totalAnswered++;
-    if (perfect) correctCount++;
+    if (perfect) { correctCount++; recordRight(); }
     else recordMiss('', swpState.explanation);
     showFeedback(perfect, swpState.explanation ||
       'Each step feeds the next \u2014 that chain is the method, not the individual numbers.');
@@ -8338,7 +8505,7 @@
     var fb = document.getElementById('feedback-box');
     fb.style.display = 'block';
     if (isError) {
-      correctCount++; currentStreak++;
+      correctCount++; currentStreak++; recordRight();
       btn.style.background = '#d1faf0'; btn.style.borderColor = '#38bfa1'; btn.style.color = '#065f46';
       fb.className = 'feedback-box show correct-fb';
       fb.innerHTML = '<div class="feedback-label">✓ Found it!</div><div class="feedback-text">' + (explanation || 'That step has the mistake.') + '</div>';
@@ -8563,7 +8730,7 @@
     sbPaint(marks);
     var sentence = st.words.join(' ');
     if (ok) {
-      correctCount++; currentStreak++;
+      correctCount++; currentStreak++; recordRight();
       fb.className = 'feedback-box show correct-fb';
       fb.innerHTML = '<div class="feedback-label">✓ That’s the sentence</div><div class="feedback-text">' +
         escHtml(sentence) + (st.q.explanation ? ' — ' + st.q.explanation : '') + '</div>';
@@ -8746,7 +8913,7 @@
 
     var fb = document.getElementById('feedback-box');
     if (isCorrect) {
-      correctCount++; currentStreak++;
+      correctCount++; currentStreak++; recordRight();
       fb.className = 'feedback-box show correct-fb';
       fb.innerHTML = '<div class="feedback-label">✓ Perfect order!</div><div class="feedback-text">' + (window._seqState.explanation || 'Great work.') + '</div>';
       spawnConfetti();
@@ -8823,6 +8990,7 @@
         totalAnswered++;
         correctCount++;
         currentStreak++;
+        recordRight();
         var fb = document.getElementById('feedback-box');
         fb.className = 'feedback-box show correct-fb';
         fb.innerHTML = '<div class="feedback-label">✓ All matched!</div><div class="feedback-text">' + (ms.explanation || 'Great work connecting these concepts.') + '</div>';
@@ -9322,7 +9490,7 @@
     var fb = document.getElementById('feedback-box');
     fb.style.display = 'block';
     if (isCorrect) {
-      correctCount++; currentStreak++;
+      correctCount++; currentStreak++; recordRight();
       fb.className = 'feedback-box show correct-fb';
       fb.innerHTML = '<div class="feedback-label">✓ Perfect!</div><div class="feedback-text">' + (state.explanation || 'All items sorted correctly.') + '</div>';
       spawnConfetti(); flashCard(true);
@@ -9332,6 +9500,10 @@
       fb.className = 'feedback-box show wrong-fb';
       fb.innerHTML = '<div class="feedback-label">✗ Not quite</div><div class="feedback-text">Correct sorting:<br>' + correctMsg + '</div>';
       flashCard(false);
+      /* The sorting card was the one self-grader left out of recordMiss: a
+         miss lowered the score and never reached "What to study more", the
+         review queue or SM-2. */
+      recordMiss('', state.explanation);
     }
     enableNext();
     var btn = document.getElementById('classify-check-btn');
@@ -11287,9 +11459,27 @@
       explanation: explanation || (q && q.explanation) || ''
     });
     if (q) updateSM2(q, false);
+    /* The self-grading cards miss through here, not handleResult - and so
+       never raised "Let's slow down a bit": three missed sorting or ordering
+       cards in a row counted as nothing. Same rule as handleResult. */
+    if (!(window.currentCard && window.currentCard.isPretest)) {
+      recentWrong++;
+      try { checkStruggling(); } catch (eS) { /* never cost the grade */ }
+    }
     /* The self-grading cards miss through here, not handleResult. */
     try { sfRecallOnMiss(); } catch (e) { /* never cost the grade */ }
     try { sfMomentOnMiss(userAns); } catch (e2) { /* never cost the grade */ }
+  }
+
+  /* The other half of recordMiss, for the graders that count a right answer
+     themselves (graph, scaffold, errorspot, sentence, sequence, match,
+     classify). They bumped correctCount and stopped there, so SM-2 only ever
+     heard about their MISSES: a sequence got right never earned a longer
+     interval, and one never missed was never scheduled at all. */
+  function recordRight() {
+    recentWrong = 0;
+    var q = sessionCards[cardIndex - 1] ? sessionCards[cardIndex - 1].q : null;
+    if (q) { try { updateSM2(q, true); } catch (e) { /* never cost the grade */ } }
   }
 
   /* What the learner chose, as words. An option button's textContent starts

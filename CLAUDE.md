@@ -39,7 +39,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `teacher-build.html` | ~78 KB | **The assignment builder** - `app.html` for a teacher: one question per screen, one call writes the lesson and a fixed set of questions, the teacher edits every one, then publishes |
 | `api/class.js` | ~35 KB | The classroom API. Checks a Firebase ID token on every call. Assignments and their submissions live here too |
 | `api/_firestore.js` | ~8 KB | Firestore as the service account, shared by `class.js` and `webhook.js`. The underscore keeps Vercel from serving it |
-| `sf-questions.js` | ~42 KB | **The question templates and validators** (`qtpl`, `buildQuestionSchema`, `tallyFor`, `sanitizeDayQuestions`, `repairJSON`), moved out of `app.html` byte for byte so the teacher builder uses the same ones. Loaded by `app.html` and `teacher-build.html` |
+| `sf-questions.js` | ~42 KB | **The question templates and validators** (`qtpl`, `buildQuestionSchema`, `tallyFor`, `sanitizeDayQuestions`, `repairJSON`), moved out of `app.html` byte for byte so the teacher builder uses the same ones, plus the **question lint** (`lintQuestion`, `lintDay`). Loaded by `app.html`, `teacher-build.html` and (for the top-up's lint) `lesson.html` - see "Question lint, spaced review and pitch" |
 | `firestore.rules` | | Deny-all. Paste into the Firebase console; only the service account reaches Firestore |
 | `draw-lab.html` / `api/draw-lab.js` / `lab/` | | **Internal.** Draws the same lessons with Haiku, Sonnet and Opus through the real lesson prompt, beside Servier Medical Art (CC BY 3.0), to decide which model draws for Pro. Linked from nothing. The endpoint is **locked**: 403 unless `DRAW_LAB_KEY` (12+ chars) is set in Vercel and sent as `x-lab-key`, so a deploy costs nothing. Delete all three when the comparison is done |
 | `sf-topics.js` | ~38 KB | **The subtopic skill.** Reads the notes of ANY subject into parts, groups them to fit the days, and composes each day's question mix. Loaded by `app.html`. See "Subtopics made from the notes" |
@@ -2899,7 +2899,9 @@ and a side column of At a glance / Scores / Calendar / reminder / invite.
   `buildQueue` actually opens with; "Resume Day N" only when
   `studyflow_timer_day` + `studyflow_seconds_left` say a session is open.
   The old "N questions due for spaced review" was dropped: nothing in the
-  lesson reads SM-2 due dates (`getDueQuestions` has no caller).
+  lesson read SM-2 due dates then. Since Oct 2026 `sfDueReview` does
+  (see "Question lint, spaced review and pitch"); the hero still does not
+  promise a count.
 - **Session length is real.** The segmented control writes
   `studyflow_minutes`, which sets the lesson's timer, and the timer ends the
   session. The old time modal did this and was never opened.
@@ -3119,6 +3121,83 @@ nav appears where the tag is (after the skip link, on pages that have one).
   `index.html`, so a signed-in learner has no link back to the dashboard from
   these pages (the old Pricing, Terms and Privacy bars had one). Fixing that
   is a change to both files.
+
+## Question lint, spaced review and pitch (Oct 2026)
+
+On branch `question-quality`, not merged: new learner-facing behaviour waits
+for the owner. Tests: `test_lint.js` (pure, runs under Node or JSC) and
+`test_review.js` (page loads); both fail on the code before.
+
+**The lint** (`sf-questions.js`, "QUESTION LINT"), run by
+`sanitizeDayQuestions` on every plan day and teacher card, and by the top-up
+(`lintQuestion` per card, then `lintDay`):
+
+- **No key means no card.** A missing or out-of-range `correctIndex` was set
+  to 0 - graded against option A - and a TF with no key became True. The key
+  is recovered from `correctLetter` / `answer` / `correct` text first; only a
+  card with none anywhere is dropped.
+- **No junk options.** Lists were padded to four with "Option 3", "Option 4".
+  Two real options stay two (every renderer filters empties). "All / None of
+  the above" and "Both A and B" are removed (their meaning was their
+  position, and options now move); as the KEY, the card is dropped. A
+  distractor that is the answer reworded, or a repeat, goes.
+- **Options are shuffled and the keys dealt across A-D** (`lintSpread`), so
+  the model's position habit no longer reaches the learner.
+- **The same stem twice in a day** (same type, 85% word overlap) is cut.
+- **Flags, never drops**: `answer-longest` (the key is 1.6x the longest
+  distractor), `tf-all-true` / `tf-all-false`. They sit in `q._lint` for
+  the review page.
+- **A teacher's own edit** (`sanitizeDayQuestions(day, {edit:true})`, from
+  `applyEdit`) keeps their order and an "All of the above" they wrote; the
+  key check still applies.
+- **In the top-up the lint runs BEFORE `normalizeQuestion`**, which sets a
+  missing key to 0 and so makes a keyless card look graded.
+
+**Review it by eye:** `/__h/questions.html` on the harness server - paste a
+raw model day or a saved plan; every question is shown with its key and
+flags, and every dropped one with why. This is where real-model output
+should be read (see Open items).
+
+**Spaced review** (`sfDueReview`, block 1 next to `getDueQuestions`).
+`updateSM2` ran on every answer and nothing ever read the result. Now up to
+3 questions from EARLIER days of the plan whose SM-2 date has passed are
+spread through the practice run as review cards (`isReview`, `isDue`),
+least-learnt first, then most overdue - before the reading sets, which go
+last. Copies, deep-cloned. Never on day 0, never in an assignment, never a
+question already in the session, only types that render whole
+(`DUE_TYPES`). Gaps closed with it:
+
+- `updateSM2` returns early in assignment mode (`studyflow_sm2_*` is not in
+  `ASSIGN_KEYS`, so homework was scheduling the learner's own reviews).
+- **`recordRight()`** - the graders that count a right answer themselves
+  (graph, scaffold, errorspot, sentence, sequence, match, classify) never
+  told SM-2, so those cards were only ever scheduled after a miss.
+- The classify grader never called `recordMiss` at all: a missed sort was
+  not in "What to study more", the review store or SM-2.
+- `recordMiss` now counts toward "Let's slow down a bit", same rule as
+  `handleResult` (pre-test excluded).
+
+**The answer log keeps the miss** (`sfLogFlush`): `w` what was answered,
+`r` what was right (`correctAnswerText`), 80 chars each, on misses only.
+
+**The top-up follows the learner:**
+
+- `sfWeakLine()` adds rule 9: this plan's last few misses, as the question,
+  their answer and the right one (≤560 chars, quotes flattened), asking for
+  the same ideas from a new angle and their wrong answers as distractors.
+- `sfAdapt` (from `sfLogFlush`, so every graded card counts and the pre-test
+  does not): three right in a row raise `sfLevel` a step (max +1), two
+  missed lower it (min -1). `sfLevelRule()` replaces "Vary difficulty" with
+  "mostly HARD" / "mostly EASY"; `sfPickByLevel` takes the matching
+  difficulty from the buffer, and the random fallback prefers it.
+- **The queue built at the start is never reordered** - it carries the
+  opening, the pre-test and the injectors' spacing. Pitch only steers what
+  comes after it, so in a short session it may never act. It never changes
+  a TYPE, so invariant 1 holds. Off in assignments.
+
+Not done: the day prompt in `app.html` does not get the weak-spot line (a
+plan is built before anything is answered), and nobody has read lint
+results on real model output yet.
 
 ## The teach-it-back card
 

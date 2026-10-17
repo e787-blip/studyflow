@@ -338,7 +338,160 @@
       return !!(q.find || q.question);
     }
 
-    function sanitizeDayQuestions(day) {
+    /* ── QUESTION LINT (Oct 2026) ─────────────────────────────────────────
+       Checks that need no model call, for the choice cards (mcq, scenario,
+       passage) and true/false. What it replaced:
+       - a missing or out-of-range correctIndex became 0, so a card with no
+         key was graded against option A, confidently and wrongly;
+       - short option lists were padded with "Option 3", "Option 4" - junk
+         distractors on a real question;
+       - options were never shuffled, so the model's own position habit
+         (it favours B and C) reached the learner unchanged;
+       - "All of the above" survived, and means nothing once options move;
+       - two near-identical options, one marked right, one wrong.
+       Flags it cannot fix (the right answer is much the longest option) go in
+       q._lint for the review harness; they never drop a card.
+       opts.edit: a teacher's own edit - keep their order and wording, check
+       only that the card can be graded. */
+    var LINT_NOTA = /^\s*(all|none|both|neither)\s+of\s+(the\s+)?(above|these|them|those|the\s+options|the\s+answers)\b|^\s*(both\s+|only\s+)?[a-d]\s*(and|&|,)\s*[a-d]\b|^\s*(answers?|options?)\s+[a-d]\s+and\s+[a-d]\b/i;
+    function lintKey(s) {
+      return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9À-￿]+/g, ' ').trim();
+    }
+    function lintWords(s) {
+      var out = {}, n = 0;
+      lintKey(s).split(' ').forEach(function (w) { if (w.length > 2 && !out[w]) { out[w] = 1; n++; } });
+      return { set: out, n: n };
+    }
+    function lintOverlap(a, b) {
+      var A = lintWords(a), B = lintWords(b), both = 0, k;
+      if (!A.n || !B.n) return 0;
+      for (k in A.set) if (B.set[k]) both++;
+      return both / (A.n + B.n - both);
+    }
+    function lintSame(a, b) {
+      var ka = lintKey(a), kb = lintKey(b);
+      if (ka && ka === kb) return true;
+      var A = lintWords(a), B = lintWords(b);
+      return A.n >= 3 && B.n >= 3 && lintOverlap(a, b) >= 0.85;
+    }
+    function lintFlag(q, f) { (q._lint = q._lint || []).indexOf(f) === -1 && q._lint.push(f); }
+    /* The key, from whatever field the model put it in. -1 when there is none. */
+    function lintFindKey(q, opts) {
+      var idx = q.correctIndex;
+      if (typeof idx === 'string' && /^\s*\d+\s*$/.test(idx)) idx = parseInt(idx, 10);
+      if (typeof idx === 'number' && idx >= 0 && idx < opts.length && String(opts[idx] || '').trim()) return idx;
+      var L = String(q.correctLetter || q.correctAnswer || q.answer || q.correct || '').trim(), i;
+      if (/^[A-Ha-h]$/.test(L)) { i = L.toUpperCase().charCodeAt(0) - 65; if (i < opts.length && String(opts[i] || '').trim()) return i; }
+      if (L) for (i = 0; i < opts.length; i++) if (lintKey(opts[i]) && lintKey(opts[i]) === lintKey(L)) return i;
+      return -1;
+    }
+    function lintChoice(q, opts) {
+      var edit = opts && opts.edit;
+      var raw = (Array.isArray(q.options) ? q.options : []).map(function (o) {
+        return o && typeof o === 'object' ? String(o.text || o.label || o.option || '') : o;   // {text:...} options
+      });
+      var key = lintFindKey(q, raw);
+      if (key === -1) return false;              // no key: ungradeable, never "assume A"
+      var right = String(raw[key]).trim();
+      if (!edit && LINT_NOTA.test(right)) return false;   // its meaning was its position
+      var wrong = [];
+      raw.forEach(function (o, i) {
+        if (i === key) return;
+        var t = String(o == null ? '' : o).trim();
+        if (!t || /^option\s*\d+$/i.test(t)) return;
+        if (!edit && LINT_NOTA.test(t)) { lintFlag(q, 'nota-removed'); return; }
+        if (lintSame(t, right)) { lintFlag(q, 'dup-of-answer'); return; }
+        for (var j = 0; j < wrong.length; j++) if (lintSame(t, wrong[j])) { lintFlag(q, 'dup-option'); return; }
+        wrong.push(t);
+      });
+      if (!wrong.length) return false;
+      /* Much the longest is the classic test-wise giveaway. Flag, never fix:
+         rewriting a distractor needs the model. */
+      var longest = 0;
+      wrong.forEach(function (w) { if (w.length > longest) longest = w.length; });
+      if (right.length > 24 && right.length > longest * 1.6) lintFlag(q, 'answer-longest');
+      if (edit) {
+        var kept = [], nk = -1;
+        raw.forEach(function (o, i) {
+          var t = String(o == null ? '' : o).trim();
+          if (i === key) { nk = kept.length; kept.push(right); }
+          else if (wrong.indexOf(t) !== -1 && kept.indexOf(t) === -1) kept.push(t);
+        });
+        q.options = kept; q.correctIndex = nk;
+      } else {
+        q.options = [right].concat(wrong.slice(0, 4)); q.correctIndex = 0;   // placed by lintSpread
+      }
+      return true;
+    }
+    function lintTrueFalse(q) {
+      var c = q.correct;
+      if (c === true || /^\s*true\s*$/i.test(String(c))) { q.correct = 'True'; return true; }
+      if (c === false || /^\s*false\s*$/i.test(String(c))) { q.correct = 'False'; return true; }
+      var a = String(q.answer == null ? '' : q.answer).trim();
+      if (/^true$/i.test(a)) { q.correct = 'True'; return true; }
+      if (/^false$/i.test(a)) { q.correct = 'False'; return true; }
+      return false;                              // was: defaulted to True
+    }
+    /* Shuffle each card's options, with the RIGHT answer's slot dealt so the
+       day's keys spread across A-D rather than landing at random (four cards
+       at random put three keys in one slot about a third of the time). */
+    function lintSpread(list) {
+      var start = Math.floor(Math.random() * 4), k = 0;
+      list.forEach(function (q) {
+        if (!q || q._lintPlace !== 1) return;
+        delete q._lintPlace;
+        var n = q.options.length, right = q.options[0], wrong = q.options.slice(1), i, j, t;
+        for (i = wrong.length - 1; i > 0; i--) { j = Math.floor(Math.random() * (i + 1)); t = wrong[i]; wrong[i] = wrong[j]; wrong[j] = t; }
+        var at = (start + k++) % n;
+        wrong.splice(at, 0, right);
+        q.options = wrong; q.correctIndex = at;
+      });
+    }
+    /* The same question twice in one day: same type, near-identical stem.
+       Only where the stem IS the question. A passage, scenario, chart or map
+       card carries a generic stem ("What is the main idea?", "What does the
+       pattern show?") over different material, and two of those are not
+       repeats - this cut a test's second readchart before it was narrowed. */
+    var LINT_STEM_IS_Q = { mcq: 1, truefalse: 1, fill: 1 };
+    function lintRepeats(list) {
+      var seen = [];
+      return list.filter(function (q) {
+        if (!LINT_STEM_IS_Q[q.type]) return true;
+        var stem = String(q.question || '');
+        if (lintWords(stem).n < 4) return true;
+        for (var i = 0; i < seen.length; i++) {
+          if (seen[i].type === q.type && lintOverlap(stem, seen[i].stem) >= 0.85) return false;
+        }
+        seen.push({ type: q.type, stem: stem });
+        return true;
+      });
+    }
+    function lintTFBalance(list) {
+      var tf = list.filter(function (q) { return q.type === 'truefalse'; });
+      if (tf.length >= 3 && tf.every(function (q) { return q.correct === tf[0].correct; }))
+        tf.forEach(function (q) { lintFlag(q, 'tf-all-' + tf[0].correct.toLowerCase()); });
+    }
+    /* One question, for the mid-session top-up, which does not run the whole
+       day validator. True = keep. Placement is that call's job (lintDay). */
+    function lintQuestion(q) {
+      if (!q || !q.type) return false;
+      if (q.type === 'mcq' || q.type === 'scenario' || q.type === 'passage') {
+        if (!lintChoice(q)) return false;
+        q._lintPlace = 1;
+        return true;
+      }
+      if (q.type === 'truefalse') return lintTrueFalse(q);
+      return true;
+    }
+    function lintDay(list) {
+      list = lintRepeats(list);
+      lintSpread(list);
+      lintTFBalance(list);
+      return list;
+    }
+
+    function sanitizeDayQuestions(day, sopts) {
+      var edit = !!(sopts && sopts.edit);
       if (!day) return day;
       if (!Array.isArray(day.questions)) { day.questions = []; return day; }
       var PH = /^\[.*\]$|^real |^exact |^specific |^numerical answer|^your answer|^formula here/i;
@@ -348,21 +501,16 @@
         var qText = (q.question || q.scenario || '').trim();
 
         if (q.type === 'mcq' || q.type === 'passage' || q.type === 'scenario') {
-          var opts = q.options || [];
-          // Need at least 2 non-empty options
-          var realOpts = opts.filter(function(o){ return o && String(o).trim().length > 0; });
-          if (realOpts.length < 2) return false;
-          var idx = q.correctIndex;
-          if (typeof idx !== 'number' || idx < 0 || idx >= opts.length) q.correctIndex = 0;
-          // Fill any empty options with placeholder so renderer doesn't crash
-          while (q.options.length < 4) q.options.push('Option ' + (q.options.length + 1));
           if (q.type === 'passage' && (!q.passage || q.passage.trim().length < 5)) return false;
+          /* Was: any 2 non-empty options, a missing key set to 0, and padding
+             to four with "Option N". See QUESTION LINT above. */
+          if (!lintChoice(q, { edit: edit })) return false;
+          if (!edit) q._lintPlace = 1;
           return true;
         }
         if (q.type === 'truefalse') {
           if (!qText) return false;
-          if (q.correct !== 'True' && q.correct !== 'False') q.correct = 'True';
-          return true;
+          return lintTrueFalse(q);               // was: an unknown key defaulted to True
         }
         if (q.type === 'sentence') return Array.isArray(q.words) && q.words.length >= 2 && q.words.filter(function(w){ return w && String(w).trim(); }).length >= 2;
         if (q.type === 'errorspot') {
@@ -628,6 +776,8 @@
         // Unknown types — keep if they have question text
         return qText.length > 3;
       });
+      if (edit) day.questions.forEach(function (q) { delete q._lintPlace; });
+      else day.questions = lintDay(day.questions);
       // If sanitize stripped everything, build fallback questions from keyTerms
       if (day.questions.length === 0 && Array.isArray(day.keyTerms) && day.keyTerms.length >= 2) {
         day.keyTerms.forEach(function(t) {
@@ -689,6 +839,8 @@
     tallyFor: tallyFor,
     scText: scText,
     sanitizeDayQuestions: sanitizeDayQuestions,
+    lintQuestion: lintQuestion,
+    lintDay: lintDay,
     repairJSON: repairJSON
   };
 })();
