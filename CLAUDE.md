@@ -3124,8 +3124,7 @@ nav appears where the tag is (after the skip link, on pages that have one).
 
 ## Question lint, spaced review and pitch (Oct 2026)
 
-On branch `question-quality`, not merged: new learner-facing behaviour waits
-for the owner. Tests: `test_lint.js` (pure, runs under Node or JSC) and
+Merged to `main` 2026-10-17 on the owner's word. Tests: `test_lint.js` (pure, runs under Node or JSC) and
 `test_review.js` (page loads); both fail on the code before.
 
 **The lint** (`sf-questions.js`, "QUESTION LINT"), run by
