@@ -33,6 +33,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `about.html` / `pricing.html` | ~52 / ~60 KB | "Our story" and the plans page, redesigned Oct 2026 in Liquid Glass to match `index.html` - see "Our story and Plans". Each carries its own copy of the shared glass CSS and footer; the nav is `sf-nav.js` |
 | `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
 | `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
+| `sf-render.js` | ~30 KB | **Pictures drawn by code.** Charts, number lines and to-scale timelines from figures and dates the model wrote; the model never places a mark. Loaded after `sf-icons.js` on `app.html` and `lesson.html` - see "Pictures drawn by code"
 | `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** The marketing pages that sit in the nav's own links (Help, Our story, Plans) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `lesson`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. `index.html` keeps its own copy - see "The site nav" |
 | `sf-smooth.js` | ~11 KB | **Smooth wheel scrolling** for `index.html`, `about.html`, `pricing.html` (window.`SFSmooth`). Off for touch and reduced motion - see "Smooth scroll and the two showcases" |
 | `sf-auth.js` | ~5 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html` — see "The classroom" |
@@ -1972,6 +1973,56 @@ one to the same `currentTime` - each frame is then exactly what a learner sees
 t ms in. Hold the page's `setTimeout`s back while you do, or `finish()` hands
 the DOM back mid-capture.
 
+### Pictures drawn by code — `sf-render.js` (Oct 2026)
+
+The owner's verdict on every model drawing was blunt, and it is the reason
+for this file: a model placing coordinates is guessing, and it looks like a
+guess. For anything that is only NUMBERS or DATES there is nothing to guess.
+The model writes the facts (`[[0,0],[4,3],[8,10]]`, `"1914: ..."`) and code
+scales the axis, places every mark and lays the labels out. Three pictures:
+
+| `type` | What | From |
+|---|---|---|
+| `chart` (and the old `bars`) | line or bar chart with real ticks; bars start at zero; one highlighted point labelled with its value; more than 5 bars or long names go horizontal | `points:[[x,y]]`, or `items:["Oxygen: 21"]` / `[{label,value}]` |
+| `numberline` | integers, decimals or quarters/thirds (stacked fractions), marks and hops | `min`, `max`, `step` or `denominator`, `marks`, `jumps` |
+| `timeline` | events placed IN PROPORTION to their dates, on a rail with round years down the side; BCE understood; each event gets its `SFIcons` picture under the kit's all-or-nothing rule | `items:["1914: ...", "44 BCE: ..."]` or `[{year,label}]` |
+
+- **It declines rather than drawing a dishonest picture** - fewer than 3
+  points, a non-number, a flat series, a repeated x, a mark off the line,
+  undated events. The caller then draws exactly what it drew before.
+  `SFRender.check(spec)` is that judgement, shared by the plan builder (which
+  drops a `chart`/`numberline` visual it would decline) and the renderer
+  (which checks again: a stored plan may predate the validator).
+- **Invented numbers say so.** The prompt asks for figures from the notes;
+  where an illustration needs numbers the notes do not give, the model adds
+  `"example":true` and the picture prints "Example numbers - not taken from
+  your notes" (the `readchart` convention).
+- **`highlight` names a point in the model's order** - it is marked before a
+  line's points are sorted by x, or a line written out of order lit the
+  wrong dot (caught by the test).
+- **Where it plugs in** (`dgRender` in `diagramForDay`): `day.diagram` with
+  one of the four types (or `custom` + `layout:"bars"|"timeline"`), then
+  `day.visual`, then the day's own structure when it would be bars or a
+  timeline - **or when every step opens with a year** (3-4 digits or an era:
+  "1: Preheat the oven" is a step number). Output gets the same
+  `legible` / `polish` / `uniqIds` exit as every diagram.
+- **The labelling card refuses it** (`data-sf-render` on the root): where a
+  dot sits on a chart is data, not anatomy, so a pin there is not knowledge.
+- Nothing the model wrote reaches the SVG except clamped numbers and escaped,
+  capped text; the root carries `role="img"` and an `aria-label` summary.
+- `SFDrawOn` draws it like any picture (axes, line, dots) and hands it back
+  byte-identical. A short timeline's canvas is as wide as its words, so it is
+  drawn bigger on a phone instead of leaving a blank right half.
+- Look at it: `.claude/skills/diagram/scripts/render-preview.html` on the
+  harness server draws ten fixtures at phone width with the real fonts and
+  SFAudit under each (all ten clean). `test_render.js` is the test.
+
+**Not this file's job:** cells, hearts, leaves - anything whose shape is the
+lesson. That needs real illustrations (a licensed library such as Servier
+Medical Art, CC BY, with pins placed from stored anchor points) and is a
+separate decision. Maps (Natural Earth outlines), function plots and
+geometry with computed angles are the natural next renderers here.
+
 ### Pictures in the diagrams — `sf-icons.js`
 
 The kit's layouts were rounded boxes with the words inside and looked it - the
@@ -2433,6 +2484,15 @@ What to check after any `buildQueue` or renderer change:
     label; a boxes-with-nouns drawing is gated; the prompt's leaf audits
     clean; icons pop in whole and the diagram is handed back identical.
     Proven to catch a hub label hung under its spoke and the date cut.
+18h. **Pictures drawn by code** (`test_render.js`): every mark sits at its
+    value (heights 0:5:10:20 come out 0:1:2:4, 3/4 sits three quarters
+    along, 1900-1901 is 1% of 1900-2000); the highlight follows its point
+    through a sort; 19 bad specs are declined; hostile titles, labels and a
+    `__proto__` key never become markup; `day.diagram`, `day.visual` and
+    dated steps reach it and a declined spec or a missing file falls back to
+    a picture, never to none; the labelling card refuses a chart; five
+    pictures audit with no failures at 343px; it draws itself and is handed
+    back identical; `app.html` loads, validates and prompts it.
 18g. **The five formats of Oct 2026** (`test_newtypes.js`): each queued once
     outside the pre-test, `whosright` in it and the other four never; recall
     forgives a plural and a slip but not a repeat, Enter moves between slots,
@@ -3379,6 +3439,12 @@ genuinely nothing.
 
 ## Open items
 
+- **Pictures drawn by code have not been fed by a real model.** `chart` and
+  `numberline` are prompted, validated and tested on hand-written specs; the
+  bars and dated-timeline routes also upgrade what plans already carry. First
+  check with a key: generate an economics, a history and a maths plan and
+  read `day.visual` - does Haiku pick `chart` when the notes have figures,
+  use the notes' own numbers, and mark invented ones `"example":true`?
 - **The five formats of Oct 2026 have not been seen from a real model.**
   `recall`, `selfcheck`, `conceptmap`, `whosright` and `readchart` are
   prompted, validated and tested against hand-written good and bad cards,
@@ -3547,6 +3613,29 @@ genuinely nothing.
     `feedback-box`, the monochrome streak pill). If the lesson card's look
     changes, this copy of it goes stale. The hooks are `window.__holdState()`
     and `window.__demo()`.
+  - **The loose papers (Oct 2026 refinement)** looked "quirky and artificial":
+    rigid cards on constant spin, three shared bend shapes, 384px textures
+    with ECG-like scribbles for text, a flat grey-blue back. Now:
+    - **Textures** (`noteCanvas`): eight pages at 2x (1.5x on phones), real
+      typed lines in DM Sans from a pool of study sentences (`textBlock`),
+      handwriting with one baseline and x-height (`hand`), and per-page grain,
+      a shaded edge, a thin cut line and letter folds (`finishPage`). Typed
+      notes, lined handwriting, graph paper, a slide handout, Cornell notes,
+      practice questions with the answer circled, a labelled cell, a textbook
+      spread. No amber. **Fonts must be loaded first** (`fontsThen` lists
+      every weight the pages use - add one there if you draw with a new one).
+    - **Every sheet has its own bend** (`bendField`, `sheetGeometry`): a cupped
+      curve about a random axis, an optional dog-ear, a faint ripple, three
+      morph targets (its pose, a second pose, flat). It flexes between its two
+      poses while it floats (`morphTargetInfluences[1]`) and is flat in the
+      stack (`[0]`).
+    - **Motion**: a sheet rocks about each axis between two angles at its own
+      slow speed (`S.osc`) and slides a little sideways as it rocks; only the
+      yaw drifts slowly on. It no longer spins like a card. Stays in 40
+      sheets / 28 on phones.
+    - **Shader** (`paperMaterial`): the back is paper with the writing faintly
+      showing through, mirrored; a sheet seen nearly edge-on is dimmed, because
+      a lit sliver reads as a white hairline glitch.
   - **The nav's entrance animation fills `backwards`, not `both`.** A
     finished animation that stays "in effect" makes the nav a backdrop root,
     and then its frosted bar has nothing to blur: headings scrolled under

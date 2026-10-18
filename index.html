@@ -1826,71 +1826,221 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       return W;
     }
 
-    /* ── textures, drawn on canvases: six kinds of notes and four day cards ── */
-    var TITLES = ['Cell division', 'Ch. 7 notes', 'Meiosis I vs II', 'Key terms', 'Mitosis', 'Review!'];
-    function scribble(ctx, x, y, w, r) {
-      ctx.beginPath();
-      var cx = x; ctx.moveTo(cx, y);
-      while (cx < x + w) {
-        var step = 5 + r() * 7;
-        ctx.quadraticCurveTo(cx + step * .5, y + (r() - .5) * 10, cx + step, y + (r() - .5) * 2.5);
-        cx += step;
-        if (r() < .13) { cx += 9 + r() * 6; ctx.moveTo(cx, y); }
+    /* ── textures: eight real-looking pages, drawn at twice the size they show ──
+       The first pages were 384px wide with ECG-like scribbles for text, and
+       at the size they appear on screen that read as a sticker of a page, not
+       a page. Now the typed lines are real words in the site's own fonts, the
+       handwriting keeps one baseline and one x-height, and every page has
+       grain, a shaded edge and (some) a fold, so overlapping sheets in the
+       stack can be told apart. No amber anywhere: ink, blue and slate. */
+    var SENT = [
+      'The cell cycle has four stages: G1, S, G2 and M.',
+      'During S phase the cell copies all of its DNA.',
+      'Chromosomes line up along the middle of the cell in metaphase.',
+      'Sister chromatids are pulled to opposite poles in anaphase.',
+      'Spaced practice beats cramming for long-term memory.',
+      'A hypothesis has to be something an experiment could prove wrong.',
+      'The French Revolution began in 1789 after years of debt and bread shortages.',
+      'Supply shifts to the right when the cost of making a good falls.',
+      'Check every answer by putting it back into the original equation.',
+      'Mitochondria turn glucose and oxygen into usable energy as ATP.',
+      'Primary sources were written at the time, so ask what the author wanted.',
+      'The slope tells you how much y changes each time x goes up by one.',
+      'Natural selection acts on variation that already exists in a population.',
+      'In the exam, show every step: marks go to the method, not only the answer.'
+    ];
+    var PW = 384, PH = 497, TEXS = 2;
+    var INK = 'rgba(30,44,100,0.88)', TYPE = '#2a3047', HILITE = 'rgba(74,124,246,0.2)', SANS = '"DM Sans", system-ui, sans-serif', SERIF = '"Instrument Serif", Georgia, serif', MONO = '"DM Mono", ui-monospace, monospace';
+    var grainTile = null;
+    function grain() {
+      if (grainTile) return grainTile;
+      var c = document.createElement('canvas'); c.width = c.height = 160;
+      var g = c.getContext('2d'), d = g.createImageData(160, 160), r = rng(7);
+      for (var i = 0; i < d.data.length; i += 4) { var v = 128 + (r() - .5) * 100; d.data[i] = v - 8; d.data[i + 1] = v - 4; d.data[i + 2] = v + 7; d.data[i + 3] = 255; }
+      g.putImageData(d, 0, 0);
+      return (grainTile = c);
+    }
+    /* Words, wrapped to a width, the last line cut short like a paragraph's. */
+    function textBlock(x, X, Y, w, n, size, lh, r, color, weight) {
+      x.font = (weight || 400) + ' ' + size + 'px ' + SANS; x.fillStyle = color || TYPE;
+      var s = '', words, lines = [], cur = '', i, j;
+      while (s.length < n * w / size * 2.6) s += SENT[Math.floor(r() * SENT.length)] + ' ';
+      words = s.split(' ');
+      for (i = 0; i < words.length && lines.length < n; i++) {
+        var t = cur ? cur + ' ' + words[i] : words[i];
+        if (x.measureText(t).width > w && cur) { lines.push(cur); cur = words[i]; } else cur = t;
       }
-      ctx.stroke();
+      for (j = 0; j < lines.length; j++) {
+        var line = lines[j];
+        if (j === n - 1) line = line.split(' ').slice(0, Math.max(2, Math.round(line.split(' ').length * (.35 + r() * .5)))).join(' ');
+        x.fillText(line, X, Y + j * lh);
+      }
+      return Y + n * lh;
+    }
+    /* Handwriting: one baseline, one x-height, an ascender now and then. */
+    function hand(x, X, Y, w, r, amp) {
+      x.beginPath(); x.moveTo(X, Y);
+      var cx = X, a = amp || 1;
+      while (cx < X + w) {
+        var step = 3.4 + r() * 4, k = r(), h = k < .12 ? -(8 + r() * 5) : (k > .93 ? 3.2 : -(2.2 + r() * 3.4) * a);
+        x.bezierCurveTo(cx + step * .3, Y + h * 1.2, cx + step * .72, Y + h * 1.05, cx + step, Y + (r() - .5) * .7);
+        cx += step;
+        if (r() < .16) { cx += 4.5 + r() * 6; x.moveTo(cx, Y + (r() - .5) * .8); }
+      }
+      x.stroke();
+    }
+    function ruled(x, y0, y1, gap, color) { x.strokeStyle = color; x.lineWidth = 1; for (var y = y0; y < y1; y += gap) { x.beginPath(); x.moveTo(0, y); x.lineTo(PW, y); x.stroke(); } }
+    function sketchBox(x, X, Y, w, h, r) {
+      x.strokeStyle = INK; x.lineWidth = 1.5;
+      for (var p = 0; p < 2; p++) {
+        x.beginPath(); x.moveTo(X + r() * 3, Y + r() * 2); x.lineTo(X + w + r() * 3, Y + r() * 2); x.lineTo(X + w + r() * 2, Y + h + r() * 3); x.lineTo(X + r() * 3, Y + h + r() * 2); x.lineTo(X + r() * 2, Y + r() * 3 - 1); x.stroke();
+      }
+    }
+    function circleWord(x, cx, cy, rx, ry, r) {
+      x.strokeStyle = 'rgba(40,81,200,0.85)'; x.lineWidth = 1.6;
+      x.beginPath(); x.ellipse(cx, cy, rx, ry, -.06, .2, Math.PI * 2 + .45); x.stroke();
+      x.beginPath(); x.ellipse(cx + 1, cy + .5, rx - 1.5, ry - 1, -.04, 1.1, Math.PI * 2 - .2); x.stroke();
+    }
+    /* Grain, a shaded edge, a thin cut line and (when asked) letter folds. */
+    function finishPage(x, creases) {
+      x.save();
+      x.globalCompositeOperation = 'multiply'; x.globalAlpha = .07; x.fillStyle = x.createPattern(grain(), 'repeat'); x.fillRect(0, 0, PW, PH);
+      x.restore();
+      var e, sides = [[0, 0, 16, 0, 0, 0, PW, PH], [PW, 0, PW - 16, 0, PW - 16, 0, 16, PH], [0, 0, 0, 16, 0, 0, PW, 16], [0, PH, 0, PH - 16, 0, PH - 16, PW, 16]];
+      sides.forEach(function (s) { e = x.createLinearGradient(s[0], s[1], s[2], s[3]); e.addColorStop(0, 'rgba(50,70,140,0.13)'); e.addColorStop(1, 'rgba(50,70,140,0)'); x.fillStyle = e; x.fillRect(s[4], s[5], s[6], s[7]); });
+      (creases || []).forEach(function (y) {
+        var g = x.createLinearGradient(0, y - 6, 0, y + 7);
+        g.addColorStop(0, 'rgba(30,50,110,0)'); g.addColorStop(.46, 'rgba(30,50,110,0.12)'); g.addColorStop(.52, 'rgba(255,255,255,0.32)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+        x.fillStyle = g; x.fillRect(0, y - 6, PW, 13);
+      });
+      x.strokeStyle = 'rgba(95,115,175,0.3)'; x.lineWidth = 1.2; x.strokeRect(.6, .6, PW - 1.2, PH - 1.2);
     }
     function noteCanvas(kind, seed) {
-      var c = document.createElement('canvas'); c.width = 384; c.height = 497;
-      var x = c.getContext('2d'), r = rng(seed), W = c.width, H = c.height, i, y;
-      var bg = ['#fbfcff', '#f6f9ff', '#ffffff', '#ffffff', '#f3f7ff', '#dce7ff'][kind];
-      x.fillStyle = bg; x.fillRect(0, 0, W, H);
-      var g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, 'rgba(255,255,255,0.35)'); g.addColorStop(1, 'rgba(20,40,110,0.07)');
-      x.fillStyle = g; x.fillRect(0, 0, W, H);
+      var c = document.createElement('canvas'); c.width = Math.round(PW * TEXS); c.height = Math.round(PH * TEXS);
+      var x = c.getContext('2d'), r = rng(seed), i, y;
+      x.scale(TEXS, TEXS);
+      x.fillStyle = ['#fcfdff', '#f7faff', '#ffffff', '#fafcff', '#f4f8ff', '#fbfcff', '#ffffff', '#f8faff'][kind]; x.fillRect(0, 0, PW, PH);
+      var g = x.createLinearGradient(0, 0, PW, PH); g.addColorStop(0, 'rgba(255,255,255,0.4)'); g.addColorStop(1, 'rgba(30,50,120,0.06)'); x.fillStyle = g; x.fillRect(0, 0, PW, PH);
       x.lineCap = 'round'; x.lineJoin = 'round';
-      var ink = 'rgba(34,48,98,0.86)';
-      function title(tx, ty, size) { x.fillStyle = '#1f2c5c'; x.font = 'italic ' + size + 'px "Instrument Serif", Georgia, serif'; x.fillText(TITLES[(seed + kind) % TITLES.length], tx, ty); }
-      if (kind === 0 || kind === 4 || kind === 5) {
-        var gap = kind === 5 ? 34 : 27, top = kind === 4 ? 92 : 78;
-        if (kind !== 5) { x.strokeStyle = 'rgba(74,124,246,0.22)'; x.lineWidth = 1.2; for (y = top; y < H - 14; y += gap) { x.beginPath(); x.moveTo(0, y); x.lineTo(W, y); x.stroke(); } }
-        if (kind === 0) { x.strokeStyle = 'rgba(74,124,246,0.45)'; x.lineWidth = 1.6; x.beginPath(); x.moveTo(56, 0); x.lineTo(56, H); x.stroke(); }
-        if (kind === 4) { x.strokeStyle = '#4a7cf6'; x.lineWidth = 3; x.beginPath(); x.moveTo(0, 62); x.lineTo(W, 62); x.stroke(); }
-        title(kind === 0 ? 70 : 28, kind === 4 ? 48 : 54, kind === 5 ? 44 : 36);
-        x.strokeStyle = ink; x.lineWidth = 2.1;
-        var hl = 2 + Math.floor(r() * 5);
-        for (i = 0, y = top + gap - 7; y < H - 30; y += gap, i++) {
-          var sx = kind === 0 ? 70 : 28, len = (W - sx - 26) * (.45 + r() * .55);
-          if (i === hl) { x.fillStyle = 'rgba(74,124,246,0.24)'; x.fillRect(sx - 4, y - 13, len * .7, 18); }
-          if (r() < .12) continue;
-          scribble(x, sx, y, len, r);
+      var creases = null;
+      if (kind === 0) {                                    /* typed lecture notes */
+        x.fillStyle = '#2851c8'; x.font = '500 7.5px ' + MONO; x.fillText('BIO 101  ·  WEEK 7', 30, 34);
+        x.fillStyle = '#1a1d2e'; x.font = '28px ' + SERIF; x.fillText('The cell cycle', 30, 68);
+        x.fillStyle = 'rgba(74,124,246,0.55)'; x.fillRect(30, 78, 38, 2);
+        y = 102;
+        ['Interphase', 'Mitosis', 'Cytokinesis'].forEach(function (h, k) {
+          x.fillStyle = '#1a1d2e'; x.font = '600 9.5px ' + SANS; x.fillText(h, 30, y);
+          if (k === 1) { x.fillStyle = HILITE; x.fillRect(28, y + 14 + 24 - 9, 214, 12); }
+          y = textBlock(x, 30, y + 15, 324, k === 0 ? 5 : 4, 8.6, 12.4, r) + 22;
+        });
+        x.fillStyle = '#7a8199'; x.font = '7.5px ' + MONO; x.fillText('7', 352, 478);
+        creases = [PH * .333, PH * .667];
+      } else if (kind === 1) {                             /* handwritten, lined */
+        ruled(x, 64, PH - 20, 22, 'rgba(74,124,246,0.24)');
+        x.strokeStyle = 'rgba(74,124,246,0.5)'; x.lineWidth = 1.4; x.beginPath(); x.moveTo(52, 0); x.lineTo(52, PH); x.stroke();
+        x.fillStyle = '#1f2c5c'; x.font = 'italic 27px ' + SERIF; x.fillText('Meiosis I vs II', 62, 48);
+        x.strokeStyle = 'rgba(40,81,200,0.7)'; x.lineWidth = 1.6; x.beginPath(); x.moveTo(62, 56); x.bezierCurveTo(110, 60, 150, 52, 200, 57); x.stroke();
+        x.strokeStyle = INK; x.lineWidth = 1.5;
+        var hl = 3 + Math.floor(r() * 4);
+        for (i = 0, y = 82; y < PH - 30; y += 22, i++) {
+          var ind = (i % 4 === 1) ? 78 : 62, len = (PW - ind - 28) * (.5 + r() * .5);
+          if (i === hl) { x.fillStyle = HILITE; x.fillRect(ind - 3, y - 10, len * .75, 15); x.strokeStyle = INK; }
+          if (r() < .1) continue;
+          if (ind === 78) { x.fillStyle = INK; x.beginPath(); x.arc(70, y - 4, 1.6, 0, 6.3); x.fill(); }
+          hand(x, ind, y - 1, len, r);
         }
-        if (kind === 0) { x.strokeStyle = 'rgba(40,81,200,0.75)'; x.lineWidth = 2.2; x.beginPath(); x.arc(W - 70, H - 80, 34, 0, Math.PI * 2); x.stroke(); x.beginPath(); x.arc(W - 64, H - 84, 11, 0, Math.PI * 2); x.stroke(); }
-        if (kind === 5) { x.strokeStyle = '#2851c8'; x.lineWidth = 2.4; x.beginPath(); for (i = 0; i < 11; i++) { var a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? 11 : 26; x.lineTo(W - 60 + Math.cos(a) * rr, 60 + Math.sin(a) * rr); } x.stroke(); }
-      } else if (kind === 1) {
-        x.strokeStyle = 'rgba(74,124,246,0.16)'; x.lineWidth = 1;
-        for (i = 0; i < W; i += 18) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, H); x.stroke(); }
-        for (i = 0; i < H; i += 18) { x.beginPath(); x.moveTo(0, i); x.lineTo(W, i); x.stroke(); }
-        title(26, 50, 34);
-        x.strokeStyle = ink; x.lineWidth = 2; x.beginPath(); x.moveTo(40, 300); x.lineTo(W - 30, 300); x.moveTo(90, 110); x.lineTo(90, 330); x.stroke();
-        x.strokeStyle = '#3567e0'; x.lineWidth = 3; x.beginPath();
-        for (i = 0; i <= 40; i++) { var u = (i - 20) / 20, px = 60 + i * 7, py = 290 - (1 - u * u) * 150; if (i) x.lineTo(px, py); else x.moveTo(px, py); }
+        sketchBox(x, 210, 214, 118, 28, r); x.strokeStyle = INK; x.lineWidth = 1.5; hand(x, 220, 233, 96, r);
+        circleWord(x, 112, 126, 38, 11, r);
+      } else if (kind === 2) {                             /* graph paper */
+        x.strokeStyle = 'rgba(74,124,246,0.14)'; x.lineWidth = .8;
+        for (i = 0; i < PW; i += 16) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, PH); x.stroke(); }
+        for (i = 0; i < PH; i += 16) { x.beginPath(); x.moveTo(0, i); x.lineTo(PW, i); x.stroke(); }
+        x.strokeStyle = 'rgba(74,124,246,0.3)'; x.lineWidth = 1; for (i = 0; i < PW; i += 80) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, PH); x.stroke(); }
+        x.fillStyle = '#1f2c5c'; x.font = 'italic 24px ' + SERIF; x.fillText('Graphing y = x²', 28, 48);
+        x.strokeStyle = INK; x.lineWidth = 1.5; x.beginPath(); x.moveTo(40, 290); x.lineTo(PW - 28, 290); x.moveTo(190, 96); x.lineTo(190, 316); x.stroke();
+        x.beginPath(); x.moveTo(PW - 36, 286); x.lineTo(PW - 28, 290); x.lineTo(PW - 36, 294); x.moveTo(186, 104); x.lineTo(190, 96); x.lineTo(194, 104); x.stroke();
+        x.strokeStyle = '#3567e0'; x.lineWidth = 2.2; x.beginPath();
+        for (i = 0; i <= 48; i++) { var u = (i - 24) / 24, px = 190 + u * 118, py = 288 - u * u * 150; if (i) x.lineTo(px, py); else x.moveTo(px, py); }
         x.stroke();
-        x.strokeStyle = ink; x.lineWidth = 2;
-        for (y = 370; y < H - 30; y += 34) { scribble(x, 30, y, 90 + r() * 60, r); x.beginPath(); x.moveTo(170, y - 4); x.lineTo(186, y - 4); x.moveTo(170, y + 3); x.lineTo(186, y + 3); x.stroke(); scribble(x, 200, y, 60 + r() * 90, r); }
-      } else if (kind === 2) {
-        x.fillStyle = '#1a1d2e'; x.fillRect(30, 34, 210, 16);
-        x.fillStyle = '#9aa6c2'; x.fillRect(30, 60, 130, 8);
-        x.fillStyle = '#eef3ff'; x.fillRect(W - 150, 90, 120, 110);
-        x.strokeStyle = '#4a7cf6'; x.lineWidth = 2.5; x.beginPath(); x.arc(W - 110, 145, 22, 0, Math.PI * 2); x.stroke(); x.beginPath(); x.arc(W - 62, 145, 14, 0, Math.PI * 2); x.stroke(); x.beginPath(); x.moveTo(W - 88, 145); x.lineTo(W - 76, 145); x.stroke();
-        x.fillStyle = '#c9d0de';
-        for (y = 92; y < H - 26; y += 15) { var right = y < 210 ? W - 170 : W - 30; if (r() < .1) { y += 10; continue; } x.fillRect(30, y, (right - 30) * (y % 5 === 2 ? .6 : 1), 6); }
-        x.strokeStyle = 'rgba(40,81,200,0.8)'; x.lineWidth = 2.4; x.beginPath(); x.ellipse(120, 250, 80, 16, -.03, 0, Math.PI * 2); x.stroke();
-      } else {
-        x.fillStyle = '#f1f5ff'; x.fillRect(22, 22, W - 44, 196); x.strokeStyle = '#cdd9f5'; x.lineWidth = 2; x.strokeRect(22, 22, W - 44, 196);
-        x.fillStyle = '#1a1d2e'; x.font = '600 22px "DM Sans", system-ui, sans-serif'; x.fillText(TITLES[(seed + 2) % TITLES.length], 40, 60);
-        for (i = 0; i < 4; i++) { x.fillStyle = '#4a7cf6'; x.beginPath(); x.arc(46, 96 + i * 30, 4.5, 0, Math.PI * 2); x.fill(); x.fillStyle = '#b8c3da'; x.fillRect(60, 92 + i * 30, 120 + r() * 150, 8); }
-        x.strokeStyle = 'rgba(74,124,246,0.22)'; x.lineWidth = 1.2; for (y = 262; y < H - 14; y += 27) { x.beginPath(); x.moveTo(22, y); x.lineTo(W - 22, y); x.stroke(); }
-        x.strokeStyle = ink; x.lineWidth = 2; for (y = 255; y < H - 30; y += 27) { if (r() < .2) continue; scribble(x, 30, y, (W - 80) * (.4 + r() * .6), r); }
+        x.fillStyle = '#2851c8'; [[-1, 1], [0, 0], [1, 1]].forEach(function (p) { x.beginPath(); x.arc(190 + p[0] * 79, 288 - p[1] * 67, 3.2, 0, 6.3); x.fill(); });
+        x.strokeStyle = INK; x.lineWidth = 1.5;
+        for (y = 352; y < PH - 30; y += 26) { hand(x, 30, y, 70 + r() * 50, r); x.beginPath(); x.moveTo(150, y - 5); x.lineTo(162, y - 5); x.moveTo(150, y - 1); x.lineTo(162, y - 1); x.stroke(); hand(x, 176, y, 50 + r() * 100, r); }
+        creases = [PH * .5];
+      } else if (kind === 3) {                             /* slide handout: three thumbnails and lines */
+        x.fillStyle = '#2851c8'; x.font = '500 7.5px ' + MONO; x.fillText('HANDOUT  ·  LECTURE 12', 26, 28);
+        for (i = 0; i < 3; i++) {
+          var fy = 40 + i * 146;
+          x.fillStyle = '#fff'; x.fillRect(26, fy, 158, 100); x.strokeStyle = '#c9d4ea'; x.lineWidth = 1.2; x.strokeRect(26, fy, 158, 100);
+          x.fillStyle = '#1a1d2e'; x.font = '600 9px ' + SANS; x.fillText(['Supply and demand', 'Equilibrium', 'Shifts'][i], 36, fy + 20);
+          x.fillStyle = '#b8c3da'; for (var b = 0; b < 3; b++) x.fillRect(36, fy + 32 + b * 11, 52 + r() * 34, 4);
+          x.strokeStyle = '#3567e0'; x.lineWidth = 1.8; x.beginPath();
+          if (i === 1) { x.moveTo(104, fy + 36); x.lineTo(172, fy + 84); x.moveTo(104, fy + 84); x.lineTo(172, fy + 36); } else { x.moveTo(104, fy + 84); x.quadraticCurveTo(136, fy + (i ? 60 : 40), 172, fy + (i ? 36 : 82)); }
+          x.stroke();
+          x.strokeStyle = 'rgba(74,124,246,0.22)'; x.lineWidth = 1; for (var q = 0; q < 5; q++) { x.beginPath(); x.moveTo(200, fy + 18 + q * 18); x.lineTo(PW - 24, fy + 18 + q * 18); x.stroke(); }
+          x.strokeStyle = INK; x.lineWidth = 1.4; for (q = 0; q < 4; q++) if (r() > .25) hand(x, 204, fy + 15 + q * 18, 60 + r() * 90, r);
+        }
+        creases = [PH * .5];
+      } else if (kind === 4) {                             /* Cornell notes */
+        x.fillStyle = '#1a1d2e'; x.font = '22px ' + SERIF; x.fillText('Chapter 7 notes', 24, 40);
+        x.fillStyle = '#7a8199'; x.font = '7.5px ' + MONO; x.fillText('MON 14', 318, 38);
+        x.strokeStyle = 'rgba(74,124,246,0.55)'; x.lineWidth = 1.6; x.beginPath(); x.moveTo(24, 56); x.lineTo(PW - 24, 56); x.moveTo(108, 56); x.lineTo(108, 396); x.moveTo(24, 396); x.lineTo(PW - 24, 396); x.stroke();
+        x.fillStyle = '#2851c8'; x.font = '600 8.5px ' + SANS; ['Prophase', 'Metaphase', 'Anaphase', 'Why it matters'].forEach(function (t, k) { x.fillText(t, 28, 84 + k * 76); });
+        y = 80; for (i = 0; i < 4; i++) { y = textBlock(x, 120, y, 236, 4, 8.4, 12, r) + 14; }
+        x.fillStyle = '#7a8199'; x.font = '500 7px ' + MONO; x.fillText('SUMMARY', 28, 414);
+        x.strokeStyle = INK; x.lineWidth = 1.5; for (y = 432; y < PH - 20; y += 20) hand(x, 28, y, (PW - 70) * (.55 + r() * .45), r);
+      } else if (kind === 5) {                             /* practice questions with the answer circled */
+        x.fillStyle = '#1a1d2e'; x.font = '26px ' + SERIF; x.fillText('Practice questions', 28, 50);
+        x.fillStyle = '#7a8199'; x.font = '7.5px ' + MONO; x.fillText('3 QUESTIONS  ·  6 MIN', 28, 66);
+        x.fillStyle = 'rgba(31,44,92,0.9)'; x.font = 'italic 26px ' + SERIF; x.fillText('8/10', 318, 54);
+        var OPT = [['Prophase', 'Metaphase', 'Anaphase', 'Telophase'], ['G1', 'S', 'G2', 'M'], ['Two', 'Four', 'Eight', 'Sixteen']];
+        var Q = ['At which stage do the chromosomes line up along the middle of the cell?', 'In which phase does the cell copy its DNA?', 'How many daughter cells does mitosis make from one cell?'];
+        for (var qn = 0; qn < 3; qn++) {
+          y = 98 + qn * 128;
+          x.fillStyle = '#2851c8'; x.font = '600 9px ' + SANS; x.fillText(String(qn + 1) + '.', 28, y);
+          x.fillStyle = TYPE; x.font = '500 9px ' + SANS;
+          var wd = Q[qn].split(' '), ln = '', ly = y;
+          wd.forEach(function (w2) { var t2 = ln ? ln + ' ' + w2 : w2; if (x.measureText(t2).width > 300 && ln) { x.fillText(ln, 42, ly); ly += 13; ln = w2; } else ln = t2; });
+          x.fillText(ln, 42, ly);
+          for (var o = 0; o < 4; o++) {
+            var oy = ly + 24 + o * 17;
+            x.strokeStyle = '#c3cfe6'; x.lineWidth = 1.2; x.beginPath(); x.arc(52, oy - 3, 5, 0, 6.3); x.stroke();
+            x.fillStyle = TYPE; x.font = '400 8.6px ' + SANS; x.fillText(OPT[qn][o], 66, oy);
+            if (o === (qn === 0 ? 1 : qn === 1 ? 1 : 0)) { circleWord(x, 52, oy - 3, 7, 7, r); x.strokeStyle = '#2851c8'; x.lineWidth = 1.8; x.beginPath(); x.moveTo(168, oy - 4); x.lineTo(172, oy); x.lineTo(180, oy - 9); x.stroke(); }
+          }
+        }
+      } else if (kind === 6) {                             /* a labelled diagram */
+        x.fillStyle = '#1a1d2e'; x.font = '24px ' + SERIF; x.fillText('Inside an animal cell', 28, 50);
+        x.fillStyle = 'rgba(74,124,246,0.07)'; x.strokeStyle = INK; x.lineWidth = 1.8;
+        x.beginPath(); x.ellipse(192, 232, 118, 92, -.06, 0, 6.3); x.fill(); x.stroke();
+        x.fillStyle = 'rgba(74,124,246,0.2)'; x.beginPath(); x.arc(176, 226, 36, 0, 6.3); x.fill(); x.stroke();
+        x.fillStyle = 'rgba(40,81,200,0.5)'; x.beginPath(); x.arc(170, 222, 11, 0, 6.3); x.fill();
+        x.lineWidth = 1.3; x.fillStyle = 'rgba(74,124,246,0.12)';
+        [[258, 196, -.5], [252, 270, .4], [128, 276, -.2], [236, 160, .2]].forEach(function (m) { x.beginPath(); x.ellipse(m[0], m[1], 20, 9, m[2], 0, 6.3); x.fill(); x.stroke(); x.beginPath(); x.moveTo(m[0] - 11, m[1] + 1); x.quadraticCurveTo(m[0], m[1] - 6, m[0] + 11, m[1] + 1); x.stroke(); });
+        x.fillStyle = INK; for (i = 0; i < 26; i++) { x.beginPath(); x.arc(110 + r() * 170, 170 + r() * 126, 1.1, 0, 6.3); x.fill(); }
+        x.font = '500 8.4px ' + SANS; x.fillStyle = TYPE; x.strokeStyle = 'rgba(30,44,100,0.7)'; x.lineWidth = 1;
+        [['Nucleus', 176, 226, 30, 322, 'l'], ['Mitochondrion', 258, 196, 330, 142, 'r'], ['Cell membrane', 306, 250, 330, 330, 'r'], ['Ribosomes', 132, 222, 30, 148, 'l']].forEach(function (L) {
+          x.beginPath(); x.moveTo(L[1], L[2]); x.lineTo(L[3] + (L[5] === 'l' ? 52 : 0), L[4]); x.stroke();
+          x.fillText(L[0], L[3] - (L[5] === 'r' ? 40 : 0), L[4] + (L[4] > 250 ? 11 : -3));
+        });
+        x.fillStyle = '#7a8199'; x.font = 'italic 8px ' + SERIF; x.fillText('Fig. 3   A generalised animal cell', 28, 372);
+        x.strokeStyle = INK; x.lineWidth = 1.4; for (y = 404; y < PH - 24; y += 22) hand(x, 28, y, (PW - 70) * (.5 + r() * .5), r);
+        creases = [PH * .5];
+      } else {                                             /* a textbook page, two columns */
+        x.fillStyle = '#7a8199'; x.font = '500 7px ' + MONO; x.fillText('CHAPTER 7  ·  CELL DIVISION', 30, 30);
+        x.fillStyle = '#1a1d2e'; x.font = '25px ' + SERIF; x.fillText('How cells divide', 30, 62);
+        y = textBlock(x, 30, 92, 150, 9, 7.8, 11.4, r);
+        x.fillStyle = '#eef3ff'; x.fillRect(30, y + 8, 150, 86); x.strokeStyle = '#cdd9f5'; x.lineWidth = 1; x.strokeRect(30, y + 8, 150, 86);
+        x.strokeStyle = '#3567e0'; x.lineWidth = 1.8; x.beginPath(); for (i = 0; i <= 40; i++) { var wx = 38 + i * 3.3, wy = y + 52 + Math.sin(i * .5) * 22; if (i) x.lineTo(wx, wy); else x.moveTo(wx, wy); } x.stroke();
+        x.fillStyle = '#7a8199'; x.font = 'italic 7px ' + SERIF; x.fillText('Figure 7.2  Chromosomes through mitosis', 30, y + 106);
+        textBlock(x, 30, y + 122, 150, 7, 7.8, 11.4, r);
+        textBlock(x, 204, 92, 150, 6, 7.8, 11.4, r);
+        x.fillStyle = 'rgba(74,124,246,0.7)'; x.fillRect(204, 182, 2.4, 40);
+        x.fillStyle = '#1f2c5c'; x.font = 'italic 12.5px ' + SERIF; x.fillText('Cells divide to grow,', 214, 197); x.fillText('to heal and to replace.', 214, 213);
+        textBlock(x, 204, 246, 150, 12, 7.8, 11.4, r);
+        x.fillStyle = '#7a8199'; x.font = '7px ' + MONO; x.fillText('142', 346, 478);
+        creases = [PH * .333, PH * .667];
       }
+      finishPage(x, creases);
       return c;
     }
     var DAYS = [
@@ -1939,33 +2089,53 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       for (var i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) - x) / w, (pos.getY(i) - y) / h);
       return g;
     }
-    function sheetGeometry(variant) {
-      var T = gl.T, g = new T.PlaneGeometry(1, 1.294, 12, 14);
-      var pos = g.attributes.position, n = pos.count;
-      var flat = new Float32Array(n * 3), flatN = new Float32Array(n * 3);
-      for (var i = 0; i < n; i++) {
-        var X = pos.getX(i), Y = pos.getY(i), z;
+    /* Every sheet has its OWN bend. Three shared shapes (one cylinder, one
+       curl, one wave) were what made the cloud read as copies of one page.
+       A bend here is a cupped curve about a random axis, a dog-eared corner
+       and a faint ripple. Each sheet carries three shapes as morph targets:
+       its own pose, a second pose it flexes toward while it floats, and flat
+       (the stack). */
+    function bendField(r) {
+      var th = r() * Math.PI, ct = Math.cos(th), st = Math.sin(th);
+      var k = (.05 + r() * .26) * (r() < .5 ? -1 : 1);
+      var cx = r() < .5 ? -1 : 1, cy = r() < .5 ? -1 : 1, cs = r() < .55 ? .12 + r() * .34 : 0, wf = 3 + r() * 3, wp = r() * 6.28, wa = .01 + r() * .028;
+      return function (X, Y) { var u = X * ct + Y * st, q = Math.max(0, X * cx + Y * cy - .28); return k * u * u + cs * q * q * 2.2 + wa * Math.sin(Y * wf + wp); };
+    }
+    function sheetGeometry(r) {
+      var T = gl.T, w = .95 + r() * .1, h = 1.28 + r() * .14, g = new T.PlaneGeometry(w, h, 12, 14);
+      var pos = g.attributes.position, n = pos.count, fa = bendField(r), fb = bendField(r), i;
+      var flat = new Float32Array(n * 3), flatN = new Float32Array(n * 3), bPos = new Float32Array(n * 3);
+      for (i = 0; i < n; i++) {
+        var X = pos.getX(i), Y = pos.getY(i);
         flat[i * 3] = X; flat[i * 3 + 1] = Y; flatN[i * 3 + 2] = 1;
-        if (variant === 0) z = 0.17 * X * X;
-        else if (variant === 1) { var q = Math.max(0, X + Y * .8 - .35); z = 0.35 * q * q + 0.03 * Math.sin(Y * 4); }
-        else z = 0.05 * Math.sin(Y * 4.5 + 1) + 0.09 * X * X;
-        pos.setZ(i, z);
+        bPos[i * 3] = X; bPos[i * 3 + 1] = Y; bPos[i * 3 + 2] = fb(X, Y);
+        pos.setZ(i, fa(X, Y));
       }
       g.computeVertexNormals();
-      g.morphAttributes.position = [new T.Float32BufferAttribute(flat, 3)];
-      g.morphAttributes.normal = [new T.Float32BufferAttribute(flatN, 3)];
+      var tmp = g.clone(); tmp.attributes.position.array.set(bPos); tmp.computeVertexNormals();
+      g.morphAttributes.position = [new T.Float32BufferAttribute(flat, 3), new T.Float32BufferAttribute(bPos, 3)];
+      g.morphAttributes.normal = [new T.Float32BufferAttribute(flatN, 3), new T.Float32BufferAttribute(tmp.attributes.normal.array.slice(), 3)];
       return g;
     }
     function paperMaterial(tex) {
       var T = gl.T;
-      var m = new T.MeshStandardMaterial({ map: tex, roughness: 0.88, metalness: 0, side: T.DoubleSide, morphTargets: true, morphNormals: true });
-      /* The back of a page is plain paper, not the writing mirrored. */
+      var m = new T.MeshStandardMaterial({ map: tex, roughness: 0.9, metalness: 0, side: T.DoubleSide, morphTargets: true, morphNormals: true });
+      /* The back of a page is paper with the writing faintly showing through,
+         mirrored, the way a real sheet is. A page seen edge-on is dimmed: a
+         lit sliver reads as a white hairline, which is what made a thin
+         sheet look like a stray glitch instead of paper. */
       m.onBeforeCompile = function (s) {
         s.fragmentShader = s.fragmentShader.replace('#include <map_fragment>', [
           '#ifdef USE_MAP',
           '  vec4 texelColor = texture2D( map, vUv );',
           '  texelColor = mapTexelToLinear( texelColor );',
-          '  if ( !gl_FrontFacing ) texelColor.rgb = mix( texelColor.rgb, vec3( 0.86, 0.89, 0.96 ), 0.9 );',
+          '  if ( !gl_FrontFacing ) {',
+          '    vec4 ghost = mapTexelToLinear( texture2D( map, vec2( 1.0 - vUv.x, vUv.y ) ) );',
+          '    float ink = clamp( 1.0 - dot( ghost.rgb, vec3( 0.3333 ) ) - 0.04, 0.0, 1.0 );',
+          '    texelColor.rgb = vec3( 0.84, 0.88, 0.96 ) * ( 1.0 - ink * 0.5 );',
+          '  }',
+          '  float facing = abs( dot( normalize( vNormal ), normalize( vViewPosition ) ) );',
+          '  texelColor.rgb *= mix( 0.6, 1.0, smoothstep( 0.03, 0.38, facing ) );',
           '  diffuseColor *= texelColor;',
           '#endif'
         ].join('\n'));
@@ -2024,18 +2194,22 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       var T = gl.T;
       var N = (window.innerWidth < 760) ? 28 : 40;
       var mats = [], k;
-      for (k = 0; k < 6; k++) mats.push(paperMaterial(texFrom(noteCanvas(k, 3 + k * 7))));
-      var geos = [sheetGeometry(0), sheetGeometry(1), sheetGeometry(2)];
-      var order = [], r = rng(17);
+      TEXS = window.innerWidth < 760 ? 1.5 : 2;
+      for (k = 0; k < 8; k++) mats.push(paperMaterial(texFrom(noteCanvas(k, 3 + k * 7))));
+      var order = [], r = rng(17), ro = rng(31), rg = rng(53);
       for (k = 0; k < N; k++) order.push(k);
       for (k = N - 1; k > 0; k--) { var j = Math.floor(r() * (k + 1)), tmp = order[k]; order[k] = order[j]; order[j] = tmp; }
       var slots = [0, 0, 0, 0];
       gl.perGroup = Math.ceil(N / 4);
       for (k = 0; k < N; k++) {
-        var mesh = new T.Mesh(geos[k % 3], mats[(k * 5) % 6]);
+        var mesh = new T.Mesh(sheetGeometry(rg), mats[(k * 3 + (k >> 3)) % 8]);
         gl.scene.add(mesh);
         var group = k % 4;
-        gl.sheets.push({ mesh: mesh, group: group, slot: slots[group]++, s: order[k] / (N - 1), jit: r(), rep: new T.Vector3(), repT: new T.Vector3() });
+        gl.sheets.push({
+          mesh: mesh, group: group, slot: slots[group]++, s: order[k] / (N - 1), jit: r(), rep: new T.Vector3(), repT: new T.Vector3(),
+          /* How this sheet rocks: swing size and speed about each axis, and a sideways sway. */
+          osc: { ax: .3 + ro() * .55, ay: .25 + ro() * .45, az: .25 + ro() * .45, wx: .22 + ro() * .34, wy: .18 + ro() * .3, wz: .26 + ro() * .4, px: ro() * 6.28, py: ro() * 6.28, pz: ro() * 6.28, sw: .1 + ro() * .14, ws: .2 + ro() * .26 }
+        });
       }
       var cardGeo = roundedPlane(1.28, 1.6, .1);
       DAYS.forEach(function (D, i) {
@@ -2103,9 +2277,12 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
         var aT = easeIO3((p - (.24 + S.s * .1)) / .2);
         var bT = easeIO3((p - (.52 + S.group * .045 + S.jit * .04)) / .17);
 
-        /* A: loose in the air, bobbing and tumbling, pushed by the pointer. */
-        var bob = Math.sin(t * .6 + S.phase) * .16;
-        Q.v.set(S.cloud.x, S.cloud.y + bob, S.cloud.z - (1 - born) * 6);
+        /* A: loose in the air. A sheet of paper does not spin like a card: it
+           rocks about its own axes, slides sideways as it rocks, and flexes.
+           Each axis swings between two angles at its own slow speed, so no two
+           sheets ever do the same thing and none turns over and over. */
+        var os = S.osc, sway = Math.sin(t * os.ws + os.px), bob = Math.sin(t * (.45 + os.ws) + S.phase) * .15;
+        Q.v.set(S.cloud.x + sway * os.sw, S.cloud.y + bob, S.cloud.z - (1 - born) * 6);
         if (repelOn && aT < 1) {
           Q.ndc.copy(Q.v).project(cam);
           var dx = (Q.ndc.x - pointer.x) * gl.w * .5, dy = (Q.ndc.y - pointer.y) * gl.h * .5;
@@ -2117,14 +2294,16 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
         } else S.repT.set(0, 0, 0);
         S.rep.lerp(S.repT, follow(.08, dt));
         Q.v.add(S.rep);
-        Q.e.set(S.cloudEuler.x + S.spin.x * t + S.rep.y * .9, S.cloudEuler.y + S.spin.y * t + S.rep.x * .9, S.cloudEuler.z + S.spin.z * t);
+        Q.e.set(S.cloudEuler.x + os.ax * Math.sin(os.wx * t + os.px) + S.rep.y * .9,
+                S.cloudEuler.y + S.spin.y * t * .45 + os.ay * Math.sin(os.wy * t + os.py) + S.rep.x * .9,
+                S.cloudEuler.z + os.az * Math.sin(os.wz * t + os.pz) + sway * .3);
         Q.a.setFromEuler(Q.e);
 
         /* B: the stream, a descending spiral that turns as you scroll. */
         var ang = S.s * 6.28 * 1.7 + p * 6.28 * 1.3 + t * .12;
         var rad = lerp(hR, hR * .28, S.s);
         Q.v2.set(Math.cos(ang) * rad, lerp(hTop, hBot, S.s), Math.sin(ang) * rad * .6);
-        Q.e.set(.28 * Math.sin(ang * 2), Math.PI / 2 - ang, .35);
+        Q.e.set(.28 * Math.sin(ang * 2) + (S.jit - .5) * .3, Math.PI / 2 - ang + (S.jit - .5) * .28, .35 + (S.jit - .5) * .5);
         Q.b.setFromEuler(Q.e);
 
         var pos = Q.v.lerp(Q.v2, aT);
@@ -2134,6 +2313,8 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
         mesh.quaternion.copy(Q.tmp);
         mesh.scale.setScalar(lerp(lerp(S.cloudScale, .9, aT), S.stackScale, bT) * (.2 + .8 * born));
         mesh.morphTargetInfluences[0] = bT;
+        /* Flexing toward its second pose while it floats; flat in the stack. */
+        mesh.morphTargetInfluences[1] = (.42 + .42 * Math.sin(t * .7 + S.phase * 1.7)) * (1 - bT) * (1 - aT * .55);
       }
 
       for (var k = 0; k < gl.cards.length; k++) {
@@ -2209,7 +2390,9 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
           document.fonts.load('58px "Instrument Serif"'),
           document.fonts.load('500 26px "DM Mono"'),
           document.fonts.load('500 27px "DM Sans"'),
-          document.fonts.load('600 30px "DM Sans"')
+          document.fonts.load('600 30px "DM Sans"'),
+          document.fonts.load('400 9px "DM Sans"'),
+          document.fonts.load('italic 12px "Instrument Serif"')
         ]).then(go, go);
         setTimeout(go, 1800);
       } else go();
