@@ -34,6 +34,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
 | `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
 | `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** The marketing pages that sit in the nav's own links (Help, Our story, Plans) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `lesson`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. `index.html` keeps its own copy - see "The site nav" |
+| `sf-smooth.js` | ~11 KB | **Smooth wheel scrolling** for `index.html`, `about.html`, `pricing.html` (window.`SFSmooth`). Off for touch and reduced motion - see "Smooth scroll and the two showcases" |
 | `sf-auth.js` | ~5 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html` — see "The classroom" |
 | `teacher-login.html` / `teacher.html` | ~21 / ~60 KB | Teacher sign-in (Firebase Auth) and the class dashboard, whose first tab is now Assignments and their results - see "Assignments" |
 | `teacher-build.html` | ~78 KB | **The assignment builder** - `app.html` for a teacher: one question per screen, one call writes the lesson and a fixed set of questions, the teacher edits every one, then publishes |
@@ -2983,6 +2984,69 @@ test reads.
 - **Instrument Serif's "1" is an "l" with a flag** - "1m studied" read as
   "lm" in the results tiles. Numbers that sit next to letters stay in
   DM Sans.
+
+## Smooth scroll and the two showcases (`sf-smooth.js`, `index.html`) — Oct 2026
+
+The owner asked for the scroll feel of Wispr Flow's site: "really smooth, like
+120 or 240 Hz", and for the two pinned scroll sections, which were "good but
+kind of boring", to be redone with the `apple-design` and `10k-websites`
+skills. Wispr was looked at directly: GSAP ScrollTrigger, every scroll-linked
+value eased (lerp ~0.16), corners scrubbed by distance to the screen edge, a
+step list with a moving bar, a snap when the scroll stops, and a fan of cards
+at the end.
+
+**`sf-smooth.js` is the smooth scroll** (Lenis-style, written here, ES5, no
+library). A wheel delta moves a target; each display frame the page moves
+`LERP` (0.1 at 60fps, dt-normalised) of the way there, so the page never stops
+between wheel notches. It cannot add frames a screen does not have - what it
+removes is the stepping, which is what made 60Hz look like 60Hz; a 120Hz
+screen gets 120 updates with the same feel. Measured in the pane: three wheel
+notches become one glide with no frame standing still, and a 4s glide through
+either showcase holds 16.7ms frames (p95 17.7ms).
+
+- It scrolls the REAL document (`window.scrollTo`), so sticky pins,
+  IntersectionObservers, anchors and the scrollbar all keep working. Never
+  swap it for a transform-on-a-wrapper library; every pin on the page breaks.
+- **Off for touch** (needs `(hover: hover) and (pointer: fine)`) and for
+  reduced motion, live. A finger already scrolls with the system's physics.
+- Leaves alone: keyboard and scrollbar (re-read afterwards), pinch zoom,
+  sideways wheels, any box that can still scroll itself
+  (`data-sf-native-scroll` forces that), and a page with overflow hidden.
+- **It turns CSS `scroll-behavior: smooth` off** (inline `auto` on `<html>`)
+  while active: left on, the browser animates every `scrollTo` the engine
+  makes. In-page `#` links are glided by the engine instead, with the hash
+  pushed and focus moved as a native jump would.
+- `SFSmooth.on(fn)` runs in the same frame as the write. `index.html`'s
+  `Scrub` uses it (`Scrub.sync`) so pinned scenes are never a frame behind,
+  and its follow is quicker while the engine is on (`soft()`): easing a scene
+  on top of an eased page made it trail like something on a rope.
+
+**The two showcases are one system** (CSS block "PINNED SHOWCASES"): a rail of
+steps on the left (each bar fills with its share of the scroll, the step being
+read is lit, the buttons jump there - it replaced the dots), a centrepiece,
+and words on the right that leave upward and arrive word by word (`.swap`,
+`.sw`: the script writes ONE number per face, `--d`, and each word works out
+its own part in CSS from `--r`, its place in the face).
+
+- **Why it works** is a night sheet that docks: an inset card with round
+  corners whose sides reach the edges and corners square off as it fills the
+  screen, and round again as it leaves (`clip-path` on `#why-sheet`, from the
+  stage's distance to the screen edges). In it a counter rolls each digit
+  through the numbers between (200 → 50 passes 1, 2, 3, 4), right-hand digit
+  first. **The numbers are read off each card's `.face-stat`**, so the counter
+  and the card cannot disagree - edit the card.
+- **Features** deals app cards up from below the screen onto a stack (played
+  cards settle back, smaller and darker), and after the sixth, fans all six
+  out as a hand while the closing words and the one call to action arrive.
+  The section is 720vh for that (6 steps + `FAN` 1.2). The hand is sized to
+  its column (`fanK`) or it reaches over the rail on a narrow laptop.
+- **Snap**: a WHEEL scroll that comes to rest mid-turn is finished by a short
+  glide to the nearer step (`SFSmooth.onSettle`). Never after a finger or the
+  keyboard.
+- Phones (≤860px) keep the old decision: no pin, every step a card; the Why
+  cards sit on a rounded night panel. Reduced motion: steps change whole.
+- The finale copy says the tutor and insights are VIP - "Start with one
+  plan" must not read as all six being free.
 
 ## Our story and Plans (`about.html`, `pricing.html`) — Liquid Glass, Oct 2026
 
