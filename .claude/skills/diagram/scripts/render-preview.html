@@ -1,0 +1,68 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>sf-render preview</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=DM+Sans:opsz,wght@9..40,300..700&display=swap" rel="stylesheet">
+<!-- Open from the harness server (see morning-check/SKILL.md), e.g.
+     http://localhost:8766/.claude/skills/diagram/scripts/render-preview.html
+     Draws every SFRender picture at phone width, light and dark, and prints
+     SFAudit's findings under each. ?dark=1 turns the page dark. -->
+<style>
+  body{font:14px 'DM Sans',system-ui,sans-serif;margin:16px;background:#f4f6fb;color:#1a1d2e}
+  body.dark{background:#10131f;color:#e8ebf5}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(343px,343px));gap:16px}
+  .card{background:#f7f9fe;border:1px solid #dde4f2;border-radius:14px;padding:12px;width:343px;box-sizing:border-box}
+  .card h4{margin:0 0 8px;font:600 12px system-ui;color:#5b6478}
+  pre{white-space:pre-wrap;font:11px/1.4 ui-monospace,monospace;margin:8px 0 0;color:#334155}
+  .fail{color:#b91c1c}.warn{color:#92400e}.ok{color:#166534}
+</style>
+<body>
+<div class="grid" id="grid"></div>
+<script src="/sf-icons.js"></script>
+<script src="/sf-render.js"></script>
+<script src="/.claude/skills/diagram/scripts/audit.js"></script>
+<script>
+var FIX = [
+  ['line: bean plant', {type:'chart',kind:'line',title:'How a bean plant grows',xLabel:'Day',yLabel:'Height',xUnit:'Day',yUnit:'cm',
+     points:[[0,0],[2,1],[4,3],[6,6],[8,10],[10,14],[12,19]],highlight:4}],
+  ['line: years, zoomed', {type:'chart',kind:'line',title:'World population',xLabel:'Year',yLabel:'People',yUnit:'billion',
+     points:[[1950,2.5],[1960,3.0],[1970,3.7],[1980,4.4],[1990,5.3],[2000,6.1],[2010,6.9],[2020,7.8]],highlight:7}],
+  ['bars: gases (vertical)', {type:'bars',title:'What air is made of',yUnit:'%',items:['Nitrogen: 78','Oxygen: 21','Argon: 1']}],
+  ['bars: horizontal', {type:'chart',kind:'bar',title:'Population of Hawaiian islands',yLabel:'People',
+     points:[['Oahu',1016000],['Hawaii Island',200629],['Maui',164754],['Kauai',73298],['Molokai',7345],['Lanai',3367]],highlight:0}],
+  ['example data', {type:'chart',kind:'line',title:'Supply as price rises',xLabel:'Price',xUnit:'$',yLabel:'Quantity supplied',
+     points:[[1,10],[2,30],[3,55],[4,80],[5,100]],example:true}],
+  ['numberline: fractions', {type:'numberline',title:'Fractions between 0 and 1',min:0,max:1,denominator:4,
+     marks:[{at:'1/4',label:'1/4'},{at:'3/4',label:'3/4'}]}],
+  ['numberline: jumps', {type:'numberline',title:'7 + 5 on a number line',min:0,max:14,step:1,
+     marks:[{at:12,label:'12'}],jumps:[{from:0,to:7,label:'7'},{from:7,to:12,label:'+5'}]}],
+  ['numberline: negatives', {type:'numberline',title:'Temperatures',min:-10,max:10,step:2,marks:[{at:-4,label:'-4°'},{at:6,label:'6°'}]}],
+  ['timeline: WWI', {type:'timeline',title:'The road to World War I',items:[
+     '1879: Germany and Austria-Hungary sign the Dual Alliance','1894: France and Russia form an alliance',
+     '1904: Britain and France agree the Entente Cordiale','1914: Archduke Franz Ferdinand is assassinated','1918: Armistice ends the fighting']}],
+  ['timeline: long span', {type:'timeline',title:'Ancient Rome',items:[
+     '753 BCE: Rome is founded','509 BCE: The Republic begins','44 BCE: Julius Caesar is killed','27 BCE: Augustus becomes emperor','476: The western empire falls']}]
+];
+var dark = /dark=1/.test(location.search);
+if (dark) document.body.classList.add('dark');
+var out = [];
+document.fonts.ready.then(function () {
+FIX.forEach(function (f) {
+  var svg = window.SFRender.fromSpec(f[1], {subject: 'history'});
+  var card = document.createElement('div'); card.className = 'card';
+  card.innerHTML = '<h4>' + f[0] + '</h4>' + (svg || '<b class="fail">declined (null)</b>');
+  document.getElementById('grid').appendChild(card);
+  out.push({name: f[0], card: card, ok: !!svg});
+});
+setTimeout(function () {
+  out.forEach(function (o) {
+    var el = o.card.querySelector('svg'); if (!el) return;
+    var res = window.SFAudit(el)[0], pre = document.createElement('pre'), lines = [];
+    (res.findings || []).forEach(function (x) { lines.push('<span class="' + (x.level === 'fail' ? 'fail' : 'warn') + '">' + x.level + ' ' + x.code + ': ' + x.message + '</span>'); });
+    pre.innerHTML = lines.length ? lines.join('\n') : '<span class="ok">audit clean</span>';
+    o.card.appendChild(pre); o.findings = res.findings || [];
+  });
+  window.__renderPreviewDone = out.map(function (o) { return {name: o.name, ok: o.ok, findings: (o.findings || []).map(function (x) { return x.level + ':' + x.code; })}; });
+}, 400);
+});
+</script>

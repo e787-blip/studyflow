@@ -1,0 +1,29 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>SF suite (autorun)</title>
+<!-- pw.html that runs by itself and posts its summary to the server, for a
+     HEADLESS Chrome: the desktop app's pane throttles a hidden page's timers
+     (a 25s test took 27 minutes), a headless page counts as visible.
+
+       ".../Google Chrome" --headless=new --user-data-dir=$(mktemp -d) \
+         --window-size=1280,900 "http://localhost:8766/__h/autorun.html?only=render,icons"
+
+     Omit ?only= for the whole suite. When it ends it writes suite.txt (the
+     summary) and suite-logs.txt (every log) to the server's out folder
+     (GET /__repo says where); Chrome does not exit on its own - kill it once
+     suite.txt exists. -->
+<style>body{margin:0;font:13px -apple-system,sans-serif;background:#eef}#log{position:fixed;right:0;top:0;width:420px;height:100vh;overflow:auto;white-space:pre-wrap;font:11px ui-monospace,monospace;background:#fff;border-left:1px solid #ccd;padding:6px;box-sizing:border-box;z-index:1}</style>
+<script src="/__h/pwshim.js"></script><script src="/__h/suite.js"></script>
+</head><body><div id="stage"></div><div id="log">harness ready</div>
+<script>
+(async function () {
+  var only = (/[?&]only=([^&]+)/.exec(location.search) || [])[1];
+  var list = only ? decodeURIComponent(only).split(',') : undefined;
+  function post(name, text) { return fetch('/__write?name=' + name, { method: 'POST', body: text }); }
+  await post('suite.txt', 'running ' + (list ? list.join(',') : 'all') + '\n');
+  var s = await window.runSuite(list);
+  var logs = window.__suite.results.map(function (r) { return '===== ' + r.name + (r.ok ? ' ok' : ' FAIL') + '\n' + r.log; }).join('\n\n');
+  await post('suite-logs.txt', logs);
+  await post('suite.txt', 'DONE failed=' + s.failed + '\n' + s.lines.join('\n') + '\n');
+})();
+</script>
+</body></html>

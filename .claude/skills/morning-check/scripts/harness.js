@@ -22,7 +22,7 @@ async function open(opts) {
   await page.goto((process.env.SF_BASE || 'http://localhost:8765/') + 'favicon.png');
   const plan = opts.plan || fx.plan;
   // opts.day: the day to open (default 0); opts.seed: extra namespaced keys, {key: value}.
-  await page.evaluate(({ plan, user, dark, day, seed }) => {
+  await page.evaluate(({ plan, user, dark, day, seed, modelArt }) => {
     localStorage.clear();
     localStorage.setItem('studyflow_user', JSON.stringify(user));
     if (dark) localStorage.setItem('studyflow_dark', '1');
@@ -32,8 +32,12 @@ async function open(opts) {
     localStorage.setItem(ns + 'studyflow_current_day', String(day || 0));
     Object.keys(seed || {}).forEach(k => localStorage.setItem(ns + k, typeof seed[k] === 'string' ? seed[k] : JSON.stringify(seed[k])));
     localStorage.setItem(ns + 'studyflow_minutes', '30');
+    /* The model's lesson drawing is off in production (lesson.html modelArtOn);
+       the tests written for that path turn it back on. opts.modelArt:false is
+       the app as learners get it - test_library.js. */
+    if (modelArt) localStorage.setItem(ns + 'studyflow_model_art', '1');
     localStorage.setItem('studyflow_onboarded', '1');
-  }, { plan, user: fx.user, dark: !!opts.dark, day: opts.day || 0, seed: opts.seed || null });
+  }, { plan, user: fx.user, dark: !!opts.dark, day: opts.day || 0, seed: opts.seed || null, modelArt: opts.modelArt !== false });
   await page.goto((process.env.SF_BASE || 'http://localhost:8765/') + 'lesson.html?cb=' + Date.now(), { waitUntil: 'load' });
   await page.waitForTimeout(opts.settle || 1200);
   return { browser, page, calls, errors };

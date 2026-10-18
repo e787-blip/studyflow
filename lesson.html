@@ -1679,6 +1679,8 @@
      optional: lesson.html falls back to the static lesson body if this
      file fails to load. -->
 <script src="/sf-icons.js"></script>
+<script src="/sf-render.js"></script>
+<script src="/sf-library.js"></script>
 <script src="/sf-draw.js"></script>
 <script src="/sf-questions.js"></script>
 <script src="/sf-auth.js"></script>
@@ -3971,7 +3973,27 @@
           markup, only a drawing or nothing.
        3. It is cached onto the day afterwards, so revisiting a lesson does
           not spend another call. Generated on first entry, not premade. */
-  var lessonArt = { state: 'idle', spec: null };
+  var lessonArt = { state: 'idle', spec: null, svg: null, lib: null };
+
+  /* THE MODEL NO LONGER DRAWS THE LESSON PICTURE (Oct 2026, the owner's call).
+     Every picture it drew from coordinates looked like a guess. A lesson now
+     gets, in order: a picture drawn by code from its own figures or dates
+     (sf-render.js), a real illustration (sf-library.js), or the diagram the
+     kit builds from its own steps. The old path is kept behind this switch
+     (studyflow_model_art = '1' in the learner's store turns it back on - the
+     tests that cover it use that) rather than deleted, because "Draw it for
+     me" still shares its parts. */
+  function modelArtOn() {
+    try { return typeof SFStore !== 'undefined' && SFStore.getItem('studyflow_model_art') === '1'; } catch (e) { return false; }
+  }
+  /* The lesson's picture as markup, whichever source it came from. */
+  function lessonArtSvg() {
+    if (lessonArt.svg) return lessonArt.svg;
+    return lessonArt.spec ? drawSpec(lessonArt.spec) : null;
+  }
+  function lessonArtTitle() {
+    return fmStr(lessonArt.lib ? lessonArt.lib.title : (lessonArt.spec && lessonArt.spec.title)) || fmStr(day && day.title);
+  }
 
   /* A model drawing, as it is SHOWN: SFSceneKit judges and renders it, then
      SFDiagramKit.polish pulls apart labels that landed on each other and
@@ -4623,6 +4645,10 @@
     function consider(svg) {
       if (!svg || svg.sfdSeen || svg.ownerSVGElement) return;   // a drawing inside a drawing goes with its parent
       svg.sfdSeen = 1;
+      /* A real illustration (sf-library.js) has hundreds of parts drawn by a
+         person; traced one by one it would take a minute and read as a
+         machine. It arrives with the card's own fade instead. */
+      if (svg.hasAttribute && svg.hasAttribute('data-sf-lib')) return;
       if (reduced()) return;
       if (drawn[keyOf(svg)]) { offerReplay(svg); return; }     // shown already this session: simply there
       var r = rectOf(svg);
@@ -4717,8 +4743,42 @@
     return drawn >= 3 || boxes < 2;
   }
 
+  /* A picture sf-render can draw from the day's own figures or dates BEATS a
+     model drawing, and the model is not asked for one. A model drawing of
+     "Five Key Events 1765-1775" came back as triangles, tiny red boxes and
+     pins sitting on each other; the same lesson as a timeline to scale has
+     nothing in it that can go wrong. Also saves the call. */
+  function dataPicture(d) {
+    try {
+      var dg = d && window.SFRender ? diagramForDay(d) : null;
+      return dg && dg.svg && /data-sf-render=/.test(dg.svg) ? dg : null;
+    } catch (e) { return null; }
+  }
+
   function requestLessonArt(d) {
     if (!d || lessonArt.state === 'loading') return;
+    if (dataPicture(d)) { lessonArt.spec = null; lessonArt.state = 'done'; return; }
+    /* A real illustration the lesson's title names. Fetched from our own
+       files, sanitised on load; until it lands the card shows the kit's
+       diagram, and if it never lands that diagram simply stays. */
+    var lib = null;
+    try { lib = window.SFLibrary && !modelArtOn() ? SFLibrary.match(d, dgSubjectOf(d)) : null; } catch (eL) { lib = null; }
+    if (lib) {
+      lessonArt.state = 'loading';
+      SFLibrary.load(lib).then(function (svg) {
+        lessonArt.state = 'done';
+        lessonArt.spec = null;
+        try { lessonArt.svg = SFDiagramKit.uniqIds(svg); } catch (eU) { lessonArt.svg = svg; }
+        lessonArt.lib = lib;
+        applyLessonArt();
+        try { sfLabelWaitCheck(false); } catch (e3) { /* never cost the lesson */ }
+      }, function () {
+        lessonArt.state = 'done';
+        try { sfLabelWaitCheck(false); } catch (e3) { /* never cost the lesson */ }
+      });
+      return;
+    }
+    if (!modelArtOn()) { lessonArt.spec = null; lessonArt.state = 'done'; return; }
     /* Already drawn for this day - on a previous visit, while the plan was
        being made (app.html), or in the background during yesterday's lesson
        (predrawNextDay). */
@@ -4777,6 +4837,8 @@
       var ni = dayIndex + 1;
       var nd = plan.days[ni];
       if (!nd || predrawn[ni] || nd.completed) return;
+      if (dataPicture(nd)) return;                      // drawn by code, nothing to ask the model
+      if (!modelArtOn()) return;                        // the model does not draw lesson pictures now
       if (nd.generatedArt !== undefined) return;        // drawn, or asked and nothing to draw
       if (!fmStr(nd.content) && !fmStr(nd.title)) return;
       predrawn[ni] = 1;
@@ -4868,12 +4930,12 @@
   /* The picture the lesson card showed: the illustration drawn at entry if
      it has landed, else the day's own diagram. Cached per day and per art. */
   function lessonPicture() {
-    var key = dayIndex + '|' + (lessonArt.spec ? 'art' : 'dgm');
+    var key = dayIndex + '|' + (lessonArt.svg ? 'lib' : lessonArt.spec ? 'art' : 'dgm');
     if (recallCache.key === key) return recallCache.pic;
     var svg = null, caption = '';
-    if (lessonArt.spec) {
-      svg = drawSpec(lessonArt.spec);
-      if (svg) caption = fmStr(lessonArt.spec.title) || fmStr(day.title);
+    if ((lessonArt.svg || lessonArt.spec) && !dataPicture(day)) {
+      svg = lessonArtSvg();
+      if (svg) caption = lessonArtTitle();
     }
     if (!svg) {
       var dg = null;
@@ -5135,9 +5197,11 @@
     var pic = lessonPicture();
     if (!pic || !pic.svg) return null;
     if (/id="sfdkArrow/.test(pic.svg)) return null;          // a kit layout
+    if (/data-sf-render=/.test(pic.svg)) return null;         // a chart or timeline drawn by sf-render: where a mark sits is data, not anatomy
     var skip = {}, cap = fmStr(pic.caption).toLowerCase();
     if (cap) skip[cap] = 1;
     if (lessonArt.spec && lessonArt.spec.title) skip[fmStr(lessonArt.spec.title).toLowerCase()] = 1;
+    if (lessonArt.lib) skip[fmStr(lessonArt.lib.title).toLowerCase()] = 1;
     var re = /<text\b([^>]*)>([\s\S]*?)<\/text>/gi, m, picks = [], seen = {};
     while ((m = re.exec(pic.svg)) !== null && picks.length < 5) {
       var attrs = m[1];
@@ -5215,7 +5279,7 @@
   function labelCanWait(card) {
     if (!window.SFDraw || typeof SFSceneKit === 'undefined') return false;
     if (day && day.generatedArt === null) return false;             // nothing to draw
-    if (lessonArt.spec) return false;                                // drawn, but not labellable
+    if (lessonArt.spec || lessonArt.svg) return false;               // drawn, but not labellable
     if (lessonArt.state !== 'loading') {
       lessonArt.state = 'idle';
       requestLessonArt(day);
@@ -5248,7 +5312,7 @@
     if (!timedOut && lessonArt.state === 'loading') return;
     clearTimeout(labelWait.timer);
     labelWait = null;
-    if (timedOut && !lessonArt.spec) { showNextCard(); return; }
+    if (timedOut && !lessonArt.spec && !lessonArt.svg) { showNextCard(); return; }
     try { card.q = lessonLabelQuestion(); } catch (e) { card.q = null; }
     if (!card.q) { showNextCard(); return; }
     renderCard(card);
@@ -5324,11 +5388,10 @@
      The pane HTML is updated as well as the DOM, so turning to another part
      and back does not bring the old diagram with it. */
   function applyLessonArt() {
-    if (!lessonArt.spec) return;
-    var svg = null;
-    svg = drawSpec(lessonArt.spec);
+    if (!lessonArt.spec && !lessonArt.svg) return;
+    var svg = lessonArtSvg();
     if (!svg) return;
-    var caption = fmStr(lessonArt.spec.title) || fmStr(day.title);
+    var caption = lessonArtTitle();
     var inner = svg + diagramCaptionHtml(svg, caption, CAPTION_STYLE);
 
     if (sfLesson && sfLesson.panes && sfLesson.panes.length) {
@@ -6484,14 +6547,14 @@
       var dgm = diagramForDay(day);
       var dgmHtml = '';
       var artSvg = null;
-      if (lessonArt.spec) {
-        artSvg = drawSpec(lessonArt.spec);
+      if (lessonArt.svg || lessonArt.spec) {
+        artSvg = lessonArtSvg();
       }
       if (artSvg || (dgm && dgm.svg)) {
         dgmHtml = '<div id="lesson-art" class="art-paper" style="text-align:center;padding:.75rem;">' +
           (artSvg || dgm.svg) +
           diagramCaptionHtml(artSvg || dgm.svg,
-            artSvg ? (fmStr(lessonArt.spec.title) || fmStr(day.title)) : dgm.caption, CAPTION_STYLE) +
+            artSvg ? lessonArtTitle() : dgm.caption, CAPTION_STYLE) +
           '</div>';
       }
 
@@ -16950,6 +17013,37 @@
     return '';
   }
 
+  /* PICTURES DRAWN BY CODE (sf-render.js).
+
+     When a lesson's material is numbers, dates or a number line, the model
+     only has to say WHAT (the figures, the years) and sf-render draws it to
+     scale. It declines (null) whenever the data would not make an honest
+     picture, and every caller then carries on exactly as before - so a wrong
+     guess here costs a plainer picture, never a broken one. The result goes
+     through the same exit guards as every other diagram. */
+  var DG_RENDER_TYPES = { chart: 1, bars: 1, numberline: 1, timeline: 1 };
+  function dgRenderSpec(spec) {
+    if (!spec || typeof spec !== 'object') return null;
+    var t = String(spec.type || '').toLowerCase();
+    if (t === 'custom') t = String(spec.layout || '').toLowerCase();
+    if (!DG_RENDER_TYPES.hasOwnProperty(t)) return null;
+    var out = {}, k;
+    for (k in spec) if (Object.prototype.hasOwnProperty.call(spec, k)) out[k] = spec[k];
+    out.type = t;
+    if (!out.title && out.label) out.title = out.label;
+    return out;
+  }
+  function dgRender(spec, d) {
+    if (!window.SFRender) return null;
+    var rs = dgRenderSpec(spec), svg = null;
+    if (!rs) return null;
+    try { svg = window.SFRender.fromSpec(rs, { subject: dgSubjectOf(d) }); } catch (e) { svg = null; }
+    if (!svg) return null;
+    try {
+      return SFDiagramKit.uniqIds(SFDiagramKit.polish(SFDiagramKit.legible(svg), { name: dgClean(rs.title) }));
+    } catch (e2) { return svg; }
+  }
+
   function diagramForDay(d) {
     if (!d) return null;
     var svg = null, title = dgClean(d.title);
@@ -16968,14 +17062,16 @@
         for (var mk in d.diagram) if (Object.prototype.hasOwnProperty.call(d.diagram, mk)) mSpec[mk] = d.diagram[mk];
         mSpec.layout = mRel;
       }
-      try { svg = generateDiagramSVG(mSpec); } catch (e) { svg = null; }
+      svg = dgRender(mSpec, d);
+      if (!svg) { try { svg = generateDiagramSVG(mSpec); } catch (e) { svg = null; } }
       if (svg) return { svg: svg, caption: dgClean(d.diagram.label) || title };
     }
 
     /* 2. The visual spec, which nothing used to read. Exotic types have no
           custom builder, so try them against the curated templates by name. */
     if (d.visual && d.visual.type) {
-      var vs = specFromDayVisual(d.visual, title);
+      svg = dgRender(d.visual, d);
+      var vs = svg ? null : specFromDayVisual(d.visual, title);
       if (vs) {
         try { svg = generateDiagramSVG(vs); } catch (e) { svg = null; }
       }
@@ -17030,7 +17126,20 @@
     }
     if (ds) {
       ds.subject = dgSubjectOf(d);
-      try { svg = generateDiagramSVG(ds); } catch (e) { svg = null; }
+      /* Real numbers or dated events in the day's own words: draw them to scale. */
+      if (ds.layout === 'bars' || ds.layout === 'timeline') svg = dgRender(ds, d);
+      /* Steps that each open with a year ARE a timeline, whatever the prose
+         said - "Causes of the American Revolution" as 1763, 1765, 1773 is
+         read best with the gaps between them visible. Three or four digits
+         or an era only: "1: Preheat the oven" is a step number, not a year. */
+      if (!svg && ds.items && ds.items.length >= 3) {
+        var dated = 0;
+        for (var di = 0; di < ds.items.length; di++) {
+          if (/^\s*(?:c\.?\s*|circa\s+)?(?:\d{3,4}|\d{1,4}\s*(?:BCE|BC|CE|AD))\s*[:\u2013\u2014-]\s*\S/i.test(ds.items[di])) dated++;
+        }
+        if (dated === ds.items.length) svg = dgRender({ type: 'timeline', title: ds.title || title, items: ds.items }, d);
+      }
+      if (!svg) { try { svg = generateDiagramSVG(ds); } catch (e) { svg = null; } }
       if (svg) return { svg: svg, caption: ds.title || title };
     }
 

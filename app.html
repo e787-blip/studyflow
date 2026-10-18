@@ -505,6 +505,7 @@
 </main>
 
 <script src="/sf-icons.js"></script>
+<script src="/sf-render.js"></script>
 <script src="/sf-draw.js"></script>
 <script src="/sf-topics.js"></script>
 <script src="/sf-auth.js"></script>
@@ -3734,6 +3735,8 @@
         '{"type":"web","nodes":["Elizabeth","Darcy","Jane"],"edges":[{"from":0,"to":1,"label":"rivalry"}]}  <- characters/relationships\n' +
         '{"type":"arcGraph"}  <- narrative plot structure\n' +
         '{"type":"bars","items":[{"label":"1990","value":42},{"label":"2020","value":78}]}  <- real numeric comparisons\n' +
+        '{"type":"chart","kind":"line","title":"","xLabel":"Day","yLabel":"Height","xUnit":"Day","yUnit":"cm","points":[[0,0],[4,3],[8,10]],"highlight":2}  <- a quantity that changes: 3+ (x,y) pairs. Use figures from the notes; only if the notes give none and an illustration needs numbers, invent plausible ones and add "example":true\n' +
+        '{"type":"numberline","title":"","min":0,"max":1,"denominator":4,"marks":[{"at":"3/4","label":"3/4"}]}  <- fractions, negatives, adding or subtracting along a line (use "step":1 instead of "denominator" for whole numbers; "jumps":[{"from":0,"to":7,"label":"7"}] draws hops)\n' +
         '{"type":"equation","lines":["2x + 3 = 11","2x = 8","x = 4"],"note":"Solving step by step"}  <- worked math steps\n' +
                         '{"type":"atom","protons":6,"element":"Carbon"}  <- atomic structure\n' +
                 '{"type":"cell","label":"animal cell"}  <- cell structure. Say "animal" or "plant" in the label.\n' +
@@ -3979,7 +3982,8 @@
           (function () {
             var VALID = { timeline:1, flow:1, cycle:1, parts:1, compare:1, map:1, web:1, arcGraph:1,
                           bars:1, equation:1, geometry:1, arc:1, atom:1, molecule:1, cell:1,
-                          vector:1, concept:1, balance:1 };
+                          vector:1, concept:1, balance:1,
+                          chart:1, numberline:1 };
             var v = day.visual;
             if (!v || typeof v !== 'object' || !VALID[v.type]) { day.visual = null; return; }
             function nonEmpty(arr) {
@@ -3993,12 +3997,20 @@
             var hasContent =
               nonEmpty(v.items) >= 2 || nonEmpty(v.places) >= 2 || nonEmpty(v.nodes) >= 2 ||
               nonEmpty(v.lines) >= 1 || nonEmpty(v.points) === 3 || nonEmpty(v.vectors) >= 1 ||
+              (v.type === 'chart' && nonEmpty(v.points) >= 3) ||
+              (v.type === 'numberline' && v.min != null && v.max != null) ||
               (v.type === 'arcGraph') || (v.type === 'cell' && v.cellType) ||
               (v.type === 'molecule' && v.preset) || (v.type === 'atom' && v.protons) ||
               (v.type === 'arc' && v.sweepDegrees) ||
               (v.type === 'compare' && v.left && v.right) ||
               (v.type === 'concept' && v.center && String(v.center).trim().length > 1);
             if (!hasContent) day.visual = null;
+            /* sf-render draws these two itself, from the figures, so a spec it
+               would decline (under 3 values, a flat series, a number that is
+               not a number) is dropped here rather than stored. The renderer
+               checks again when it draws: a plan can be loaded from storage
+               this never saw. */
+            else if ((v.type === 'chart' || v.type === 'numberline') && window.SFRender && !window.SFRender.check(v)) day.visual = null;
           })();
           day.isFinal    = !!isLast;
           day.completed  = false;
@@ -4150,6 +4162,12 @@
 
     function predrawFirstLesson(days, then) {
       var d = days && days[0];
+      /* The model no longer draws lesson pictures (see lesson.html,
+         modelArtOn): code-drawn charts, real illustrations or the kit's own
+         diagram instead. studyflow_model_art = '1' turns this back on. */
+      var modelArt = false;
+      try { modelArt = typeof SFStore !== 'undefined' && SFStore.getItem('studyflow_model_art') === '1'; } catch (eM) { modelArt = false; }
+      if (!modelArt) { then(); return; }
       if (!d || !window.SFDraw || d.generatedArt !== undefined) { then(); return; }
       var went = false;
       function go() { if (!went) { went = true; then(); } }

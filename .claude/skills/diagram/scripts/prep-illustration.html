@@ -1,0 +1,192 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>prep illustration</title>
+<!-- The browser half of prep_illustration.py (run that, not this). Needs real
+     layout: a label's place is its box after every transform in the file,
+     which only a browser can measure. Reads ?src= (a cleaned SVG on this
+     server), ?job= (JSON: id, title, key, translate, drop, credit), and posts
+     the result to /__write?name=<id>.svg on the harness server. -->
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&display=swap" rel="stylesheet">
+<body style="margin:0">
+<div id="host" style="width:1000px"></div>
+<script>
+(async function () {
+  var q = new URLSearchParams(location.search);
+  var job = JSON.parse(q.get('job'));
+  var NS = 'http://www.w3.org/2000/svg';
+  var FONT = "'DM Sans', system-ui, -apple-system, sans-serif";
+  function norm(s) { return String(s || '').replace(/\s+/g, ' ').trim(); }
+  function squash(s) { return norm(s).replace(/\s+/g, '').toLowerCase(); }
+  function r1(n) { return Math.round(n * 10) / 10; }
+  function post(name, text) { return fetch('/__write?name=' + encodeURIComponent(name), { method: 'POST', body: text }); }
+  try {
+    await document.fonts.ready;
+    var txt = await (await fetch(q.get('src'), { cache: 'no-store' })).text();
+    var host = document.getElementById('host');
+    host.innerHTML = txt;
+    var svg = host.querySelector('svg');
+    if (!svg.getAttribute('viewBox')) {
+      var w0 = parseFloat(svg.getAttribute('width')) || 1000, h0 = parseFloat(svg.getAttribute('height')) || 1000;
+      svg.setAttribute('viewBox', '0 0 ' + w0 + ' ' + h0);
+    }
+    svg.removeAttribute('width'); svg.removeAttribute('height');
+    svg.setAttribute('width', '1000');
+
+    /* 1. A <style> block's classes would leak into the whole page once the
+          picture is inlined (and two files both use ".st0"). Bake the
+          computed values into each element, then drop the block. */
+    var PROPS = ['fill', 'stroke', 'stroke-width', 'opacity', 'fill-opacity', 'stroke-opacity', 'stroke-linecap',
+                 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'fill-rule', 'clip-rule', 'display', 'visibility'];
+    var styles = svg.querySelectorAll('style');
+    if (styles.length) {
+      svg.querySelectorAll('[class]').forEach(function (el) {
+        var cs = getComputedStyle(el);
+        PROPS.forEach(function (p) {
+          var v = cs.getPropertyValue(p);
+          if (v && !el.getAttribute(p)) el.setAttribute(p, v.indexOf('url(') >= 0 ? v.replace(/url\("?[^#"]*#/, 'url(#').replace(/"\)/, ')') : v);
+        });
+        el.removeAttribute('class');
+      });
+      styles.forEach(function (s) { s.remove(); });
+    }
+
+    /* 1b. A <switch> holds the same label in several languages; keep the
+           English child (or the default one) and drop the rest. */
+    Array.prototype.slice.call(svg.querySelectorAll('switch')).forEach(function (sw) {
+      var kids = Array.prototype.slice.call(sw.children), pick = null;
+      kids.forEach(function (k) { if (!pick && /(^|[\s,])en\b/.test(k.getAttribute('systemLanguage') || '')) pick = k; });
+      kids.forEach(function (k) { if (!pick && !k.hasAttribute('systemLanguage')) pick = k; });
+      kids.forEach(function (k) { if (k !== pick) k.remove(); });
+      if (pick) pick.removeAttribute('systemLanguage');
+      var g2 = document.createElementNS(NS, 'g');
+      Array.prototype.slice.call(sw.attributes).forEach(function (a) { g2.setAttribute(a.name, a.value); });
+      while (sw.firstChild) g2.appendChild(sw.firstChild);
+      sw.parentNode.replaceChild(g2, sw);
+    });
+    var leave = (job.leave || []).map(squash);
+
+    /* 2. Every label, measured in the root's own units, then removed. */
+    var vb = svg.viewBox.baseVal, inv = svg.getScreenCTM().inverse();
+    function rootBox(el) {
+      var b = el.getBBox(), m = inv.multiply(el.getScreenCTM());
+      var pts = [[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height]].map(function (p) {
+        var P = svg.createSVGPoint(); P.x = p[0]; P.y = p[1]; P = P.matrixTransform(m); return [P.x, P.y];
+      });
+      var xs = pts.map(function (p) { return p[0]; }), ys = pts.map(function (p) { return p[1]; });
+      return { x0: Math.min.apply(null, xs), x1: Math.max.apply(null, xs), y0: Math.min.apply(null, ys), y1: Math.max.apply(null, ys) };
+    }
+    var labels = [];
+    Array.prototype.slice.call(svg.querySelectorAll('text')).forEach(function (t) {
+      if (t.closest('defs')) return;
+      var spans = t.querySelectorAll('tspan'), lines = [];
+      if (spans.length > 1) {
+        var lastY = null;
+        spans.forEach(function (s) {
+          var y = s.getBBox ? Math.round(s.getBBox().y) : 0, v = norm(s.textContent);
+          if (!v) return;
+          if (lastY !== null && Math.abs(y - lastY) < 2 && lines.length) lines[lines.length - 1] += v; else lines.push(v);
+          lastY = y;
+        });
+      }
+      if (!lines.length) lines = [norm(t.textContent)];
+      var full = norm(lines.join(' '));
+      if (!full) { t.remove(); return; }
+      if (leave.indexOf(squash(full)) >= 0) return;          // part of the drawing, not a label
+      var box = rootBox(t), cs = getComputedStyle(t);
+      var scale = Math.sqrt(Math.abs(inv.multiply(t.getScreenCTM()).a * inv.multiply(t.getScreenCTM()).d));
+      labels.push({ text: full, lines: lines, box: box, anchor: cs.textAnchor || 'start',
+                    size: (parseFloat(cs.fontSize) || 12) * (scale || 1) });
+      t.remove();
+    });
+    /* Pieces written as separate texts on one line - "CO" then a lowered "2"
+       - are one label. A lone digit after letters is a subscript. */
+    var SUB = '\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089';
+    labels.sort(function (a, b) { return a.box.x0 - b.box.x0; });
+    for (var mi = 0; mi < labels.length; mi++) {
+      var A = labels[mi];
+      if (!A || A.lines.length > 1) continue;
+      for (var mj = 0; mj < labels.length; mj++) {
+        var B = labels[mj];
+        if (!B || B === A || B.lines.length > 1) continue;
+        var ah = A.box.y1 - A.box.y0, gap = B.box.x0 - A.box.x1;
+        var sameLine = B.box.y0 < A.box.y1 && B.box.y1 > A.box.y0 + ah * 0.3;
+        if (!sameLine || gap < -1 || gap > ah * 0.45) continue;
+        var sub = /^\d+$/.test(B.text) && /[A-Za-z]$/.test(A.text);
+        A.text = A.text + (sub ? B.text.replace(/\d/g, function (d) { return SUB.charAt(+d); }) : (gap > ah * 0.15 ? ' ' : '') + B.text);
+        A.lines = [A.text];
+        A.box = { x0: A.box.x0, x1: Math.max(A.box.x1, B.box.x1), y0: Math.min(A.box.y0, B.box.y0), y1: Math.max(A.box.y1, B.box.y1) };
+        labels[mj] = null; mj = -1;
+      }
+    }
+    labels = labels.filter(Boolean);
+    var tr = {};
+    Object.keys(job.translate || {}).forEach(function (k) { tr[squash(k)] = job.translate[k]; });
+    var drop = (job.drop || []).map(squash);
+    var keep = (job.key || []).map(squash), out = [], seen = {};
+    labels.forEach(function (L) {
+      var k = squash(L.text);
+      if (tr[k]) { L.text = tr[k]; L.lines = [tr[k]]; k = squash(L.text); }
+      if (drop.indexOf(k) >= 0) return;
+      var cx = (L.box.x0 + L.box.x1) / 2, cy = (L.box.y0 + L.box.y1) / 2, dk = k + '@' + Math.round(cx / 6) + ',' + Math.round(cy / 6);
+      if (seen[dk]) return;                               // the halo copy many files draw under each label
+      seen[dk] = 1;
+      L.key = keep.indexOf(k);
+      out.push(L);
+    });
+
+    /* 3. Crop to the drawing, then put the labels back in one style, sized
+          for a phone: nothing under ~10px on a 320px-wide picture. */
+    var bb = rootBox(svg.querySelector('g') ? svg : svg);
+    try { var gb = svg.getBBox(); bb = { x0: gb.x, y0: gb.y, x1: gb.x + gb.width, y1: gb.y + gb.height }; } catch (e) {}
+    out.forEach(function (L) { bb.x0 = Math.min(bb.x0, L.box.x0); bb.x1 = Math.max(bb.x1, L.box.x1); bb.y0 = Math.min(bb.y0, L.box.y0); bb.y1 = Math.max(bb.y1, L.box.y1); });
+    var W = bb.x1 - bb.x0, pad = W * 0.02;
+    var floorU = 10 * (W + pad * 2) / 320;
+    var g = document.createElementNS(NS, 'g');
+    g.setAttribute('class', 'sf-labels'); g.setAttribute('font-family', FONT);
+    out.sort(function (a, b) { return (a.key < 0 ? 99 : a.key) - (b.key < 0 ? 99 : b.key); });
+    out.forEach(function (L) {
+      var size = r1(Math.max(L.size, floorU)), lh = size * 1.18, n = L.lines.length;
+      var x = L.anchor === 'middle' ? (L.box.x0 + L.box.x1) / 2 : L.anchor === 'end' ? L.box.x1 : L.box.x0;
+      var cy = (L.box.y0 + L.box.y1) / 2, y = cy - (n - 1) * lh / 2 + size * 0.35;
+      var t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', r1(x)); t.setAttribute('y', r1(y)); t.setAttribute('text-anchor', L.anchor);
+      t.setAttribute('font-size', size); t.setAttribute('font-weight', L.key >= 0 ? 700 : 500);
+      t.setAttribute('fill', '#1a1d2e'); t.setAttribute('stroke', '#ffffff'); t.setAttribute('stroke-width', r1(size * 0.28));
+      t.setAttribute('stroke-linejoin', 'round'); t.setAttribute('paint-order', 'stroke');
+      L.lines.forEach(function (line, i) {
+        if (n === 1) { t.textContent = line; return; }
+        var s = document.createElementNS(NS, 'tspan');
+        s.setAttribute('x', r1(x)); if (i) s.setAttribute('dy', r1(lh)); s.textContent = line; t.appendChild(s);
+      });
+      g.appendChild(t);
+    });
+    svg.appendChild(g);
+    /* The labels were drawn bigger than the file had them: crop again round
+       what is really there, or a long label is cut at the edge. */
+    try { var lb = g.getBBox(); bb.x0 = Math.min(bb.x0, lb.x - pad * 0.3); bb.x1 = Math.max(bb.x1, lb.x + lb.width + pad * 0.3);
+          bb.y0 = Math.min(bb.y0, lb.y); bb.y1 = Math.max(bb.y1, lb.y + lb.height); W = bb.x1 - bb.x0; pad = W * 0.02; } catch (e) {}
+
+    /* 4. The credit, inside the picture so it goes wherever the picture goes. */
+    var cSize = r1(9.5 * (W + pad * 2) / 320);
+    var credit = document.createElementNS(NS, 'text');
+    credit.setAttribute('class', 'sf-credit'); credit.setAttribute('x', r1(bb.x1 + pad));
+    credit.setAttribute('y', r1(bb.y1 + pad + cSize * 1.1)); credit.setAttribute('text-anchor', 'end');
+    credit.setAttribute('font-family', FONT); credit.setAttribute('font-size', cSize); credit.setAttribute('font-weight', 400);
+    credit.setAttribute('fill', '#5b6478'); credit.textContent = job.credit;
+    svg.appendChild(credit);
+    svg.setAttribute('viewBox', [r1(bb.x0 - pad), r1(bb.y0 - pad), r1(W + pad * 2), r1(bb.y1 - bb.y0 + pad * 2 + cSize * 1.6)].join(' '));
+    svg.setAttribute('width', '100%');
+    svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', job.title);
+    svg.setAttribute('data-sf-lib', job.id);
+    svg.setAttribute('style', 'display:block;margin:0 auto;max-width:520px;');
+    var report = { id: job.id, labels: out.map(function (L) { return (L.key >= 0 ? '*' : '') + L.text; }),
+                   missingKeys: (job.key || []).filter(function (k) { return !out.some(function (L) { return squash(L.text) === squash(k); }); }) };
+    await post(job.id + '.svg', new XMLSerializer().serializeToString(svg));
+    await post(job.id + '.report.json', JSON.stringify(report));
+  } catch (e) {
+    await post((job && job.id || 'x') + '.report.json', JSON.stringify({ error: String(e && e.stack || e) }));
+  }
+  await post('prep.done', 'done');
+})();
+</script>
+</body>

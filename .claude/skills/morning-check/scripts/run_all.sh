@@ -40,6 +40,8 @@ PY
 for b in "$OUT"/blk_*; do node --check "$b" >>"$OUT/parse.log" 2>&1 && echo "$(basename "$b") OK" >>"$OUT/parse.log" || echo "$(basename "$b") FAIL" >>"$OUT/parse.log"; done
 node --check "$REPO/sf-draw.js" >>"$OUT/parse.log" 2>&1 && echo "sf-draw.js OK" >>"$OUT/parse.log" || echo "sf-draw.js FAIL" >>"$OUT/parse.log"
 node --check "$REPO/sf-topics.js" >>"$OUT/parse.log" 2>&1 && echo "sf-topics.js OK" >>"$OUT/parse.log" || echo "sf-topics.js FAIL" >>"$OUT/parse.log"
+node --check "$REPO/sf-library.js" >>"$OUT/parse.log" 2>&1 && echo "sf-library.js OK" >>"$OUT/parse.log" || echo "sf-library.js FAIL" >>"$OUT/parse.log"
+node --check "$REPO/sf-render.js" >>"$OUT/parse.log" 2>&1 && echo "sf-render.js OK" >>"$OUT/parse.log" || echo "sf-render.js FAIL" >>"$OUT/parse.log"
 for a in "$REPO"/api/*.js; do node --check "$a" >>"$OUT/parse.log" 2>&1 || echo "$(basename "$a") FAIL" >>"$OUT/parse.log"; done
 if grep -q FAIL "$OUT/parse.log"; then FAILS=$((FAILS+1)); note "FAIL  parse"; grep FAIL "$OUT/parse.log" | sed 's/^/        /'; else note "ok    parse (every page, sf-draw.js, sf-topics.js, api/*.js)"; fi
 # 2. Behaviour, on real page loads.
@@ -70,6 +72,8 @@ check history      "HISTORY OK"            node "$HERE/test_history.js"
 check newtypes     "NEWTYPES OK"           node "$HERE/test_newtypes.js"
 check draw_on      "DRAWON OK"             node "$HERE/test_drawon.js"
 check icons        "ICONS OK"              node "$HERE/test_icons.js"
+check render       "RENDER OK"             node "$HERE/test_render.js"
+check library      "LIBRARY OK"            node "$HERE/test_library.js"
 # The subtopic skill: its rules exhaustively in Node, then the plan builder and the top-up on real pages.
 check topics_rules "TOPICS OK"             node "$REPO/.claude/skills/subtopics/scripts/check_topics.js"
 check topics_page  "TOPICS PAGE OK"        node "$HERE/test_topics.js"

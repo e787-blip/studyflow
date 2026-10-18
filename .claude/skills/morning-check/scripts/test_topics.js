@@ -35,7 +35,7 @@ async function run(o) {
     return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ result: JSON.stringify(d) }) });
   });
   await page.goto((process.env.SF_BASE || 'http://localhost:8765/') + 'favicon.png');
-  await page.evaluate((u) => { localStorage.clear(); localStorage.setItem('studyflow_user', JSON.stringify(u)); localStorage.setItem('studyflow_onboarded', '1'); }, Object.assign({}, fx.user, { tier: 'vip' }));
+  await page.evaluate((u) => { localStorage.clear(); localStorage.setItem('studyflow_user', JSON.stringify(u)); localStorage.setItem('studyflow_onboarded', '1'); localStorage.setItem('sfu:' + u.email + '|studyflow_model_art', '1'); }, Object.assign({}, fx.user, { tier: 'vip' }));
   if (o.block) await page.route('**/sf-topics.js', r => r.abort());
   await page.goto((process.env.SF_BASE || 'http://localhost:8765/') + 'app.html?cb=' + Date.now(), { waitUntil: 'load' });
   await page.waitForTimeout(600);

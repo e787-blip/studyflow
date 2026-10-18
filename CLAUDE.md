@@ -34,6 +34,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
 | `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
 | `sf-render.js` | ~30 KB | **Pictures drawn by code.** Charts, number lines and to-scale timelines from figures and dates the model wrote; the model never places a mark. Loaded after `sf-icons.js` on `app.html` and `lesson.html` - see "Pictures drawn by code"
+| `sf-library.js` + `illustrations/` | ~8 KB + 5 SVGs | **Real illustrations** (leaf, heart, plant cell, volcano, water cycle) from Wikimedia Commons, each with its credit inside the picture. Shown when the lesson's TITLE names one; the model no longer draws lesson pictures - see "Real illustrations"
 | `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** The marketing pages that sit in the nav's own links (Help, Our story, Plans) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `lesson`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. `index.html` keeps its own copy - see "The site nav" |
 | `sf-smooth.js` | ~11 KB | **Smooth wheel scrolling** for `index.html`, `about.html`, `pricing.html` (window.`SFSmooth`). Off for touch and reduced motion - see "Smooth scroll and the two showcases" |
 | `sf-auth.js` | ~5 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html` — see "The classroom" |
@@ -1973,6 +1974,74 @@ one to the same `currentTime` - each frame is then exactly what a learner sees
 t ms in. Hold the page's `setTimeout`s back while you do, or `finish()` hands
 the DOM back mid-capture.
 
+### Real illustrations — `sf-library.js`, `illustrations/` (Oct 2026)
+
+**The model no longer draws the lesson picture.** Every drawing it made from
+coordinates (`SFSceneKit`) looked like a guess - the owner's screenshot of a
+"Five Key Events" labelling card was triangles, tiny red boxes and pins on
+top of each other - and no prompt fixed it. Shown real textbook drawings
+from Wikimedia Commons, the owner said "OMG. so much better" and chose:
+**show a credit**, and **when nothing matches, the kit's own diagram**.
+
+A lesson's picture is now, first that applies:
+
+1. drawn by code from its figures or dates (`sf-render.js`, `dataPicture`);
+2. a real illustration its TITLE or micro-topic names (`SFLibrary.match`);
+3. the diagram the kit builds from the day's own steps (`diagramForDay`).
+
+- **`modelArtOn()`** (block 1, beside `lessonArt`) is the switch for the old
+  path: `studyflow_model_art = '1'` in the learner's store. Off, nothing asks
+  the model for a lesson picture - not on entry, not `predrawNextDay`, not
+  `app.html`'s `predrawFirstLesson` (a plan builds one call and up to 25s
+  faster). Kept, not deleted, because "Draw it for me" shares its parts and
+  the tests of that path turn it on.
+- **Truth first**, as `SFIcons.match`: the title or micro-topic must name the
+  thing; prose never counts; a subject list keeps "The heart of the
+  Industrial Revolution" out. "Evaporation and condensation" is not the water
+  cycle.
+- **Fetched, then never trusted**: `SFLibrary.load` fetches
+  `/illustrations/<id>.svg` once per session and `sanitize()` keeps only
+  drawing elements, local `#` references and no `on*`, `javascript:`,
+  `data:` or outside `url()`. `uniqIds` runs on it (`lessonArt.svg`), as on
+  every picture. Until it lands the card shows the kit's diagram;
+  `applyLessonArt` swaps it in. A failed load is not cached.
+- **The credit is inside the SVG** (`text.sf-credit`), so it is wherever the
+  picture is - lesson card, recall panel, walkthrough, labelling card.
+  CC BY-SA requires credit and that an *adapted image* stays CC BY-SA; the
+  app's code is not an adaptation. The owner should read the licences once.
+- **The labelling card works unchanged.** The pipeline re-sets every label in
+  DM Sans at phone size with the catalogue's KEY labels bold and first, which
+  is exactly what `lessonLabelQuestion` lifts into pins.
+- `SFDrawOn` does not trace them (`data-sf-lib`): hundreds of hand-drawn parts
+  traced one by one read as a machine. They arrive with the card's fade.
+- Every `lessonArt.spec` reader goes through `lessonArtSvg()` /
+  `lessonArtTitle()` now; a new reader must too.
+
+**Adding one** (about 15 minutes): a Commons file with REAL text labels (not
+labels converted to outlines - those cannot be re-set), an entry in
+`.claude/skills/diagram/references/illustrations.json` (`key` labels for the
+pins, `translate` for another language, `leave` for text that is part of the
+drawing like the leaf's CO₂ arrows), then
+
+```bash
+python3 -I .claude/skills/diagram/scripts/prep_illustration.py <id>
+```
+
+(harness server on 8766 and Chrome needed). It reads licence and author from
+Commons, never by hand; cleans editor cruft; picks the English child of a
+`<switch>` (the heart file holds eight languages); merges split labels
+("CO" + "2" -> CO₂); crops; bakes the credit; rounds to 1 decimal (never
+whole numbers: relative path steps drift and the drawing scatters); and
+writes the credit block in `sf-library.js`. Then add the id and its words to
+`ITEMS`, and LOOK at it on a lesson card at 375px. Two bugs already paid
+for: an attribute filter without a colon stripped `id`, `x`, `x1`, `x2` and
+scattered the leaf; and labels grown to phone size were cut until the crop
+was measured again after them.
+
+Left out on purpose: LadyofHats' animal cell - its labels sit in stacked
+columns that collide at phone size. Not changed: "Draw it for me" still
+draws with the model.
+
 ### Pictures drawn by code — `sf-render.js` (Oct 2026)
 
 The owner's verdict on every model drawing was blunt, and it is the reason
@@ -3439,6 +3508,12 @@ genuinely nothing.
 
 ## Open items
 
+- **Real illustrations: five, growing.** Leaf, heart, plant cell, volcano,
+  water cycle. Next by how often learners meet them: animal cell (a cleaner
+  source), mitosis, the digestive system, the solar system, plate boundaries,
+  the rock cycle, a flower, the eye, the lungs, a neuron. Servier Medical Art
+  (plain CC BY) is the better source for the body. The leaf's left-hand
+  labels are tight at 375px ("Upper epidermis" touches "Palisade").
 - **Pictures drawn by code have not been fed by a real model.** `chart` and
   `numberline` are prompted, validated and tested on hand-written specs; the
   bars and dated-timeline routes also upgrade what plans already carry. First

@@ -91,6 +91,20 @@ $JSC .claude/skills/morning-check/browser/noderun.js -- "$PWD/.claude/skills/mor
 $JSC .claude/skills/morning-check/browser/noderun.js -- "$PWD/.claude/skills/subtopics/scripts/check_topics.js"
 ```
 
+**Faster, and immune to the hidden pane: headless Chrome.** A hidden pane
+throttles timers so hard that a 25s test took 27 minutes and the runner's
+300s cap killed it mid-run ("Cannot read properties of null (reading
+'eval')" is that kill, not a bug). `browser/autorun.html` runs the suite by
+itself in a headless Chrome, whose page counts as visible, and writes
+`suite.txt` and `suite-logs.txt` to the out folder (whole suite ~10 min):
+
+```bash
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --user-data-dir="$(mktemp -d)" --window-size=1280,900 "http://localhost:8766/__h/autorun.html"
+```
+
+Add `?only=render,icons` for some. Chrome does not exit on its own: kill it
+once `suite.txt` starts with `DONE`.
+
 `dg_regress` writes `diagrams.json` to the server's out folder (`GET /__repo`
 says where); `cmp` it with `diagram_baseline.json`. Known differences from
 Playwright: **a hidden pane stops rendering after a while** - animation
