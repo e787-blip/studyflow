@@ -33,7 +33,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `about.html` / `pricing.html` | ~52 / ~60 KB | "Our story" and the plans page, redesigned Oct 2026 in Liquid Glass to match `index.html` - see "Our story and Plans". Each carries its own copy of the shared glass CSS and footer; the nav is `sf-nav.js` |
 | `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
 | `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
-| `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** Site pages (Terms, Help, Privacy, Parent view, Our story, Plans, both sign-ins) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `lesson`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. `index.html` keeps its own copy - see "The site nav" |
+| `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** The marketing pages that sit in the nav's own links (Help, Our story, Plans) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `lesson`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. `index.html` keeps its own copy - see "The site nav" |
 | `sf-auth.js` | ~5 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html` — see "The classroom" |
 | `teacher-login.html` / `teacher.html` | ~21 / ~60 KB | Teacher sign-in (Firebase Auth) and the class dashboard, whose first tab is now Assignments and their results - see "Assignments" |
 | `teacher-build.html` | ~78 KB | **The assignment builder** - `app.html` for a teacher: one question per screen, one call writes the lesson and a fixed set of questions, the teacher edits every one, then publishes |
@@ -3083,9 +3083,9 @@ nav appears where the tag is (after the skip link, on pages that have one).
 - A signed-in student's "Build my plan" goes straight to `app.html`, for every
   such link on the page, once the page has loaded: the script runs before the
   page's own buttons exist.
-- **The sign-in pages load it too** (site mode). Their own logos (the
-  night panel's, and its "Home" pill) are gone - the bar's logo goes home -
-  and the form side and the panels start below the bar.
+- **The sign-in pages do NOT load it** (Oct 2026, the owner's call: a
+  marketing nav on a sign-in form is a distraction). `login.html` and
+  `teacher-login.html` carry their own logo and Home pill on the dark panel.
 - **The app pages use it in app mode** (`app.html`, `dashboard.html`,
   `lesson.html`, `teacher.html`, `teacher-build.html`). Their four bars had
   four logo sizes, three colours and a different button on each. Now:
