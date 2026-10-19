@@ -1,5 +1,6 @@
 /* sf-library.js - real illustrations, drawn by people, for the lessons whose
-   SHAPE is the lesson: a leaf, a heart, a cell, a volcano, the water cycle.
+   SHAPE is the lesson: a leaf, a heart, a cell, a volcano, the water cycle,
+   the lungs, a neuron, the eye, mitosis, a flower, the rock cycle...
 
    WHY THIS EXISTS. A model placing coordinates is guessing, and every lesson
    picture it drew looked like a guess - triangles, tiny boxes, labels on top
@@ -75,6 +76,87 @@
       "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
       "source": "https://commons.wikimedia.org/wiki/File:Water_cycle_blank.svg",
       "credit": "Illustration: Ingwik, Wikimedia Commons, CC BY-SA 3.0"
+    },
+    "digestive-system": {
+      "id": "digestive-system",
+      "title": "The digestive system",
+      "author": "Mariana Ruiz, Jmarchn",
+      "license": "Public domain",
+      "licenseUrl": "",
+      "source": "https://commons.wikimedia.org/wiki/File:Digestive_system_diagram_en.svg",
+      "credit": "Illustration: Mariana Ruiz, Jmarchn, Wikimedia Commons"
+    },
+    "flower": {
+      "id": "flower",
+      "title": "Parts of a flower",
+      "author": "Mariana Ruiz (LadyofHats)",
+      "license": "Public domain",
+      "licenseUrl": "",
+      "source": "https://commons.wikimedia.org/wiki/File:Mature_flower_diagram.svg",
+      "credit": "Illustration: Mariana Ruiz (LadyofHats), Wikimedia Commons"
+    },
+    "eye": {
+      "id": "eye",
+      "title": "The human eye",
+      "author": "Rhcastilhos and Jmarchn",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Schematic_diagram_of_the_human_eye_en.svg",
+      "credit": "Illustration: Rhcastilhos and Jmarchn, Wikimedia Commons, CC BY-SA 3.0"
+    },
+    "rock-cycle": {
+      "id": "rock-cycle",
+      "title": "The rock cycle",
+      "author": "Carie Frantz",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Rock_Cycle_with_labels.svg",
+      "credit": "Illustration: Carie Frantz, Wikimedia Commons, CC BY-SA 4.0"
+    },
+    "subduction": {
+      "id": "subduction",
+      "title": "How plates move",
+      "author": "Yug, Bibar",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Simplified_subduction.svg",
+      "credit": "Illustration: Yug, Bibar, Wikimedia Commons, CC BY-SA 4.0"
+    },
+    "animal-cell": {
+      "id": "animal-cell",
+      "title": "An animal cell",
+      "author": "Kelvin Song",
+      "license": "CC0",
+      "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+      "source": "https://commons.wikimedia.org/wiki/File:Animal_Cell_Unannotated.svg",
+      "credit": "Illustration: Kelvin Song, Wikimedia Commons"
+    },
+    "lungs": {
+      "id": "lungs",
+      "title": "The lungs",
+      "author": "Patrick J. Lynch",
+      "license": "CC BY 2.5",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.5",
+      "source": "https://commons.wikimedia.org/wiki/File:Lungs_diagram_detailed.svg",
+      "credit": "Illustration: Patrick J. Lynch, Wikimedia Commons, CC BY 2.5"
+    },
+    "neuron": {
+      "id": "neuron",
+      "title": "A neuron",
+      "author": "Quasar Jarosz and Dhp1080",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+      "source": "https://commons.wikimedia.org/wiki/File:Neuron.svg",
+      "credit": "Illustration: Quasar Jarosz and Dhp1080, Wikimedia Commons, CC BY-SA 3.0"
+    },
+    "mitosis": {
+      "id": "mitosis",
+      "title": "The stages of mitosis",
+      "author": "Jpablo Cad, Juliana Osorio and M3.dahl",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+      "source": "https://commons.wikimedia.org/wiki/File:Mitosis_schematic_diagram-en.svg",
+      "credit": "Illustration: Jpablo Cad, Juliana Osorio and M3.dahl, Wikimedia Commons, CC BY-SA 3.0"
     }
   };
   /* END CREDITS */
@@ -93,7 +175,30 @@
     { id: 'volcano', title: 'Inside a volcano', subjects: ['science', 'geography', 'general'],
       words: /\bvolcan|\beruptions?\b|\bmagma\b|\blava\b/i },
     { id: 'water-cycle', title: 'The water cycle', subjects: ['science', 'geography', 'general'],
-      words: /\bwater cycle\b|\bhydrolog(?:ic|ical)? cycle\b/i }
+      words: /\bwater cycle\b|\bhydrolog(?:ic|ical)? cycle\b/i },
+    /* Oct 2026, the second batch. Order matters where two could answer:
+       mitosis before the animal cell ("the cell cycle"), the plant cell
+       (above) before it ("plant and animal cells"). */
+    { id: 'mitosis', title: 'The stages of mitosis', subjects: ['science', 'general'],
+      words: /\bmitosis\b|\bmitotic\b|\bcell division\b|\bcell cycle\b|\bprophase\b|\bmetaphase\b|\banaphase\b|\btelophase\b/i,
+      not: /^(?!.*\bmitosis\b).*\bmeiosis\b/i },
+    { id: 'animal-cell', title: 'An animal cell', subjects: ['science', 'general'],
+      words: /\banimal cells?\b|\beukaryotic cells?\b|\borganelles?\b|\bparts of (?:a|the) cell\b|\bcell (?:structure|parts|organelles?)\b|\bstructure of (?:a|the) cell\b/i },
+    { id: 'neuron', title: 'A neuron', subjects: ['science', 'psychology', 'general'],
+      words: /\bneurons?\b|\bnerve cells?\b|\bnervous system\b|\bsynap|\baxons?\b|\bdendrites?\b/i },
+    { id: 'eye', title: 'The human eye', subjects: ['science', 'psychology', 'general'],
+      words: /\beyes?\b|\bvision\b|\bretina\b|\bhow we see\b/i,
+      not: /\beye of the|\bbird'?s[- ]eye\b|\beye ?witness|\bvision (?:statement|board)/i },
+    { id: 'lungs', title: 'The lungs', subjects: ['science', 'general'],
+      words: /\blungs?\b|\brespiratory system\b|\bbreathing\b|\btrachea\b|\bbronch|\balveol/i },
+    { id: 'digestive-system', title: 'The digestive system', subjects: ['science', 'general'],
+      words: /\bdigestive\b|\bdigestion\b|\bstomach\b|\bintestines?\b|\besophagus\b|\balimentary\b/i },
+    { id: 'flower', title: 'Parts of a flower', subjects: ['science', 'general'],
+      words: /\bflowers?\b|\bflowering plants?\b|\bpollinat|\bstamens?\b|\bpistils?\b|\bpetals?\b|\bplant reproduction\b|\breproduction in plants\b/i },
+    { id: 'rock-cycle', title: 'The rock cycle', subjects: ['science', 'geography', 'general'],
+      words: /\brock cycle\b|\btypes of rocks?\b|\bigneous\b|\bsedimentary\b|\bmetamorphic\b|\brocks and minerals\b/i },
+    { id: 'subduction', title: 'How plates move', subjects: ['science', 'geography', 'general'],
+      words: /\bplate tectonics?\b|\btectonic plates?\b|\bplate boundar|\bsubduction\b|\bcontinental drift\b|\bsea[- ]?floor spreading\b|\bmid-ocean ridges?\b|\bocean(?:ic)? trench/i }
   ];
 
   ITEMS.forEach(function (it) {

@@ -1,6 +1,6 @@
-// Real illustrations (sf-library.js): a lesson whose TITLE names a leaf, a heart, a plant cell, a
-// volcano or the water cycle shows a person's drawing with its credit, instead of anything the
-// model draws. Checks: the matcher is truth-first; the sanitiser strips hostile SVG; the picture
+// Real illustrations (sf-library.js): a lesson whose TITLE names one of the catalogue's pictures (a
+// leaf, a heart, a cell, the lungs, a neuron, mitosis, the rock cycle...) shows a person's drawing
+// with its credit, instead of anything the model draws. Checks: the matcher is truth-first; the sanitiser strips hostile SVG; the picture
 // lands on the lesson card with its credit; no model drawing is asked for, with or without a match;
 // a failed file leaves the kit's diagram; the labelling card turns the bold labels into pins; the
 // draw-on animation leaves it alone; dark mode keeps paper under it; the files are within budget.
@@ -49,19 +49,31 @@ async function toLessonCard(page) {
       leaf: m('Photosynthesis: inside a leaf', 'science'), heart: m('The heart and blood vessels', 'science'),
       cell: m('Parts of a plant cell', 'science'), volcano: m('How volcanoes erupt', 'geography'),
       water: m('The water cycle', 'science'), viaMicro: m('Biology week 3', 'science', 'Plants › Leaf structure'),
-      prose: L.match({ title: 'Cell division', microTopic: '', content: 'A leaf and a heart and a volcano' }, 'science'),
+      prose: L.match({ title: 'Forces and motion', microTopic: '', content: 'A leaf and a heart and a volcano and the lungs' }, 'science'),
+      // the second batch (Oct 2026), and the near-misses each of them must refuse
+      batch2: [m('Parts of an animal cell', 'science'), m('Cell division: mitosis', 'science'), m('The cell cycle', 'science'),
+               m('Mitosis and meiosis', 'science'), m('The digestive system', 'science'), m('Parts of a flower', 'science'),
+               m('How the eye works', 'science'), m('Vision', 'psychology'), m('The lungs and breathing', 'science'),
+               m('Neurons and synapses', 'psychology'), m('Types of rocks', 'geography'), m('Plate boundaries', 'geography'),
+               m('Earthquakes and plate tectonics', 'science'), m('Plant and animal cells', 'science')].join(','),
+      batch2Not: [m('Meiosis', 'science'), m('Cellular respiration', 'science'), m('Neural networks', 'general'),
+                  m('Flowers for Algernon', 'english'), m('Eyewitness testimony', 'psychology'), m('The eye of the storm', 'geography'),
+                  m('Kafka: The Metamorphosis', 'general'), m('Cell phones and society', 'general')].join(','),
       heartHistory: m('The heart of the Industrial Revolution', 'history'), heartOf: m('The heart of the matter: cells', 'science'),
       evap: m('Evaporation and condensation', 'science'), market: m('The Market Revolution', 'history'),
       clean, bad: /<script|onload|onclick|foreignObject|<image|javascript:|evil/i.test(clean), keeps: /url\(#ok\)/.test(clean) && /fine/.test(clean),
       notSvg: L.sanitize('<html><body>x</body></html>'), broken: L.sanitize('<svg><path></svg')
     };
   });
-  assert(r.loaded && r.n === 5, 'sf-library.js is on the lesson page with ' + r.n + ' illustrations');
+  assert(r.loaded && r.n === 14, 'sf-library.js is on the lesson page with ' + r.n + ' illustrations');
   assert(r.leaf === 'leaf-cross-section' && r.heart === 'heart' && r.cell === 'plant-cell' && r.volcano === 'volcano' && r.water === 'water-cycle',
     'a title that names it gets it (' + [r.leaf, r.heart, r.cell, r.volcano, r.water].join(', ') + ')');
   assert(r.viaMicro === 'leaf-cross-section', 'the micro-topic counts as a title');
   assert(r.prose === null && r.heartHistory === '' && r.heartOf === '' && r.evap === '' && r.market === '',
     'prose words, other subjects, "the heart of", and near-misses get nothing');
+  assert(r.batch2 === 'animal-cell,mitosis,mitosis,mitosis,digestive-system,flower,eye,eye,lungs,neuron,rock-cycle,subduction,subduction,plant-cell',
+    'the second batch answers its titles (' + r.batch2 + ')');
+  assert(r.batch2Not === ',,,,,,,', 'and refuses their near-misses: meiosis alone, cellular respiration, neural networks, a novel, eyewitnesses (' + r.batch2Not + ')');
   assert(!r.bad && r.keeps, 'the sanitiser drops script, handlers, foreignObject, images, javascript: and outside URLs, and keeps local ones');
   assert(r.notSvg === null && r.broken === null, 'a non-SVG or broken file is refused');
   await env.browser.close();
@@ -88,6 +100,20 @@ async function toLessonCard(page) {
   });
   assert(r && r.n >= 3 && r.n <= 5 && r.hasSvg && r.labelsLeft, 'the labelling card pins the leaf\'s own key labels: ' + (r ? r.answers.join(', ') : 'none'));
   assert(r && r.answers.indexOf('Palisade mesophyll') === 0, 'in the order the catalogue chose, key part first');
+  await env.browser.close();
+
+  // 2b. A drawing whose labels WE placed (the catalogue's `add`): the animal cell. Its labels and
+  // leader lines are in the file like any other, so the card pins them the same way.
+  env = await h.open({ plan: planFor(lessonDay('Parts of an animal cell', 'science'), 'science'), day: 1, mock: none, settle: 900, modelArt: false });
+  await toLessonCard(env.page);
+  r = await env.page.evaluate(() => {
+    const svg = document.querySelector('#lesson-art svg'), q = lessonLabelQuestion();
+    return { lib: lessonArt.lib && lessonArt.lib.id, credit: svg ? (svg.querySelector('.sf-credit') || {}).textContent || '' : '',
+             leaders: svg ? svg.querySelectorAll('.sf-leaders line').length : 0, answers: q ? q.pins.map(p => p.answer) : [] };
+  });
+  assert(r.lib === 'animal-cell' && /Kelvin Song/.test(r.credit) && r.leaders >= 8, 'the animal cell shows, credited, with its placed leader lines (' + r.leaders + ')');
+  assert(r.answers.join('|') === 'Nucleus|Mitochondrion|Golgi apparatus|Cell membrane|Rough ER', 'and its placed labels become the pins: ' + r.answers.join(', '));
+  assert(env.calls.length === 0 && env.errors.length === 0, 'with no model call and no page error');
   await env.browser.close();
 
   // 3. Dark mode: the picture keeps a paper ground.
@@ -133,7 +159,7 @@ async function toLessonCard(page) {
     sizes.push(id + ' ' + Math.round(gz / 1024) + 'KB');
     if (gz > 80 * 1024) problems.push(id + ': ' + Math.round(gz / 1024) + 'KB gzipped');
   });
-  assert(ids.length === 5 && problems.length === 0, 'every illustration is present, credited, safe and under 80KB gzipped (' + (problems.join('; ') || sizes.join(', ')) + ')');
+  assert(ids.length === 14 && problems.length === 0, 'every illustration is present, credited, safe and under 80KB gzipped (' + (problems.join('; ') || sizes.join(', ')) + ')');
 
   console.log(fails ? fails + ' FAILED' : 'LIBRARY OK');
 })().catch(e => { console.log('FAIL threw ' + (e && e.stack || e)); process.exitCode = 1; });
