@@ -64,6 +64,12 @@ async function toLessonCard(page) {
     'prose words, other subjects, "the heart of", and near-misses get nothing');
   assert(!r.bad && r.keeps, 'the sanitiser drops script, handlers, foreignObject, images, javascript: and outside URLs, and keeps local ones');
   assert(r.notSvg === null && r.broken === null, 'a non-SVG or broken file is refused');
+  r = await env.page.evaluate(() => {
+    plan.subjectType = 'science';
+    const html = String(renderFill({ type: 'fill', question: 'The ___ controls the cell and holds its DNA.', answer: 'nucleus', explanation: 'x' }) || '');
+    return { clip: /simplified|Mito\./.test(html), leak: /<svg[\s\S]*Nucleus[\s\S]*<\/svg>/i.test(html), svgs: (html.match(/<svg/g) || []).length };
+  });
+  assert(!r.clip && !r.leak && r.svgs === 0, 'a science fill-in about the cell carries no clip-art picture, so no answer printed above the blank (' + JSON.stringify(r) + ')');
   await env.browser.close();
 
   // 2. A lesson that names one: the picture, its credit, no model call, the labelling card.
