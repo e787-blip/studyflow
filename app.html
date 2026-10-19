@@ -3187,6 +3187,10 @@
     function generateDay(dayNum, totalDays, subjectType, strategy, callback) {
       var MAX_RETRIES = 3;
       var attempt = 0;
+      /* Why the last attempt failed. A day that ran out of the server's 55s
+         will run out again if it is asked the same thing, so a retry after a
+         timeout asks for the same day written SHORT (SHORT_RETRY below). */
+      var lastFail = '';
       var isFirst = dayNum === 1, isLast = dayNum === totalDays;
       var difficulty = isFirst ? 'Easy' : (isLast ? 'Hard' : 'Medium');
       var questionInstructions = '', questionSchema = '';
@@ -3438,19 +3442,25 @@
            So the decision now runs the other way: draw the thing if it has a
            shape, use a layout if the material is a relationship, and take a
            template only when the topic IS that template. */
+        /* NO DRAWING HERE ANY MORE (Oct 2026). A {"type":"drawing"} with up to
+           40 shapes was the biggest single thing this prompt asked the model
+           to WRITE, and together with the old whiteboard beats it pushed a day
+           past the 55s the server allows: two runs of a real cell-division
+           prompt both came back 504, and the build retried the same doomed
+           call three times a day. The lesson picture is a real illustration,
+           a code-drawn chart or the kit's own diagram now (sf-library.js,
+           sf-render.js), not the model's coordinates, so the drawing was
+           output nobody wanted. A stored plan's drawing still renders. */
         '   Decide in this order:\n' +
-        '   a) Is this lesson about a THING WITH A SHAPE - something you could point at or\n' +
-        '      sketch? A leaf, a trebuchet, a call stack, the atmosphere, an eye, a bridge,\n' +
-        '      a sarcomere, an orbit, a river meander. If so DRAW IT: {"type":"drawing"}, below.\n' +
-        '      This is the best answer and it is available for every topic. Prefer it.\n' +
-        '   b) Otherwise, is the material a RELATIONSHIP between ideas - an order, a cycle,\n' +
+        '   a) Is the material a RELATIONSHIP between ideas - an order, a cycle,\n' +
         '      a set of causes, a ranking, a contrast? Use a custom layout and name the\n' +
         '      "relation", below.\n' +
-        '   c) Only if the topic IS one of the 23 named templates, and the lesson is about\n' +
+        '   b) Only if the topic IS one of the 23 named templates, and the lesson is about\n' +
         '      that whole topic rather than one corner of it, use the template.\n' +
         '      A lesson on "photosynthesis" may use the template. A lesson on "the light\n' +
-        '      reactions in the thylakoid" should be DRAWN - the template shows the whole\n' +
-        '      leaf and says nothing about this day.\n' +
+        '      reactions in the thylakoid" should use a custom layout - the template shows\n' +
+        '      the whole leaf and says nothing about this day.\n' +
+        '   Never {"type":"drawing"} here - the app draws the lesson picture itself.\n' +
         /* Every name here must match a template in curatedDiagramSVG() in
            lesson.html. Listing one that does not exist is not an error - the
            kit quietly falls back to a generic custom diagram - so the failure
@@ -3512,7 +3522,7 @@
            against a given structure, which is what labelling is. */
         '\nLABEL THE DIAGRAM - {"type":"labeldiagram"} - when the topic has a THING WITH PARTS.\n' +
         '   A cell, a leaf, a heart, a volcano, a wave, a circuit, a river, an eye, a neuron.\n' +
-        '   You draw it with the SAME shape vocabulary as "drawing" below, then put numbered\n' +
+        '   You draw it with the shape vocabulary below, then put numbered\n' +
         '   pins on it and say what each pin is. The learner picks a label for each pin.\n' +
         '   {"type":"labeldiagram","question":"Label each numbered part.",\n' +
         '    "drawing":{"title":"","w":400,"h":260,"shapes":[ ...same shapes as below... ]},\n' +
@@ -3523,13 +3533,8 @@
         '   - "options" are extra wrong labels. The pin answers are added automatically.\n' +
         '   - Do NOT write the part names into the drawing itself. The pins are the question;\n' +
         '     labelling the picture gives the answer away.\n' +
-        '\nDRAW IT YOURSELF - {"type":"drawing"} - THE PREFERRED ANSWER (see 5a).\n' +
-        '   The templates cover 23 topics and the custom layouts are boxes and arrows. Neither\n' +
-        '   was made for the lesson in front of you; this is. If the lesson is about a thing\n' +
-        '   with a shape - a trebuchet, the layers of the atmosphere, an eye, a volcano, a\n' +
-        '   bridge truss, a sarcomere, a castle keep, an orbit, a call stack - draw it, and\n' +
-        '   draw the part THIS day is about rather than the whole subject.\n' +
-        '   Shape: {"type":"drawing","title":"short title","w":400,"h":260,"shapes":[ ... ]}\n' +
+        '\nHOW TO DRAW the labeldiagram card\'s "drawing" (never the day\'s "diagram"):\n' +
+        '   Shape: {"title":"short title","w":400,"h":260,"shapes":[ ... ]}\n' +
         '   Canvas: x goes right from 0, y goes DOWN from 0. Keep everything inside w and h.\n' +
         '   Each entry in "shapes" is one of:\n' +
         '     {"s":"rect","x":,"y":,"w":,"h":,"r":8,"fill":"blueFill","stroke":"blue"}\n' +
@@ -3566,7 +3571,7 @@
         '   (water blue, heat red). Decide where labels go FIRST - e.g. drawing left, labels in a\n' +
         '   right-hand column - so no label can land on the drawing.\n' +
         '   Worked example - the layers of the atmosphere, DRAWN, not boxed:\n' +
-        '   {"type":"drawing","title":"The atmosphere in cross-section","w":400,"h":300,"shapes":[\n' +
+        '   {"title":"The atmosphere in cross-section","w":400,"h":300,"shapes":[\n' +
         '     {"s":"path","d":"M0 112 Q200 86 400 112 L400 48 Q200 22 0 48 Z","fill":"blueFill","stroke":"none","opacity":0.28},\n' +
         '     {"s":"path","d":"M0 168 Q200 142 400 168 L400 112 Q200 86 0 112 Z","fill":"blueFill","stroke":"none","opacity":0.45},\n' +
         '     {"s":"path","d":"M0 224 Q200 198 400 224 L400 168 Q200 142 0 168 Z","fill":"blueFill","stroke":"none","opacity":0.64},\n' +
@@ -3597,7 +3602,7 @@
         '     {"s":"text","x":392,"y":252,"t":"Troposphere · 0–12 km","size":11,"anchor":"end","fill":"ink"},\n' +
         '     {"s":"text","x":24,"y":182,"t":"Ozone layer","size":11,"anchor":"start","fill":"ink"},\n' +
         '     {"s":"text","x":144,"y":120,"t":"Meteors burn up","size":11,"anchor":"end","fill":"ink"}]}\n' +
-        '   Use {"type":"none"} only when the topic genuinely cannot be drawn.\n' +
+        '   If the topic has no thing with parts, leave labeldiagram out rather than force one.\n' +
         '6. concepts: 3-5 items each {name,definition,why,misconception,visual}.\n' +
         '   These are the MAIN IDEAS. They open the session on their own card, one numbered\n' +
         '   row each, and every row shows its own picture - so give each concept a "visual".\n' +
@@ -3670,23 +3675,10 @@
            The hard requirement is ONE problem carried all the way through -
            without it the model wrote general prose about the topic and the
            board became paragraphs with unrelated expressions beside them. */
-        'WHITEBOARD (field "whiteboard") - a WORKED WALKTHROUGH of ONE problem, 4 to 7 beats.\n' +
-        '  Pick a single concrete example from the notes - one equation, one passage, one\n' +
-        '  case - and SOLVE IT STEP BY STEP across the beats. Every beat moves that same\n' +
-        '  example one step further. Do not write general commentary about the topic, and\n' +
-        '  do not switch to a different example halfway through.\n' +
-        '  Beat 1: state the problem and what we are trying to find.\n' +
-        '  Middle beats: ONE move each, with the result of that move in "show".\n' +
-        '  Last beat: the answer, and how to check it.\n' +
-        '  Each beat: "headline" under 8 words naming the move ("Subtract 3 from both\n' +
-        '  sides"), "say" one or two sentences explaining WHY that move, and "show"\n' +
-        '  {"kind":"equation|text|list|table|diagram","value":...} holding the example AS IT\n' +
-        '  NOW STANDS after that move. For "list"/"table", "value" is an array.\n' +
-        '  The "show" must be the SAME problem at every beat - 2x + 3 = 11, then 2x = 8,\n' +
-        '  then x = 4. If a beat has no new state to show, leave "show" out entirely\n' +
-        '  rather than putting an unrelated expression there.\n' +
-        '  Give most beats a "checkpoint": one short question answerable from that beat.\n' +
-        '  The headline must not restate the "say", and none of it may restate "content".\n' +
+        /* The "whiteboard" beats were read only by whiteboard.js, which nothing
+           has called since LESSON_CARD_STEPPED went false - 4 to 7 beats of
+           output per day, written and thrown away, on a call that was already
+           timing out. The opening board is workedExample (rule 4d). */
         '\nTHE SIX EXTENDED FORMATS - what goes in each field:\n' +
         'twopart: Part A is the question; "reasons" are four explanations, and reasonIndex\n' +
         '  must be the one that genuinely justifies the option at correctIndex. The other\n' +
@@ -3749,7 +3741,6 @@
            own picture. Without "visual" in the shape here the model returns
            none, and every row silently falls back to text only. */
         '"concepts":[{"name":"","definition":"","why":"","misconception":"","visual":{"layout":"flow","items":["",""]}}],' +
-        '"whiteboard":[{"beat":1,"headline":"","say":"","show":{"kind":"text","value":""},"checkpoint":""}],' +
         /* The opening whiteboard is built from these three. Without them in the
            schema the model never returned them, so the board had nothing to
            show and silently did not render. */
@@ -3765,6 +3756,18 @@
         '"visual":{"type":"concept","center":"","items":[]},' +
         '"duration":30,"isFinal":' + isLast + ',"completed":false,"questions":[' + questionSchema + ']}';
 
+      /* MEASURED, Oct 2026: a full day is 16-20k characters of JSON and takes
+         41-49s against the 55s the server allows (before the whiteboard beats
+         and the plan-time drawing were dropped from the prompt, 2 of 2 real
+         calls timed out). What runs over is LENGTH, so the retry keeps every
+         field and every question and asks for less of each. Prepended, so the
+         schema stays the last thing in the prompt. */
+      var SHORT_RETRY =
+        'LENGTH LIMIT - the last attempt at this day ran out of time. Return the SAME JSON with\n' +
+        'every field and every question, but SHORT: each explanation, hint, why and definition one\n' +
+        'sentence under 120 characters; content 3 sentences; workedExample 3 steps; at most 3\n' +
+        'concepts; leave out every optional "visual" field; a labeldiagram drawing of 8-16 shapes.\n\n';
+
       function tryFetch() {
         attempt++;
         setProgress(
@@ -3775,7 +3778,7 @@
         fetch('api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: prompt }),
+          body: JSON.stringify({ prompt: (attempt > 1 && /HTTP 50[24]|Failed to fetch|timeout|NetworkError|Load failed/i.test(lastFail)) ? SHORT_RETRY + prompt : prompt }),
           keepalive: true  // tells browser to keep this fetch alive even if tab goes background
         })
         .then(function(res) {
@@ -4045,10 +4048,17 @@
                              covers: sub.covers, guide: sub.guide };
           }
           sanitizeDayQuestions(day);
+          /* A reply that parsed but kept almost no questions is a broken day,
+             not a short one: repairJSON's last resort keeps the title and
+             little else. Ask again; on the last attempt keep what there is
+             rather than lose the day. */
+          if (day.questions.length < 3 && attempt < MAX_RETRIES)
+            throw new Error('Only ' + day.questions.length + ' questions survived');
           callback(null, day);
         })
         .catch(function(err) {
           console.warn('[gen] day ' + dayNum + ' attempt ' + attempt + ':', err.message);
+          lastFail = String(err && err.message || '');
           if (attempt < MAX_RETRIES) {
             /* BACKOFF MUST OUTLAST THE CALL IT IS BACKING OFF FROM.
 

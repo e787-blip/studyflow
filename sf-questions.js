@@ -800,7 +800,18 @@
     function repairJSON(raw) {
       var m = raw.match(/\{[\s\S]*/);
       if (!m) return null;
-      var s = m[0]
+      /* The model fences its reply in ```json ... ``` despite being told not
+         to, and the closing fence alone made every reply fail the first
+         parse. Then the one mistake it makes on almost every day (measured on
+         two real cell-division days, Oct 2026): the labelling card's
+         "drawing" object is never closed - `...}],"pins":` where it should be
+         `...}]},"pins":`. The whole reply failed to parse, and the last layer
+         below rescued the title and NO questions, so the day was saved with
+         nothing to practise. The broken form cannot occur in valid JSON
+         (`]` straight into `,"pins"` only happens when an object was left
+         open), so closing it is safe. */
+      var s = m[0].replace(/\s*```\s*$/, '')
+        .replace(/\}\]\s*,\s*"pins"\s*:/g, '}]},"pins":')
         .replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"')
         .replace(/[\u2013\u2014]/g, '-').replace(/\u00A0/g, ' ')
         .replace(/\\'/g, "'").replace(/\t/g, ' ')
