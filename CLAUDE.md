@@ -3491,6 +3491,24 @@ on a **three**-day plan during testing.
   `vercel.json`. It stops short of the platform limit on purpose: the
   function returns a JSON error rather than being killed, and the client
   cannot tell a platform kill apart from a network failure.
+- **A day must FIT in 55s, and it did not (Oct 2026).** The owner saw
+  "Retrying day 1 (attempt 3 of 3)" on most builds. Two real cell-division
+  day prompts both came back 504 at 55.3s: the prompt asked for ~20k
+  characters of JSON. Fixes, measured on the live endpoint: the day prompt no
+  longer asks for the `whiteboard` beats (read only by the unreached
+  `whiteboard.js`) or a plan-time `{"type":"drawing"}` for `day.diagram` (the
+  lesson picture is the library, `sf-render.js` or the kit now; the shape
+  vocabulary stays for the labelling card) - full days then took 41-49s;
+  and **a retry after a timeout prepends `SHORT_RETRY`** (same fields and
+  questions, shorter text, no optional visuals) - 30s. Still close to the
+  edge on a long day: if timeouts come back, cut output again or raise
+  `maxDuration` (needs the Vercel plan checked first).
+- **The model leaves the labelling card's `drawing` object open** (`}],"pins"`
+  for `}]},"pins"`) - on both real days measured - and ```json fences the
+  reply. Either broke the parse, and `repairJSON`'s last layer rescued the
+  title and no questions, so a "successful" day could be saved with nothing
+  to practise. `repairJSON` strips the fence and closes the drawing; a day
+  with under 3 questions is retried (kept on the last attempt).
 
 ### Key definitions must survive the model's shape
 
