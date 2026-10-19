@@ -73,7 +73,8 @@ def clean(s):
     for k, v in ents.items():
         s = s.replace('&' + k + ';', v)
     s = re.sub(r'<\?xml[^>]*\?>|<!DOCTYPE[\s\S]*?\]>\s*|<!DOCTYPE[^>]*>|<!--[\s\S]*?-->', '', s)
-    for tag in ('metadata', 'sodipodi:namedview', 'script', 'foreignObject', 'title', 'desc', 'i:pgf'):
+    # flowRoot is Inkscape's unfinished SVG 1.2 text: browsers never draw it.
+    for tag in ('metadata', 'sodipodi:namedview', 'script', 'foreignObject', 'title', 'desc', 'i:pgf', 'flowRoot'):
         s = re.sub(r'<%s\b[\s\S]*?</%s>' % (tag, tag), '', s)
         s = re.sub(r'<%s\b[^>]*/>' % tag, '', s)
     s = re.sub(r'<image\b[\s\S]*?(/>|</image>)', '', s)
@@ -109,16 +110,34 @@ def sanitise(s):
 def shrink(s, vbw):
     nd = 2 if vbw < 200 else 1     # never whole numbers: relative path steps drift
 
+    # A real tokenizer, left to right: "-9.9.03" is -9.9 then .03. A pattern that
+    # only looked for "long" decimals restarted INSIDE -9.9 and read 9.03, and
+    # Illustrator's compact paths scattered.
+    NUM = re.compile(r'-?(?:\d+\.\d*|\.\d+)(?:[eE][-+]?\d+)?|-?\d+')
+
     def rnd(m):
-        v = round(float(m.group(0)), nd)
+        g = m.group(0)
+        if '.' not in g or len(g.split('.')[1].split('e')[0].split('E')[0]) <= nd and 'e' not in g.lower():
+            return g
+        v = round(float(g), nd)
         t = ('%.*f' % (nd, v)).rstrip('0').rstrip('.') if nd else str(int(round(v)))
-        return '0' if t in ('-0', '') else t
+        t = '0' if t in ('-0', '') else t
+        # "1.12.04" is 1.12 then .04. Rounded, ".04" is "0", and "1.1" + "0" would
+        # read as ONE number, 1.10. A number that follows a digit or a point keeps
+        # a space in front of it.
+        # And a whole number with ".25" straight after it would swallow it.
+        p = m.string[m.start() - 1] if m.start() else ''
+        n = m.string[m.end()] if m.end() < len(m.string) else ''
+        t = (' ' + t) if (p.isdigit() or p == '.') and not t.startswith('-') else t
+        return (t + ' ') if n == '.' and '.' not in t else t
 
     def tag(m):
-        t = m.group(0)
-        return re.sub(r'-?\d*\.\d{%d,}(?:e-?\d+)?' % (nd + 1 if nd else 1), rnd, t)
+        return NUM.sub(rnd, m.group(0))
     s = re.sub(r'<[^>]+>', tag, s)
     s = re.sub(r'>\s+<', '><', s)
+    # An id nothing points to is bytes on every lesson open (hundreds, from editors).
+    used = set(re.findall(r'#([\w.:-]+)', s))
+    s = re.sub(r'\sid="([^"]*)"', lambda m: m.group(0) if m.group(1) in used else '', s)
     return s
 
 
@@ -169,7 +188,9 @@ def main():
             continue
         open(os.path.join(STAGE, it['id'] + '.svg'), 'w', encoding='utf8').write(clean(raw))
         job = {'id': it['id'], 'title': it['title'], 'key': it.get('key', []), 'translate': it.get('translate', {}),
-               'drop': it.get('drop', []), 'leave': it.get('leave', []), 'credit': credit}
+               'drop': it.get('drop', []), 'leave': it.get('leave', []), 'add': it.get('add', []),
+               'hide': it.get('hide', []), 'join': it.get('join', []), 'page': it.get('page', False), 'keep': it.get('keep', []),
+               'nudge': it.get('nudge', {}), 'credit': credit}
         svg, rep = browser(job, '/illustrations/.stage/' + it['id'] + '.svg')
         vbw = float(re.search(r'viewBox="[-\d.]+ [-\d.]+ ([\d.]+)', svg).group(1))
         svg = shrink(sanitise(svg), vbw)

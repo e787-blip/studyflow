@@ -1,5 +1,5 @@
 {
-  "_about": "Source list for illustrations/*.svg, built by scripts/prep_illustration.py. 'src' is a Wikimedia Commons file title; licence and author are read from Commons, never typed here. 'key' labels become bold (the labelling card's pins, in this order); 'translate' rewrites label text; 'drop' removes labels whose text matches. 'title' is what the learner sees.",
+  "_about": "Source list for illustrations/*.svg, built by scripts/prep_illustration.py. 'src' is a Wikimedia Commons file title; licence and author are read from Commons, never typed here ('author' overrides only the NAME when Commons' artist line is long or wrong). 'key' labels become bold (the labelling card's pins, in this order); 'translate' rewrites label text; 'drop' removes labels whose text matches; 'keep' keeps only these labels; 'leave' marks text that is part of the drawing (not re-set); 'join' names labels written as one text per line ('Small' over 'intestine'); 'nudge' {label: [dx, dy]} moves a label; 'hide' [CSS selectors] removes parts of the file (a dropped label's leader line); 'page': true keeps only what lies on the file's own canvas, clipped to it; 'add' [{text, x, y, anchor, to:[x, y]}] places a label OURSELVES in the file's viewBox units, with a leader line to 'to' - a claim about the drawing, so name parts only from the author's own labelled version or legend, and look. 'title' is what the learner sees. '_note' is for people.",
   "items": [
     {
       "id": "leaf-cross-section",
@@ -22,7 +22,17 @@
         "O",
         "↑↓",
         "↓↑"
-      ]
+      ],
+      "nudge": {
+        "Palisade mesophyll": [
+          0,
+          9
+        ],
+        "Upper epidermis": [
+          0,
+          -3
+        ]
+      }
     },
     {
       "id": "heart",
@@ -84,6 +94,425 @@
       "src": "Water cycle blank.svg",
       "title": "The water cycle",
       "key": []
+    },
+    {
+      "id": "digestive-system",
+      "src": "Digestive system diagram en.svg",
+      "title": "The digestive system",
+      "key": [
+        "Stomach",
+        "Liver",
+        "Esophagus",
+        "Pancreas",
+        "Gallbladder",
+        "Appendix"
+      ],
+      "join": [
+        "Small intestine",
+        "Large intestine",
+        "Salivary glands",
+        "Common bile duct",
+        "Pancreatic duct",
+        "Transverse colon",
+        "Ascending colon",
+        "Descending colon",
+        "Sigmoid colon"
+      ]
+    },
+    {
+      "id": "flower",
+      "src": "Mature flower diagram.svg",
+      "title": "Parts of a flower",
+      "drop": [
+        "Mature flower"
+      ],
+      "translate": {
+        "stigma": "Stigma",
+        "style": "Style",
+        "ovary": "Ovary",
+        "ovules": "Ovules",
+        "anther": "Anther",
+        "filament": "Filament",
+        "petal/corolla": "Petal",
+        "sepal/calyx": "Sepal",
+        "pistil": "Pistil",
+        "stamen": "Stamen",
+        "perianth": "Perianth",
+        "nectary": "Nectary",
+        "pedicel": "Pedicel",
+        "connective": "Connective",
+        "microsporangium": "Pollen sac",
+        "floral axis": "Receptacle"
+      },
+      "key": [
+        "Stigma",
+        "Anther",
+        "Ovary",
+        "Petal",
+        "Filament",
+        "Style",
+        "Sepal"
+      ],
+      "author": "Mariana Ruiz (LadyofHats)",
+      "nudge": {
+        "stigma": [
+          0,
+          -8
+        ],
+        "ovary": [
+          0,
+          7
+        ]
+      }
+    },
+    {
+      "id": "eye",
+      "src": "Schematic diagram of the human eye en.svg",
+      "title": "The human eye",
+      "author": "Rhcastilhos and Jmarchn",
+      "key": [
+        "Cornea",
+        "Lens",
+        "Retina",
+        "Iris",
+        "Pupil",
+        "Optic nerve"
+      ],
+      "drop": [
+        "Posterior chamber",
+        "Hyaloid canal"
+      ],
+      "hide": [
+        "#path14809",
+        "#path4987",
+        "#path14845",
+        "#path14913"
+      ],
+      "_note": "Posterior chamber and hyaloid canal dropped with their leader lines: at 375px they crowded the labels a 7th grader needs."
+    },
+    {
+      "id": "rock-cycle",
+      "src": "Rock Cycle with labels.svg",
+      "title": "The rock cycle",
+      "key": [
+        "Magma",
+        "Igneous Rock",
+        "Sedimentary Rock",
+        "Metamorphic Rock"
+      ],
+      "hide": [
+        "rect[rx=\"10.75\"]",
+        "path[d^=\"M508.75,245c\"]",
+        "path[d^=\"M1181.75,450c\"]",
+        "path[d^=\"M1143.75,559c\"]",
+        "path[d^=\"M654.75,672c\"]"
+      ],
+      "nudge": {
+        "erosion & deposition": [
+          -150,
+          -8
+        ]
+      },
+      "_note": "The file's white label tags are hidden: re-set at phone size the labels are wider than the tags, and the halo does their job."
+    },
+    {
+      "id": "subduction",
+      "src": "Simplified subduction.svg",
+      "title": "How plates move",
+      "translate": {
+        "Dorsale océanique": "Mid-ocean ridge",
+        "Fosse océanique": "Ocean trench",
+        "Lithosphère océanique": "Oceanic plate",
+        "Asthénosphère": "Mantle (asthenosphere)",
+        "Arc volcanique": "Volcano",
+        "Lithosphère continentale": "Continental plate"
+      },
+      "drop": [
+        "OLD VERSION:",
+        "Remonté magmatique",
+        "Pluton magmatique",
+        "3,2",
+        "3.3",
+        "3,3",
+        "3,4"
+      ],
+      "key": [
+        "Ocean trench",
+        "Mid-ocean ridge",
+        "Oceanic plate",
+        "Continental plate",
+        "Volcano"
+      ],
+      "page": true,
+      "nudge": {
+        "Mid-ocean ridge": [
+          -45,
+          0
+        ],
+        "Ocean trench": [
+          15,
+          0
+        ]
+      }
+    },
+    {
+      "id": "animal-cell",
+      "src": "Animal Cell Unannotated.svg",
+      "title": "An animal cell",
+      "_note": "Unlabelled drawing; labels placed from Kelvinsong's own numbered version (Animal Cell.svg) and its legend.",
+      "add": [
+        {
+          "text": "Mitochondrion",
+          "x": 165,
+          "y": -40,
+          "anchor": "middle",
+          "to": [
+            300,
+            142
+          ]
+        },
+        {
+          "text": "Centrosome",
+          "x": 545,
+          "y": -40,
+          "anchor": "middle",
+          "to": [
+            500,
+            140
+          ]
+        },
+        {
+          "text": "Lysosome",
+          "x": 830,
+          "y": -40,
+          "anchor": "middle",
+          "to": [
+            730,
+            60
+          ]
+        },
+        {
+          "text": "Nucleolus",
+          "x": 1075,
+          "y": -40,
+          "anchor": "middle",
+          "to": [
+            945,
+            165
+          ]
+        },
+        {
+          "text": "Nucleus",
+          "x": 1300,
+          "y": -40,
+          "anchor": "middle",
+          "to": [
+            1120,
+            100
+          ]
+        },
+        {
+          "text": "Cytoplasm",
+          "x": 200,
+          "y": 325,
+          "anchor": "middle"
+        },
+        {
+          "text": "Cell membrane",
+          "x": 720,
+          "y": 715,
+          "anchor": "middle"
+        },
+        {
+          "text": "Vacuole",
+          "x": 200,
+          "y": 880,
+          "anchor": "middle",
+          "to": [
+            365,
+            490
+          ]
+        },
+        {
+          "text": "Smooth ER",
+          "x": 560,
+          "y": 880,
+          "anchor": "middle",
+          "to": [
+            548,
+            540
+          ]
+        },
+        {
+          "text": "Golgi apparatus",
+          "x": 930,
+          "y": 880,
+          "anchor": "middle",
+          "to": [
+            950,
+            565
+          ]
+        },
+        {
+          "text": "Rough ER",
+          "x": 1260,
+          "y": 880,
+          "anchor": "middle",
+          "to": [
+            1150,
+            470
+          ]
+        }
+      ],
+      "key": [
+        "Nucleus",
+        "Mitochondrion",
+        "Golgi apparatus",
+        "Cell membrane",
+        "Rough ER"
+      ]
+    },
+    {
+      "id": "lungs",
+      "src": "Lungs diagram detailed.svg",
+      "title": "The lungs",
+      "author": "Patrick J. Lynch",
+      "_note": "Unlabelled drawing; labels placed here. The right lung is on the viewer's left, as in every anatomy diagram.",
+      "add": [
+        {
+          "text": "Larynx",
+          "x": 180,
+          "y": 50,
+          "anchor": "end",
+          "to": [
+            212,
+            70
+          ]
+        },
+        {
+          "text": "Bronchioles",
+          "x": 180,
+          "y": 150,
+          "anchor": "end",
+          "to": [
+            120,
+            320
+          ]
+        },
+        {
+          "text": "Trachea",
+          "x": 340,
+          "y": 150,
+          "anchor": "start",
+          "to": [
+            275,
+            250
+          ]
+        },
+        {
+          "text": "Right lung",
+          "x": 90,
+          "y": 690,
+          "anchor": "middle",
+          "to": [
+            90,
+            560
+          ]
+        },
+        {
+          "text": "Bronchus",
+          "x": 272,
+          "y": 690,
+          "anchor": "middle",
+          "to": [
+            312,
+            385
+          ]
+        },
+        {
+          "text": "Left lung",
+          "x": 430,
+          "y": 690,
+          "anchor": "middle",
+          "to": [
+            430,
+            560
+          ]
+        }
+      ],
+      "key": [
+        "Trachea",
+        "Bronchus",
+        "Larynx",
+        "Bronchioles",
+        "Right lung",
+        "Left lung"
+      ]
+    },
+    {
+      "id": "neuron",
+      "src": "Neuron.svg",
+      "title": "A neuron",
+      "author": "Quasar Jarosz and Dhp1080",
+      "translate": {
+        "Axon Terminal": "Axon terminal"
+      },
+      "key": [
+        "Dendrite",
+        "Cell body",
+        "Axon",
+        "Myelin sheath",
+        "Axon terminal",
+        "Nucleus"
+      ],
+      "drop": [
+        "Node of Ranvier"
+      ],
+      "add": [
+        {
+          "text": "Node of\nRanvier",
+          "x": 245,
+          "y": 50,
+          "anchor": "middle"
+        }
+      ]
+    },
+    {
+      "id": "mitosis",
+      "src": "Mitosis schematic diagram-en.svg",
+      "title": "The stages of mitosis",
+      "key": [
+        "Prophase",
+        "Metaphase",
+        "Anaphase",
+        "Telophase",
+        "Interphase"
+      ],
+      "author": "Jpablo Cad, Juliana Osorio and M3.dahl",
+      "keep": [
+        "Interphase",
+        "Prophase",
+        "Prometaphase",
+        "Metaphase",
+        "Anaphase",
+        "Telophase",
+        "Nucleus",
+        "Nucleolus",
+        "Chromatin",
+        "Chromosomes",
+        "Spindle",
+        "Centrioles",
+        "Nuclear envelope",
+        "Daughter chromosomes"
+      ],
+      "add": [
+        {
+          "text": "Interphase",
+          "x": 20,
+          "y": 22,
+          "anchor": "start"
+        }
+      ]
     }
   ]
 }

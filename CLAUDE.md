@@ -34,7 +34,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
 | `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
 | `sf-render.js` | ~30 KB | **Pictures drawn by code.** Charts, number lines and to-scale timelines from figures and dates the model wrote; the model never places a mark. Loaded after `sf-icons.js` on `app.html` and `lesson.html` - see "Pictures drawn by code"
-| `sf-library.js` + `illustrations/` | ~8 KB + 5 SVGs | **Real illustrations** (leaf, heart, plant cell, volcano, water cycle) from Wikimedia Commons, each with its credit inside the picture. Shown when the lesson's TITLE names one; the model no longer draws lesson pictures - see "Real illustrations"
+| `sf-library.js` + `illustrations/` | ~11 KB + 14 SVGs | **Real illustrations** (leaf, heart, plant cell, animal cell, volcano, water cycle, lungs, digestive system, eye, neuron, mitosis, flower, rock cycle, plate boundaries) from Wikimedia Commons, each with its credit inside the picture. Shown when the lesson's TITLE names one; the model no longer draws lesson pictures - see "Real illustrations"
 | `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** The marketing pages that sit in the nav's own links (Help, Our story, Plans) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `lesson`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. `index.html` keeps its own copy - see "The site nav" |
 | `sf-smooth.js` | ~11 KB | **Smooth wheel scrolling** for `index.html`, `about.html`, `pricing.html` (window.`SFSmooth`). Off for touch and reduced motion - see "Smooth scroll and the two showcases" |
 | `sf-auth.js` | ~5 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html` — see "The classroom" |
@@ -2038,9 +2038,43 @@ for: an attribute filter without a colon stripped `id`, `x`, `x1`, `x2` and
 scattered the leaf; and labels grown to phone size were cut until the crop
 was measured again after them.
 
+**The catalogue's other keys** (Oct 2026, the second batch), each because a
+real file needed it - all in the `_about` line of `illustrations.json`:
+
+| Key | What | First needed by |
+|---|---|---|
+| `add` | labels WE place, `{text, x, y, anchor, to}` in the file's units, with a leader line and dot to `to` | the animal cell (Kelvinsong's unlabelled drawing, named from his own numbered version's legend), the lungs (Patrick Lynch), mitosis's "Interphase" |
+| `drop` + `hide` | a label and, by CSS selector, its leader line or box | the eye's posterior chamber and hyaloid canal, crowding at 375px |
+| `keep` | these labels and no others | mitosis: stage names kept, the paragraphs under them dropped |
+| `join` | stacked one-word texts that are one label ("Small" / "intestine") | the digestive system |
+| `nudge` | move a label `[dx, dy]` | the leaf (its left labels touched), the flower, the rock cycle, the plates |
+| `page` | keep only what is on the file's own canvas, clipped there | the plates file keeps an old draft under its page |
+
+`add` makes US responsible for the label being true: name parts only from
+the author's own labelled version or a legend, look at every leader dot, and
+leave out a part you are not sure of (the animal cell's orange blob is a
+second mitochondrion in the legend - it is simply not labelled).
+
+Three more prep bugs, paid for on this batch: **the number rounding glued
+numbers together** - Illustrator writes `1.12.04` (1.12 then .04), the old
+pattern restarted INSIDE `-9.9.03` and read `9.03`, and a value rounded to
+`0` ran into the next `.25`; the rock cycle's strata scattered across the
+picture. `shrink()` is a left-to-right tokenizer now, property-tested on
+random paths. **`clip-path` and `mask` were not baked** from a `<style>`
+block, so the rock cycle's inset circle came out unclipped. And **a filter
+built from lighting primitives** (the eye's) was refused outright; it is
+removed with every reference to it, because the page's sanitiser would empty
+it and an element under an empty filter is not drawn. Unreferenced `id`s are
+stripped (the lungs went from 81 to 79 KB gzipped) and a credit wider than
+its picture wraps to two lines.
+
 Left out on purpose: LadyofHats' animal cell - its labels sit in stacked
-columns that collide at phone size. Not changed: "Draw it for me" still
-draws with the model.
+columns that collide at phone size; **the solar system** - every Commons file
+tried (Beinahegut's, Planets2013) is a wide strip of planets with moons and
+data in 6px type, and is 130px tall on a phone, or is photographs; and
+LadyofHats' row of six mitosis cells (45px each on a phone - the cycle
+diagram is used instead). Not changed: "Draw it for me" still draws with the
+model.
 
 ### Pictures drawn by code — `sf-render.js` (Oct 2026)
 
@@ -3526,12 +3560,18 @@ genuinely nothing.
 
 ## Open items
 
-- **Real illustrations: five, growing.** Leaf, heart, plant cell, volcano,
-  water cycle. Next by how often learners meet them: animal cell (a cleaner
-  source), mitosis, the digestive system, the solar system, plate boundaries,
-  the rock cycle, a flower, the eye, the lungs, a neuron. Servier Medical Art
-  (plain CC BY) is the better source for the body. The leaf's left-hand
-  labels are tight at 375px ("Upper epidermis" touches "Palisade").
+- **Real illustrations: fourteen.** Leaf, heart, plant cell, animal cell,
+  volcano, water cycle, lungs, digestive system, eye, neuron, mitosis,
+  flower, rock cycle, plate boundaries (subduction and a ridge; no transform
+  boundary). Each was looked at on a lesson card at 375px, light and dark.
+  Still missing: **the solar system** (no Commons file reads on a phone -
+  a code-drawn one in `sf-render.js` may be the answer), the skeleton, the
+  brain (the kit's curated template is the fallback), the ear, the kidney,
+  atoms. Servier Medical Art (plain CC BY) was not used: its body drawings
+  are unlabelled, which the `add` key now makes workable. The flower and
+  mitosis are small on a phone (labels 9px, the mitosis cells ~45px) - they
+  read, but a source drawn bigger would be better. Rock cycle's tiny
+  "sediments" inset is the original's.
 - **Pictures drawn by code have not been fed by a real model.** `chart` and
   `numberline` are prompted, validated and tested on hand-written specs; the
   bars and dated-timeline routes also upgrade what plans already carry. First
