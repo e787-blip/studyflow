@@ -34,6 +34,8 @@
     ['icons', 'ICONS OK', S + 'test_icons.js'],
     ['render', 'RENDER OK', S + 'test_render.js'],
     ['library', 'LIBRARY OK', S + 'test_library.js'],
+    ['webart_api', 'WEBART API OK', S + 'test_webart_api.js'],
+    ['webart', 'WEBART OK', S + 'test_webart.js'],
     ['topics_rules', 'TOPICS OK', '/.claude/skills/subtopics/scripts/check_topics.js'],
     ['topics_page', 'TOPICS PAGE OK', S + 'test_topics.js'],
     ['e2e_cards', 'E2E CARDS OK', S + 'test_e2e_cards.js'],

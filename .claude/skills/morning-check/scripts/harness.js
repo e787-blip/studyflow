@@ -19,6 +19,8 @@ async function open(opts) {
     if (r.abort) return route.abort();
     await route.fulfill({ status: r.status || 200, contentType: 'application/json', body: JSON.stringify(r.json) });
   });
+  /* opts.routes: [[pattern, handler], ...] - more endpoints answered before the page loads. */
+  for (const r of (opts.routes || [])) await page.route(r[0], r[1]);
   await page.goto((process.env.SF_BASE || 'http://localhost:8765/') + 'favicon.png');
   const plan = opts.plan || fx.plan;
   // opts.day: the day to open (default 0); opts.seed: extra namespaced keys, {key: value}.

@@ -1681,6 +1681,7 @@
 <script src="/sf-icons.js"></script>
 <script src="/sf-render.js"></script>
 <script src="/sf-library.js"></script>
+<script src="/sf-illustrate.js"></script>
 <script src="/sf-draw.js"></script>
 <script src="/sf-questions.js"></script>
 <script src="/sf-auth.js"></script>
@@ -4757,7 +4758,7 @@
 
   function requestLessonArt(d) {
     if (!d || lessonArt.state === 'loading') return;
-    if (dataPicture(d)) { lessonArt.spec = null; lessonArt.state = 'done'; return; }
+    if (dataPicture(d)) { lessonArt.spec = null; lessonArt.state = 'done'; predrawNextDay(); return; }
     /* A real illustration the lesson's title names. Fetched from our own
        files, sanitised on load; until it lands the card shows the kit's
        diagram, and if it never lands that diagram simply stays. */
@@ -4772,13 +4773,30 @@
         lessonArt.lib = lib;
         applyLessonArt();
         try { sfLabelWaitCheck(false); } catch (e3) { /* never cost the lesson */ }
+        predrawNextDay();
       }, function () {
         lessonArt.state = 'done';
         try { sfLabelWaitCheck(false); } catch (e3) { /* never cost the lesson */ }
+        predrawNextDay();
       });
       return;
     }
-    if (!modelArtOn()) { lessonArt.spec = null; lessonArt.state = 'done'; return; }
+    if (webArtAllowed(d) && d.webArt !== null) {
+      lessonArt.state = 'loading';
+      webArtFor(d).then(function (r) {
+        lessonArt.state = 'done';
+        lessonArt.spec = null;
+        if (r && r.svg) {
+          try { lessonArt.svg = SFDiagramKit.uniqIds(r.svg); } catch (eU) { lessonArt.svg = r.svg; }
+          lessonArt.lib = { id: 'web', title: feynmanTopic(d) || fmStr(d.title), web: true, file: r.meta && r.meta.file };
+          applyLessonArt();
+        }
+        try { sfLabelWaitCheck(false); } catch (e3) { /* never cost the lesson */ }
+        predrawNextDay();
+      });
+      return;
+    }
+    if (!modelArtOn()) { lessonArt.spec = null; lessonArt.state = 'done'; predrawNextDay(); return; }
     /* Already drawn for this day - on a previous visit, while the plan was
        being made (app.html), or in the background during yesterday's lesson
        (predrawNextDay). */
@@ -4833,12 +4851,21 @@
   var predrawn = {};
   function predrawNextDay() {
     try {
-      if (!window.SFDraw || !plan || !plan.days) return;
+      if (!plan || !plan.days) return;
       var ni = dayIndex + 1;
       var nd = plan.days[ni];
       if (!nd || predrawn[ni] || nd.completed) return;
       if (dataPicture(nd)) return;                      // drawn by code, nothing to ask the model
-      if (!modelArtOn()) return;                        // the model does not draw lesson pictures now
+      /* Tomorrow's real illustration, picked now, so it opens with it. Only
+         the choice is kept (day.webArt); the file is fetched again tomorrow
+         from the CDN. Not when one of the 14 checked pictures covers it. */
+      if (!modelArtOn()) {
+        var nlib = null;
+        try { nlib = window.SFLibrary ? SFLibrary.match(nd, dgSubjectOf(nd)) : null; } catch (eN) { nlib = null; }
+        if (!nlib && nd.webArt === undefined && webArtAllowed(nd)) { predrawn[ni] = 1; webArtFor(nd); }
+        return;                                         // the model does not draw lesson pictures now
+      }
+      if (!window.SFDraw) return;
       if (nd.generatedArt !== undefined) return;        // drawn, or asked and nothing to draw
       if (!fmStr(nd.content) && !fmStr(nd.title)) return;
       predrawn[ni] = 1;
@@ -4865,6 +4892,131 @@
         SFStore.setItem('studyflow_plan', JSON.stringify(plan));
       }
     } catch (e) { /* storage full or unavailable - the art still shows now */ }
+  }
+
+  /* ── A REAL ILLUSTRATION FOUND FOR THIS LESSON (api/illustration.js) ──────
+
+     The 14 checked pictures (sf-library.js) cover 14 topics. For every other
+     lesson the server searches Wikimedia Commons, a model LOOKS at the best
+     candidates and refuses the wrong ones, and this page makes the winner
+     ready for a phone with the same code that made the 14 (sf-illustrate.js):
+     labels re-set at phone size, key terms bold for the labelling card, the
+     credit baked in. A pick whose labels collide at phone width fails the
+     legibility gate and the next one is tried.
+
+     The choice is saved on the day (`day.webArt`): {file, credit} for a
+     picture, null for "nothing fits" - so a lesson is judged once, ever. A
+     failure (offline, a 503, a timeout) is not saved, and the next open
+     tries again. Until a picture lands the card shows the kit's diagram;
+     if none ever does, that diagram is the lesson's picture. */
+  var WEB_ART_TIMEOUT_MS = 45000;
+  var WEB_ART_SKIP = { math: 1, language: 1 };   // maths has its own pictures; a verb table has no illustration
+
+  function webArtSubject(d) { return String(dgSubjectOf(d) || '').toLowerCase(); }
+
+  function webArtAllowed(d) {
+    return !!(d && window.SFIllustrate && window.fetch && !modelArtOn() &&
+              !WEB_ART_SKIP[webArtSubject(d)] && (fmStr(d.title) || fmStr(d.microTopic)));
+  }
+
+  /* The most specific name for the lesson, and a broader one to fall back
+     on: "Photosynthesis: the light reactions" -> "the light reactions" /
+     "Photosynthesis". Lower-cased, so every learner on the same topic shares
+     one cached answer at the CDN. */
+  function webArtTopics(d) {
+    function tidy(v) {
+      return String(v || '').replace(/…/g, '').replace(/[^\w\s'&()-]/g, ' ').replace(/\s+/g, ' ')
+        .trim().toLowerCase().slice(0, 120);
+    }
+    var specific = tidy(feynmanTopic(d));
+    var title = String(d.title || '').replace(/^(?:unit|chapter|lesson|day|week|part|module|section)\b\s*\d*\s*[-–—:.]?\s*/i, '');
+    var broad = tidy(title.indexOf(':') > 0 ? title.slice(0, title.indexOf(':')) : title);
+    if (!specific) specific = broad;
+    return { topic: specific, broad: broad === specific ? '' : broad };
+  }
+
+  function webFetchJson(url) {
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, WEB_ART_TIMEOUT_MS);
+    return fetch(url, ctrl ? { signal: ctrl.signal } : {}).then(function (r) {
+      clearTimeout(timer);
+      return r.json().catch(function () { return {}; }).then(function (j) { return { status: r.status, body: j || {} }; });
+    }, function (e) { clearTimeout(timer); throw e; });
+  }
+
+  function webArtJob(d, meta) {
+    var terms = [], kt = ldArr(d.keyTerms), i;
+    for (i = 0; i < kt.length && terms.length < 12; i++) {
+      var t = fmStr(kt[i] && (kt[i].term || kt[i].name || kt[i].label) || kt[i]);
+      if (t && t.length <= 40) terms.push(t);
+    }
+    return { id: 'web', title: feynmanTopic(d) || fmStr(d.title), credit: fmStr(meta.credit).slice(0, 160), terms: terms };
+  }
+
+  /* One file, made ready: resolves {svg, report} or null (refused/unusable),
+     rejects on a network failure. */
+  function webArtPrepare(d, file) {
+    return webFetchJson('/api/illustration?file=' + encodeURIComponent(file)).then(function (res) {
+      if (res.status === 404 || res.status === 422 || res.status === 400) return null;      // gone or no longer usable
+      if (res.status !== 200 || !res.body || typeof res.body.svg !== 'string') throw new Error('file ' + res.status);
+      return SFIllustrate.prepare(res.body.svg, webArtJob(d, res.body), { finalize: true }).then(function (out) {
+        return out && out.svg ? { svg: out.svg, report: out.report, meta: res.body } : null;
+      }, function () { return null; });
+    });
+  }
+
+  function saveWebArt(d, value) {
+    try {
+      d.webArt = value;
+      if (plan && plan.days) {
+        for (var i = 0; i < plan.days.length; i++) {
+          if (plan.days[i] === d || (plan.days[i] && fmStr(plan.days[i].title) === fmStr(d.title) && plan.days[i].day === d.day)) {
+            plan.days[i].webArt = value; break;
+          }
+        }
+        SFStore.setItem('studyflow_plan', JSON.stringify(plan));
+      }
+    } catch (e) { /* storage full - the picture still shows now, and is picked again next time */ }
+  }
+
+  var webArtBusy = {};
+  /* Resolves {svg, meta} or null; never rejects. */
+  function webArtFor(d) {
+    if (!webArtAllowed(d)) return Promise.resolve(null);
+    if (d.webArt === null) return Promise.resolve(null);                   // judged before: nothing fits
+    var key = fmStr(d.title) + '|' + (d.day || '');
+    if (webArtBusy[key]) return webArtBusy[key];
+    var p;
+    if (d.webArt && d.webArt.file) {
+      p = webArtPrepare(d, d.webArt.file).then(function (r) {
+        if (r) return r;
+        saveWebArt(d, undefined);        // the file is gone or changed licence: judge again next time
+        return null;
+      }, function () { return null; });
+    } else {
+      var tp = webArtTopics(d);
+      var url = '/api/illustration?topic=' + encodeURIComponent(tp.topic) +
+                (tp.broad ? '&broad=' + encodeURIComponent(tp.broad) : '') +
+                '&subject=' + encodeURIComponent(webArtSubject(d));
+      p = webFetchJson(url).then(function (res) {
+        if (res.status !== 200 || !res.body || !Array.isArray(res.body.picks)) throw new Error('pick ' + res.status);
+        var picks = res.body.picks.slice(0, 3), i = 0;
+        function next() {
+          if (i >= picks.length) { saveWebArt(d, null); return null; }
+          var pk = picks[i++];
+          if (!pk || typeof pk.file !== 'string') return next();
+          return webArtPrepare(d, pk.file).then(function (r) {
+            if (!r || !r.report || !r.report.legible) return next();
+            saveWebArt(d, { file: pk.file, credit: fmStr(pk.credit).slice(0, 160) });
+            return r;
+          });
+        }
+        return next();
+      }).then(null, function () { return null; });      // a failure is not an answer: nothing saved
+    }
+    webArtBusy[key] = p;
+    p.then(function () { delete webArtBusy[key]; });
+    return p;
   }
 
   /* ── THE LESSON'S PICTURE, BROUGHT BACK DURING PRACTICE ──────────────────
