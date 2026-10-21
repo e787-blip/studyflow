@@ -1579,8 +1579,19 @@ error. Always verify `render()` returns true, not just that `build()` works.
 
 ```
 welcome  ->  lesson  ->  flashcards  ->  sfwb-brief  ->  practice
-(topic)      (teach)     (words+traps)   (one example)
+(topic)      (teach)     (words+traps)   (maths only)
 ```
+
+**The worked-example card is MATHS ONLY (Oct 2026, the owner's call).** On
+every other subject it walked one "real instance" of the topic and the owner
+saw it ("Ribosomes on rough ER synthesize the protein" behind a "Why does
+this work?" button) and said it was not helping anyone learn the topic.
+`buildOpeningBoard` returns nothing unless `resolveSubjectType` says `math`,
+and `app.html` no longer asks any other subject's day for a `workedExample`
+(rule 4d and its schema line are maths-only), which also shortens the day's
+output. Maths keeps it: working a problem step by step is the method, and the
+parallel example is not one of the learner's questions (invariant 7). A
+stored non-maths plan that still carries `workedExample` simply never shows it.
 
 It used to be `welcome -> sfwb-outline -> sfwb-brief -> lesson -> terms`,
 and it was **fourteen screens before the first question** with the same
@@ -2615,11 +2626,11 @@ What to check after any `buildQueue` or renderer change:
 14. The opening board is `worked` or a subject scene (`map`, `timeline`,
     `compare`, `cycle`, `parts`, `steps`) — **never `brief`/`hero`**, which is
     the identical generic node card every subject used to open on
-14b. The opening is `welcome > lesson > flashcards > sfwb-brief`, in that
-    order, and **`sfwb-outline` appears nowhere**. A day with no
-    `workedExample` and no maths gets no `sfwb-brief` at all — assert its
-    absence, and assert that a day WITH one gets it, or the "no fake
-    example" rule silently becomes "no example ever"
+14b. The opening is `welcome > lesson > flashcards`, and on a MATHS day
+    `> sfwb-brief` after them, in that order, and **`sfwb-outline` appears
+    nowhere**. A non-maths day gets no `sfwb-brief` even when it carries a
+    `workedExample` - assert that, and assert maths still gets one, or "maths
+    only" silently becomes "no example ever"
 14e. The ideas card builds and renders on all 10 subjects, with **no empty
     picture slot** and **no picture scaled under 0.66**; a model-supplied
     `flow`/`compare` per idea is drawn, a tall `concept` one is refused

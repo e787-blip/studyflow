@@ -2236,6 +2236,15 @@
     var cards = [];
     try {
       if (!window.SFWhiteboard || !window.SFWhiteboard.briefFor) return cards;
+      /* MATHS ONLY (Oct 2026, the owner's call). On every other subject this
+         card walked one "real instance" of the topic in a few panels and the
+         owner's verdict was that it was not helping anyone learn it, so it is
+         no longer queued. Solving a problem step by step IS the maths method
+         and the parallel example is not one of the learner's questions
+         (invariant 7), so maths keeps it. */
+      var qtype = '';
+      try { qtype = resolveSubjectType(typeof plan !== 'undefined' ? plan : null, day || {}); } catch (eT) { qtype = ''; }
+      if (qtype !== 'math') return cards;
       var subj = (typeof day !== 'undefined' && day && day.subject) ||
                  (window.SFStore && window.SFStore.subject) || '';
       var spec = typeof window.SFWhiteboard.workedInstanceFor === 'function'

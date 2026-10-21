@@ -3411,6 +3411,10 @@
         '   BAD:  "Order these events..." / "Name the trade route" / "Fill in the blank"\n' +
         '   Never use an instruction or a question as the prompt. The blank must sit inside\n' +
         '   a sentence that reads correctly once the answer is put back in.\n' +
+        /* Maths only (Oct 2026): the opening worked-example card is queued for
+           maths alone now, so no other subject is asked to write one - less
+           output per day, on a call that was running out of time. */
+        (subjectType === 'math' ?
         '4d. WORKED EXAMPLE (field "workedExample") - required on every day. This is the\n' +
         '   opening whiteboard: ONE example carried all the way through, one step per panel,\n' +
         '   and it is the only card in the session that shows a method rather than asserting one.\n' +
@@ -3427,7 +3431,8 @@
         '   example of this topic actually plays out, step by step.\n' +
         '   Each step may carry its own picture as "visual", using the same shapes as field 5:\n' +
         '   {"layout":"flow|cycle|parts|concept|compare|timeline|hierarchy","title":"","items":[],"center":""}\n' +
-        '   Omit "visual" when the step does not need one - a wrong picture is worse than none.\n' +
+        '   Omit "visual" when the step does not need one - a wrong picture is worse than none.\n'
+        : '') +
 
         '5. diagram: every topic should get one, and it should be MADE FOR THIS LESSON.\n' +
         /* THE ORDER OF THIS DECISION IS THE WHOLE POINT.
@@ -3752,7 +3757,7 @@
            the schema the model never returns it, and the board falls back to
            the day's steps or concepts - which works, but is a procedure or a
            word list rather than a worked example. */
-        '"workedExample":{"problem":"","steps":[{"title":"","line":"","why":""},{"title":"","line":"","why":""},{"title":"","line":"","why":""}]},' +
+        (subjectType === 'math' ? '"workedExample":{"problem":"","steps":[{"title":"","line":"","why":""},{"title":"","line":"","why":""},{"title":"","line":"","why":""}]},' : '') +
         '"visual":{"type":"concept","center":"","items":[]},' +
         '"duration":30,"isFinal":' + isLast + ',"completed":false,"questions":[' + questionSchema + ']}';
 
