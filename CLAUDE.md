@@ -35,6 +35,8 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
 | `sf-render.js` | ~30 KB | **Pictures drawn by code.** Charts, number lines and to-scale timelines from figures and dates the model wrote; the model never places a mark. Loaded after `sf-icons.js` on `app.html` and `lesson.html` - see "Pictures drawn by code"
 | `sf-library.js` + `illustrations/` | ~11 KB + 14 SVGs | **Real illustrations** (leaf, heart, plant cell, animal cell, volcano, water cycle, lungs, digestive system, eye, neuron, mitosis, flower, rock cycle, plate boundaries) from Wikimedia Commons, each with its credit inside the picture. Shown when the lesson's TITLE names one; the model no longer draws lesson pictures - see "Real illustrations"
+| `sf-illustrate.js` | ~22 KB | **Makes a real illustration ready for a phone** - the label re-setting, crop and credit, in an off-screen shadow root after a sanitise pass. ONE implementation for the offline pipeline (the 14 library files rebuild byte-identical through it) and for a picture found live - see "A real illustration for any lesson" |
+| `api/illustration.js` | ~22 KB | **Finds a real illustration for any lesson on Wikimedia Commons**: search, language-copy collapsing, licence/size/shape/noise filters, then a model that SEES the 5 best and refuses the wrong ones. `?file=` returns a cleaned SVG. CDN-cached 30 days |
 | `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** The marketing pages that sit in the nav's own links (Help, Our story, Plans) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `lesson`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. `index.html` keeps its own copy - see "The site nav" |
 | `sf-smooth.js` | ~11 KB | **Smooth wheel scrolling** for `index.html`, `about.html`, `pricing.html` (window.`SFSmooth`). Off for touch and reduced motion - see "Smooth scroll and the two showcases" |
 | `sf-auth.js` | ~5 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html` — see "The classroom" |
@@ -2076,6 +2078,118 @@ LadyofHats' row of six mitosis cells (45px each on a phone - the cycle
 diagram is used instead). Not changed: "Draw it for me" still draws with the
 model.
 
+### A real illustration for any lesson — `api/illustration.js`, `sf-illustrate.js` (Oct 2026)
+
+The 14 checked pictures cover 14 topics; the owner wanted every lesson to get
+a real one, chosen for that lesson, at the same bar, never drawn by a model.
+A lesson's picture is now, first that applies:
+
+1. drawn by code from its figures/dates (`sf-render.js`, `dataPicture`);
+2. one of the 14 checked illustrations (`SFLibrary.match`);
+3. **the best Commons illustration for this lesson** (`webArtFor`), picked once;
+4. the kit's diagram from the day's steps.
+
+Not for `math` or `language` days (`WEB_ART_SKIP`), and off when the old
+`studyflow_model_art` switch is on (that path is left exactly as it was).
+
+**The server** (`GET ?topic=&broad=&subject=`, CDN-cached 30 days, so a topic
+is judged once for every learner; errors are `no-store`). Every rule came from
+a survey of 15 real lesson topics run against the real Commons
+(`.web-probe/run.html`-style dry run, judge stubbed) and LOOKED at:
+
+- **Language copies swamp results** (the nitrogen cycle came back in seven
+  languages before English). `langOf` reads codes AND names at the end of a
+  title ("-eu", " no", " it", " as", "(mul)", "uz cyrl", "(Hrvatski)",
+  "-espanol", "nan") - English-word codes are NOT exempt, the survey met all of
+  them - and a title written in another language by its small words ("Ciclo
+  de Krebs"). One file per family; a family that came back only in other
+  languages is asked for its English copy BY NAME in one `titles=` query
+  ("Map Europe alliances 1914-en" came back that way).
+- **Relevance**: a topic word must be in the title, or two in the description
+  ("Map Europe alliances 1914" names World War I only in its description); two
+  words when the topic has three or more ("Causes of World War I" matched a
+  Vietnam War poster and a white-power fist on "war" alone); short words whole
+  ("ear" is not "early"/"earth"). Noise words (flags, insignia, sleeves,
+  medals, hate symbols...) are out unless the topic names them. One file per
+  series ("DNA infographic-1, -2, -3" took four of five slots).
+- **Too few by those words**: topped up from Commons' own top-6 ranking,
+  through every other filter, AFTER the broad topic was tried.
+- **Hard filters**: SVG, 3 KB-1.2 MB, free licence (public domain, CC0, CC BY,
+  CC BY-SA, ports; never NC/ND/GFDL-only), aspect 0.45-2.4 (a 1:5 solar-system
+  strip is 130px tall on a phone), not two+ labels in another SCRIPT (counted
+  per label: a Cyrillic nitrogen cycle's NO₃/NH₄ formulas diluted a per-letter
+  share), not numbers-only labels.
+- **The judge SEES them**: Haiku with Commons' own 500px PNG renders of up to
+  5, each named, plus its text labels, under five strict rules (this topic not
+  a neighbour, accurate, readable at 340px for 12-15 year olds, English only,
+  teaches). Up to 3, best first, or none - "a wrong picture is worse than none".
+  An answer with no JSON is a failure (503), never cached.
+- `?file=` re-checks the licence, size and type itself (the caller is never
+  trusted), refuses any name that is not a plain `File:...svg`, and cleans the
+  SVG (`cleanSvg`: scripts, handlers, foreignObject, images, outside URLs,
+  @import, editor cruft; the file's own `<style>` and `#` references kept).
+
+**The page** (`webArtFor`, block 1 beside `cacheLessonArt`): tries the picks
+in order through `SFIllustrate.prepare` and its **legibility gate** (labels
+piling up at phone size reject the pick for the next); saves the choice on the
+day (`day.webArt = {file, credit}`, or `null` for "nothing fits" - never asked
+again); a failure saves nothing; a saved file Commons has lost is forgotten.
+Key terms printed on the picture are made bold, so the labelling card pins
+them. `predrawNextDay` picks tomorrow's during today's lesson.
+
+**`sf-illustrate.js` is the safety boundary for these files**, not the
+server: it parses in an INERT document, removes what does not draw before the
+file touches the page, lays it out in an off-screen **shadow root** (a file's
+`<style>` - `.session-card{display:none}` in the test - cannot reach the
+page), and runs the allowlist again on the result. Three bugs this caught
+while being built, each worth knowing:
+
+- **The stage was `visibility:hidden`**, which children inherit, and the
+  style-baking step wrote `visibility="hidden"` onto the drawing: invisible
+  pictures. It is `all:initial` + `opacity:0` now. Caught only because the 14
+  library files were rebuilt through it and compared byte for byte.
+- **`url\(\s*['"]?(?!#)` treats `url("#id")` as outside** - the optional
+  quote backs off. All three sanitisers (`sf-illustrate.js`, `sf-library.js`,
+  `api/illustration.js`) use `url\(\s*(?!['"]?\s*#)` now.
+- **Removing filter primitives before the filter step** left an emptied filter
+  on the eye (an element under an empty filter is not drawn). Primitives stay
+  until `run()` drops the whole filter, except `feImage`, which can fetch.
+
+Tests: `test_webart_api.js` (the real endpoint with Commons and the judge
+answered from survey-shaped fixtures, 50+ checks) and `test_webart.js` (22
+page checks: the pick shown and credited, the illegible pick skipped, saved,
+reopen spends nothing, null remembered, failure not, library/sf-render/maths
+first, tomorrow picked, labelling pins, a hostile file touching nothing, dark
+mode paper). Both were broken on purpose to prove they fail without the code.
+
+**The real judge, 2026-10-20.** `api/illustration.js` alone is on `main`
+(nothing on the live site calls it yet); 15 real topics were run against it
+and every pick LOOKED at. The first run picked the Atom text editor's logo
+for "Parts of an atom", an unlabelled brain, a chart labelled in Czech for
+the atmosphere, a pharmacology nephron for "The kidney", the 1793
+constitution for "The French Revolution", and credited files to a file name
+and to a Commons style sheet. Fixed, each with a test:
+
+- **Under 3 word labels is out** (`fewWords`): logos, unlabelled drawings,
+  and files whose words are outlines (the old nitrogen-cycle pick).
+- **Labels in another Latin-alphabet language are out** (`foreignLatin`:
+  accents on 30% of word labels, under two English small words).
+- **The judge answers true/false per rule for every candidate, and the CODE
+  keeps only a picture passing all five** (`JUDGE_RULES`). Given the rules
+  and asked for a list, Haiku read them and picked against them anyway.
+- **Credits**: a translation chain names the person ("Johann Dréo and
+  others"), a notice box's `<style>` is dropped, "Credits go to X" is read.
+- **`sf-illustrate.js` read bare text + positioned tspans wrong** (the ear:
+  "Stapes" lost, "Semicircularcanals", and H₂O as "2/O"). A tspan with its
+  own x and y starts a line now; the 14 library files rebuild identical.
+
+After: 9 of 15 get a picture, 6 get none (atom, kidney, French Revolution,
+atmosphere, and the Silk Road and ocean-current maps - 35-60 labels, refused
+as unreadable at 340px). Still through: a brainstem labelled partly in Latin
+for "The brain", and German spellings in a Krebs cycle. A redeploy clears the
+CDN cache (each topic is judged again); to probe a build, add any extra query
+parameter.
+
 ### Pictures drawn by code — `sf-render.js` (Oct 2026)
 
 The owner's verdict on every model drawing was blunt, and it is the reason
@@ -3560,6 +3674,11 @@ genuinely nothing.
 
 ## Open items
 
+- **A real illustration for any lesson: judged for real, not shipped.** Only
+  `api/illustration.js` is on `main`; the page side is on `web-illustrations`
+  (see its section for the 15-topic run). Cost per NEW topic: one Haiku call with up to 5 small images,
+  shared across learners by the CDN. The endpoint is open like
+  `api/generate.js`; a flood of made-up topics would each cost a call.
 - **Real illustrations: fourteen.** Leaf, heart, plant cell, animal cell,
   volcano, water cycle, lungs, digestive system, eye, neuron, mitosis,
   flower, rock cycle, plate boundaries (subduction and a ridge; no transform

@@ -399,7 +399,8 @@ function judgePrompt(topic, subject, cands) {
     '5. It is a diagram, cross-section, map or illustration that teaches - not a logo, flag, icon, photo collage or decoration, and not numbers-only labels with no key.\n' +
     'Judge EVERY candidate against each rule, true or false, then rank the ones that pass all five, best first (rank 1 = best; 0 for a candidate that fails any). ' +
     'A wrong picture is worse than none, so answer false whenever a rule is in doubt.\n' +
-    'Output ONLY JSON: {"verdicts":[{"n":<candidate number>,"topic":<rule 1>,"accurate":<rule 2>,"readable":<rule 3>,"english":<rule 4>,"teaches":<rule 5>,"rank":<number>,"why":"<under 100 characters>"}]}' });
+    'Output ONLY JSON: {"verdicts":[{"n":<candidate number>,"topic":<rule 1>,"accurate":<rule 2>,"readable":<rule 3>,"english":<rule 4>,"teaches":<rule 5>,"rank":<number>,"why":"<under 100 characters>",' +
+    '"caption":"<what the picture shows, for the student: one plain sentence under 70 characters naming only what is drawn, e.g. The outer, middle and inner ear, cut open from the side>"}]}' });
   return content;
 }
 
@@ -425,7 +426,9 @@ function parseJudge(text, n) {
     const k = p && Number(p.n);
     if (!Number.isInteger(k) || k < 1 || k > n || seen[k] || out.length >= MAX_PICKS) return;
     seen[k] = 1;
-    out.push({ n: k, why: clip(p.why, 140) });
+    /* The caption is printed under the picture: plain text, no markup, short. */
+    const cap = clip(p.caption, 90).replace(/[<>{}]/g, '').replace(/\.$/, '');
+    out.push({ n: k, why: clip(p.why, 140), caption: cap });
   });
   return out;
 }
@@ -518,7 +521,7 @@ async function pick(req, res) {
       const c = ready[p.n - 1];
       return { file: c.title, credit: creditFor(c), author: c.author, license: c.license, licenseUrl: c.licenseUrl,
                source: 'https://commons.wikimedia.org/wiki/' + encodeURIComponent(c.title.replace(/ /g, '_')).replace(/%3A/g, ':'),
-               w: c.w, h: c.h, why: p.why };
+               w: c.w, h: c.h, why: p.why, caption: p.caption || '' };
     });
   }
   res.setHeader('Cache-Control', CACHE_OK);

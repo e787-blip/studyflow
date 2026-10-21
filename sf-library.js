@@ -251,7 +251,7 @@
         if (/^on/.test(name) ||
             ((name === 'href' || name === 'xlink:href') && val.charAt(0) !== '#') ||
             /javascript:|data:|expression\(/i.test(val) ||
-            /url\(\s*['"]?(?!#)/i.test(val)) {
+            /url\(\s*(?!['"]?\s*#)/i.test(val)) {
           el.removeAttribute(a.name);
         }
       }
