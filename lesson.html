@@ -2244,7 +2244,9 @@
          (invariant 7), so maths keeps it. */
       var qtype = '';
       try { qtype = resolveSubjectType(typeof plan !== 'undefined' ? plan : null, day || {}); } catch (eT) { qtype = ''; }
-      if (qtype !== 'math') return cards;
+      /* No subject any more (Oct 2026, the owner's call): the maths example went
+         too. The code below is kept, unreached, like whiteboard.js. */
+      return cards;
       var subj = (typeof day !== 'undefined' && day && day.subject) ||
                  (window.SFStore && window.SFStore.subject) || '';
       var spec = typeof window.SFWhiteboard.workedInstanceFor === 'function'
@@ -5294,6 +5296,10 @@
     var sc = document.getElementById('session-card');
     if (!sc) return;
     sc.setAttribute('data-recall', r && r.afterMiss ? '1' : '');
+    /* No "See the diagram" button before answering (Oct 2026, the owner's
+       call). The picture still opens by itself after a wrong answer
+       (sfRecallOnMiss), which is where it helps. */
+    return;
     if (!r || !r.before) return;
     var fb = sc.querySelector('#feedback-box');
     var host = fb ? fb.parentNode : sc.querySelector('.card-body');
@@ -5523,14 +5529,7 @@
       if (!r || !r.afterMiss) return;
       wrap.appendChild(recallPanel(pic, 'The picture from the lesson'));
     } else {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'sf-recall-btn';
-      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/>' +
-        '<circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg><span>See the diagram</span>';
-      btn.onclick = function () { sfRecallToggle(); };
-      wrap.appendChild(btn);
+      return;   // no "See the diagram" toggle under a board any more
     }
     mount.appendChild(wrap);
   }

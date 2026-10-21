@@ -1582,7 +1582,15 @@ welcome  ->  lesson  ->  flashcards  ->  sfwb-brief  ->  practice
 (topic)      (teach)     (words+traps)   (maths only)
 ```
 
-**The worked-example card is MATHS ONLY (Oct 2026, the owner's call).** On
+**UPDATE, later the same day: the worked-example card is gone from maths too**,
+and so are the "See the diagram" buttons (the one before an answer on a
+question card, and the toggle under a board). `buildOpeningBoard` always
+returns nothing, `sfRecallAttach` and `sfRecallBoard` add no button, and no
+subject is asked for a `workedExample`. The code is left in place, unreached.
+The picture still opens by itself after a wrong answer ("Look at it again").
+What follows is the earlier state, kept for the reasoning.
+
+**The worked-example card was MATHS ONLY (Oct 2026, the owner's call).** On
 every other subject it walked one "real instance" of the topic and the owner
 saw it ("Ribosomes on rough ER synthesize the protein" behind a "Why does
 this work?" button) and said it was not helping anyone learn the topic.

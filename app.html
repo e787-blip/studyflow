@@ -3411,10 +3411,10 @@
         '   BAD:  "Order these events..." / "Name the trade route" / "Fill in the blank"\n' +
         '   Never use an instruction or a question as the prompt. The blank must sit inside\n' +
         '   a sentence that reads correctly once the answer is put back in.\n' +
-        /* Maths only (Oct 2026): the opening worked-example card is queued for
-           maths alone now, so no other subject is asked to write one - less
-           output per day, on a call that was running out of time. */
-        (subjectType === 'math' ?
+        /* No subject is asked for a workedExample any more (Oct 2026): the
+           opening worked-example card is gone, and this is output per day on
+           a call that was running out of time. */
+        (false ?
         '4d. WORKED EXAMPLE (field "workedExample") - required on every day. This is the\n' +
         '   opening whiteboard: ONE example carried all the way through, one step per panel,\n' +
         '   and it is the only card in the session that shows a method rather than asserting one.\n' +
@@ -3757,7 +3757,7 @@
            the schema the model never returns it, and the board falls back to
            the day's steps or concepts - which works, but is a procedure or a
            word list rather than a worked example. */
-        (subjectType === 'math' ? '"workedExample":{"problem":"","steps":[{"title":"","line":"","why":""},{"title":"","line":"","why":""},{"title":"","line":"","why":""}]},' : '') +
+        (false ? '"workedExample":{"problem":"","steps":[{"title":"","line":"","why":""},{"title":"","line":"","why":""},{"title":"","line":"","why":""}]},' : '') +
         '"visual":{"type":"concept","center":"","items":[]},' +
         '"duration":30,"isFinal":' + isLast + ',"completed":false,"questions":[' + questionSchema + ']}';
 
