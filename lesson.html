@@ -3993,6 +3993,7 @@
     return lessonArt.spec ? drawSpec(lessonArt.spec) : null;
   }
   function lessonArtTitle() {
+    if (lessonArt.lib && lessonArt.lib.web) return fmStr(lessonArt.lib.title);   // '' = no caption, never the day title
     return fmStr(lessonArt.lib ? lessonArt.lib.title : (lessonArt.spec && lessonArt.spec.title)) || fmStr(day && day.title);
   }
 
@@ -4788,7 +4789,7 @@
         lessonArt.spec = null;
         if (r && r.svg) {
           try { lessonArt.svg = SFDiagramKit.uniqIds(r.svg); } catch (eU) { lessonArt.svg = r.svg; }
-          lessonArt.lib = { id: 'web', title: feynmanTopic(d) || fmStr(d.title), web: true, file: r.meta && r.meta.file };
+          lessonArt.lib = { id: 'web', title: webArtCaption(d, r.caption, r.meta && r.meta.file), web: true, file: r.meta && r.meta.file };
           applyLessonArt();
         }
         try { sfLabelWaitCheck(false); } catch (e3) { /* never cost the lesson */ }
@@ -4953,6 +4954,28 @@
     return { id: 'web', title: feynmanTopic(d) || fmStr(d.title), credit: fmStr(meta.credit).slice(0, 160), terms: terms };
   }
 
+  /* The line under a found picture. It used to be the lesson's title in
+     capitals - "THE HUMAN EAR" right under "The human ear". Now: the judge's
+     sentence about what is DRAWN ("The outer, middle and inner ear, cut open
+     from the side"), else the file's own name tidied ("Anatomy of the human
+     ear"), and nothing when that only says the title again. Plain text,
+     escaped where it is printed. */
+  function webArtCaption(d, caption, file) {
+    var c = fmStr(caption).replace(/[<>{}]/g, '').replace(/\s+/g, ' ').trim();
+    if (!c && file) {
+      c = fmStr(file).replace(/^File:/i, '').replace(/\.svg$/i, '').replace(/_/g, ' ')
+        .replace(/[\s-]+(en|eng|english)$/i, '').replace(/[\s-]*\d+$/, '')
+        .replace(/\b(diagram|svg|illustration|vector|version|labell?ed|simple|cute)\b/gi, ' ')
+        .replace(/\s*[-(]\s*$/, '').replace(/\s+/g, ' ').trim();
+      if (/^[A-Z]/.test(c)) c = c.charAt(0) + c.slice(1).replace(/\b([A-Z])([a-z]+)\b/g, function (w, a, b) { return a.toLowerCase() + b; });
+    }
+    c = c.replace(/\.$/, '').slice(0, 90);
+    var topic = captionNorm(feynmanTopic(d) || fmStr(d.title));
+    var cn = captionNorm(c).replace(/^(the|a|an) /, '');
+    if (!cn || cn === topic || cn === topic.replace(/^(the|a|an) /, '') || cn.split(' ').length < 2) return '';
+    return c;
+  }
+
   /* One file, made ready: resolves {svg, report} or null (refused/unusable),
      rejects on a network failure. */
   function webArtPrepare(d, file) {
@@ -4989,7 +5012,7 @@
     var p;
     if (d.webArt && d.webArt.file) {
       p = webArtPrepare(d, d.webArt.file).then(function (r) {
-        if (r) return r;
+        if (r) { r.caption = d.webArt.caption || ''; return r; }
         saveWebArt(d, undefined);        // the file is gone or changed licence: judge again next time
         return null;
       }, function () { return null; });
@@ -5007,7 +5030,8 @@
           if (!pk || typeof pk.file !== 'string') return next();
           return webArtPrepare(d, pk.file).then(function (r) {
             if (!r || !r.report || !r.report.legible) return next();
-            saveWebArt(d, { file: pk.file, credit: fmStr(pk.credit).slice(0, 160) });
+            r.caption = webArtCaption(d, pk.caption, pk.file);
+            saveWebArt(d, { file: pk.file, credit: fmStr(pk.credit).slice(0, 160), caption: r.caption });
             return r;
           });
         }
@@ -5535,6 +5559,10 @@
      slate in dark mode and read at about 3:1 on paper. */
   var CAPTION_STYLE = 'font-size:0.68rem;color:#6b7280;margin-top:.4rem;' +
     'text-transform:uppercase;letter-spacing:.06em;font-weight:600;';
+  /* A found picture's caption is a sentence, so it is set as one: shouted in
+     small capitals, a sentence reads as a label. */
+  var WEB_CAPTION_STYLE = 'font-size:0.8rem;line-height:1.35;color:#4b5263;margin:.5rem auto 0;max-width:30em;font-weight:500;';
+  function artCaptionStyle() { return lessonArt.lib && lessonArt.lib.web ? WEB_CAPTION_STYLE : CAPTION_STYLE; }
 
   /* Swap the drawing in wherever the lesson card is showing its picture.
      The pane HTML is updated as well as the DOM, so turning to another part
@@ -5544,7 +5572,7 @@
     var svg = lessonArtSvg();
     if (!svg) return;
     var caption = lessonArtTitle();
-    var inner = svg + diagramCaptionHtml(svg, caption, CAPTION_STYLE);
+    var inner = svg + diagramCaptionHtml(svg, caption, artCaptionStyle());
 
     if (sfLesson && sfLesson.panes && sfLesson.panes.length) {
       sfLesson.panes[0].html = sfLesson.panes[0].html.replace(
@@ -6706,7 +6734,7 @@
         dgmHtml = '<div id="lesson-art" class="art-paper" style="text-align:center;padding:.75rem;">' +
           (artSvg || dgm.svg) +
           diagramCaptionHtml(artSvg || dgm.svg,
-            artSvg ? lessonArtTitle() : dgm.caption, CAPTION_STYLE) +
+            artSvg ? lessonArtTitle() : dgm.caption, artSvg ? artCaptionStyle() : CAPTION_STYLE) +
           '</div>';
       }
 

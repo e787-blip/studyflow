@@ -51,7 +51,7 @@ function endpoint(o) {
   return { calls, routes: [['**/api/illustration*', handler]] };
 }
 const PICKS = [{ file: 'File:Piled labels.svg', credit: 'Illustration: Tester, Wikimedia Commons, CC BY-SA 4.0' },
-               { file: 'File:Good Krebs.svg', credit: 'Illustration: Tester, Wikimedia Commons, CC BY-SA 4.0' }];
+               { file: 'File:Good Krebs.svg', credit: 'Illustration: Tester, Wikimedia Commons, CC BY-SA 4.0', caption: 'The eight steps of the cycle, <b>in a ring</b>' }];
 
 async function toLesson(page) {
   for (let i = 0; i < 12; i++) {
@@ -90,6 +90,12 @@ const saved = page => page.evaluate(() => { const p = JSON.parse(SFStore.getItem
   assert(r.anim === 0, 'a person\'s drawing is not traced line by line');
   let s = await saved(env.page);
   assert(s[1] && s[1].file === 'File:Good Krebs.svg', 'the choice is saved on the day (' + JSON.stringify(s[1]) + ')');
+  r = await env.page.evaluate(() => { const c = document.querySelector('#lesson-art > div'); return c ? { t: c.textContent, up: getComputedStyle(c).textTransform, html: c.innerHTML } : null; });
+  assert(r && r.t === 'The eight steps of the cycle, bin a ring/b' && r.up === 'none' && !/</.test(r.html),
+         'the caption is the judge\'s sentence about the picture, in sentence case, no markup - not the title in capitals (' + JSON.stringify(r) + ')');
+  assert(s[1].caption === r.t, 'the caption is saved with the choice, so a reopen shows it too');
+  r = await env.page.evaluate(() => [webArtCaption({ title: 'The human ear' }, '', 'File:Human ear en.svg'), webArtCaption({ title: 'The human ear' }, '', 'File:Anatomy of the Human Ear.svg')]);
+  assert(r[0] === '' && r[1] === 'Anatomy of the human ear', 'with no sentence, the file name tidied - and nothing when that only repeats the title (' + JSON.stringify(r) + ')');
   r = await env.page.evaluate(() => { const q = lessonLabelQuestion(); return q ? { n: q.pins.length, a: q.pins.map(p => p.answer) } : null; });
   assert(r && r.n >= 3 && r.a.every(a => /^(Citrate|Oxaloacetate|Succinate|Malate)$/.test(a)), 'the day\'s key terms printed on it become the labelling card\'s pins (' + (r ? r.a.join(', ') : 'none') + ')');
   assert(env.errors.length === 0, 'no page errors (' + env.errors.slice(0, 2).join(' | ') + ')');
