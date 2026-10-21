@@ -95,6 +95,10 @@ function world(script) {
   ok(I.shortAuthor('This SVG image was created by Medium69. Cette image...') === 'Medium69' && I.shortAuthor('<a href="x">LadyofHats</a> (Mariana Ruiz)') === 'LadyofHats' &&
      I.shortAuthor('Own work') === 'Unknown author', 'authors are shortened to a name, never "Own work"');
   ok(I.parseJudge('{"picks":[{"n":2,"why":"a"},{"n":2},{"n":9},{"n":"x"},{"n":1}]}', 3).map(p => p.n).join() === '2,1', 'the judge\'s repeats, out-of-range and non-numbers are ignored');
+  const V = (n, o) => Object.assign({ n: n, topic: true, accurate: true, readable: true, english: true, teaches: true, rank: n, why: 'w' }, o || {});
+  ok(I.parseJudge(JSON.stringify({ verdicts: [V(1, { english: false, rank: 1 }), V(2, { rank: 2 }), V(3, { rank: 1 }), V(4, { topic: 'true' }), V(5, { rank: 0 })] }), 5).map(p => p.n).join() === '3,2',
+     'verdicts: only a picture passing all five rules is kept, by rank - one false, a "true" string or rank 0 is out');
+  ok(I.parseJudge('{"verdicts":[]}', 3).length === 0, 'verdicts with nothing passing is an answer of none, not a failure');
   ok(I.parseJudge('no json here', 3) === null && I.parseJudge('{"nope":1}', 3) === null, 'an answer with no picks list is no answer');
   ok(I.nonLatinShare(['Атмосфера', 'Земля', 'вода']) > 0.9 && I.nonLatinShare(['Nitrogen', 'NH₄⁺', 'CO₂']) < 0.1, 'labels in another script are measured as such');
   ok(I.foreignScript(['Денітриф', 'Нітриф', 'NO₃⁻', 'NH₄⁺', 'NO₂⁻', 'N₂', 'NO', 'N₂O', 'NH₃', 'O₂']) &&
@@ -111,7 +115,7 @@ function world(script) {
   ok(I.shortAuthor('<ul><li><a href="x">Cicle_del_nitrogen_de.svg</a>: *<a href="y">Cicle_del_nitrogen_ca.svg</a>: Johann Dréo (<a href="z">User:Nojhan</a>), traduction de Joanjoc</li><li>derivative work: Burkhard (talk)</li></ul>') === 'Johann Dréo and others',
      'a chain of translations credits the person, never a file name: "' + I.shortAuthor('<a>Cicle_del_nitrogen_de.svg</a>: *<a>Cicle_del_nitrogen_ca.svg</a>: Johann Dréo (User:Nojhan)') + '"');
   const jp = JSON.stringify(I.judgePrompt('The kidney', 'science', [{ title: 'File:A.svg', desc: '', labels: ['a'], img: { type: 'image/png', data: '' } }]));
-  ok(/one nephron is not/.test(jp) && /medical students/.test(jp) && /constitution of 1793/.test(jp), 'the judge is told a part is a neighbour, and to refuse medical-school detail');
+  ok(/verdicts/.test(jp) && /one nephron is not/.test(jp) && /medical students/.test(jp) && /constitution of 1793/.test(jp), 'the judge is told a part is a neighbour, and to refuse medical-school detail');
   const dirty = '<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY ns "x">]><!-- c --><svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)">' +
     '<script>alert(1)</script><foreignObject><div>x</div></foreignObject><image href="http://evil/x.png"/><a href="javascript:alert(1)"><rect/></a>' +
     '<use xlink:href="http://evil/#a"/><style>@import url(http://evil/x.css); .a{fill:url(http://evil/#g)} .b{fill:url(#ok)} .c{fill:url("#ok2")}</style>' +
@@ -174,7 +178,7 @@ function world(script) {
   ok(shown.length > 2 && shown.every((c, i) => c.type !== 'image' || (shown[i - 1].type === 'text' && /Candidate \d+:/.test(shown[i - 1].text))),
      'every picture is named just before it');
   const allText = shown.filter(c => c.type === 'text').map(c => c.text).join(' ');
-  ok(/"the nitrogen cycle"/.test(allText) && /12-15/.test(allText) && /English/.test(allText) && /340 pixels/.test(allText) && /empty list/.test(allText),
+  ok(/"the nitrogen cycle"/.test(allText) && /12-15/.test(allText) && /English/.test(allText) && /340 pixels/.test(allText) && /worse than none/.test(allText),
      'its instructions carry the topic, the age, English only, phone width, and "none is better than wrong"');
   ok(r.body.picks.length === 2 && r.body.picks[0].file === 'File:' + shownTitles[1] && r.body.picks[1].file === 'File:' + shownTitles[0],
      'the picks come back in the judge\'s order, its out-of-range one dropped, despite a ``` fence');
