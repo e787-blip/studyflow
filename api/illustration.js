@@ -40,7 +40,9 @@ const SUBJECTS = { science: 1, math: 1, history: 1, english: 1, language: 1, geo
 
 function clip(s, n) { return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, n); }
 function stripTags(s) {
-  return String(s || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+  /* A Commons notice box arrives with its own <style>: "Food Web" was
+     credited to ".mw-parser-output .messagebox{margin:4px 0;width". */
+  return String(s || '').replace(/<(style|script)\b[\s\S]*?<\/\1\s*>/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'")
     .replace(/\s+/g, ' ').trim();
 }
@@ -84,6 +86,8 @@ function shortAuthor(a) {
   /* A translated or derived file lists its sources as "Name_xx.svg: *Name_yy.svg:
      Johann Dréo (User:Nojhan), traduction de ..." - file names are not people.
      The nitrogen cycle was credited to "Cicle_del_nitrogen_de.svg : *". */
+  const credited = /\bcredits?\s+go(?:es)?\s+to\s+([^.;,()]{2,48})/i.exec(s);
+  if (credited) return credited[1].trim();
   const chain = /\.(svg|png|jpe?g|gif)\b/i.test(s) || /derivative work/i.test(s);
   s = s.replace(/(?:Image:|File:)?[^\s:*]+\.(?:svg|png|jpe?g|gif)\s*:?\s*\*?\s*/gi, '').replace(/^[\s:*]+/, '');
   s = s.replace(/^(this (svg|image|file) (image )?was created by|created by|own work by|drawn by)\s*/i, '');

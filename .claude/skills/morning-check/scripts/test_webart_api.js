@@ -114,6 +114,8 @@ function world(script) {
      'a file with fewer than three word labels is too few words to teach from');
   ok(I.shortAuthor('<ul><li><a href="x">Cicle_del_nitrogen_de.svg</a>: *<a href="y">Cicle_del_nitrogen_ca.svg</a>: Johann Dréo (<a href="z">User:Nojhan</a>), traduction de Joanjoc</li><li>derivative work: Burkhard (talk)</li></ul>') === 'Johann Dréo and others',
      'a chain of translations credits the person, never a file name: "' + I.shortAuthor('<a>Cicle_del_nitrogen_de.svg</a>: *<a>Cicle_del_nitrogen_ca.svg</a>: Johann Dréo (User:Nojhan)') + '"');
+  ok(I.shortAuthor('<style>.mw-parser-output .messagebox{margin:4px 0;width:80%}</style><table><tr><td>This image has been created during "<a>DensityDesign Studio</a>" at Politecnico di Milano, in 2015. Credits goes to Roberta Rosina</td></tr></table>') === 'Roberta Rosina',
+     'a notice box\'s style sheet never becomes the credit, and "Credits goes to" names the person');
   const jp = JSON.stringify(I.judgePrompt('The kidney', 'science', [{ title: 'File:A.svg', desc: '', labels: ['a'], img: { type: 'image/png', data: '' } }]));
   ok(/verdicts/.test(jp) && /one nephron is not/.test(jp) && /medical students/.test(jp) && /constitution of 1793/.test(jp), 'the judge is told a part is a neighbour, and to refuse medical-school detail');
   const dirty = '<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY ns "x">]><!-- c --><svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)">' +
