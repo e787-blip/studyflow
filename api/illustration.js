@@ -81,11 +81,16 @@ function licenceOk(name) {
 
 function shortAuthor(a) {
   let s = stripTags(a);
+  /* A translated or derived file lists its sources as "Name_xx.svg: *Name_yy.svg:
+     Johann Dréo (User:Nojhan), traduction de ..." - file names are not people.
+     The nitrogen cycle was credited to "Cicle_del_nitrogen_de.svg : *". */
+  const chain = /\.(svg|png|jpe?g|gif)\b/i.test(s) || /derivative work/i.test(s);
+  s = s.replace(/(?:Image:|File:)?[^\s:*]+\.(?:svg|png|jpe?g|gif)\s*:?\s*\*?\s*/gi, '').replace(/^[\s:*]+/, '');
   s = s.replace(/^(this (svg|image|file) (image )?was created by|created by|own work by|drawn by)\s*/i, '');
   s = s.split(/[.;]\s|\s\(|,\s?(?:traduction|translation|derivative|modified|vectori[sz]ed)\b/i)[0];
   s = s.replace(/\s*\b(own work|talk|contribs?)\b.*$/i, '').trim();
-  if (!s || /^(unknown|anonymous|see below|own work)$/i.test(s)) return 'Unknown author';
-  return s.slice(0, 48);
+  if (!s || /^(unknown|anonymous|see below|own work|derivative work:?)$/i.test(s)) return 'Unknown author';
+  return chain && s.length <= 36 ? s + ' and others' : s.slice(0, 48);
 }
 
 function creditFor(meta) {
@@ -317,6 +322,28 @@ function foreignScript(labels) {
   return n >= 2 || (labels.length > 0 && n / labels.length >= 0.2);
 }
 
+/* A Latin-alphabet language that is not English: "Vrstvy atmosféry" was the
+   pick for the layers of the atmosphere, labelled EXOSFÉRA, TERMOSFÉRA,
+   výška, teplota - the script check cannot see it. Accented letters on 30%
+   of the word labels, and not two English small words among them. A map of
+   place names (Zürich, São Paulo) can trip it; losing one is cheaper than a
+   chart the learner cannot read. */
+const EN_SMALL = /\b(the|of|and|to|in|into|from|by|with|for|on|is|are|at|out)\b/gi;
+function foreignLatin(labels) {
+  const words = labels.filter(l => /\p{L}{3,}/u.test(l));
+  if (words.length < 3) return false;
+  const marked = words.filter(l => /[\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u024F]/.test(l)).length;
+  const english = (words.join(' ').match(EN_SMALL) || []).length;
+  return marked >= 2 && marked / words.length >= 0.3 && english < 2;
+}
+
+/* A picture needs words to teach from, and the labelling card needs them to
+   pin. The Atom TEXT EDITOR's logo was the pick for "Parts of an atom", and
+   an unlabelled pink brain for "The brain". */
+function fewWords(labels) {
+  return labels.filter(l => /\p{L}{3,}/u.test(l)).length < 3;
+}
+
 async function getText(url, max) {
   const r = await fetchT(url, { headers: { 'User-Agent': UA } }, COMMONS_TIMEOUT_MS);
   if (!r.ok) throw new Error('fetch ' + r.status);
@@ -359,10 +386,12 @@ function judgePrompt(topic, subject, cands) {
   content.push({ type: 'text', text:
     '\nInclude a candidate ONLY if ALL of these are true:\n' +
     '1. It shows "' + topic + '" itself - the thing this lesson teaches - not a related or neighbouring topic ' +
-    '(the layers of the atmosphere are not the layers of the Earth; a plant cell is not an animal cell).\n' +
+    '(the layers of the atmosphere are not the layers of the Earth; a plant cell is not an animal cell). ' +
+    'One part of it, one event in it or one document from it is a neighbouring topic too, unless the lesson is about that part ' +
+    '(one nephron is not "the kidney"; the constitution of 1793 is not "the French Revolution").\n' +
     '2. Nothing in it looks scientifically, historically or factually wrong.\n' +
-    '3. A 12-15 year old could learn from it, and its words would still be readable shrunk to 340 pixels wide. Reject dense research figures and pages of tiny print.\n' +
-    '4. Every word in it is English (numbers, units, symbols and chemical formulas are fine). Reject any with labels in another language, including Latin.\n' +
+    '3. A 12-15 year old could learn from it, and its words would still be readable shrunk to 340 pixels wide. Reject dense research figures, pages of tiny print, and anything made for university or medical students (drug names, receptor and enzyme detail).\n' +
+    '4. Every word in it is English (numbers, units, symbols and chemical formulas are fine). Reject any with labels in another language, including Latin and spellings like "Citrat" or "atmosféra".\n' +
     '5. It is a diagram, cross-section, map or illustration that teaches - not a logo, flag, icon, photo collage or decoration, and not numbers-only labels with no key.\n' +
     'Rank the qualifying ones best first, at most ' + MAX_PICKS + '. If none qualifies, return an empty list - a wrong picture is worse than none.\n' +
     'Output ONLY JSON: {"picks":[{"n":<candidate number>,"why":"<under 100 characters>"}]}' });
@@ -459,7 +488,7 @@ async function pick(req, res) {
   const files = await inParallel(list, 4, async c => {
     const svg = await getText(c.url, MAX_BYTES);
     const labels = labelsOf(svg);
-    if (foreignScript(labels)) return null;
+    if (foreignScript(labels) || foreignLatin(labels) || fewWords(labels)) return null;
     if (labels.length >= 3 && labels.every(l => /^[\d\s.,()-]+$/.test(l))) return null;  // numbers with no key
     return Object.assign(c, { labels: labels });
   });
@@ -517,4 +546,4 @@ module.exports = async function handler(req, res) {
 };
 
 module.exports._internal = { licenceOk, shortAuthor, creditFor, langOf, stems, score, usable, collapseLanguages,
-  shortlist, labelsOf, nonLatinShare, foreignScript, judgePrompt, parseJudge, cleanSvg, toCandidate };
+  shortlist, labelsOf, nonLatinShare, foreignScript, foreignLatin, fewWords, judgePrompt, parseJudge, cleanSvg, toCandidate };
