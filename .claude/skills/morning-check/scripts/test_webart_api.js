@@ -100,6 +100,18 @@ function world(script) {
   ok(I.foreignScript(['Денітриф', 'Нітриф', 'NO₃⁻', 'NH₄⁺', 'NO₂⁻', 'N₂', 'NO', 'N₂O', 'NH₃', 'O₂']) &&
      !I.foreignScript(['Nitrogen fixation', 'NH₄⁺', 'NO₃⁻', 'Denitrifying bacteria', 'N₂']) && !I.foreignScript(['Café', 'Señor', 'Zürich']),
      'a file with Cyrillic labels among many formulas is caught; English with formulas, and Latin accents, are not');
+  // Oct 20 2026, the first run with the real judge: a Czech chart, a logo and an unlabelled brain got through.
+  ok(I.foreignLatin(['EXOSFÉRA', 'TERMOSFÉRA', 'MEZOSFÉRA', 'STRATOSFÉRA', 'TROPOSFÉRA', 'výška [km]', 'teplota [°C]', 'termopauza', 'mezopauza']) &&
+     !I.foreignLatin(['Troposphere', 'Stratosphere', 'Ozone layer', 'Mesosphere', 'Thermosphere']) &&
+     !I.foreignLatin(['Paris', 'Zürich', 'Berlin', 'Rome', 'Madrid', 'Vienna', 'London']) &&
+     !I.foreignLatin(['Café de Flore', 'Movement of the crowd', 'Storming of the Bastille', 'Sans-culottes']),
+     'labels in another Latin-alphabet language are caught; English, a map with one accented city, and English with a French name are not');
+  ok(I.fewWords([]) && I.fewWords(['12', '40', 'NO₃']) && I.fewWords(['Atom', '1']) && !I.fewWords(['Malleus', 'Incus', 'Stapes']),
+     'a file with fewer than three word labels is too few words to teach from');
+  ok(I.shortAuthor('<ul><li><a href="x">Cicle_del_nitrogen_de.svg</a>: *<a href="y">Cicle_del_nitrogen_ca.svg</a>: Johann Dréo (<a href="z">User:Nojhan</a>), traduction de Joanjoc</li><li>derivative work: Burkhard (talk)</li></ul>') === 'Johann Dréo and others',
+     'a chain of translations credits the person, never a file name: "' + I.shortAuthor('<a>Cicle_del_nitrogen_de.svg</a>: *<a>Cicle_del_nitrogen_ca.svg</a>: Johann Dréo (User:Nojhan)') + '"');
+  const jp = JSON.stringify(I.judgePrompt('The kidney', 'science', [{ title: 'File:A.svg', desc: '', labels: ['a'], img: { type: 'image/png', data: '' } }]));
+  ok(/one nephron is not/.test(jp) && /medical students/.test(jp) && /constitution of 1793/.test(jp), 'the judge is told a part is a neighbour, and to refuse medical-school detail');
   const dirty = '<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY ns "x">]><!-- c --><svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)">' +
     '<script>alert(1)</script><foreignObject><div>x</div></foreignObject><image href="http://evil/x.png"/><a href="javascript:alert(1)"><rect/></a>' +
     '<use xlink:href="http://evil/#a"/><style>@import url(http://evil/x.css); .a{fill:url(http://evil/#g)} .b{fill:url(#ok)} .c{fill:url("#ok2")}</style>' +
