@@ -393,17 +393,29 @@ function judgePrompt(topic, subject, cands) {
     '3. A 12-15 year old could learn from it, and its words would still be readable shrunk to 340 pixels wide. Reject dense research figures, pages of tiny print, and anything made for university or medical students (drug names, receptor and enzyme detail).\n' +
     '4. Every word in it is English (numbers, units, symbols and chemical formulas are fine). Reject any with labels in another language, including Latin and spellings like "Citrat" or "atmosféra".\n' +
     '5. It is a diagram, cross-section, map or illustration that teaches - not a logo, flag, icon, photo collage or decoration, and not numbers-only labels with no key.\n' +
-    'Rank the qualifying ones best first, at most ' + MAX_PICKS + '. If none qualifies, return an empty list - a wrong picture is worse than none.\n' +
-    'Output ONLY JSON: {"picks":[{"n":<candidate number>,"why":"<under 100 characters>"}]}' });
+    'Judge EVERY candidate against each rule, true or false, then rank the ones that pass all five, best first (rank 1 = best; 0 for a candidate that fails any). ' +
+    'A wrong picture is worse than none, so answer false whenever a rule is in doubt.\n' +
+    'Output ONLY JSON: {"verdicts":[{"n":<candidate number>,"topic":<rule 1>,"accurate":<rule 2>,"readable":<rule 3>,"english":<rule 4>,"teaches":<rule 5>,"rank":<number>,"why":"<under 100 characters>"}]}' });
   return content;
 }
+
+const JUDGE_RULES = ['topic', 'accurate', 'readable', 'english', 'teaches'];
 
 function parseJudge(text, n) {
   const m = String(text || '').match(/\{[\s\S]*\}/);
   if (!m) return null;
   let d;
   try { d = JSON.parse(m[0]); } catch (e) { return null; }
-  if (!d || !Array.isArray(d.picks)) return null;
+  if (!d) return null;
+  /* Verdicts, one per candidate and rule: the CODE keeps only a picture that
+     passes all five. Asked for a list of picks, Haiku read the rules and
+     still picked a brainstem labelled in Latin for "The brain". A plain
+     picks list is still read, for an answer in the older shape. */
+  if (Array.isArray(d.verdicts)) {
+    d.picks = d.verdicts.filter(v => v && JUDGE_RULES.every(k => v[k] === true) && Number(v.rank) >= 1)
+      .sort((a, b) => Number(a.rank) - Number(b.rank));
+  }
+  if (!Array.isArray(d.picks)) return null;
   const seen = {}, out = [];
   d.picks.forEach(p => {
     const k = p && Number(p.n);
@@ -418,7 +430,7 @@ async function judge(topic, subject, cands, apiKey) {
   const r = await fetchT('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 400,
+    body: JSON.stringify({ model: MODEL, max_tokens: 900,
       system: 'You select accurate, readable teaching illustrations. Output only the JSON asked for.',
       messages: [{ role: 'user', content: judgePrompt(topic, subject, cands) }] })
   }, JUDGE_TIMEOUT_MS);
