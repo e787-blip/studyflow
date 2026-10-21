@@ -2162,10 +2162,33 @@ reopen spends nothing, null remembered, failure not, library/sf-render/maths
 first, tomorrow picked, labelling pins, a hostile file touching nothing, dark
 mode paper). Both were broken on purpose to prove they fail without the code.
 
-**Not seen yet: a real judge.** The key exists only on Vercel and preview
-deployments are behind Vercel sign-in, so the judge has only run against
-fixtures; the search, filters, fetching and page side ran against the real
-Commons. First thing once deployed: run 15 real topics, look at every pick.
+**The real judge, 2026-10-20.** `api/illustration.js` alone is on `main`
+(nothing on the live site calls it yet); 15 real topics were run against it
+and every pick LOOKED at. The first run picked the Atom text editor's logo
+for "Parts of an atom", an unlabelled brain, a chart labelled in Czech for
+the atmosphere, a pharmacology nephron for "The kidney", the 1793
+constitution for "The French Revolution", and credited files to a file name
+and to a Commons style sheet. Fixed, each with a test:
+
+- **Under 3 word labels is out** (`fewWords`): logos, unlabelled drawings,
+  and files whose words are outlines (the old nitrogen-cycle pick).
+- **Labels in another Latin-alphabet language are out** (`foreignLatin`:
+  accents on 30% of word labels, under two English small words).
+- **The judge answers true/false per rule for every candidate, and the CODE
+  keeps only a picture passing all five** (`JUDGE_RULES`). Given the rules
+  and asked for a list, Haiku read them and picked against them anyway.
+- **Credits**: a translation chain names the person ("Johann Dréo and
+  others"), a notice box's `<style>` is dropped, "Credits go to X" is read.
+- **`sf-illustrate.js` read bare text + positioned tspans wrong** (the ear:
+  "Stapes" lost, "Semicircularcanals", and H₂O as "2/O"). A tspan with its
+  own x and y starts a line now; the 14 library files rebuild identical.
+
+After: 9 of 15 get a picture, 6 get none (atom, kidney, French Revolution,
+atmosphere, and the Silk Road and ocean-current maps - 35-60 labels, refused
+as unreadable at 340px). Still through: a brainstem labelled partly in Latin
+for "The brain", and German spellings in a Krebs cycle. A redeploy clears the
+CDN cache (each topic is judged again); to probe a build, add any extra query
+parameter.
 
 ### Pictures drawn by code — `sf-render.js` (Oct 2026)
 
@@ -3651,8 +3674,9 @@ genuinely nothing.
 
 ## Open items
 
-- **A real illustration for any lesson has not seen a real judge** (see its
-  section). Cost per NEW topic: one Haiku call with up to 5 small images,
+- **A real illustration for any lesson: judged for real, not shipped.** Only
+  `api/illustration.js` is on `main`; the page side is on `web-illustrations`
+  (see its section for the 15-topic run). Cost per NEW topic: one Haiku call with up to 5 small images,
   shared across learners by the CDN. The endpoint is open like
   `api/generate.js`; a flood of made-up topics would each cost a call.
 - **Real illustrations: fourteen.** Leaf, heart, plant cell, animal cell,

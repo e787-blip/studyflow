@@ -95,6 +95,23 @@ const saved = page => page.evaluate(() => { const p = JSON.parse(SFStore.getItem
   assert(env.errors.length === 0, 'no page errors (' + env.errors.slice(0, 2).join(' | ') + ')');
   await env.browser.close();
 
+  // 1b. Labels written as bare text then a tspan per line (Commons' ear): every line kept, each its own word.
+  env = await h.open({ plan: planOf([before, krebsDay(2)]), day: 1, mock: none, settle: 600, modelArt: false, routes: endpoint({ picks: [] }).routes });
+  r = await env.page.evaluate(async () => {
+    const src = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><path d="M40 40 L360 40 L360 260 L40 260 Z" fill="#e9f0ff" stroke="#1a1d2e"/>' +
+      '<g transform="translate(60 80)"><text font-size="14">Stapes<tspan x="0" y="20">(attached to</tspan><tspan x="0" y="40">oval window)</tspan></text></g>' +
+      '<g transform="translate(240 80)"><text font-size="14">Semicircular<tspan x="0" y="20">canals</tspan></text></g>' +
+      '<text x="60" y="220" font-size="14">H<tspan dy="3" font-size="10">2</tspan><tspan dy="-3">O</tspan></text>' +
+      '<text x="240" y="220" font-size="14"><tspan x="240" y="220">Round</tspan><tspan x="240" y="238">window</tspan></text></svg>';
+    const out = await SFIllustrate.prepare(src, { credit: 'Illustration: T, Wikimedia Commons' }, { finalize: true });
+    const d = new DOMParser().parseFromString(out.svg, 'image/svg+xml');
+    return Array.from(d.querySelectorAll('text')).filter(t => !t.classList.contains('sf-credit'))
+      .map(t => { const sp = t.querySelectorAll('tspan'); return sp.length ? Array.from(sp).map(x => x.textContent).join('/') : t.textContent; }).sort();
+  });
+  assert(JSON.stringify(r) === JSON.stringify(['H2O', 'Round/window', 'Semicircular/canals', 'Stapes/(attached to/oval window)']),
+         'bare text then tspan lines: "Stapes" kept, "Semicircular canals" two words, H2O one line - ' + JSON.stringify(r));
+  await env.browser.close();
+
   // 2. Reopening: the saved file, no new pick.
   ep = endpoint({ picks: PICKS });
   env = await h.open({ plan: planOf([before, krebsDay(2, { webArt: { file: 'File:Good Krebs.svg', credit: 'x' } })]), day: 1, mock: none, settle: 900, modelArt: false, routes: ep.routes });

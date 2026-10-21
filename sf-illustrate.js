@@ -235,7 +235,20 @@
     Array.prototype.slice.call(svg.querySelectorAll('text')).forEach(function (t) {
       if (t.closest('defs')) return;
       var spans = t.querySelectorAll('tspan'), lines = [];
-      if (spans.length > 1) {
+      /* Bare text, then a tspan per further line - "Stapes<tspan x="0" y="20">(attached
+         to</tspan><tspan x="0" y="40">oval window)</tspan>" (Commons' ear). Read by
+         tspans only, "Stapes" was lost; by textContent, "Semicircular" + "canals" read
+         "Semicircularcanals". A tspan with its own x and y starts a line; one without
+         (a subscript, a bold word) carries on the line it is in. */
+      var bare = Array.prototype.some.call(t.childNodes, function (n) { return n.nodeType === 3 && norm(n.nodeValue); });
+      if (bare && spans.length) {
+        Array.prototype.forEach.call(t.childNodes, function (n) {
+          var raw = n.textContent || '';
+          var br = n.nodeType === 1 && n.hasAttribute('x') && (n.hasAttribute('y') || n.hasAttribute('dy'));
+          if ((br || !lines.length) && norm(raw)) lines.push(raw); else if (lines.length) lines[lines.length - 1] += raw;
+        });
+        lines = lines.map(norm).filter(Boolean);
+      } else if (spans.length > 1) {
         var lastY = null;
         spans.forEach(function (s) {
           var y = s.getBBox ? Math.round(s.getBBox().y) : 0, v = norm(s.textContent);
