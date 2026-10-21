@@ -406,6 +406,16 @@ function judgePrompt(topic, subject, cands) {
 
 const JUDGE_RULES = ['topic', 'accurate', 'readable', 'english', 'teaches'];
 
+/* The judge writes past the length it is asked for, and a hard cut printed
+   "...primase, polymerases, and lig". Cut at a comma, else at a whole word. */
+function shortCaption(c) {
+  c = String(c || '').replace(/\s+/g, ' ').trim().replace(/\.$/, '');
+  if (c.length <= 80) return c;
+  const head = c.slice(0, 80), comma = head.lastIndexOf(', ');
+  if (comma >= 40) return head.slice(0, comma);
+  return head.slice(0, head.lastIndexOf(' ')).replace(/[\s,;:-]+(and|or|with|of|the|a|an|to|from|by|in)?$/i, '').replace(/[\s,;:-]+$/, '');
+}
+
 function parseJudge(text, n) {
   const m = String(text || '').match(/\{[\s\S]*\}/);
   if (!m) return null;
@@ -427,7 +437,7 @@ function parseJudge(text, n) {
     if (!Number.isInteger(k) || k < 1 || k > n || seen[k] || out.length >= MAX_PICKS) return;
     seen[k] = 1;
     /* The caption is printed under the picture: plain text, no markup, short. */
-    const cap = clip(p.caption, 90).replace(/[<>{}]/g, '').replace(/\.$/, '');
+    const cap = shortCaption(clip(p.caption, 300).replace(/[<>{}]/g, ''));
     out.push({ n: k, why: clip(p.why, 140), caption: cap });
   });
   return out;
@@ -565,4 +575,4 @@ module.exports = async function handler(req, res) {
 };
 
 module.exports._internal = { licenceOk, shortAuthor, creditFor, langOf, stems, score, usable, collapseLanguages,
-  shortlist, labelsOf, nonLatinShare, foreignScript, foreignLatin, fewWords, judgePrompt, parseJudge, cleanSvg, toCandidate };
+  shortlist, labelsOf, nonLatinShare, foreignScript, foreignLatin, fewWords, judgePrompt, parseJudge, shortCaption, cleanSvg, toCandidate };

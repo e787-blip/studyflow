@@ -100,6 +100,9 @@ function world(script) {
      'verdicts: only a picture passing all five rules is kept, by rank - one false, a "true" string or rank 0 is out');
   ok(I.parseJudge(JSON.stringify({ verdicts: [V(1, { caption: 'The ear, <b>cut</b> open from the side.' })] }), 1)[0].caption === 'The ear, bcut/b open from the side' &&
      I.parseJudge(JSON.stringify({ verdicts: [V(1)] }), 1)[0].caption === '', 'the judge\'s caption comes back as plain text with no markup, or empty');
+  ok(I.shortCaption('Eukaryotic DNA replication showing both strands copying with primase, polymerases, and ligase at work') === 'Eukaryotic DNA replication showing both strands copying with primase' &&
+     I.shortCaption('A forest food web showing how energy flows from plants through herbivores and omnivores to the top predators') === 'A forest food web showing how energy flows from plants through herbivores' &&
+     I.shortCaption('A human skeleton from the front.') === 'A human skeleton from the front', 'a long caption is cut at a comma or a whole word, never mid-word');
   ok(I.parseJudge('{"verdicts":[]}', 3).length === 0, 'verdicts with nothing passing is an answer of none, not a failure');
   ok(I.parseJudge('no json here', 3) === null && I.parseJudge('{"nope":1}', 3) === null, 'an answer with no picks list is no answer');
   ok(I.nonLatinShare(['Атмосфера', 'Земля', 'вода']) > 0.9 && I.nonLatinShare(['Nitrogen', 'NH₄⁺', 'CO₂']) < 0.1, 'labels in another script are measured as such');

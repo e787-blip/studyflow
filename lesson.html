@@ -4969,7 +4969,11 @@
         .replace(/\s*[-(]\s*$/, '').replace(/\s+/g, ' ').trim();
       if (/^[A-Z]/.test(c)) c = c.charAt(0) + c.slice(1).replace(/\b([A-Z])([a-z]+)\b/g, function (w, a, b) { return a.toLowerCase() + b; });
     }
-    c = c.replace(/\.$/, '').slice(0, 90);
+    c = c.replace(/\.$/, '');
+    if (c.length > 80) {                                   // at a comma or a whole word, never mid-word
+      var head = c.slice(0, 80), comma = head.lastIndexOf(', ');
+      c = comma >= 40 ? head.slice(0, comma) : head.slice(0, head.lastIndexOf(' ')).replace(/[\s,;:-]+$/, '');
+    }
     var topic = captionNorm(feynmanTopic(d) || fmStr(d.title));
     var cn = captionNorm(c).replace(/^(the|a|an) /, '');
     if (!cn || cn === topic || cn === topic.replace(/^(the|a|an) /, '') || cn.split(' ').length < 2) return '';
