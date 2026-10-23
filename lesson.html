@@ -5397,8 +5397,16 @@
     if (cap) skip[cap] = 1;
     if (lessonArt.spec && lessonArt.spec.title) skip[fmStr(lessonArt.spec.title).toLowerCase()] = 1;
     if (lessonArt.lib) skip[fmStr(lessonArt.lib.title).toLowerCase()] = 1;
-    var re = /<text\b([^>]*)>([\s\S]*?)<\/text>/gi, m, picks = [], seen = {};
-    while ((m = re.exec(pic.svg)) !== null && picks.length < 5) {
+    /* A real illustration (the library's or one found on Commons) marks its
+       key labels bold, and those are pinned first. A FOUND picture's bold
+       labels are only the day's key terms that happen to be printed on it -
+       the ear printed "Tympanic membrane" where the terms said "Eardrum" -
+       so it had one bold name, and the card skipped itself on every found
+       picture. There its other labels may be pinned too, after the bold
+       ones: a hand-checked drawing names every part it labels. */
+    var lib = /data-sf-lib="/.test(pic.svg);
+    var re = /<text\b([^>]*)>([\s\S]*?)<\/text>/gi, m, picks = [], seen = {}, cands = [];
+    while ((m = re.exec(pic.svg)) !== null) {
       var attrs = m[1];
       var txt = m[2].replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
                     .replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
@@ -5406,8 +5414,10 @@
       var key = txt.toLowerCase();
       if (!txt || seen[key] || skip[key]) continue;
       if (/transform\s*=|serif/i.test(attrs)) continue;        // rotated axis titles, serif titles
+      if (/sf-credit/.test(attrs)) continue;
       var wgt = rcAttr(attrs, 'font-weight');
-      if (!(parseFloat(wgt) >= 600 || /bold/i.test(wgt))) continue;
+      var bold = parseFloat(wgt) >= 600 || /bold/i.test(wgt);
+      if (!bold && !lib) continue;
       if (txt.length < 3 || txt.length > 28 || !/[a-z]/i.test(txt)) continue;
       if (/[=→+×]|^\d/.test(txt)) continue;          // equations, dates, numbers
       var x = parseFloat(rcAttr(attrs, 'x')), y = parseFloat(rcAttr(attrs, 'y'));
@@ -5415,14 +5425,21 @@
       var size = parseFloat(rcAttr(attrs, 'font-size')) || 11;
       var anchor = rcAttr(attrs, 'text-anchor') || 'start';
       var px = anchor === 'middle' ? x : (anchor === 'end' ? x - 11 : x + 11);
-      var py = y - size * 0.35, clash = false, k;
+      var py = y - size * 0.35;
+      seen[key] = 1;
+      cands.push({ full: m[0], x: Math.round(px * 10) / 10, y: Math.round(py * 10) / 10, answer: txt, bold: bold });
+    }
+    var boldN = cands.filter(function (c) { return c.bold; }).length;
+    var borrowed = boldN < 3;
+    cands = cands.filter(function (c) { return c.bold || borrowed; });
+    cands.sort(function (a, b) { return (b.bold ? 1 : 0) - (a.bold ? 1 : 0); });   // stable: bold first, then drawing order
+    for (var ci = 0; ci < cands.length && picks.length < 5; ci++) {
+      var cd = cands[ci], clash = false, k;
       /* Two pins closer than their own diameter read as one. */
       for (k = 0; k < picks.length; k++) {
-        if (Math.abs(picks[k].x - px) < 24 && Math.abs(picks[k].y - py) < 22) { clash = true; break; }
+        if (Math.abs(picks[k].x - cd.x) < 24 && Math.abs(picks[k].y - cd.y) < 22) { clash = true; break; }
       }
-      if (clash) continue;
-      seen[key] = 1;
-      picks.push({ full: m[0], x: Math.round(px * 10) / 10, y: Math.round(py * 10) / 10, answer: txt });
+      if (!clash) picks.push(cd);
     }
     if (picks.length < 3) return null;
     var svg = pic.svg, i;
@@ -5434,7 +5451,10 @@
     var extra = [], terms = ldArr(day.keyTerms), taken = {};
     function tkey(v) { return recallWords(v).join(' ') || String(v).toLowerCase(); }
     for (i = 0; i < picks.length; i++) taken[tkey(picks[i].answer)] = 1;
-    for (i = 0; i < terms.length && extra.length < 2; i++) {
+    /* Not when labels were borrowed: the day's terms may name the same parts
+       in other words, and "Eardrum" offered as WRONG beside "Tympanic
+       membrane" marks a right answer wrong. */
+    for (i = 0; !borrowed && i < terms.length && extra.length < 2; i++) {
       var t = fmStr(terms[i] && (terms[i].term || terms[i]));
       if (t && t.length <= 28 && !taken[tkey(t)]) { extra.push(t); taken[tkey(t)] = 1; }
     }

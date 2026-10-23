@@ -98,6 +98,26 @@ const saved = page => page.evaluate(() => { const p = JSON.parse(SFStore.getItem
   assert(r[0] === '' && r[1] === 'Anatomy of the human ear', 'with no sentence, the file name tidied - and nothing when that only repeats the title (' + JSON.stringify(r) + ')');
   r = await env.page.evaluate(() => { const q = lessonLabelQuestion(); return q ? { n: q.pins.length, a: q.pins.map(p => p.answer) } : null; });
   assert(r && r.n >= 3 && r.a.every(a => /^(Citrate|Oxaloacetate|Succinate|Malate)$/.test(a)), 'the day\'s key terms printed on it become the labelling card\'s pins (' + (r ? r.a.join(', ') : 'none') + ')');
+  // A found picture with only ONE key term printed on it (the ear: "Eardrum" in the terms, "Tympanic membrane" on the drawing).
+  r = await env.page.evaluate(() => {
+    const T = (x, y, t, b) => '<text x="' + x + '" y="' + y + '" font-size="12"' + (b ? ' font-weight="700"' : '') + '>' + t + '</text>';
+    const one = '<svg xmlns="http://www.w3.org/2000/svg" data-sf-lib="web" viewBox="0 0 400 300"><path d="M10 10 L390 10 L390 290 Z" fill="#eee"/>' +
+      T(20, 40, 'Cochlea', 1) + T(20, 120, 'Malleus') + T(20, 200, 'Incus') + T(250, 60, 'Tympanic membrane') + T(250, 160, 'Eustachian tube') + T(250, 260, 'Auricle') +
+      '<text class="sf-credit" x="10" y="295" font-size="8">Illustration: T, Wikimedia Commons</text></svg>';
+    const keep = { svg: lessonArt.svg, lib: lessonArt.lib, terms: day.keyTerms };
+    lessonArt.svg = one; lessonArt.lib = { id: 'web', web: true, title: '' }; recallCache.key = null;
+    day.keyTerms = [{ term: 'Cochlea' }, { term: 'Eardrum' }, { term: 'Auditory nerve' }];
+    const q = lessonLabelQuestion();
+    const lib = one.replace('data-sf-lib="web"', 'data-sf-lib="heart"').replace(' font-weight="700"', '');
+    lessonArt.svg = lib.replace('data-sf-lib="heart"', ''); recallCache.key = null;
+    const q2 = lessonLabelQuestion();
+    lessonArt.svg = keep.svg; lessonArt.lib = keep.lib; day.keyTerms = keep.terms; recallCache.key = null;
+    return { pins: q && q.pins.map(p => p.answer), opts: q && q.options, plain: !!q2 };
+  });
+  assert(r.pins && r.pins.length === 5 && r.pins[0] === 'Cochlea' && r.pins.indexOf('Illustration: T, Wikimedia Commons') < 0,
+         'a found picture with one bold key term still becomes a labelling card - the bold name first, then its own labels (' + JSON.stringify(r.pins) + ')');
+  assert(r.opts && r.opts.length === 0, 'and no key term is added as a wrong option ("Eardrum" beside "Tympanic membrane") (' + JSON.stringify(r.opts) + ')');
+  assert(!r.plain, 'a picture with no bold names that is not a real illustration still gets no card');
   assert(env.errors.length === 0, 'no page errors (' + env.errors.slice(0, 2).join(' | ') + ')');
   await env.browser.close();
 
