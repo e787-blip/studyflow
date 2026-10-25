@@ -1846,7 +1846,14 @@ to the question that was just asked", animated with the `apple-design` skill. It
 replaced the passive worked-example card they had removed ("it isn't helping them
 learn the topic").
 
-- **The button opens a sheet**, not a queued card. `sfwbExplain(explanation,
+- **Both walkthroughs stay (the owner's call, after seeing both).** A question
+  with a picture (`sfPicWalkFor`) keeps the picture walk on its main button
+  ("Show walkthrough" opens `sfwb-picwalk`, the version the owner liked) and
+  gets a second button, **"Work it out step by step"** (`.sfwb-guide`,
+  `sfwbExplain(..., 'guide')`), for the guided sheet. Without a picture there
+  is one button and it opens the guided sheet. `SFGuide.can(q)` decides
+  whether the second button is offered.
+- **The guided steps open a sheet**, not a queued card. `sfwbExplain(explanation,
   wasCorrect, btn)` (block 2) calls `SFGuide.open`; if that declines or its call
   fails, the old walkthroughs (`sfwb-picwalk`, `sfwb-explain`) run as before -
   they are the fallback, never lost. Declined: `write` (no answer to walk to) and

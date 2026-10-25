@@ -854,8 +854,16 @@
     }
   }
 
+  /* Whether open() would take this question - so the page can decide which
+     buttons to offer before anyone presses one. */
+  function can(q) {
+    if (!q || w.SF_GUIDE_OFF || q.fromLesson) return false;
+    if (SKIP[str(q.type).toLowerCase()]) return false;
+    return !!(stemOf(q) && answerOf(q));
+  }
+
   w.SFGuide = {
-    open: open, close: close, isOpen: function () { return !!S; },
+    open: open, close: close, can: can, isOpen: function () { return !!S; },
     /* for tests */
     prompt: prompt, clean: clean, facts: facts, key: key, labelLayout: labelLayout, STATIONS: STATIONS
   };

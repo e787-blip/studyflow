@@ -20407,6 +20407,9 @@ var SFBoard = (function () {
     'transition:color .18s ease,border-color .18s ease,transform .18s ease;}' +
   '.sfwb-explain:hover{border-bottom-color:' + ACCENT + ';transform:translateY(-1px);}' +
   '.sfwb-explain:active{transform:translateY(0);}' +
+  /* The guided steps' button sits beside the picture walk's, after a quiet dot. */
+  '.sfwb-guide{margin-left:1.1rem;position:relative;}' +
+  '.sfwb-guide::before{content:"";position:absolute;left:-.62rem;top:50%;width:3px;height:3px;border-radius:50%;background:' + MUTED + ';opacity:.6;}' +
   '.sfwb-explain:focus-visible{outline:2px solid ' + ACCENT + ';outline-offset:3px;border-radius:4px;}' +
   '.sfwb-explain:disabled{color:' + MUTED + ';cursor:default;border-bottom-color:transparent;' +
     'transform:none;opacity:.7;}' +
@@ -22514,10 +22517,28 @@ var SFBoard = (function () {
     btn.innerHTML = (wasCorrect ? 'Walk me through it' : 'Show walkthrough') + ' \u2192';
     btn.onclick = function () { w.sfwbExplain(explanation, wasCorrect, btn); };
     fb.appendChild(btn);
+
+    /* Both walkthroughs, when the question has a picture (the owner's call,
+       Oct 2026: "keep this version of walkthrough as well"). The main button
+       is the walk ON the picture; this one opens the guided steps. Without a
+       picture the main button already opens the guided steps, so there is
+       one button. */
+    try {
+      var cur = w.currentCard, q = (cur && cur.q) || w.currentQuestion || null;
+      if (q && w.SFGuide && w.SFGuide.can(q) && typeof w.sfPicWalkFor === 'function' && w.sfPicWalkFor(q)) {
+        var gb = w.document.createElement('button');
+        gb.className = 'sfwb-explain sfwb-guide sfwb-focus';
+        gb.type = 'button';
+        gb.setAttribute('aria-label', 'Work this question out one step at a time');
+        gb.innerHTML = 'Work it out step by step \u2192';
+        gb.onclick = function () { w.sfwbExplain(explanation, wasCorrect, gb, 'guide'); };
+        fb.appendChild(gb);
+      }
+    } catch (eG) { /* the main button is enough */ }
   }
 
   /* ── 3. the walkthrough itself ──────────────────────────────────────────── */
-  w.sfwbExplain = function (explanation, wasCorrect, fromBtn) {
+  w.sfwbExplain = function (explanation, wasCorrect, fromBtn, mode) {
     var cards = g('sessionCards');
     var idx = g('cardIndex');
     if (!cards || typeof idx !== 'number') return;
@@ -22538,19 +22559,20 @@ var SFBoard = (function () {
     var decision = w.SFWhiteboard.shouldTrigger({ explainRequest: true });
     if (!decision.trigger) return;
 
-    /* The guided walkthrough (sf-guide.js, Oct 2026): a sheet over THIS
-       question that asks its steps one at a time. It declines the formats it
-       does not suit and hands back here on a failed call, so the boards below
-       are the fallback, never lost. */
-    if (w.SFGuide && w.SFGuide.open(q, explanation, wasCorrect, fromBtn, function () { legacy(); })) return;
+    /* Which walkthrough. A question with a picture - its own drawing, the
+       lesson's, or the pins of a labelling card - is walked through ON the
+       picture first (the owner wanted that version kept); the guided steps
+       (sf-guide.js) are then its second button, mode 'guide'. Without a
+       picture the guided steps come first, and the text board below is their
+       fallback when the call fails or they decline the format. */
+    var walk = null;
+    try { walk = typeof w.sfPicWalkFor === 'function' ? w.sfPicWalkFor(q) : null; } catch (eP) { walk = null; }
+    if (mode === 'guide' || !walk) {
+      if (w.SFGuide && w.SFGuide.open(q, explanation, wasCorrect, fromBtn, function () { legacy(); })) return;
+    }
     legacy();
 
     function legacy() {
-
-    /* A question with a picture - its own drawing, the lesson's, or the pins
-       of a labelling card - is walked through ON the picture. */
-    var walk = null;
-    try { walk = typeof w.sfPicWalkFor === 'function' ? w.sfPicWalkFor(q) : null; } catch (eP) { walk = null; }
     if (walk) {
       if (idx < cards.length) cards.splice(idx, 0, { type: 'sfwb-picwalk', walk: walk, missedQ: q });
       else cards.push({ type: 'sfwb-picwalk', walk: walk, missedQ: q });
