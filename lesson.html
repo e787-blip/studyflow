@@ -1684,6 +1684,7 @@
 <script src="/sf-illustrate.js"></script>
 <script src="/sf-draw.js"></script>
 <script src="/sf-questions.js"></script>
+<script src="/sf-guide.js"></script>
 <script src="/sf-auth.js"></script>
 <script src="/whiteboard.js"></script>
 <script>
@@ -22511,12 +22512,12 @@ var SFBoard = (function () {
     btn.type = 'button';
     btn.setAttribute('aria-label', 'Show a step by step walkthrough of this question');
     btn.innerHTML = (wasCorrect ? 'Walk me through it' : 'Show walkthrough') + ' \u2192';
-    btn.onclick = function () { w.sfwbExplain(explanation); };
+    btn.onclick = function () { w.sfwbExplain(explanation, wasCorrect, btn); };
     fb.appendChild(btn);
   }
 
   /* ── 3. the walkthrough itself ──────────────────────────────────────────── */
-  w.sfwbExplain = function (explanation) {
+  w.sfwbExplain = function (explanation, wasCorrect, fromBtn) {
     var cards = g('sessionCards');
     var idx = g('cardIndex');
     if (!cards || typeof idx !== 'number') return;
@@ -22536,6 +22537,15 @@ var SFBoard = (function () {
 
     var decision = w.SFWhiteboard.shouldTrigger({ explainRequest: true });
     if (!decision.trigger) return;
+
+    /* The guided walkthrough (sf-guide.js, Oct 2026): a sheet over THIS
+       question that asks its steps one at a time. It declines the formats it
+       does not suit and hands back here on a failed call, so the boards below
+       are the fallback, never lost. */
+    if (w.SFGuide && w.SFGuide.open(q, explanation, wasCorrect, fromBtn, function () { legacy(); })) return;
+    legacy();
+
+    function legacy() {
 
     /* A question with a picture - its own drawing, the lesson's, or the pins
        of a labelling card - is walked through ON the picture. */
@@ -22581,6 +22591,7 @@ var SFBoard = (function () {
     var btn = w.document.querySelector('.sfwb-explain');
     if (btn) btn.disabled = true;
     w.showNextCard();
+    }
   };
 
   /* ── expose a small surface for manual hooks / debugging ────────────────── */

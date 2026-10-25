@@ -39,6 +39,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `api/illustration.js` | ~22 KB | **Finds a real illustration for any lesson on Wikimedia Commons**: search, language-copy collapsing, licence/size/shape/noise filters, then a model that SEES the 5 best and refuses the wrong ones. `?file=` returns a cleaned SVG. CDN-cached 30 days |
 | `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** The marketing pages that sit in the nav's own links (Help, Our story, Plans) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `lesson`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. `index.html` keeps its own copy - see "The site nav" |
 | `sf-smooth.js` | ~11 KB | **Smooth wheel scrolling** for `index.html`, `about.html`, `pricing.html` (window.`SFSmooth`). Off for touch and reduced motion - see "Smooth scroll and the two showcases" |
+| `sf-guide.js` | ~40 KB | **The guided walkthrough.** The Walkthrough button opens a sheet over the question just answered and asks its steps one at a time, written for THAT question by one model call; on a cell lesson a drawn cell shows the protein travelling. Loaded by `lesson.html` after `sf-questions.js` - see "The guided walkthrough" |
 | `sf-auth.js` | ~5 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html` — see "The classroom" |
 | `teacher-login.html` / `teacher.html` | ~21 / ~60 KB | Teacher sign-in (Firebase Auth) and the class dashboard, whose first tab is now Assignments and their results - see "Assignments" |
 | `teacher-build.html` | ~78 KB | **The assignment builder** - `app.html` for a teacher: one question per screen, one call writes the lesson and a fixed set of questions, the teacher edits every one, then publishes |
@@ -1837,6 +1838,58 @@ five times each). The session order is shuffled per run, so the census reads
 card for card; compare that way before calling a change.
 `sfRecallOnMiss` and `sfMomentOnMiss` both ask `picChoice()`, decided once per showing of a card; `picCount` runs from
 `sfRecallAttach` on every render.
+
+### The guided walkthrough — `sf-guide.js` (Oct 2026, branch `guided-walkthrough`)
+
+The owner's ask: the Walkthrough button should open a walkthrough "custom-tailored
+to the question that was just asked", animated with the `apple-design` skill. It
+replaced the passive worked-example card they had removed ("it isn't helping them
+learn the topic").
+
+- **The button opens a sheet**, not a queued card. `sfwbExplain(explanation,
+  wasCorrect, btn)` (block 2) calls `SFGuide.open`; if that declines or its call
+  fails, the old walkthroughs (`sfwb-picwalk`, `sfwb-explain`) run as before -
+  they are the fallback, never lost. Declined: `write` (no answer to walk to) and
+  `labeldiagram` (its pin-by-pin walk is on the picture).
+- **One call per question** (`api/generate`, ~1.5-2k chars, 4-7s measured live),
+  cached on `day.guides` (last 16) and in the saved plan; a reopen costs nothing.
+  The prompt carries the question, the right answer, what the learner answered
+  (`wrongItems`), the explanation and the grade; one step must meet the
+  learner's own slip. Steps: 3-4 (maths 3-5), three options each.
+- **Each option carries its own note** (`{text, right, note}`). The first shape
+  was a parallel `wrong` array, and a real reply put its `""` LAST instead of
+  beside the right answer, so every "why not" sat one option off. `clean()`
+  still realigns that older shape. A reply with no usable steps is a failure
+  (offers "Show the quick walkthrough" / "Try again"), never cached.
+- **The cell map** only on a cell lesson (`isCellTopic`, never maths), and only
+  when 3+ distinct parts are named: a walk that names two (what mitochondria do,
+  then the Golgi) is not a journey, and a real reply tagged exactly that. The
+  prompt asks for `place` only where the moving thing IS. Labels only for the
+  parts this walk visits, outside the cell, 15.5 units (~10px on a phone).
+  The map is sticky at the top of the sheet; `seat()` puts each new question
+  just under it.
+- **Motion** (apple-design): the sheet rises from the bottom on a critically
+  damped spring (JS, so it can be caught mid-flight), the page behind scales to
+  .965 and dims; drag the blue head 1:1 with rubber-band upward, and release
+  projects the flick (`project`, d=0.998) - past 35% closes at the finger's
+  velocity, else springs home (damping .8 only after a flick). Same path out.
+  Options rise staggered, a right pick pops, draws a tick, sparks and lights the
+  rail; a wrong one shakes and draws a cross. The protein eases along the route,
+  rings each part it reaches, rides a vesicle to the membrane and spills out.
+  Reduced motion: cross-fades only. Reduced transparency: no backdrop blur.
+- **Timers back up every frame-driven step** (close 900ms, travel 2.2s): a
+  background tab runs no frames, and the sheet used to stay up after Escape.
+- **Keys belong to the sheet while it is up** (window capture, before
+  `handleEnterKey`): Escape closes, 1-4 / A-D pick, Enter never advances the
+  session behind, Tab is trapped. Focus returns to the Walkthrough button.
+- Layer 10000/10001 (the chat button is 300). Never scored: no correctCount,
+  SM-2 or answer-log writes. All model text through `esc()`.
+- **`window.SF_GUIDE_OFF = true` turns it off.** `test_moment.js`,
+  `walk_pic.js`, `walk_model.js` and `test_visuals.js` set it, because they test
+  the old walkthroughs, which are still the fallback.
+- **Not covered by the morning suite yet** - checked by hand on real page loads
+  (mocked and with three live replies: a journey, a lookup, a maths problem)
+  at 1024 and 375px, light and dark. A `test_guide.js` is the next thing to write.
 
 ### The walkthrough of a picture — `sfPicWalkFor`, `sfPicWalkRender`
 

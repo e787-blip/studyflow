@@ -81,6 +81,7 @@ const assert = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) pro
   // walkthrough board: cached, no new call
   const hasWalk = await page.locator('.sfwb-explain').count();
   if (hasWalk) {
+    await page.evaluate(() => { window.SF_GUIDE_OFF = true; }); // the old board, not the guided sheet
     await page.locator('.sfwb-explain').first().click();
     await page.waitForTimeout(900);
     const b = await page.evaluate(() => { const h = document.querySelector('#pw-fig .sf-moment') || document.querySelector('.sf-moment-board .sf-moment'); return h && h.getAttribute('data-state'); });
