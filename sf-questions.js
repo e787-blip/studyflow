@@ -88,7 +88,22 @@
     return '';
   }
 
+  /* No model-drawn labelling card (Oct 2026, the owner's call). Its slot
+     becomes the closest card that needs no drawing: name the parts from
+     memory (recall), or a fill-in when the day already has a recall. The
+     schema and the tally both go through this, so they still agree. */
+  function noDrawn(types) {
+    var out = [], hasRecall = false, i;
+    for (i = 0; i < types.length; i++) if (String(types[i]).split(':')[0] === 'recall') hasRecall = true;
+    for (i = 0; i < types.length; i++) {
+      if (String(types[i]).split(':')[0] === 'labeldiagram') { out.push(hasRecall ? 'fill' : 'recall'); hasRecall = true; }
+      else out.push(types[i]);
+    }
+    return out;
+  }
+
   function buildQuestionSchema(types, d) {
+    types = noDrawn(types || []);
     var out = [], i, frag;
     for (i = 0; i < types.length; i++) {
       frag = qtpl(types[i], d, i);
@@ -113,6 +128,7 @@
      strings before, and a tally that disagrees with the schema is read by the
      model as permission to improvise. */
   function tallyFor(types) {
+    types = noDrawn(types || []);
     var order = [], counts = {}, i, base;
     for (i = 0; i < types.length; i++) {
       base = String(types[i]).split(':')[0];

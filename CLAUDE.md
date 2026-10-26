@@ -712,6 +712,16 @@ validators off the plan builder's real page).
 
 ### `labeldiagram` — the learner acts on the picture
 
+**No model-drawn labelling card since Oct 2026** (the owner: "none of that
+drawing"). The model's drawings came out as circles with pins on top of each
+other. `noDrawn()` in `sf-questions.js` turns any `labeldiagram` in a mix into
+`recall` (or `fill` when the day already has a recall) before the schema and
+the tally, so the two still agree; the drawing instructions and the
+atmosphere example left the day prompt (~39k to ~27k characters on a cell
+day); and `labelDiagramOk` refuses a saved plan's model drawing, so the
+labelling card built from the lesson's REAL picture (`lessonLabelQuestion`)
+takes its place. What follows describes the model-drawn card as it was.
+
 A drawing with numbered pins and a menu per pin. It is the only format in
 the app where the learner does something TO an image rather than reading
 one, and it exists because drawing-to-learn is the largest effect in the
@@ -1714,6 +1724,13 @@ exemplar labels its four layers + ozone; a concept web is refused; across all
 still 10 bigequation / 2 wordproblem.
 
 ### Drawn on the spot, for the question just answered — `requestMomentArt`
+
+**OFF since Oct 2026 (the owner: "just get rid of that drawing, it just keeps
+popping up").** `MOMENT_ON = false` beside `momentCanDraw` turns off every
+place below - the automatic drawing after a miss, "Draw it for me", the
+walkthrough's and the results screen's - and no drawing call is made. The code
+is kept; flip that one line to bring it back. What follows describes it as it
+was.
 
 The lesson draws one picture a day. A learner who has just missed a question
 needs a different one: the ONE thing this answer is about, drawn big, with

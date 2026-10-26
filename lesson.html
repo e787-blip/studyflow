@@ -5714,7 +5714,16 @@
     return momentStr(q.correctAnswer || q.modelAnswer, 200);
   }
 
+  /* OFF (Oct 2026, the owner's call: "just get rid of that drawing, it
+     just keeps popping up"). Every place a model drawing was offered or
+     drawn for a question - automatically after a miss, "Draw it for me", the
+     walkthrough, the results list - asks this first, so false here removes
+     them all. The code below is kept, unreached; delete this line to bring
+     it back. */
+  var MOMENT_ON = false;
+
   function momentCanDraw(q, cardType) {
+    if (!MOMENT_ON) return false;
     if (!q || typeof SFSceneKit === 'undefined') return false;
     var t = fmStr(cardType || cardTypeFor(q)).toLowerCase(), qt = fmStr(q.type).toLowerCase();
     if (MOMENT_NEVER[t] || MOMENT_NEVER[qt]) return false;
@@ -9943,6 +9952,11 @@
        unanswerable card, so it is never queued rather than rendered empty. */
     if (!q) return false;
     if (q.svg) return ldArr(q.pins).length >= 2;
+    /* A picture the MODEL drew from coordinates is never queued any more
+       (Oct 2026, the owner's call): saved plans still carry them, and they
+       came out as circles with the pins on top of each other. The lesson's
+       own real picture takes the slot instead (the placeholder below). */
+    if (q.drawing || q.diagram) return false;
     if (typeof SFSceneKit === 'undefined') return false;
     var pins = ldArr(q.pins).filter(function (p) {
       return p && fmStr(p.answer) && isFinite(p.x) && isFinite(p.y);
