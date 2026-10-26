@@ -26,6 +26,7 @@ const tag = process.argv[3] || 'w';
   await page.screenshot({ path: tag + '_0card.png', fullPage: true });
   const hasBtn = await page.$('.sfwb-explain');
   if (!hasBtn) { console.log('no walkthrough button'); await browser.close(); return; }
+  await page.evaluate(() => { window.SF_GUIDE_OFF = true; }); // the picture walk, not the guided sheet
   await page.click('.sfwb-explain'); await page.waitForTimeout(900);
   const info = await page.evaluate(() => ({ type: window.currentCard && window.currentCard.type, kind: window.currentCard && window.currentCard.walk && window.currentCard.walk.kind, rows: window.currentCard && window.currentCard.walk && window.currentCard.walk.rows.map(r => r.label + ': ' + r.detail) }));
   console.log(JSON.stringify(info, null, 1));

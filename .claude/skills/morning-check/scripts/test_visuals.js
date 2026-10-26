@@ -75,7 +75,7 @@ const wrong = page => page.evaluate(() => {
     if (t === 'sentence') break;
     await page.evaluate(() => showNextCard()); await page.waitForTimeout(100);
   }
-  await page.evaluate(() => window.sfwbExplain(window.currentCard.q.explanation || ''));
+  await page.evaluate(() => { window.SF_GUIDE_OFF = true; window.sfwbExplain(window.currentCard.q.explanation || ''); });
   await page.waitForTimeout(700);
   const walk = await page.evaluate(() => ({ t: window.currentCard && window.currentCard.type, kind: window.currentCard && window.currentCard.walk && window.currentCard.walk.kind,
     labels: ((window.currentCard && window.currentCard.walk && window.currentCard.walk.rows) || []).map(r => r.label) }));

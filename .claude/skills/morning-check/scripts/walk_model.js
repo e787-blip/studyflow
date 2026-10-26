@@ -17,6 +17,7 @@ const FX = require('./bigday');
   await page.waitForTimeout(500);
   await page.evaluate(() => { document.querySelectorAll('.ld-sel').forEach(s => { s.selectedIndex = s.options.length - 1; }); document.getElementById('ld-check-btn').click(); });
   await page.waitForTimeout(600);
+  await page.evaluate(() => { window.SF_GUIDE_OFF = true; }); // the picture walk, not the guided sheet
   await page.click('.sfwb-explain'); await page.waitForTimeout(700);
   const kind = await page.evaluate(() => window.currentCard.walk && window.currentCard.walk.kind);
   console.log('kind', kind);
