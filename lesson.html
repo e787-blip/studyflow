@@ -1029,36 +1029,199 @@
   .end-btn { display:block; margin:1.3rem auto 0; background:none; border:0; color:var(--muted); padding:.6rem 1.1rem; border-radius:999px; font-family:var(--sans); font-size:0.84rem; font-weight:500; cursor:pointer; }
   .end-btn:hover { color:var(--red); background:rgba(239,68,68,.07); }
 
-  /* AI CHAT (VIP) */
+  /* AI TUTOR (VIP) - redesigned Oct 2026 (apple-design, animate).
+     A floating glass panel that grows out of its button on a desktop, and a
+     bottom sheet you can drag down on a phone. Opening and closing are
+     TRANSITIONS on one class, never keyframes, so a second tap mid-flight
+     reverses from where the panel is (interruptible), and it leaves along
+     the path it came in by. Replies are rendered by chatRich, never shown
+     as raw text: a model's **bold** used to arrive as literal asterisks. */
   .chat-fab {
-    position:fixed; bottom:2rem; right:2rem; width:52px; height:52px; border-radius:50%;
-    background:linear-gradient(135deg,#4a7cf6,#2851c8); color:#fff; border:none; cursor:pointer;
-    display:none; align-items:center; justify-content:center; font-size:1.3rem;
-    box-shadow:0 6px 20px rgba(74,124,246,.4); transition:all .3s; z-index:300;
+    position:fixed; bottom:max(1.5rem, calc(env(safe-area-inset-bottom) + .75rem)); right:1.5rem;
+    width:54px; height:54px; border-radius:50%; padding:0;
+    background:var(--blue); color:#fff; border:none; cursor:pointer;
+    display:none; align-items:center; justify-content:center; z-index:302;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.28), 0 10px 26px rgba(53,99,233,.30), 0 2px 6px rgba(26,29,46,.12);
+    transition:transform var(--spring-fast-ms) var(--spring-fast), box-shadow .2s ease;
+    -webkit-tap-highlight-color:transparent; touch-action:manipulation;
   }
   .chat-fab.show { display:flex; }
-  .chat-fab:hover { box-shadow:0 10px 28px rgba(74,124,246,.5); }
-  .chat-fab:active { transform:scale(.92); transition-duration:80ms; }
-  .chat-panel {
-    position:fixed; bottom:6rem; right:2rem; width:320px; max-height:420px;
-    background:#fff; border:1.5px solid var(--border); border-radius:20px;
-    box-shadow:0 16px 48px rgba(74,124,246,.2); z-index:300; display:none;
-    flex-direction:column; overflow:hidden; animation:fadeUp .3s cubic-bezier(0.16,1,.3,1);
+  @media (hover:hover) and (pointer:fine) {
+    .chat-fab:hover { box-shadow:inset 0 1px 0 rgba(255,255,255,.28), 0 14px 32px rgba(53,99,233,.36), 0 2px 6px rgba(26,29,46,.12); }
   }
-  .chat-panel.open { display:flex; }
-  .chat-header { background:linear-gradient(135deg,#4a7cf6,#2851c8); padding:1rem 1.2rem; display:flex; align-items:center; justify-content:space-between; }
-  .chat-header h4 { color:#fff; font-size:0.9rem; font-weight:600; }
-  .chat-header p { color:rgba(255,255,255,.7); font-size:0.72rem; }
-  .chat-close { background:none; border:none; color:rgba(255,255,255,.7); cursor:pointer; font-size:1.1rem; }
-  .chat-messages { flex:1; overflow-y:auto; padding:1rem; display:flex; flex-direction:column; gap:.6rem; }
-  .chat-msg { padding:.65rem .9rem; border-radius:12px; font-size:0.85rem; line-height:1.5; max-width:85%; }
-  .chat-msg.ai { background:var(--soft); color:var(--ink); align-self:flex-start; }
-  .chat-msg.user { background:var(--blue); color:#fff; align-self:flex-end; }
-  .chat-input-row { padding:.75rem; border-top:1px solid var(--border); display:flex; gap:.5rem; }
-  .chat-input { flex:1; padding:.6rem .85rem; border:1.5px solid var(--border); border-radius:10px; font-family:var(--sans); font-size:0.85rem; outline:none; transition:border-color .2s; }
-  .chat-input:focus { border-color:var(--blue); }
-  .chat-send { background:var(--blue); color:#fff; border:none; border-radius:10px; padding:.6rem .9rem; cursor:pointer; font-size:0.85rem; transition:background .2s; }
-  .chat-send:hover { background:#3567e0; }
+  .chat-fab:active { transform:scale(.92); transition-duration:80ms; }
+  .chat-fab:focus-visible { outline:2px solid var(--blue); outline-offset:3px; }
+  /* The mark and the close glyph trade places when the panel is open. */
+  .chat-fab .cf-mark, .chat-fab .cf-x { position:absolute; display:flex;
+    transition:opacity .16s ease-out, transform var(--spring-ms) var(--spring); }
+  .chat-fab .cf-x { opacity:0; transform:rotate(-90deg) scale(.6); }
+  .chat-fab.is-open .cf-mark { opacity:0; transform:rotate(90deg) scale(.6); }
+  .chat-fab.is-open .cf-x { opacity:1; transform:none; }
+
+  .chat-scrim { position:fixed; inset:0; z-index:300; background:rgba(14,18,32,.34);
+    opacity:0; visibility:hidden; transition:opacity .22s ease-out, visibility 0s linear .22s; }
+
+  .chat-panel {
+    position:fixed; z-index:301; right:1.5rem;
+    bottom:calc(max(1.5rem, calc(env(safe-area-inset-bottom) + .75rem)) + 54px + 14px);
+    width:min(396px, calc(100vw - 2rem)); height:min(620px, calc(100dvh - 150px));
+    display:flex; flex-direction:column; overflow:hidden;
+    background:rgba(255,255,255,.9);
+    -webkit-backdrop-filter:blur(30px) saturate(160%); backdrop-filter:blur(30px) saturate(160%);
+    border:1px solid rgba(26,29,46,.08); border-radius:26px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.75), 0 28px 70px rgba(26,29,46,.18), 0 6px 18px rgba(26,29,46,.08);
+    /* Grows from the button's centre: 27px in from the right, 41px below. */
+    transform-origin:calc(100% - 27px) calc(100% + 41px);
+    opacity:0; transform:translateY(12px) scale(.92); visibility:hidden; pointer-events:none;
+    transition:opacity .16s ease-out, transform .22s cubic-bezier(.23,1,.32,1), visibility 0s linear .22s;
+    font-family:var(--sans); color:var(--ink);
+  }
+  .chat-panel.open { opacity:1; transform:none; visibility:visible; pointer-events:auto;
+    transition:opacity .2s ease-out, transform var(--spring-ms) var(--spring), visibility 0s; }
+  .chat-panel.is-dragging { transition:none !important; }
+
+  .chat-head { position:relative; display:flex; align-items:center; gap:.7rem;
+    padding:.95rem .8rem .8rem 1.05rem; flex-shrink:0; }
+  .chat-grab { display:none; position:absolute; top:7px; left:50%; width:38px; height:5px; margin-left:-19px;
+    border-radius:3px; background:rgba(26,29,46,.18); }
+  .chat-avatar { width:34px; height:34px; border-radius:11px; flex-shrink:0; background:var(--blue);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.28); }
+  .chat-id { flex:1; min-width:0; }
+  .chat-title { margin:0; font-family:var(--sans); font-size:.95rem; font-weight:650; letter-spacing:-.01em; line-height:1.2; }
+  .chat-ctx { margin:.1rem 0 0; font-size:.74rem; color:var(--muted); line-height:1.3;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:opacity .2s ease; }
+  .chat-ctx.is-swap { opacity:0; }
+  .chat-icon-btn { width:34px; height:34px; border-radius:50%; border:0; flex-shrink:0;
+    background:rgba(26,29,46,.06); color:var(--ink); cursor:pointer; padding:0;
+    display:flex; align-items:center; justify-content:center;
+    transition:background .16s ease, transform var(--spring-fast-ms) var(--spring-fast);
+    -webkit-tap-highlight-color:transparent; }
+  @media (hover:hover) and (pointer:fine) { .chat-icon-btn:hover { background:rgba(26,29,46,.1); } }
+  .chat-icon-btn:active { transform:scale(.9); transition-duration:80ms; }
+  .chat-icon-btn:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
+
+  /* The thread. Edges fade instead of a hard divider under the header. */
+  .chat-messages { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+    padding:.5rem 1rem 1rem; display:flex; flex-direction:column; gap:.55rem;
+    -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 10px), transparent 100%);
+    mask-image:linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 10px), transparent 100%); }
+  .chat-msg { max-width:88%; padding:.62rem .85rem; border-radius:18px; font-size:.88rem; line-height:1.5;
+    overflow-wrap:anywhere; animation:chatIn .26s cubic-bezier(.23,1,.32,1) backwards; }
+  .chat-msg.ai { align-self:flex-start; background:rgba(26,29,46,.05); color:var(--ink);
+    border-bottom-left-radius:6px; transform-origin:0 100%; }
+  .chat-msg.user { align-self:flex-end; background:var(--blue); color:#fff;
+    border-bottom-right-radius:6px; transform-origin:100% 100%; }
+  @keyframes chatIn { from { opacity:0; transform:translateY(6px) scale(.97); } }
+  /* Each paragraph of a reply arrives a beat after the one before. */
+  .chat-msg.ai p, .chat-msg.ai li { animation:chatLine .32s cubic-bezier(.23,1,.32,1) backwards;
+    animation-delay:calc(var(--i, 0) * 55ms + 40ms); }
+  @keyframes chatLine { from { opacity:0; transform:translateY(4px); } }
+  .chat-msg p { margin:0; }
+  .chat-msg p + p, .chat-msg p + ul, .chat-msg p + ol, .chat-msg ul + p, .chat-msg ol + p { margin-top:.5rem; }
+  .chat-msg ul, .chat-msg ol { margin:.15rem 0 0; padding-left:1.15rem; }
+  .chat-msg li { margin:.18rem 0; padding-left:.1rem; }
+  .chat-msg li::marker { color:var(--blue); font-weight:600; }
+  .chat-msg strong { font-weight:650; }
+  .chat-msg code { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.82em;
+    background:rgba(74,124,246,.1); padding:.05em .3em; border-radius:5px; }
+  .chat-msg.err { background:rgba(239,68,68,.07); }
+  .chat-retry { margin-top:.45rem; display:inline-flex; border:0; background:none; padding:0;
+    color:var(--blue); font:inherit; font-weight:600; cursor:pointer; }
+  .chat-retry:focus-visible { outline:2px solid var(--blue); outline-offset:2px; border-radius:4px; }
+
+  .chat-thinking { display:flex; gap:5px; align-items:center; padding:.8rem .95rem; }
+  .chat-thinking span { width:7px; height:7px; border-radius:50%; background:var(--muted);
+    animation:chatDot 1.1s ease-in-out infinite; }
+  .chat-thinking span:nth-child(2) { animation-delay:.15s; }
+  .chat-thinking span:nth-child(3) { animation-delay:.3s; }
+  @keyframes chatDot { 0%, 80%, 100% { opacity:.3; transform:scale(.85); } 40% { opacity:1; transform:none; } }
+
+  /* Empty state: what the tutor can see, and where to start. */
+  .chat-hello { margin:auto 0 .25rem; padding:.4rem .15rem .2rem; }
+  .chat-hello h3 { margin:0 0 .3rem; font-family:var(--serif); font-weight:400; font-size:1.65rem;
+    line-height:1.08; letter-spacing:-.015em; }
+  .chat-hello p { margin:0; font-size:.86rem; color:var(--muted); line-height:1.45; max-width:30ch; }
+
+  /* Suggestions, built from what is on screen (chatSuggestions). A column
+     while the thread is empty, one swipeable row once it is not. */
+  .chat-sugg { display:flex; gap:.45rem; padding:0 1rem .55rem; flex-shrink:0;
+    overflow-x:auto; scroll-snap-type:x proximity; scroll-padding-inline:1rem; scrollbar-width:none; }
+  .chat-sugg::-webkit-scrollbar { display:none; }
+  .chat-sugg:empty { display:none; }
+  .chat-panel.is-empty .chat-sugg { flex-direction:column; align-items:flex-start; overflow:visible; }
+  .chat-chip { flex-shrink:0; scroll-snap-align:start; max-width:100%;
+    border:1px solid rgba(74,124,246,.28); background:rgba(255,255,255,.7); color:#2f5fd9;
+    font-family:var(--sans); font-size:.82rem; font-weight:550; line-height:1.25;
+    padding:.5rem .8rem; border-radius:999px; cursor:pointer; text-align:left;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    animation:chatChip .3s cubic-bezier(.23,1,.32,1) backwards; animation-delay:calc(var(--i, 0) * 40ms);
+    transition:background .16s ease, border-color .16s ease, transform var(--spring-fast-ms) var(--spring-fast);
+    -webkit-tap-highlight-color:transparent; }
+  .chat-panel.is-empty .chat-chip { white-space:normal; }
+  @keyframes chatChip { from { opacity:0; transform:translateY(5px); } }
+  @media (hover:hover) and (pointer:fine) { .chat-chip:hover { background:rgba(74,124,246,.08); border-color:rgba(74,124,246,.45); } }
+  .chat-chip:active { transform:scale(.96); transition-duration:80ms; }
+  .chat-chip:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
+
+  .chat-compose { flex-shrink:0; padding:.15rem .75rem calc(.75rem + env(safe-area-inset-bottom)); }
+  .chat-field { display:flex; align-items:flex-end; gap:.4rem; padding:.3rem .3rem .3rem .95rem;
+    background:var(--white); border:1px solid rgba(26,29,46,.1); border-radius:22px;
+    box-shadow:0 1px 2px rgba(26,29,46,.04); transition:border-color .18s ease, box-shadow .18s ease; }
+  .chat-field:focus-within { border-color:rgba(74,124,246,.55); box-shadow:0 0 0 4px rgba(74,124,246,.12); }
+  .chat-input { flex:1; min-width:0; border:0; outline:0; resize:none; background:transparent; color:var(--ink);
+    font-family:var(--sans); font-size:16px; line-height:1.4; padding:.42rem 0; max-height:7.2em; }
+  .chat-input::placeholder { color:var(--muted); }
+  .chat-send { width:34px; height:34px; border-radius:50%; border:0; padding:0; flex-shrink:0; cursor:pointer;
+    background:var(--blue); color:#fff; display:flex; align-items:center; justify-content:center;
+    transition:transform var(--spring-fast-ms) var(--spring-fast), background .16s ease, opacity .16s ease; }
+  .chat-send:disabled { background:rgba(26,29,46,.14); cursor:default; transform:scale(.88); }
+  .chat-send:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
+
+  body.dark .chat-panel { background:rgba(20,25,37,.86); border-color:rgba(255,255,255,.08);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 28px 70px rgba(0,0,0,.5); }
+  body.dark .chat-msg.ai { background:rgba(255,255,255,.06); }
+  body.dark .chat-icon-btn { background:rgba(255,255,255,.08); }
+  @media (hover:hover) and (pointer:fine) { body.dark .chat-icon-btn:hover { background:rgba(255,255,255,.13); } }
+  body.dark .chat-chip { background:rgba(255,255,255,.04); border-color:rgba(122,160,255,.32); color:#a9c2ff; }
+  body.dark .chat-field { background:#0f131d; border-color:rgba(255,255,255,.1); }
+  body.dark .chat-send:disabled { background:rgba(255,255,255,.12); }
+  body.dark .chat-grab { background:rgba(255,255,255,.22); }
+  body.dark .chat-msg code { background:rgba(122,160,255,.16); }
+
+  /* A phone gets a bottom sheet: the page dims behind it (it is the task
+     now), and the header drags it down (chatDragInit). */
+  @media (max-width:600px) {
+    .chat-fab { right:1rem; bottom:max(1.1rem, calc(env(safe-area-inset-bottom) + .6rem)); width:50px; height:50px; }
+    .chat-panel { left:0; right:0; bottom:0; width:100%; height:min(80dvh, 660px);
+      border-radius:26px 26px 0 0; border-bottom:0;
+      transform:translateY(104%); transform-origin:50% 100%;
+      transition:transform .26s cubic-bezier(.32,.72,0,1), visibility 0s linear .26s; opacity:1; }
+    .chat-panel.open { transform:none; transition:transform var(--spring-ms) var(--spring), visibility 0s; }
+    .chat-grab { display:block; }
+    .chat-head { padding-top:1.35rem; touch-action:none; cursor:grab; }
+    .chat-scrim.open { opacity:1; visibility:visible; transition:opacity .26s ease-out, visibility 0s; }
+    .chat-fab.is-open { opacity:0; pointer-events:none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chat-panel, .chat-panel.open { transform:none !important;
+      transition:opacity .2s ease, visibility 0s linear .2s !important; }
+    .chat-panel.open { transition:opacity .2s ease, visibility 0s !important; }
+    .chat-msg, .chat-msg.ai p, .chat-msg.ai li, .chat-chip { animation:chatFade .2s ease backwards; animation-delay:0s; }
+    .chat-thinking span { animation:none; opacity:.6; }
+    .chat-fab .cf-mark, .chat-fab .cf-x { transform:none !important; transition:opacity .16s ease; }
+    @keyframes chatFade { from { opacity:0; } }
+  }
+  @media (prefers-reduced-motion: reduce) and (max-width:600px) {
+    .chat-panel { opacity:0; }
+    .chat-panel.open { opacity:1; }
+  }
+  @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+    .chat-panel { background:var(--white); -webkit-backdrop-filter:none; backdrop-filter:none; border-color:var(--border); }
+  }
+  @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+    .chat-panel { background:var(--white); }
+  }
 
   /* RESULTS */
   .results-wrap { display:none; animation:sfCardIn var(--spring-ms) var(--spring) both; }
@@ -1153,9 +1316,6 @@
   body.dark .wrong-reviews { background:#161b28; }
   body.dark .wrong-item { background:#1e2336; }
   body.dark .results-stats .r-stat { background:#161b28; }
-  body.dark .chat-panel { background:#161b28; border-color:#222840; }
-  body.dark .chat-msg.ai { background:#1e2336; color:#e8eeff; }
-  body.dark .chat-input { background:#1e2336; border-color:#222840; color:#e8eeff; }
   body.dark .end-btn { color:var(--muted); }
 
   /* ── MOBILE ── */
@@ -1197,11 +1357,6 @@
     .r-stat-label { font-size:0.65rem; }
     /* Next button bigger on mobile */
     .btn-next { padding:.85rem 1.4rem; font-size:0.92rem; border-radius:999px; min-height:48px; }
-    /* Chat */
-    .chat-fab { bottom:1.2rem; right:1rem; width:48px; height:48px; }
-    .chat-panel { width:calc(100vw - 1.5rem); right:.75rem; bottom:4.5rem; max-height:65vh; }
-    .chat-header { padding:.85rem 1rem; }
-    .chat-messages { max-height:200px; }
     /* Streak pill - sizes itself from its content now, so no fixed square. */
     .streak-mark { width:12px; height:12px; }
     /* Milestone/Struggling banners */
@@ -1637,49 +1792,58 @@
 </div>
 
 <!-- VIP AI CHAT -->
-<button class="chat-fab" id="chat-fab" onclick="toggleChat()" title="AI Study Tutor (VIP)">
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="28" height="28">
-    <rect x="5" y="5" width="17" height="22" rx="3" fill="rgba(255,255,255,0.25)"/>
-    <rect x="8" y="5" width="17" height="22" rx="3" fill="rgba(255,255,255,0.4)"/>
-    <rect x="11" y="5" width="17" height="22" rx="3" fill="white"/>
-    <rect x="14" y="11" width="11" height="2" rx="1" fill="#4a7cf6"/>
-    <rect x="14" y="16" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
-    <rect x="14" y="21" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
-    <path d="M30 3 L31.2 7 L35 8.5 L31.2 10 L30 14 L28.8 10 L25 8.5 L28.8 7 Z" fill="white"/>
-  </svg>
+<button class="chat-fab" id="chat-fab" onclick="toggleChat()" aria-label="Study tutor" aria-expanded="false" aria-controls="chat-panel" title="Study tutor (VIP)">
+  <span class="cf-mark" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="28" height="28">
+      <rect x="5" y="5" width="17" height="22" rx="3" fill="rgba(255,255,255,0.25)"/>
+      <rect x="8" y="5" width="17" height="22" rx="3" fill="rgba(255,255,255,0.4)"/>
+      <rect x="11" y="5" width="17" height="22" rx="3" fill="white"/>
+      <rect x="14" y="11" width="11" height="2" rx="1" fill="#4a7cf6"/>
+      <rect x="14" y="16" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
+      <rect x="14" y="21" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
+      <path d="M30 3 L31.2 7 L35 8.5 L31.2 10 L30 14 L28.8 10 L25 8.5 L28.8 7 Z" fill="white"/>
+    </svg>
+  </span>
+  <span class="cf-x" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </span>
 </button>
-<div class="chat-panel" id="chat-panel">
-  <div class="chat-header">
-    <div style="display:flex;align-items:center;gap:.75rem;">
-      <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="22" height="22">
-          <rect x="5" y="5" width="17" height="22" rx="3" fill="rgba(255,255,255,0.3)"/>
-          <rect x="8" y="5" width="17" height="22" rx="3" fill="rgba(255,255,255,0.5)"/>
-          <rect x="11" y="5" width="17" height="22" rx="3" fill="white"/>
-          <rect x="14" y="11" width="11" height="2" rx="1" fill="#4a7cf6"/>
-          <rect x="14" y="16" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
-          <rect x="14" y="21" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
-          <path d="M30 3 L31.2 7 L35 8.5 L31.2 10 L30 14 L28.8 10 L25 8.5 L28.8 7 Z" fill="white"/>
-        </svg>
-      </div>
-      <div>
-        <h4 style="color:#fff;font-size:0.9rem;font-weight:700;margin:0;">AI Study Tutor</h4>
-        <p style="color:rgba(255,255,255,.7);font-size:0.7rem;margin:0;">Ask anything about today's lesson</p>
-      </div>
+<div class="chat-scrim" id="chat-scrim" onclick="toggleChat(false)"></div>
+<div class="chat-panel is-empty" id="chat-panel" role="dialog" aria-label="Study tutor" aria-hidden="true">
+  <div class="chat-head" id="chat-head">
+    <div class="chat-grab" aria-hidden="true"></div>
+    <div class="chat-avatar" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="22" height="22">
+        <rect x="5" y="5" width="17" height="22" rx="3" fill="rgba(255,255,255,0.3)"/>
+        <rect x="8" y="5" width="17" height="22" rx="3" fill="rgba(255,255,255,0.5)"/>
+        <rect x="11" y="5" width="17" height="22" rx="3" fill="white"/>
+        <rect x="14" y="11" width="11" height="2" rx="1" fill="#4a7cf6"/>
+        <rect x="14" y="16" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>
+        <rect x="14" y="21" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>
+        <path d="M30 3 L31.2 7 L35 8.5 L31.2 10 L30 14 L28.8 10 L25 8.5 L28.8 7 Z" fill="white"/>
+      </svg>
     </div>
-    <div style="display:flex;gap:.4rem;align-items:center;">
-      <button onclick="clearChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;cursor:pointer;font-size:0.72rem;font-family:var(--sans);font-weight:600;padding:.3rem .6rem;border-radius:6px;transition:background .2s;" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">Clear</button>
-      <button class="chat-close" onclick="toggleChat()">×</button>
+    <div class="chat-id">
+      <h2 class="chat-title">Study tutor</h2>
+      <p class="chat-ctx" id="chat-ctx">Knows today's lesson</p>
     </div>
-  </div>
-  <div class="chat-messages" id="chat-messages">
-    <div class="chat-msg ai">Hi! I'm your personal AI tutor for this session. I know your lesson content and can see what you've gotten right or wrong. Ask me anything.</div>
-  </div>
-  <div class="chat-input-row">
-    <input class="chat-input" id="chat-input" placeholder="Ask about today's lesson..." onkeydown="if(event.key==='Enter')sendChat()" />
-    <button class="chat-send" onclick="sendChat()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    <button class="chat-icon-btn" onclick="clearChat()" aria-label="New chat" title="New chat">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
     </button>
+    <button class="chat-icon-btn" onclick="toggleChat(false)" aria-label="Close" title="Close">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="chat-messages" id="chat-messages" aria-live="polite"></div>
+  <div class="chat-sugg" id="chat-sugg" aria-label="Suggestions"></div>
+  <div class="chat-compose">
+    <div class="chat-field">
+      <textarea class="chat-input" id="chat-input" rows="1" data-sf-enter="self" enterkeyhint="send"
+        placeholder="Ask about this card" aria-label="Message the tutor"></textarea>
+      <button class="chat-send" id="chat-send" onclick="sendChat()" aria-label="Send" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -12476,80 +12640,468 @@
     }, 1000);
   }
 
-  /* ── VIP CHAT ── */
+  /* ── VIP CHAT (the study tutor) ─────────────────────────────────────────
+     Redesigned Oct 2026. Three things it does that it did not:
+
+     1. It knows what is ON SCREEN (chatScene): which card, whether the
+        question has been answered, what was answered and what was right
+        (only once it HAS been answered - before that the right answer never
+        leaves the page), and the words of the picture showing. It used to
+        send sessionCards[cardIndex] as "the current question", which is the
+        NEXT pre-built card (cardIndex is already past the one on screen),
+        and nothing at all for a card served from the buffer.
+     2. It offers what to ask from that (chatSuggestions), refreshed as the
+        card changes underneath it.
+     3. Replies go through chatRich, never textContent. The model writes
+        Markdown however it is asked not to, and "**Photosynthesis**" was
+        printed with its asterisks. chatRich turns bold, lists and code into
+        markup, reads a lone * between two operands as a times sign, and
+        drops any asterisk left - so none can reach the learner. Every
+        character of the reply is escaped first. */
   var chatHistory = [];
   var chatOpen = false;
+  var chatBusy = false;
+  var chatWatch = null, chatWatchT = 0;
 
-  function toggleChat() {
-    chatOpen = !chatOpen;
-    document.getElementById('chat-panel').classList.toggle('open', chatOpen);
-    if (chatOpen) document.getElementById('chat-input').focus();
+  function chatEl(id) { return document.getElementById(id); }
+  function chatPhone() { return !!(window.matchMedia && window.matchMedia('(max-width:600px)').matches); }
+  function chatCoarse() { return !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches); }
+
+  function toggleChat(force) {
+    var open = typeof force === 'boolean' ? force : !chatOpen;
+    if (open === chatOpen) return;
+    chatOpen = open;
+    var panel = chatEl('chat-panel'), fab = chatEl('chat-fab'), scrim = chatEl('chat-scrim');
+    panel.classList.toggle('open', open);
+    panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+    if (scrim) scrim.classList.toggle('open', open);
+    if (fab) { fab.classList.toggle('is-open', open); fab.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+    if (open) {
+      chatRefresh(true);
+      chatWatchStart();
+      /* A phone's keyboard would cover half the sheet before the learner
+         has read the suggestions; let them tap the field themselves. */
+      if (!chatCoarse()) setTimeout(function () { try { chatEl('chat-input').focus({ preventScroll: true }); } catch (e) {} }, 60);
+    } else {
+      chatWatchStop();
+      /* Hand focus back to the button (offsetParent is always null for a
+         fixed element, so test that it is laid out at all). */
+      if (panel.contains(document.activeElement)) {
+        if (fab && fab.getClientRects().length) fab.focus({ preventScroll: true });
+        else if (document.activeElement.blur) document.activeElement.blur();
+      }
+    }
   }
 
   function clearChat() {
     chatHistory = [];
-    document.getElementById('chat-messages').innerHTML = '<div class="chat-msg ai">Chat cleared! Ask me anything about today\'s lesson. </div>';
+    chatBusy = false;
+    chatEl('chat-messages').innerHTML = '';
+    chatRefresh(true);
+    try { chatEl('chat-input').focus({ preventScroll: true }); } catch (e) {}
   }
 
-  function sendChat() {
-    var input = document.getElementById('chat-input');
-    var msg = input.value.trim();
-    if (!msg) return;
-    input.value = '';
-    addChatMsg(msg, 'user');
-    chatHistory.push({ role: 'user', content: msg });
+  /* ── What is on screen ── */
+  function chatPicture() {
+    var sc = chatEl('session-card');
+    if (!sc) return null;
+    var svgs = sc.querySelectorAll('svg'), best = null, bestA = 0, i;
+    for (i = 0; i < svgs.length; i++) {
+      var s = svgs[i];
+      if (s.closest('button') || s.closest('.chat-panel')) continue;
+      if (s.querySelectorAll('text').length < 2) continue;
+      var r = s.getBoundingClientRect(), a = r.width * r.height;
+      if (r.width < 120 || a <= bestA) continue;
+      best = s; bestA = a;
+    }
+    if (!best) return null;
+    var seen = {}, labels = [], texts = best.querySelectorAll('text'), j;
+    for (j = 0; j < texts.length && labels.length < 14; j++) {
+      if (texts[j].closest('.sf-credit') || /sf-credit/.test(texts[j].getAttribute('class') || '')) continue;
+      /* A label set on two lines is two tspans with no space between them:
+         textContent alone reads "Right" + "Atrium" as "RightAtrium". */
+      var spans = texts[j].querySelectorAll('tspan'), t;
+      if (spans.length > 1) t = [].map.call(spans, function (sp) { return sp.textContent; }).join(' ');
+      else t = texts[j].textContent || '';
+      t = t.replace(/\s+/g, ' ').trim();
+      if (t.length < 2 || t.length > 40 || !/[A-Za-zÀ-ɏ]/.test(t)) continue;
+      var k = t.toLowerCase();
+      if (seen[k]) continue;
+      seen[k] = 1; labels.push(t);
+    }
+    if (labels.length < 2) return null;
+    var cap = '';
+    try { if (best.closest('#lesson-art')) cap = fmStr(lessonArtTitle()); } catch (e) { cap = ''; }
+    if (!cap) cap = fmStr(best.getAttribute('aria-label')).slice(0, 80);
+    return { caption: cap, labels: labels };
+  }
 
-    // Full context object sent to dedicated chat endpoint
-    var context = {
-      subject: plan.subject || 'General',
-      lessonTitle: day.title || '',
-      lessonContent: day.content || '',
-      missedQuestions: wrongItems.map(function(w){ return w.q ? w.q.question : ''; }).filter(Boolean),
-      accuracy: totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : null,
-      correctCount: correctCount,
-      currentQuestion: sessionCards[cardIndex] && sessionCards[cardIndex].q ? sessionCards[cardIndex].q.question : null
-    };
+  function chatScene() {
+    var card = window.currentCard || null;
+    var type = fmStr(card && card.type);
+    var q = card && card.q ? card.q : null;
+    var rw = chatEl('results-wrap');
+    var sc = { kind: 'other', label: 'Knows today’s lesson', card: type, picture: null };
+    if (rw && rw.classList.contains('show')) {
+      sc.kind = 'results'; sc.label = 'Looking at your results';
+      return sc;
+    }
+    sc.picture = chatPicture();
+    if (q && (q.question || q.prompt || q.text)) {
+      sc.kind = 'question';
+      sc.question = fmStr(q.question || q.prompt || q.text).replace(/\s+/g, ' ').slice(0, 400);
+      sc.answered = !!currentAnswered;
+      sc.label = sc.answered ? 'Looking at your answer' : 'Looking at this question';
+      if (sc.answered) {
+        var m = sfLogMark;
+        if (m && totalAnswered > m.t) sc.correct = (correctCount - m.c) >= (totalAnswered - m.t);
+        try { var said = m ? sfSaid(m) : ''; if (said && sc.correct === false) sc.yours = fmStr(said).slice(0, 160); } catch (e1) {}
+        try { var rt = fmStr(correctAnswerText(q)); if (rt && rt !== '—') sc.right = rt.slice(0, 200); } catch (e2) {}
+      }
+    } else if (type === 'lesson') { sc.kind = 'lesson'; sc.label = 'Looking at the lesson'; }
+    else if (type === 'flashcards') { sc.kind = 'flashcards'; sc.label = 'Looking at your flashcards'; }
+    else if (/^sfwb/.test(type)) { sc.kind = 'walkthrough'; sc.label = 'Looking at the walkthrough'; }
+    if (sc.picture && sc.kind !== 'question') sc.label = sc.label.replace(/^Looking at .*/, 'Looking at the ' + (sc.kind === 'lesson' ? 'lesson and its picture' : 'picture'));
+    return sc;
+  }
 
-    addChatMsg('', 'ai thinking');
+  /* A key term the learner can see, never one inside the answer. */
+  function chatTerm(sc) {
+    var terms = (day && Array.isArray(day.keyTerms)) ? day.keyTerms : [];
+    var hay = ((sc.question || '') + ' ' + (sc.picture ? sc.picture.labels.join(' ') : '')).toLowerCase();
+    var ans = '';
+    if (sc.kind === 'question') {
+      try { ans = fmStr(correctAnswerText(window.currentCard.q)).toLowerCase(); } catch (e) { ans = ''; }
+    }
+    for (var i = 0; i < terms.length; i++) {
+      var t = fmStr(terms[i] && typeof terms[i] === 'object' ? (terms[i].term || terms[i].name) : terms[i]).trim();
+      if (t.length < 3 || t.length > 28) continue;
+      var tl = t.toLowerCase();
+      if (sc.kind === 'question' && (!hay || hay.indexOf(tl) < 0)) continue;
+      if (ans && (ans.indexOf(tl) >= 0 || tl.indexOf(ans) >= 0)) continue;
+      return t;
+    }
+    return '';
+  }
 
-    fetch('api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: chatHistory.slice(), // full conversation history
-        context: context
-      })
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(data) {
-      var reply = data.reply || 'I\'m not sure — try reviewing your notes!';
-      var msgs = document.getElementById('chat-messages');
-      var thinking = msgs.querySelector('.thinking');
-      if (thinking) thinking.remove();
-      chatHistory.push({ role: 'assistant', content: reply });
-      addChatMsg(reply, 'ai');
-    })
-    .catch(function() {
-      var msgs = document.getElementById('chat-messages');
-      var thinking = msgs.querySelector('.thinking');
-      if (thinking) thinking.remove();
-      addChatMsg('Something went wrong — try again!', 'ai');
+  /* A part of the picture to ask about: a key term on it first, else its
+     longest plain label. */
+  function chatPart(sc) {
+    if (!sc.picture) return '';
+    var labels = sc.picture.labels, terms = (day && Array.isArray(day.keyTerms)) ? day.keyTerms : [], i, j;
+    for (i = 0; i < labels.length; i++) {
+      for (j = 0; j < terms.length; j++) {
+        var t = fmStr(terms[j] && typeof terms[j] === 'object' ? (terms[j].term || terms[j].name) : terms[j]).toLowerCase();
+        if (t && labels[i].toLowerCase() === t) return labels[i];
+      }
+    }
+    var best = '';
+    for (i = 0; i < labels.length; i++) {
+      var l = labels[i];
+      if (l.length > 24 || /\d{3,}/.test(l) || l === sc.picture.caption) continue;
+      if (l.length > best.length) best = l;
+    }
+    return best;
+  }
+
+  function chatSuggestions(sc) {
+    var out = [], asked = {}, h;
+    for (h = 0; h < chatHistory.length; h++) if (chatHistory[h].role === 'user') asked[chatHistory[h].content] = 1;
+    /* Never offer again what was just asked. */
+    function add(s) { if (s && !asked[s] && out.indexOf(s) < 0 && out.length < 4) out.push(s); }
+    var term = chatTerm(sc), part = chatPart(sc);
+    if (sc.kind === 'question') {
+      if (!sc.answered) {
+        add('Give me a hint, not the answer');
+        if (sc.picture) add('How does the picture help here?');
+        if (term) add('What does “' + term + '” mean?');
+        add('Say the question another way');
+      } else if (sc.correct === false) {
+        add('Why was my answer wrong?');
+        add('Explain the right answer');
+        if (sc.picture) add('Show me where it is in the picture');
+        add('Give me a similar one to try');
+      } else {
+        add('Why is that the right answer?');
+        add('Give me a harder one');
+        if (term) add('What does “' + term + '” mean?');
+      }
+    } else if (sc.kind === 'lesson') {
+      if (sc.picture) add('Walk me through the picture');
+      if (part) add('Tell me more about “' + part + '”');
+      add('Explain this part more simply');
+      add('Give me a real-life example');
+    } else if (sc.kind === 'flashcards') {
+      add('Quiz me on these terms');
+      if (term) add('Help me remember “' + term + '”');
+      add('Which of these get mixed up?');
+    } else if (sc.kind === 'results') {
+      if (wrongItems.length) { add('What should I review first?'); add('Quiz me on what I missed'); }
+      add('Sum up today in three lines');
+    } else if (sc.kind === 'walkthrough') {
+      add('Explain this step again');
+      if (part) add('Tell me more about “' + part + '”');
+      add('Why does this step come next?');
+    } else {
+      add('Explain today’s lesson simply');
+      add('Quiz me on today’s lesson');
+      add('What is the hardest part of this?');
+    }
+    return out;
+  }
+
+  function chatRefresh(force) {
+    if (!chatOpen && !force) return;
+    var sc = chatScene();
+    var ctx = chatEl('chat-ctx'), panel = chatEl('chat-panel');
+    if (ctx && ctx.textContent !== sc.label) {
+      ctx.classList.add('is-swap');
+      setTimeout(function () { ctx.textContent = sc.label; ctx.classList.remove('is-swap'); }, 160);
+    }
+    var empty = !chatHistory.length;
+    panel.classList.toggle('is-empty', empty);
+    var msgs = chatEl('chat-messages');
+    if (empty && !msgs.querySelector('.chat-hello')) {
+      msgs.innerHTML = '<div class="chat-hello"><h3>What can I help with?</h3>' +
+        '<p>I can see this card, today’s lesson and anything you’ve missed.</p></div>';
+    }
+    var list = chatSuggestions(sc), box = chatEl('chat-sugg');
+    var key = list.join('|');
+    if (box.getAttribute('data-key') === key && !force) return;
+    box.setAttribute('data-key', key);
+    box.innerHTML = '';
+    for (var i = 0; i < list.length; i++) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chat-chip';
+      b.style.setProperty('--i', i);
+      b.textContent = list[i];
+      b.onclick = (function (s) { return function () { sendChat(s); }; })(list[i]);
+      box.appendChild(b);
+    }
+  }
+
+  /* The card can change under an open panel (Next, an answer). Watch the
+     card while the panel is up, and only then. */
+  function chatWatchStart() {
+    var sc = chatEl('session-card');
+    if (!sc || chatWatch || !window.MutationObserver) return;
+    chatWatch = new MutationObserver(function () {
+      clearTimeout(chatWatchT);
+      chatWatchT = setTimeout(function () { chatRefresh(false); }, 220);
     });
+    chatWatch.observe(sc, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  }
+  function chatWatchStop() {
+    if (chatWatch) { chatWatch.disconnect(); chatWatch = null; }
+    clearTimeout(chatWatchT);
+  }
+
+  /* ── Replies: Markdown in, markup out, never an asterisk ── */
+  function chatInline(t) {
+    var h = escHtml(t);
+    h = h.replace(/\[([^\]]+)\]\([^)\s]*\)/g, '$1');                       // [text](url) -> text
+    h = h.replace(/`([^`]+)`/g, function (_, c) { return '<code>' + c.replace(/\*/g, '&#42;') + '</code>'; });
+    h = h.replace(/\*\*\s*([^*]+?)\s*\*\*/g, '<strong>$1</strong>');
+    h = h.replace(/__([^_]+?)__/g, '<strong>$1</strong>');
+    h = h.replace(/(^|[^\w*])\*(?=\S)([^*\n]+?)\*(?![\w*])/g, '$1<em>$2</em>');
+    /* 3 * 4, 2*x, (a+b) * c -> times. Operands are numbers, one-letter
+       variables or brackets only: "Stray * here" is prose, not maths. */
+    h = h.replace(/(\d|\b[A-Za-z]|[)\]])[ \t]*\*[ \t]*(?=\d|[A-Za-z]\b|[(\[])/g, '$1 × ');
+    h = h.replace(/[ \t]*\*+[ \t]*/g, function (m) { return /^[ \t]|[ \t]$/.test(m) ? ' ' : ''; });  // anything left is stray markup
+    h = h.replace(/&#42;/g, '*');                                            // ...except inside code
+    return h;
+  }
+  function chatRich(text) {
+    var s = fmStr(text).replace(/\r\n?/g, '\n').replace(/```[^\n]*\n?/g, '');
+    var lines = s.split('\n'), out = [], list = null, n = 0, i, m;
+    function close() { if (list) { out.push('</' + list + '>'); list = null; } }
+    for (i = 0; i < lines.length; i++) {
+      var t = lines[i].trim();
+      if (!t || /^([-*_]\s*){3,}$/.test(t)) { close(); continue; }            // blank, or a --- rule
+      var head = /^#{1,6}\s*\S/.test(t);
+      t = t.replace(/^#{1,6}\s*/, '').replace(/^>\s?/, '');
+      if (head) t = t.replace(/\s*#+\s*$/, '');                               // "## Title ##"
+      if (head) {
+        close();
+        out.push('<p style="--i:' + (n++) + '"><strong>' + chatInline(t.replace(/\*/g, '')) + '</strong></p>');
+      } else if ((m = t.match(/^[-*+•]\s+(.+)$/))) {
+        if (list !== 'ul') { close(); out.push('<ul>'); list = 'ul'; }
+        out.push('<li style="--i:' + (n++) + '">' + chatInline(m[1]) + '</li>');
+      } else if ((m = t.match(/^\d{1,2}[.)]\s+(.+)$/))) {
+        if (list !== 'ol') { close(); out.push('<ol>'); list = 'ol'; }
+        out.push('<li style="--i:' + (n++) + '">' + chatInline(m[1]) + '</li>');
+      } else {
+        close();
+        out.push('<p style="--i:' + (n++) + '">' + chatInline(t) + '</p>');
+      }
+    }
+    close();
+    return out.join('') || '<p></p>';
+  }
+
+  function chatScroll() {
+    var msgs = chatEl('chat-messages');
+    var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    try { msgs.scrollTo({ top: msgs.scrollHeight, behavior: still ? 'auto' : 'smooth' }); }
+    catch (e) { msgs.scrollTop = msgs.scrollHeight; }
   }
 
   function addChatMsg(text, who) {
-    var msgs = document.getElementById('chat-messages');
+    var msgs = chatEl('chat-messages');
+    var hello = msgs.querySelector('.chat-hello');
+    if (hello) hello.remove();
+    chatEl('chat-panel').classList.remove('is-empty');
     var div = document.createElement('div');
-    if (who === 'ai thinking') {
-      div.className = 'chat-msg ai thinking';
-      div.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+    if (who === 'thinking') {
+      div.className = 'chat-msg ai chat-thinking';
+      div.setAttribute('aria-label', 'The tutor is thinking');
+      div.innerHTML = '<span></span><span></span><span></span>';
+    } else if (who === 'error') {
+      div.className = 'chat-msg ai err';
+      div.innerHTML = '<p>' + escHtml(text) + '</p><button class="chat-retry" type="button">Try again</button>';
+      div.querySelector('.chat-retry').onclick = function () { div.remove(); chatRequest(); };
+    } else if (who === 'ai') {
+      div.className = 'chat-msg ai';
+      div.innerHTML = chatRich(text);
     } else {
-      div.className = 'chat-msg ' + who;
+      div.className = 'chat-msg user';
       div.textContent = text;
     }
     msgs.appendChild(div);
-    msgs.scrollTop = msgs.scrollHeight;
+    chatScroll();
+    return div;
   }
+
+  function chatInputSync() {
+    var input = chatEl('chat-input'), send = chatEl('chat-send');
+    if (!input) return;
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    if (send) send.disabled = chatBusy || !input.value.trim();
+  }
+
+  function sendChat(preset) {
+    if (chatBusy) return;
+    var input = chatEl('chat-input');
+    var msg = fmStr(typeof preset === 'string' ? preset : input.value).trim();
+    if (!msg) return;
+    if (typeof preset !== 'string') input.value = '';
+    chatInputSync();
+    addChatMsg(msg, 'user');
+    chatHistory.push({ role: 'user', content: msg });
+    chatRequest();
+  }
+
+  function chatRequest() {
+    chatBusy = true;
+    chatInputSync();
+    var sc = chatScene();
+    var context = {
+      subject: (plan && plan.subject) || 'General',
+      lessonTitle: (day && day.title) || '',
+      lessonContent: (day && day.content) || '',
+      missedQuestions: wrongItems.map(function (w) { return w.q ? w.q.question : ''; }).filter(Boolean).slice(-3),
+      accuracy: totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : null,
+      correctCount: correctCount,
+      currentQuestion: sc.kind === 'question' ? sc.question : null,
+      screen: sc.kind,
+      answered: sc.kind === 'question' ? !!sc.answered : null,
+      correct: typeof sc.correct === 'boolean' ? sc.correct : null,
+      yourAnswer: sc.yours || null,
+      rightAnswer: sc.answered ? (sc.right || null) : null,
+      picture: sc.picture,
+      grade: (plan && plan.grade) || null
+    };
+    var thinking = addChatMsg('', 'thinking');
+    var settled = false;
+    function done(reply, failed) {
+      if (settled) return;
+      settled = true;
+      chatBusy = false;
+      if (thinking.parentNode) thinking.remove();
+      if (failed) {
+        addChatMsg('Couldn’t reach the tutor. Check your connection.', 'error');
+      } else {
+        chatHistory.push({ role: 'assistant', content: reply });
+        addChatMsg(reply, 'ai');
+      }
+      chatInputSync();
+      chatRefresh(false);
+    }
+    var timer = setTimeout(function () { done('', true); }, 25000);
+    fetch('api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: chatHistory.slice(-10), context: context })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      clearTimeout(timer);
+      if (data && typeof data.reply === 'string' && data.reply.trim()) done(data.reply, false);
+      else done('', true);
+    })
+    .catch(function () { clearTimeout(timer); done('', true); });
+  }
+
+  /* ── Drag the sheet down (phone) ──
+     1:1 with the finger from where it was grabbed, resisting past the top
+     (rubber band), and on release the flick is projected forward (Apple's
+     decay, d = 0.998): past a third of the sheet it closes, else it springs
+     back. Both ends are the CSS transitions above, which start from the
+     dragged position. */
+  function chatRubber(over, dim) { return (over * dim * 0.55) / (dim + 0.55 * Math.abs(over)); }
+  function chatProject(v) { return (v / 1000) * 0.998 / (1 - 0.998); }
+  function chatDragInit() {
+    var head = chatEl('chat-head'), panel = chatEl('chat-panel'), scrim = chatEl('chat-scrim');
+    if (!head || !panel || !window.PointerEvent) return;
+    var d = null;
+    head.addEventListener('pointerdown', function (e) {
+      if (!chatPhone() || !chatOpen || (e.target.closest && e.target.closest('button'))) return;
+      d = { id: e.pointerId, y0: e.clientY, dy: 0, h: panel.offsetHeight || 1, s: [{ y: e.clientY, t: e.timeStamp }] };
+      try { head.setPointerCapture(e.pointerId); } catch (eC) {}
+      panel.classList.add('is-dragging');
+    });
+    head.addEventListener('pointermove', function (e) {
+      if (!d || e.pointerId !== d.id) return;
+      d.dy = e.clientY - d.y0;
+      var y = d.dy >= 0 ? d.dy : -chatRubber(-d.dy, d.h);
+      panel.style.transform = 'translateY(' + y.toFixed(1) + 'px)';
+      if (scrim) scrim.style.opacity = String(Math.max(0, 1 - Math.max(0, d.dy) / d.h));
+      d.s.push({ y: e.clientY, t: e.timeStamp });
+      while (d.s.length > 2 && e.timeStamp - d.s[0].t > 100) d.s.shift();
+    });
+    function end(e) {
+      if (!d || (e && e.pointerId !== d.id)) return;
+      var a = d.s[0], b = d.s[d.s.length - 1];
+      var v = b.t > a.t ? (b.y - a.y) / (b.t - a.t) * 1000 : 0;
+      var close = d.dy + chatProject(v) > d.h * 0.35 && v > -200;
+      panel.classList.remove('is-dragging');
+      panel.style.transform = '';
+      if (scrim) scrim.style.opacity = '';
+      d = null;
+      if (close) toggleChat(false);
+    }
+    head.addEventListener('pointerup', end);
+    head.addEventListener('pointercancel', end);
+  }
+
+  (function chatBoot() {
+    function go() {
+      var input = chatEl('chat-input'), panel = chatEl('chat-panel');
+      if (!input || !panel) return;
+      input.addEventListener('input', chatInputSync);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); }
+      });
+      panel.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { e.stopPropagation(); toggleChat(false); }
+      });
+      chatDragInit();
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);
+    else go();
+  })();
 
   /* ── END SESSION ── */
   function endSession() {

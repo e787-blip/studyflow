@@ -3755,6 +3755,58 @@ its switch, each card answered and graded, the axis falling, nothing on
 maths or a day without numbers, hostile table text never markup). Both fail
 on the code before.
 
+## The study tutor (VIP chat) — `lesson.html`, `api/chat.js` (Oct 2026)
+
+Redesigned with the `apple-design`, `animate` and `design-taste-frontend`
+skills. Block 1, "VIP CHAT (the study tutor)"; CSS under "AI TUTOR (VIP)".
+
+- **A glass panel that grows out of its button** on a desktop
+  (`transform-origin` at the button's centre), **a bottom sheet** on a phone
+  (≤600px) with a dimmed page behind it. Open and close are TRANSITIONS on
+  `.open`, never keyframes: a second tap mid-flight reverses from where the
+  panel is, and it leaves by the path it came in. The button's mark turns
+  into an X. Reduced motion: opacity only. Reduced transparency / more
+  contrast / no `backdrop-filter`: a solid panel.
+- **The sheet drags down** from its header (`chatDragInit`): 1:1 with the
+  finger, rubber-band upward, and the release is projected (Apple's decay,
+  d = 0.998) - past a third of the sheet it closes. Both ends are the CSS
+  transitions, which start from the dragged position.
+- **Replies go through `chatRich`, never `textContent`, and never show an
+  asterisk.** The model writes Markdown however it is asked not to, and
+  "**Photosynthesis**" was printed with its stars. Bold, italics, lists,
+  numbered steps, headings, links and code become markup; a lone `*`
+  between two operands (a number, a one-letter variable or a bracket) is a
+  times sign; every other `*` is dropped, and inside `<code>` it is kept.
+  Everything is escaped first. `api/chat.js` also asks for plain text
+  (rule 10) - the prompt asks, the renderer guarantees.
+- **It knows what is on screen** (`chatScene`): the card, whether its
+  question is answered (`currentAnswered`), right or wrong (from
+  `sfLogMark`), what was answered and what was right - **the right answer
+  only once the question is answered** - and the labels of the biggest
+  picture on the card (`chatPicture`; two-line labels are two tspans, so
+  they are joined with a space, or "Right Atrium" reads "RightAtrium"). It
+  used to send `sessionCards[cardIndex]` as the current question, which is
+  the NEXT card. `api/chat.js` rule 8: never give, confirm or rule out the
+  answer to an unanswered question.
+- **Suggestions from that** (`chatSuggestions`): a hint before answering,
+  "Why was my answer wrong?" after a miss, "Walk me through the picture" /
+  "Tell me more about <a labelled key term>" on the lesson, "Quiz me" on
+  the flashcards, "What should I review first?" on the results. A key term
+  that is part of the answer is never offered; one already asked is not
+  offered again. Refreshed while the panel is open by a MutationObserver on
+  the card (connected only while open).
+- The input is a textarea marked `data-sf-enter="self"`: Enter sends,
+  Shift+Enter is a new line, and `handleEnterKey` never answers or advances
+  the card behind it (the old `<input>` let Enter reach it). Escape closes
+  and hands focus back to the button.
+
+`test_chat.js` (morning suite): no asterisk, hash or live markup across 16
+hostile replies; times signs only between operands; no answer in the
+request or the suggestions before answering, and both answers after a miss;
+Enter does not move the card; Try again after a failed call; Escape; dark
+mode. **Not seen against the real model yet** - ask it three things on the
+live site and read the replies.
+
 ## The teach-it-back card
 
 `.write-area` starts at **five lines and grows with what is typed**, to a

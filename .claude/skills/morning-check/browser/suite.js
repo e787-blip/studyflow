@@ -26,6 +26,7 @@
     ['visuals', 'VISUALS OK', S + 'test_visuals.js'],
     ['eqcard', 'EQCARD OK', S + 'test_eqcard.js'],
     ['deck', 'DECK OK', S + 'test_deck.js'],
+    ['chat', 'CHAT OK', S + 'test_chat.js'],
     ['language', 'LANGUAGE OK', S + 'test_language.js'],
     ['languages', 'LANGUAGES OK', S + 'test_languages.js'],
     ['history', 'HISTORY OK', S + 'test_history.js'],
