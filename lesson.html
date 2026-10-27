@@ -1684,6 +1684,7 @@
 <script src="/sf-illustrate.js"></script>
 <script src="/sf-draw.js"></script>
 <script src="/sf-questions.js"></script>
+<script src="/sf-data.js"></script>
 <script src="/sf-guide.js"></script>
 <script src="/sf-auth.js"></script>
 <script src="/whiteboard.js"></script>
@@ -2855,6 +2856,7 @@
         { type: cardTypeFor(q), q: q, isReview: true, isDue: true });
     });
 
+
     /* The Feynman loop is applied last, once every other card is in place, so
        it can see where teaching ends and practice begins. */
     /* A reading set expands into several cards that must stay together: the
@@ -2886,6 +2888,43 @@
     });
 
     sessionCards = applyFeynmanOrder(sessionCards, day);
+
+    /* DATA CARDS (Oct 2026, sf-data.js). Built from the day's numbers, so
+       every answer key is arithmetic on the learner's own figures. Placed by
+       COUNT, not by share of the run: the session ends when its timer does,
+       and a card at 60% of a long day was never reached. Read the table is
+       the 3rd practice question (looking up is the easiest data skill); the
+       second card - Complete the table or Spot the bad graph - the 6th, at
+       least three cards after it. Never in the pre-test (it sits before
+       practiceStart), never in an assignment (that queue is the teacher's),
+       placed LAST - after every injector, the reading sets and the
+       teach-it-back cards - so nothing pushes them later (placed before
+       applyFeynmanOrder they landed 4th and 7th). Never inside a reading
+       set: a passage and its questions stay one block. */
+    try {
+      var dataModel = sfDataDay();
+      if (dataModel) {
+        var dataQs = SFData.questions(dataModel, { title: day.title, dayIndex: dayIndex });
+        var qSlot = function (n) {
+          var seen = 0, i, c;
+          for (i = practiceStart; i < sessionCards.length; i++) {
+            c = sessionCards[i];
+            if (c && c.q && !c.isPretest && ++seen === n) {
+              while (i < sessionCards.length && sessionCards[i] && sessionCards[i].q && sessionCards[i].q.collapsePassage) i++;
+              return i;
+            }
+          }
+          return sessionCards.length;
+        };
+        var readAt = -1, at2;
+        if (dataQs.read) { readAt = qSlot(3); sessionCards.splice(readAt, 0, { type: 'readtable', q: dataQs.read }); }
+        if (dataQs.second) {
+          at2 = qSlot(6);
+          if (readAt >= 0 && at2 < readAt + 3) at2 = Math.min(sessionCards.length, readAt + 3);
+          sessionCards.splice(at2, 0, { type: dataQs.second.type, q: dataQs.second });
+        }
+      }
+    } catch (eData) { /* the session never pays for its data cards */ }
 }
 
   // Build a graph question from day content (works generically for linear function topics)
@@ -3045,7 +3084,8 @@
       fill: 1,
       twopart: 1, corroborate: 1, highlight: 1, tracetable: 1, matchpairs: 1,
       estimate: 1, readingset: 1, dictation: 1,
-      recall: 1, selfcheck: 1, conceptmap: 1, whosright: 1, readchart: 1
+      recall: 1, selfcheck: 1, conceptmap: 1, whosright: 1, readchart: 1,
+      readtable: 1, filltable: 1, badgraph: 1
     };
     if (DIRECT[t]) {
       /* A fill question that is really a calculation belongs on the equation
@@ -3365,7 +3405,7 @@
     var ids = ['fill-btn', 'seq-check-btn', 'classify-check-btn', 'write-submit',
                'graph-check-btn', 'match-check-btn',
                'mp-check-btn', 'tt-check-btn', 'est-check-btn', 'ld-check-btn', 'sb-check-btn',
-               'rc-check-btn', 'sc-check-btn', 'sc-done-btn', 'cm-check-btn'];
+               'rc-check-btn', 'sc-check-btn', 'sc-done-btn', 'cm-check-btn', 'ft-check-btn'];
     var i, el;
     for (i = 0; i < ids.length; i++) {
       el = document.getElementById(ids[i]);
@@ -5101,7 +5141,7 @@
                        errorspot: 1, tracetable: 1, sentence: 1, dictation: 1, recall: 1 };
   /* The concept map and the chart are drawings already: one picture a card. */
   var RECALL_NEVER = { write: 1, labeldiagram: 1, graph: 1, readingset: 1, match: 1,
-                       conceptmap: 1, readchart: 1 };
+                       conceptmap: 1, readchart: 1, readtable: 1, filltable: 1, badgraph: 1 };
 
   function recallWords(s) {
     var out = [], seen = {}, w = String(s == null ? '' : s).toLowerCase()
@@ -5672,7 +5712,7 @@
      a teach-it-back, a list of pairs). */
   var MOMENT_NEVER = { write: 1, labeldiagram: 1, graph: 1, bigequation: 1, sentence: 1,
                        tracetable: 1, match: 1, matchpairs: 1, readingset: 1, dictation: 1,
-                       conceptmap: 1, readchart: 1 };
+                       conceptmap: 1, readchart: 1, readtable: 1, filltable: 1, badgraph: 1 };
 
   function momentStr(v, n) {
     return fmStr(v).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ')
@@ -6801,6 +6841,18 @@
         lpSection(panes, stepItems, 'How it works', 'More steps', 6);
       }
 
+      /* THE NUMBERS (Oct 2026, sf-data.js): the figures from the learner's
+         notes, as a chart that turns into its table. After "How it works",
+         so the data is evidence for the idea just explained; only on a day
+         whose notes HAVE numbers - a day without gets no such page. */
+      var dataM = sfDataDay();
+      if (dataM) {
+        panes.push({ label: 'The numbers',
+          html: (dataM.takeaway ? '<p class="content-text" style="margin-bottom:.85rem;"><strong>' + escHtml(dataM.takeaway) + '</strong></p>' : '') +
+                SFData.figure(dataM, nfFigWidth()) +
+                (dataM.notice ? '<p class="content-text" style="margin-top:.85rem;font-size:.9rem;"><strong>Notice:</strong> ' + escHtml(dataM.notice) + '</p>' : '') });
+      }
+
       // Concepts
       if (day.concepts && day.concepts.length > 0) {
         var conItems = [];
@@ -6970,6 +7022,14 @@
       if (card.q) html = renderLabelDiagram(card.q);
     }
     else if (card.type === 'estimate')    { html = renderEstimate(card.q); }
+    else if (card.type === 'readtable' || card.type === 'filltable' || card.type === 'badgraph') {
+      /* Built from the day's numbers (sf-data.js); a table that no longer
+         checks out is skipped, never drawn half-broken. */
+      if (!dtUsable(card.q)) { showNextCard(); return; }
+      if (card.type === 'readtable')      html = renderReadTable(card.q, card);
+      else if (card.type === 'filltable') html = renderFillTable(card.q, card);
+      else                                html = renderBadGraph(card.q, card);
+    }
     else if (card.type === 'dictation')   { html = renderDictation(card.q); }
     else if (card.type === 'recall' || card.type === 'selfcheck' || card.type === 'conceptmap' ||
              card.type === 'whosright' || card.type === 'readchart') {
@@ -11360,6 +11420,194 @@
     enableNext();
   }
 
+  /* ══ DATA CARDS (Oct 2026, sf-data.js) ════════════════════════════════════
+     Read the table, Complete the table, Spot the bad graph. Each is built by
+     sf-data.js from the day's NUMBERS, never written by the model, so every
+     answer key is arithmetic on the learner's own figures. The table a card
+     carries is checked again here before anything is drawn - a stored or
+     carried-over question is never trusted - and every string the model
+     wrote goes in through escHtml. All three end in handleResult, so the
+     results list, SM-2, the answer log and the walkthrough work as for
+     multiple choice. */
+  function sfDataModel(d) {
+    try { return window.SFData ? SFData.check(d) : null; } catch (e) { return null; }
+  }
+  /* Today's numbers, on a subject that gets data cards, or null. */
+  function sfDataDay() {
+    if (!window.SFData || !day || !day.data) return null;
+    var st = 'general';
+    try { st = resolveSubjectType(plan, day); } catch (e) { return null; }
+    return SFData.allowed(st) ? sfDataModel(day.data) : null;
+  }
+  function dtUsable(q) {
+    var m = q && sfDataModel(q.data);
+    if (!m) return false;
+    if (q.type === 'filltable') return !!m.rule && nfArr(q.blanks).length > 0;
+    return nfArr(q.options).length >= 2 && typeof q.correctIndex === 'number';
+  }
+  function dtOptions(q, fn) {
+    return '<div class="q-options">' + nfArr(q.options).map(function (o, i) {
+      return '<button class="q-option" data-i="' + i + '" onclick="' + fn + '(' + i + ',this)"><span class="opt-letter">' +
+        String.fromCharCode(65 + i) + '</span><span>' + escHtml(o) + '</span></button>';
+    }).join('') + '</div>';
+  }
+  /* Grade the options the way readchart does: the key goes green, the pick
+     red, the rest step back. */
+  function dtMark(i, key) {
+    var btns = document.querySelectorAll('#session-card .q-options .q-option'), k;
+    for (k = 0; k < btns.length; k++) {
+      btns[k].disabled = true;
+      var idx = +btns[k].getAttribute('data-i');
+      if (idx === key) btns[k].classList.add('correct-ans');
+      else if (idx === i) btns[k].classList.add('wrong-ans');
+      else btns[k].classList.add('dimmed');
+    }
+  }
+  function dtFinish(ok, explanation, said) {
+    currentAnswered = true;
+    totalAnswered++;
+    if (ok) spawnConfetti();
+    handleResult(ok, escHtml(explanation), said || '—');
+    enableNext();
+  }
+
+  /* READ THE TABLE. After the answer the evidence lights up: on a "rise"
+     question a Change column arrives beside the data, the rows that prove
+     it stay bright and the rest step back. */
+  function renderReadTable(q, card) {
+    var m = sfDataModel(q.data);
+    window._dtState = { q: q, m: m, done: false };
+    var add = null;
+    if (q.mode === 'delta' && nfArr(q.deltas).length) {
+      add = { name: 'Change', unit: m.cols[q.col || 1] ? m.cols[q.col || 1].unit : '',
+              cells: ['<span style="color:var(--muted)">–</span>'].concat(nfArr(q.deltas).map(function (d) {
+                return '<span class="sfd-delta">' + escHtml(d) + '</span>'; })) };
+    }
+    var body = nfMeta('Read the table', q) +
+      SFData.table(m, { id: 'dt-table', caption: m.title, add: add }) +
+      '<div class="q-text" style="margin-top:1rem">' + escHtml(q.question) + '</div>' +
+      dtOptions(q, 'dtChoose') +
+      '<div class="feedback-box" id="feedback-box"></div>';
+    return nfShell('Read the table', body, card);
+  }
+  function dtChoose(i) {
+    var st = window._dtState;
+    if (!st || st.done || currentAnswered) return;
+    st.done = true;
+    var q = st.q, ok = i === q.correctIndex;
+    dtMark(i, q.correctIndex);
+    var t = document.getElementById('dt-table');
+    if (t) {
+      if (q.mode === 'delta') t.classList.add('has-add');
+      t.classList.add('is-lit');
+      /* The row names and the column the question asked about - not always
+         the first: on a table with a rule it is the column the rule works out. */
+      var lit = nfArr(q.lit), col = String(q.col || 1), cells = t.querySelectorAll('tbody td'), k;
+      for (k = 0; k < cells.length; k++) {
+        var r = +cells[k].getAttribute('data-r'), c = cells[k].getAttribute('data-c');
+        if (lit.indexOf(r) !== -1 && (c === '0' || c === col)) cells[k].classList.add('lit');
+        if (q.mode === 'delta' && c === 'add' && r === lit[lit.length - 1]) cells[k].classList.add('lit');
+      }
+    }
+    dtFinish(ok, q.explanation, q.options[i]);
+  }
+
+  /* COMPLETE THE TABLE. The first row is the worked example; the blanks
+     follow the rule above the table. Checked with the leeway the table's
+     own decimals allow, so 1.5 and 1.50 both count. A wrong cell keeps what
+     was typed, crossed out, with the right number under it - corrected
+     where the mistake was made. */
+  function renderFillTable(q, card) {
+    var m = sfDataModel(q.data), blanks = nfArr(q.blanks), given = {};
+    given[0] = true;
+    window._ftState = { q: q, m: m, done: false };
+    var cell = function (r, c) {
+      var k = blanks.indexOf(r);
+      if (c !== m.rule.col || k === -1) return null;
+      return '<span class="sfd-cell"><input class="sfd-in" id="ft-in-' + k + '" data-k="' + k + '" inputmode="decimal" autocomplete="off" ' +
+        'placeholder="?" data-sf-enter="next" aria-label="' + escHtml(m.cols[c].name + ' for ' + m.rows[r].label) + '" ' +
+        'oninput="ftInput(this)"></span>';
+    };
+    var body = nfMeta('Complete the table', q) +
+      '<div class="sfd-rule"><b>Rule</b><span>' + escHtml(m.rule.text) + '</span></div>' +
+      SFData.table(m, { id: 'ft-table', caption: m.title, cell: cell, given: given }) +
+      '<button class="sfd-check" id="ft-check-btn" disabled onclick="ftCheck()">Check</button>' +
+      '<div class="feedback-box" id="feedback-box"></div>';
+    return nfShell('Complete the table', body, card);
+  }
+  function ftInput(el) {
+    el.value = el.value.replace(/[^\d.,\-−$%]/g, '');
+    var ins = document.querySelectorAll('#ft-table .sfd-in'), all = true, k;
+    for (k = 0; k < ins.length; k++) if (!ins[k].value.trim()) all = false;
+    var b = document.getElementById('ft-check-btn');
+    if (b) b.disabled = !all;
+  }
+  function ftCheck() {
+    var st = window._ftState;
+    if (!st || st.done || currentAnswered) return;
+    st.done = true;
+    var m = st.m, rule = m.rule, blanks = nfArr(st.q.blanks), right = 0, said = [], want = [];
+    var ins = document.querySelectorAll('#ft-table .sfd-in'), k;
+    for (k = 0; k < ins.length; k++) {
+      var j = +ins[k].getAttribute('data-k'), w = m.rows[blanks[j]].v[rule.col - 1];
+      var got = SFData.toNum(ins[k].value);
+      var ok = isFinite(got) && Math.abs(got - w) <= Math.max(0.5 * Math.pow(10, -rule.dp) + 1e-9, Math.abs(w) * 0.01);
+      said.push(ins[k].value.trim());
+      want.push(SFData.withUnit(w, m.cols[rule.col]));
+      ins[k].disabled = true;
+      ins[k].classList.add(ok ? 'sel-right' : 'sel-wrong');
+      if (ok) right++;
+      else ins[k].parentNode.insertAdjacentHTML('beforeend', '<span class="sfd-fix">' + escHtml(SFData.show(w, rule.dp)) + '</span>');
+    }
+    var b = document.getElementById('ft-check-btn');
+    if (b) { b.disabled = true; b.textContent = right === ins.length ? 'All right' : right + ' of ' + ins.length + ' right'; }
+    var allOk = right === ins.length && ins.length > 0;
+    dtFinish(allOk, (allOk ? '' : 'Use the rule ' + rule.text + ': ') + 'the answers are ' + want.join(' and ') + '.', said.join(', '));
+  }
+
+  /* SPOT THE BAD GRAPH. The day's own bars with one known distortion - the
+     axis cut under the smallest value. After the answer the card FIXES the
+     graph in front of the learner: the axis falls to zero and the "huge"
+     differences settle to nearly equal bars. While it moves the chart's own
+     drawing-on is held (sfd-still), or every frame would replay it. */
+  function renderBadGraph(q, card) {
+    var m = sfDataModel(q.data);
+    window._bgState = { q: q, m: m, done: false, y: q.y0, W: nfFigWidth() - 22 };
+    var body = nfMeta('Spot the bad graph', q) +
+      '<div class="sfd-fig art-paper" data-view="chart"><div class="sfd-top"><div class="sfd-title" id="bg-title">' + escHtml(m.title) + '</div></div>' +
+      '<div class="sfd-view sfd-chart" id="bg-chart"></div></div>' +
+      '<div class="q-text" style="margin-top:1rem">' + escHtml(q.question) + '</div>' +
+      dtOptions(q, 'bgChoose') +
+      '<div class="feedback-box" id="feedback-box"></div>';
+    setTimeout(function () { bgPaint(window._bgState && window._bgState.y); }, 0);
+    return nfShell('Spot the bad graph', body, card);
+  }
+  function bgPaint(y) {
+    var st = window._bgState, el = document.getElementById('bg-chart');
+    if (!st || !el) return;
+    var mw = nfMeasured(el);
+    if (mw) st.W = mw;
+    st.y = y;
+    el.innerHTML = SFData.badBars(st.q, st.W, y);
+  }
+  function bgChoose(i) {
+    var st = window._bgState;
+    if (!st || st.done || currentAnswered) return;
+    st.done = true;
+    var q = st.q;
+    dtMark(i, q.correctIndex);
+    dtFinish(i === q.correctIndex, q.explanation, q.options[i]);
+    var el = document.getElementById('bg-chart');
+    if (el) el.classList.add('sfd-still');
+    setTimeout(function () {
+      if (window._bgState !== st) return;
+      SFData.settle(q.y0, 0, 900, bgPaint, function () {
+        var t = document.getElementById('bg-title');
+        if (t && window._bgState === st) t.textContent = 'Same numbers, axis from 0';
+      });
+    }, 450);
+  }
+
   function renderScenario(q) {
     // Scenario questions have: question (the scenario text), options[], correctIndex
     var optHtml = (q.options || []).map(function(opt, i) {
@@ -12393,6 +12641,11 @@
       if (rm.findIndex >= 0) bits.push(rm.points[rm.findIndex].label);
       if (rm.question) bits.push(rm.options[rm.correctIndex]);
       return bits.join(' \u2014 ');
+    }
+    if (t === 'filltable') {
+      var ftm = window.SFData ? SFData.check(q.data) : null;
+      if (!ftm || !ftm.rule) return '';
+      return nfArr(q.blanks).map(function (r) { return SFData.show(ftm.rows[r].v[ftm.rule.col - 1], ftm.rule.dp); }).join(', ');
     }
     if (q.options && typeof q.correctIndex === 'number') return fmStr(q.options[q.correctIndex]);
     if (t === 'labeldiagram') return pick(q.pins, function (p, i) { return p && p.answer ? (i + 1) + ' ' + p.answer : ''; }).join(', ');

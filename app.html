@@ -510,6 +510,7 @@
 <script src="/sf-topics.js"></script>
 <script src="/sf-auth.js"></script>
 <script src="/sf-questions.js"></script>
+<script src="/sf-data.js"></script>
 <script>
 
   /* ── PER-ACCOUNT STORAGE NAMESPACE ─────────────────────────────────────
@@ -3544,6 +3545,21 @@
         '7. keyTerms: exactly 4 items {term,definition}.\n' +
         '8. misconceptions: exactly 2 items, each {believe,actually,why}. These are the specific WRONG things students most often think about this exact topic. "believe" = the mistaken idea in the student\'s own words. "actually" = the correct idea. "why" = the reason the mistake is so tempting. Be concrete and specific to "' + subject + '" - never generic study advice.\n' +
         '9. caseStudy: one real-world anchor {title,what,connection}. "title" = a specific named real event, experiment, structure, person, or application. "what" = 1-2 sentences on what actually happened. "connection" = how it directly demonstrates this exact topic. Must be a REAL documented example, not hypothetical.\n' +
+        /* The day's NUMBERS (Oct 2026, sf-data.js). Asked for only on the
+           subjects that get data cards, and only when the notes hold real
+           figures: the code builds the chart and every data question's answer
+           key from this table, so a made-up row would teach a made-up fact. */
+        (window.SFData && SFData.allowed(subjectType) ?
+        '10. data: ONLY if the notes give at least 3 rows of real numbers (a table, measurements, prices, amounts over time).\n' +
+        '   Copy the numbers EXACTLY from the notes; never invent, estimate or round. Otherwise "data": null.\n' +
+        '   {"title":"","cols":[{"name":"","unit":""},{"name":"","unit":""}],"rows":[["","",""]],"chart":"line|bars|donut|scatter|none",\n' +
+        '    "takeaway":"one sentence: what the numbers show","notice":"one sentence: the thing to notice in them",\n' +
+        '    "rule":{"col":2,"op":"divide","a":1,"b":0}}\n' +
+        '   First column names each row (or is the number along the bottom); the other columns are numbers only.\n' +
+        '   chart: line = a number that changes along a number; bars = named things compared; donut = parts of one\n' +
+        '   whole adding to 100%; scatter = 5+ pairs to look for a pattern; none = a table is clearer.\n' +
+        '   rule: ONLY when one column is worked out from two others on every row (col = a OP b; op is divide, multiply,\n' +
+        '   add, subtract or percent; numbers are column positions from 0). Otherwise leave "rule" out.\n' : '') +
         questionInstructions +
         /* The line above names the exact types this subject wants, but only as
            a tally ("3 MCQ, 2 True/False..."), and the model reads that as a
@@ -3672,6 +3688,7 @@
         '"keyTerms":[{"term":"","definition":""},{"term":"","definition":""},{"term":"","definition":""},{"term":"","definition":""}],' +
         '"misconceptions":[{"believe":"","actually":"","why":""},{"believe":"","actually":"","why":""}],' +
         '"caseStudy":{"title":"","what":"","connection":""},' +
+        (window.SFData && SFData.allowed(subjectType) ? '"data":null,' : '') +
         /* The opening whiteboard walks this one panel at a time. Without it in
            the schema the model never returns it, and the board falls back to
            the day's steps or concepts - which works, but is a procedure or a
@@ -3793,6 +3810,12 @@
           } else {
             day.caseStudy = null;
           }
+          /* The day's numbers: kept only when sf-data.js can use them honestly
+             (3-12 rows, every value a number, no "example" table) and only on
+             a subject that gets data cards. The raw table is stored; the
+             session checks it again, because a stored plan can predate this. */
+          if (day.data && !(window.SFData && SFData.allowed(subjectType) && SFData.check(day.data))) day.data = null;
+          if (!day.data) delete day.data;
           day.duration   = day.duration   || 30;
 
           /* Validate the worked example the opening whiteboard is built from.

@@ -48,6 +48,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `sf-questions.js` | ~42 KB | **The question templates and validators** (`qtpl`, `buildQuestionSchema`, `tallyFor`, `sanitizeDayQuestions`, `repairJSON`), moved out of `app.html` byte for byte so the teacher builder uses the same ones, plus the **question lint** (`lintQuestion`, `lintDay`). Loaded by `app.html`, `teacher-build.html` and (for the top-up's lint) `lesson.html` - see "Question lint, spaced review and pitch" |
 | `firestore.rules` | | Deny-all. Paste into the Firebase console; only the service account reaches Firestore |
 | `draw-lab.html` / `api/draw-lab.js` / `lab/` | | **Internal.** Draws the same lessons with Haiku, Sonnet and Opus through the real lesson prompt, beside Servier Medical Art (CC BY 3.0), to decide which model draws for Pro. Linked from nothing. The endpoint is **locked**: 403 unless `DRAW_LAB_KEY` (12+ chars) is set in Vercel and sent as `x-lab-key`, so a deploy costs nothing. Delete all three when the comparison is done |
+| `sf-data.js` | ~30 KB | **A lesson's numbers** (Oct 2026): checks the table the model copied from the notes, draws its chart (line, bars, donut, scatter) and table, and BUILDS the data questions from it - Read the table, Complete the table, Spot the bad graph - so every answer key is arithmetic on the learner's figures. Loaded by `app.html` and `lesson.html` - see "Tables, charts and data questions" |
 | `sf-topics.js` | ~38 KB | **The subtopic skill.** Reads the notes of ANY subject into parts, groups them to fit the days, and composes each day's question mix. Loaded by `app.html`. See "Subtopics made from the notes" |
 
 `lesson.html` has **two `<script>` blocks**. Block 1 is the session runtime.
@@ -3635,6 +3636,85 @@ Not done: the day prompt in `app.html` does not get the weak-spot line (a
 plan is built before anything is answered), and nobody has read lint
 results on real model output yet.
 
+## Tables, charts and data questions — `sf-data.js` (Oct 2026, branch `data-cards`)
+
+The owner's idea, designed in `prototypes/data-cards.html` (on `main`,
+linked from nothing) and built here. **The NOTES decide, not the subject**
+(the owner's rule): a lesson whose notes contain real numbers gets them, one
+without gets nothing, and no numbers are invented to force a chart in.
+
+**The model writes one thing: the table.** The day prompt (`app.html`, item
+10, asked only when `SFData.allowed(subjectType)`) wants `"data"` - the
+figures copied exactly from the notes, or `null`:
+
+```json
+"data": {"title":"","cols":[{"name":"","unit":""}],"rows":[["",""]],
+         "chart":"line|bars|donut|scatter|none","takeaway":"","notice":"",
+         "rule":{"col":2,"op":"divide","a":1,"b":0}}
+```
+
+`SFData.check` keeps it only with 2-5 columns, 3-12 rows, every value after
+the first column a number, unique row names, and no `"example"` flag; the
+plan builder stores the raw table and the session checks it AGAIN when it
+draws (a stored plan can predate the validator). Everything else is
+computed:
+
+- **The chart** is the one asked for when the numbers allow it honestly,
+  else the next (`pickChart`): a line needs numeric, distinct x; a donut
+  must add to 100 (±1) in 6 slices or fewer; a scatter needs 5+ points; bars
+  start at zero. None fits: the table alone. One series is labelled on the
+  axis, several at the line ends (never a colour legend for lines).
+- **A `rule`** ("Per pen = Total ÷ Pens") is kept only when it holds on
+  EVERY row within the rounding the table shows.
+- **Subjects**: science, economics, geography, psychology, cs, general.
+  Never maths (invariant 1), history (timelines), English or language.
+
+**Where they appear** (the owner asked for "when", so a short session still
+reaches them):
+
+| Card | Where | Built from |
+|---|---|---|
+| **The numbers** | a page of the lesson card, right after "How it works": a one-line takeaway, the chart with a Chart / Table switch, a "Notice" line | the table itself |
+| **Read the table** (`readtable`) | the **3rd** practice question | ordered rising/falling rows: "between which two did it rise the least/most?" (a Change column slides in after the answer); otherwise "which has the highest/lowest?". Never asked about a tie |
+| **Complete the table** (`filltable`) | the **6th**, when a rule holds | the first row is the worked example; up to two later rows of the rule's column are blank |
+| **Spot the bad graph** (`badgraph`) | the **6th**, when there is no rule, on a data-minded day (title names data, graph, survey, sales, price...) or every third day | the day's own bars with the axis cut just under the smallest value - only when the values are within 30% of each other, so the cut is what makes the lie |
+
+Placed **by count, after everything else** - after every injector, the
+reading sets and `applyFeynmanOrder` (placed before it, the teach-it-back
+cards pushed them to 4th and 7th) - at least three cards apart, never in
+the pre-test, never inside a reading set, never in an assignment (that
+queue is the teacher's). Build the graph (tap to plot) is in the preview
+and left for later.
+
+How each grades, all through `handleResult` (so the results list, SM-2, the
+answer log, the retry and the walkthrough work as for multiple choice):
+
+- Read the table and Spot the bad graph: option buttons, keys computed by
+  `sf-data.js`; after the answer the rows that prove it light up (`is-lit`,
+  `.lit`). The bad graph then FIXES itself: the axis falls to 0 on a
+  critically damped spring (`SFData.settle`, timer-backed) and the title
+  becomes "Same numbers, axis from 0". While it moves, `sfd-still` holds the
+  chart's draw-on, or every frame would replay it.
+- Complete the table: inputs in the table, Enter moves between them
+  (`data-sf-enter="next"`), Check (`ft-check-btn`, in `submitControl`).
+  Leeway is the table's own decimals, so 1.5 counts for 1.50. A wrong cell
+  keeps what was typed, crossed out, with the right number under it.
+  `correctAnswerText` has its branch (before the generic options line).
+
+The plumbing a new data card type needs: `DIRECT`, `RECALL_NEVER`,
+`MOMENT_NEVER` (a table or chart is already the card's one picture), the
+dispatch with `dtUsable`, `correctAnswerText`. Every model string goes in
+through `escHtml` (lesson) or `esc` (sf-data); a question carries the RAW
+table (`q.data = m.src`) and is checked again when drawn. Charts draw
+themselves with CSS only (line traced, bars grow, dots pop) each time they
+are shown; reduced motion stops all of it.
+
+Tests: `test_data.js` (the rules, no page; Node or JSC) and
+`test_data_page.js` (real sessions: positions 3 and 6, the lesson page and
+its switch, each card answered and graded, the axis falling, nothing on
+maths or a day without numbers, hostile table text never markup). Both fail
+on the code before.
+
 ## The teach-it-back card
 
 `.write-area` starts at **five lines and grows with what is typed**, to a
@@ -3770,21 +3850,12 @@ genuinely nothing.
 
 ## Open items
 
-- **Tables, charts and data questions: a design preview, not built.**
-  `prototypes/data-cards.html` (linked from nothing) shows the lesson's
-  "The numbers" page (chart <-> table), four new charts drawn by code
-  (two lines, grouped bars, donut, scatter with a computed trend line), and
-  four questions: Read the table, Complete the table, Spot the bad graph,
-  Build the graph. Every card works; checked at 375px, light and dark.
-  What was agreed with the owner (Oct 2026): **the NOTES decide, not the
-  subject** - a lesson whose notes contain real numbers gets them, one
-  without gets nothing, and no numbers are invented to force a chart in.
-  Not on maths (invariant 1) or history (timelines). Placement proposed so
-  a short session still reaches them: "The numbers" is lesson page 3;
-  Read the table is the 3rd practice question, the second data question
-  (one of the other three, picked by the data) the 6th, three cards apart,
-  never in the pre-test, never dropped by the picture budget. Not decided:
-  which of the four questions ship first.
+- **Tables, charts and data questions are built (branch `data-cards`), not
+  seen from a real model.** Before merging: build a science, an economics and
+  a geography plan from notes that HAVE numbers and read `day.data` - does
+  Haiku copy the figures exactly, pick a sensible chart, and give a `rule`
+  only where one column really is worked out from two others? And one plan
+  from notes with no numbers: `data` must come back null.
 
 - **A real illustration for any lesson: judged for real, not shipped.** Only
   `api/illustration.js` is on `main`; the page side is on `web-illustrations`
