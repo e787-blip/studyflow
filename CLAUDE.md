@@ -3770,6 +3770,22 @@ genuinely nothing.
 
 ## Open items
 
+- **Tables, charts and data questions: a design preview, not built.**
+  `prototypes/data-cards.html` (linked from nothing) shows the lesson's
+  "The numbers" page (chart <-> table), four new charts drawn by code
+  (two lines, grouped bars, donut, scatter with a computed trend line), and
+  four questions: Read the table, Complete the table, Spot the bad graph,
+  Build the graph. Every card works; checked at 375px, light and dark.
+  What was agreed with the owner (Oct 2026): **the NOTES decide, not the
+  subject** - a lesson whose notes contain real numbers gets them, one
+  without gets nothing, and no numbers are invented to force a chart in.
+  Not on maths (invariant 1) or history (timelines). Placement proposed so
+  a short session still reaches them: "The numbers" is lesson page 3;
+  Read the table is the 3rd practice question, the second data question
+  (one of the other three, picked by the data) the 6th, three cards apart,
+  never in the pre-test, never dropped by the picture budget. Not decided:
+  which of the four questions ship first.
+
 - **A real illustration for any lesson: judged for real, not shipped.** Only
   `api/illustration.js` is on `main`; the page side is on `web-illustrations`
   (see its section for the 15-topic run). Cost per NEW topic: one Haiku call with up to 5 small images,

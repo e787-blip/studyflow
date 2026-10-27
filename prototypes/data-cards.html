@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Data Cards Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,400&display=swap" rel="stylesheet">
+<!-- PROTOTYPE (Oct 2026). Tables, charts and the four data questions, built
+     with lesson.html's own tokens, card styles and spring curves so it looks
+     like the session it would live in. Nothing here is wired into the app.
+     Every number on this page is sample notes. -->
+<script data-sf-boot>
+  /* lesson.html's boot script, verbatim: a damped spring (Apple's damping
+     ratio + response) sampled into CSS linear(). */
+  (function () {
+    var d = document.documentElement;
+    function curve(zeta, response) {
+      var w = 2 * Math.PI / response, k = w * w, c = 2 * zeta * w;
+      var h = 1 / 1200, x = 0, v = 0, t = 0, end = 3, a;
+      for (t = h; t < 3; t += h) {
+        a = -k * (x - 1) - c * v; v += a * h; x += v * h;
+        if (Math.abs(x - 1) < 0.0008 && Math.abs(v) < 0.01) { end = t; break; }
+      }
+      var n = Math.max(24, Math.min(64, Math.round(end * 70))), pts = [], step = end / n;
+      x = 0; v = 0; t = 0;
+      for (var i = 0; i <= n; i++) {
+        while (t < i * step) { a = -k * (x - 1) - c * v; v += a * h; x += v * h; t += h; }
+        pts.push(i === n ? 1 : +x.toFixed(4));
+      }
+      return { e: 'linear(' + pts.join(', ') + ')', ms: Math.round(end * 1000) };
+    }
+    try {
+      if (window.CSS && CSS.supports && CSS.supports('transition-timing-function', 'linear(0, 1)')) {
+        var specs = { '': [1, 0.42], '-fast': [1, 0.26], '-slow': [1, 0.62], '-pop': [0.72, 0.38] };
+        for (var key in specs) {
+          var s = curve(specs[key][0], specs[key][1]);
+          d.style.setProperty('--spring' + key, s.e);
+          d.style.setProperty('--spring' + key + '-ms', s.ms + 'ms');
+        }
+      }
+    } catch (e) {}
+  })();
+</script>
+<style>
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  :root {
+    --ink:#1a1d2e; --muted:#6b7280; --soft:#f4f6fb;
+    --blue:#4a7cf6; --blue-light:#dce8ff; --white:#fff; --border:#e8ecf4;
+    --green:#38bfa1; --red:#ef4444;
+    --sans:'DM Sans', system-ui, -apple-system, sans-serif; --serif:'Instrument Serif', Georgia, serif;
+    --blue-ink:#2f5fe0; --blue-deep:#2a52d4; --blue-tint:#eef3ff;
+    --shadow-card:0 1px 2px rgba(26,29,46,.04), 0 22px 44px -22px rgba(26,29,46,.2);
+    --spring:cubic-bezier(.22,1,.36,1);      --spring-ms:560ms;
+    --spring-fast:cubic-bezier(.22,1,.36,1); --spring-fast-ms:340ms;
+    --spring-slow:cubic-bezier(.16,1,.3,1);  --spring-slow-ms:820ms;
+    --spring-pop:cubic-bezier(.34,1.4,.64,1); --spring-pop-ms:520ms;
+    --paper:#f7f9fe; --paper-edge:#e3e9f7;
+  }
+  body { font-family:var(--sans); color:var(--ink); background:var(--soft); -webkit-font-smoothing:antialiased; font-optical-sizing:auto; }
+  body.dark { --ink:#e9eeff; --muted:#8b95ae; --soft:#0c0f16; --white:#141925; --border:#232a3c;
+    --blue-ink:#8db0ff; --blue-tint:rgba(91,138,248,.14);
+    --shadow-card:0 1px 2px rgba(0,0,0,.35), 0 22px 44px -22px rgba(0,0,0,.75); }
+  button { font-family:inherit; }
+
+  /* ── THE PAGE AROUND THE PROTOTYPES ─────────────────────────────────── */
+  .page { max-width:1120px; margin:0 auto; padding:2.5rem 1.25rem 6rem; }
+  .top { display:flex; align-items:flex-start; justify-content:space-between; gap:1.5rem; margin-bottom:2.2rem; }
+  .kicker { font-size:.72rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--blue); margin-bottom:.5rem; }
+  h1 { font-family:var(--serif); font-weight:400; font-size:clamp(2.2rem,5vw,3.3rem); line-height:1.02; letter-spacing:-.02em; }
+  .lede { margin-top:.8rem; max-width:62ch; font-size:1rem; line-height:1.65; color:var(--muted); }
+  .lede b { color:var(--ink); font-weight:600; }
+  h2.sec { font-family:var(--serif); font-weight:400; font-size:clamp(1.7rem,3.6vw,2.2rem); letter-spacing:-.015em; line-height:1.08; }
+  .sec-num { font-family:var(--sans); font-size:.72rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--blue); display:block; margin-bottom:.35rem; }
+  section.block { margin-top:4.2rem; }
+
+  .demo { display:grid; grid-template-columns:minmax(0,1fr) 375px; gap:2.6rem; align-items:start; margin-top:1.4rem; }
+  .notes p { font-size:.95rem; line-height:1.7; color:var(--ink); margin-bottom:.9rem; max-width:56ch; }
+  .notes p.muted { color:var(--muted); }
+  .when { border:1px solid var(--border); background:var(--white); border-radius:18px; padding:1rem 1.15rem; margin:1.1rem 0; box-shadow:var(--shadow-card); }
+  .when h4 { font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--blue); margin-bottom:.45rem; }
+  .when ul { list-style:none; display:flex; flex-direction:column; gap:.45rem; }
+  .when li { font-size:.88rem; line-height:1.5; padding-left:1.1rem; position:relative; }
+  .when li::before { content:''; position:absolute; left:.15rem; top:.58em; width:5px; height:5px; border-radius:50%; background:var(--blue); }
+  .try { font-size:.8rem; color:var(--muted); margin-top:.3rem; }
+  .try b { color:var(--ink); }
+
+  /* Theme switch: a segmented control, the same component as Chart | Table. */
+  .theme { flex:none; }
+
+  /* ── PHONE FRAME ─────────────────────────────────────────────────────── */
+  .phone { width:375px; max-width:100%; background:var(--soft); border-radius:46px; padding:10px 16px 22px;
+    box-shadow:0 0 0 1px var(--border), 0 0 0 9px var(--white), 0 0 0 10px var(--border), 0 40px 80px -30px rgba(26,29,46,.35);
+    position:relative; }
+  body.dark .phone { box-shadow:0 0 0 1px var(--border), 0 0 0 9px #05070b, 0 0 0 10px #232a3c, 0 40px 80px -30px rgba(0,0,0,.8); }
+  .sbar { display:flex; align-items:center; gap:.6rem; padding:.55rem .25rem .8rem; }
+  .sbar .mark { width:22px; height:22px; border-radius:7px; background:linear-gradient(135deg,#5b8df8,#2851c8); flex:none; }
+  .sbar .tb { flex:1; height:5px; border-radius:99px; background:rgba(26,29,46,.08); overflow:hidden; }
+  body.dark .sbar .tb { background:rgba(255,255,255,.1); }
+  .sbar .tb i { display:block; height:100%; width:58%; background:var(--blue); border-radius:inherit; }
+  .sbar .t { font-size:.72rem; font-weight:600; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .sbar .pill { font-size:.72rem; font-weight:700; color:var(--blue-ink); background:var(--blue-tint); padding:.2rem .55rem; border-radius:999px; font-variant-numeric:tabular-nums; }
+
+  /* ── lesson.html's card, copied ──────────────────────────────────────── */
+  .session-card { background:#fff; border:1px solid var(--border); border-radius:24px; overflow:hidden; box-shadow:var(--shadow-card); position:relative; }
+  body.dark .session-card { background:var(--white); }
+  .card-header {
+    background:
+      radial-gradient(110% 130% at 100% 0%, rgba(140,176,255,.5) 0%, rgba(140,176,255,0) 55%),
+      radial-gradient(80% 90% at 0% 100%, rgba(30,62,190,.45) 0%, rgba(30,62,190,0) 60%),
+      linear-gradient(160deg,#4f82f8 0%,#3a69ec 50%,#2c56d8 100%);
+    padding:1.15rem 1.25rem 1.05rem; position:relative; overflow:hidden; isolation:isolate; }
+  .card-header::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
+    background-image:repeating-linear-gradient(to bottom, transparent 0 27px, rgba(255,255,255,.08) 27px 28px);
+    -webkit-mask-image:linear-gradient(100deg, transparent 35%, #000 92%); mask-image:linear-gradient(100deg, transparent 35%, #000 92%); }
+  body.dark .card-header { background:
+      radial-gradient(110% 130% at 100% 0%, rgba(125,162,255,.36) 0%, rgba(125,162,255,0) 55%),
+      linear-gradient(160deg,#3a64d6 0%,#2c4fb8 55%,#213f9a 100%); }
+  .card-badge { display:inline-flex; align-items:center; gap:.4rem; background:rgba(255,255,255,.16); color:#fff; font-size:.7rem; font-weight:600; letter-spacing:.07em; text-transform:uppercase; padding:.3rem .75rem; border-radius:999px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.24); margin-bottom:.6rem; }
+  .card-header h3 { font-family:var(--serif); font-weight:400; font-size:1.65rem; color:#fff; letter-spacing:-.015em; line-height:1.08; text-wrap:balance; }
+  .card-body { padding:1.1rem 1.2rem; }
+  .card-footer { padding:.85rem 1.2rem; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+  .footer-left { font-size:.75rem; color:var(--muted); font-weight:500; font-variant-numeric:tabular-nums; }
+  .btn-next { background:var(--blue); color:#fff; min-height:48px; padding:.85rem 1.4rem; border-radius:999px; font-size:.92rem; font-weight:600; border:none; cursor:pointer;
+    box-shadow:0 1px 0 rgba(255,255,255,.22) inset, 0 8px 18px -8px rgba(74,124,246,.7); white-space:nowrap;
+    transition:transform var(--spring-fast-ms) var(--spring-fast), background .18s; }
+  .btn-next:active:not(:disabled) { transform:scale(.96); transition-duration:80ms; }
+  .btn-next:disabled { background:var(--border); color:var(--muted); cursor:not-allowed; box-shadow:none; }
+  .q-meta { display:flex; align-items:center; gap:.5rem; margin-bottom:.85rem; flex-wrap:wrap; }
+  .q-type-label { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.18rem .55rem; border-radius:999px; background:#eef3ff; color:#2f5bd8; }
+  body.dark .q-type-label { background:rgba(74,124,246,.16); color:#a9c1ff; }
+  .q-difficulty { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:.18rem .55rem .18rem .45rem; border-radius:999px;
+    display:inline-flex; align-items:center; gap:.35rem; color:var(--muted); border:1px solid var(--border); --b1:#4a7cf6; --b2:#d5e0fa; --b3:#d5e0fa; }
+  .q-difficulty::before { content:''; flex:none; width:13px; height:9px;
+    background:linear-gradient(var(--b1),var(--b1)) 0 100%/3px 4px no-repeat,
+               linear-gradient(var(--b2),var(--b2)) 5px 100%/3px 6.5px no-repeat,
+               linear-gradient(var(--b3),var(--b3)) 10px 100%/3px 9px no-repeat; }
+  .q-difficulty.medium { --b2:#4a7cf6; }
+  .q-difficulty.hard { --b2:#4a7cf6; --b3:#4a7cf6; }
+  body.dark .q-difficulty { --b2:#2b3556; --b3:#2b3556; }
+  body.dark .q-difficulty.medium { --b2:#4a7cf6; }
+  body.dark .q-difficulty.hard { --b2:#4a7cf6; --b3:#4a7cf6; }
+  .q-text { font-size:1.02rem; font-weight:600; line-height:1.5; letter-spacing:-.006em; margin-bottom:1rem; text-wrap:pretty; }
+  .q-options { display:flex; flex-direction:column; gap:.55rem; }
+  .q-option { padding:.8rem .9rem; border-radius:16px; border:1.5px solid var(--border); background:var(--soft); font-size:.9rem; font-weight:500; color:var(--ink);
+    cursor:pointer; text-align:left; display:flex; align-items:center; gap:.7rem; font-variant-numeric:tabular-nums;
+    transition:border-color .18s ease, background .18s ease, color .18s ease, opacity .25s ease, transform var(--spring-fast-ms) var(--spring-fast); }
+  @media (hover:hover) { .q-option:hover:not(:disabled) { border-color:var(--blue); background:var(--blue-tint); } }
+  .q-option:active:not(:disabled) { transform:scale(.985); transition-duration:80ms; }
+  .q-option:disabled { cursor:default; }
+  body.dark .q-option { background:#1e2336; border-color:#222840; color:#e8eeff; }
+  .opt-letter { width:26px; height:26px; border-radius:8px; background:rgba(26,29,46,.06); display:flex; align-items:center; justify-content:center; font-size:.74rem; font-weight:700; flex-shrink:0; }
+  body.dark .opt-letter { background:rgba(255,255,255,.08); }
+  .q-option.correct-ans { background:#d1faf0; border-color:var(--green); color:#065f46; animation:optOk var(--spring-pop-ms) var(--spring-pop) both; }
+  .q-option.wrong-ans { background:#fee2e2; border-color:var(--red); color:#7f1d1d; animation:optNo .4s ease both; }
+  body.dark .q-option.correct-ans { background:rgba(56,191,161,.14); color:#a7f3d0; }
+  body.dark .q-option.wrong-ans { background:rgba(239,68,68,.12); color:#fecaca; }
+  .q-option.dimmed { opacity:.45; }
+  @keyframes optOk { 0% { transform:scale(.985); } 100% { transform:none; } }
+  @keyframes optNo { 0%,100% { transform:translateX(0); } 25% { transform:translateX(-6px); } 75% { transform:translateX(6px); } }
+  @keyframes sfRise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  .feedback-box { margin-top:.95rem; border-radius:14px; padding:.85rem 1rem; display:none; animation:sfRise var(--spring-ms) var(--spring) both; }
+  .feedback-box.show { display:block; }
+  .feedback-box.correct-fb { background:#effcf8; border:1px solid #bdeee0; border-left:4px solid var(--green); }
+  .feedback-box.wrong-fb { background:#fef6f6; border:1px solid #fbd5d5; border-left:4px solid var(--red); }
+  body.dark .feedback-box.correct-fb { background:rgba(56,191,161,.1); border-color:rgba(56,191,161,.3); border-left-color:var(--green); }
+  body.dark .feedback-box.wrong-fb { background:rgba(239,68,68,.09); border-color:rgba(239,68,68,.28); border-left-color:var(--red); }
+  .feedback-label { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.28rem; }
+  .correct-fb .feedback-label { color:#1a9e80; } .wrong-fb .feedback-label { color:#dc2626; }
+  .feedback-text { font-size:.85rem; line-height:1.6; }
+  .correct-fb .feedback-text { color:#065f46; } .wrong-fb .feedback-text { color:#7f1d1d; }
+  body.dark .correct-fb .feedback-text { color:#a7f3d0; } body.dark .wrong-fb .feedback-text { color:#fecaca; }
+  body.dark .correct-fb .feedback-label { color:#5eead4; } body.dark .wrong-fb .feedback-label { color:#f87171; }
+  .content-text { font-size:.95rem; line-height:1.75; font-weight:400; }
+  .content-text strong { font-weight:600; }
+  /* The lesson pager's head and rail, copied. */
+  .lp-head { display:flex; align-items:baseline; justify-content:space-between; gap:1rem; margin-bottom:.45rem; }
+  .lp-label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--blue); }
+  .lp-count { font-size:.7rem; font-weight:600; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .lp-rail { display:flex; align-items:center; gap:.3rem; margin-bottom:.95rem; }
+  .lp-seg { flex:1; height:4px; border-radius:999px; background:var(--border); }
+  .lp-seg.is-done { background:rgba(74,124,246,.4); } .lp-seg.is-at { background:var(--blue); }
+  .art-paper { background:var(--paper); border:1px solid var(--paper-edge); border-radius:14px; }
+
+  /* ── NEW: THE FIGURE (a chart and its table, one ground) ──────────────
+     A drawing keeps a paper ground in dark mode (design system), and the
+     table it turns into keeps the same ground, so switching views never
+     flips the card from paper to night and back. */
+  .fig { padding:.75rem .7rem .6rem; color:#1a1d2e; }
+  .fig-top { display:flex; align-items:flex-start; justify-content:space-between; gap:.6rem; margin:0 .2rem .35rem; }
+  .fig-title { font-family:var(--serif); font-weight:400; font-size:1.12rem; line-height:1.18; letter-spacing:-.005em; color:#1a1d2e; text-wrap:balance; }
+  .fig-sub { font-size:.72rem; color:#5b6478; margin-top:.12rem; }
+  .fig-note { font-size:.78rem; font-weight:600; color:#2f5bd8; margin:.45rem .2rem 0; line-height:1.4; }
+  .fig-src { font-size:.7rem; color:#6b7280; margin:.35rem .2rem 0; display:flex; align-items:center; gap:.35rem; }
+  .fig-src .dot { width:6px; height:6px; border-radius:50%; background:#9aabcc; flex:none; }
+  .fig-src.example .dot { background:none; box-shadow:inset 0 0 0 1.5px #9aabcc; }
+  .fig-views { position:relative; overflow:hidden; transition:height var(--spring-ms) var(--spring); }
+  .fig-view { transition:opacity .22s ease, transform var(--spring-ms) var(--spring); }
+  .fig-view[hidden] { display:block; position:absolute; inset:0 0 auto 0; opacity:0; pointer-events:none; transform:translateX(14px); visibility:hidden; }
+  .fig-view.from-left[hidden] { transform:translateX(-14px); }
+  .fig svg { display:block; width:100%; height:auto; overflow:visible; }
+
+  /* Segmented control. The thumb slides on the spring; the label under the
+     finger answers on the press. Same component for the theme switch. */
+  .seg { position:relative; display:inline-grid; grid-auto-flow:column; grid-auto-columns:1fr; padding:2px; border-radius:999px;
+    background:rgba(26,29,46,.06); flex:none; isolation:isolate; }
+  .seg button { position:relative; z-index:1; border:0; background:none; cursor:pointer; padding:.32rem .7rem; border-radius:999px;
+    font-size:.72rem; font-weight:600; color:#5b6478; min-width:3.6rem; transition:color .2s ease, transform var(--spring-fast-ms) var(--spring-fast); }
+  .seg button:active { transform:scale(.94); transition-duration:80ms; }
+  .seg button[aria-selected="true"] { color:#1a1d2e; }
+  .seg button:focus-visible { outline:2px solid var(--blue); outline-offset:1px; }
+  .seg-thumb { position:absolute; z-index:0; top:2px; bottom:2px; left:2px; border-radius:999px; background:#fff;
+    box-shadow:0 1px 2px rgba(26,29,46,.12), 0 3px 8px -2px rgba(26,29,46,.14);
+    transition:transform var(--spring-ms) var(--spring), width var(--spring-ms) var(--spring); }
+  .seg.big button { font-size:.8rem; padding:.45rem .95rem; }
+  body.dark .seg.theme-seg { background:rgba(255,255,255,.08); }
+  body.dark .seg.theme-seg button { color:#8b95ae; }
+  body.dark .seg.theme-seg button[aria-selected="true"] { color:#e9eeff; }
+  body.dark .seg.theme-seg .seg-thumb { background:#2a3150; box-shadow:none; }
+
+  /* ── NEW: THE DATA TABLE ──────────────────────────────────────────────
+     Numbers right-aligned in tabular figures so the digits line up and a
+     column can be read down; the first column is the row's name and stays
+     put when a wide table scrolls sideways inside its own box. */
+  .dt-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:12px; border:1px solid var(--border); background:var(--white);
+    scrollbar-width:thin; }
+  .fig .dt-wrap { border-color:#e3e9f7; background:#fff; }
+  .dt { border-collapse:separate; border-spacing:0; width:100%; font-variant-numeric:tabular-nums lining-nums; font-size:.86rem; }
+  .dt caption { caption-side:top; text-align:left; font-size:.72rem; font-weight:600; color:var(--muted); padding:.6rem .7rem .45rem; }
+  .dt th, .dt td { padding:.55rem .7rem; text-align:right; white-space:nowrap; border-bottom:1px solid var(--border); }
+  .fig .dt th, .fig .dt td { border-bottom-color:#edf1f8; }
+  .dt tr:last-child td { border-bottom:0; }
+  .dt th:first-child, .dt td:first-child { text-align:left; position:sticky; left:0; background:inherit; }
+  .dt thead th, .dt thead th:first-child { font-size:.68rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); background:var(--soft); vertical-align:bottom; }
+  .fig .dt thead th, .fig .dt thead th:first-child { background:#f4f7fd; color:#5b6478; }
+  .dt thead th small { white-space:normal; }
+  .dt thead th small { display:block; text-transform:none; letter-spacing:0; font-weight:500; font-size:.68rem; color:var(--muted); margin-top:.05rem; }
+  .dt tbody tr { background:var(--white); }
+  .fig .dt tbody tr { background:#fff; color:#1a1d2e; }
+  .dt td { color:inherit; }
+  .dt td:first-child { font-weight:600; }
+  /* The evidence lights up: after an answer, the cells that prove it go
+     blue and the rest step back. */
+  .dt td, .dt th { transition:background .3s ease, color .3s ease, opacity .3s ease; }
+  .dt.is-lit tbody td, .dt.is-lit.show-add tbody td.add-col { opacity:.42; }
+  .dt.is-lit tbody td.lit, .dt.is-lit.show-add tbody td.add-col.lit { opacity:1; background:#eef3ff; color:#1d3a8a; font-weight:700; }
+  body.dark .dt.is-lit tbody td.lit, body.dark .dt.is-lit.show-add tbody td.add-col.lit { background:rgba(74,124,246,.2); color:#cfe0ff; }
+  /* A column that arrives after the answer takes no room before it: hidden
+     columns still claimed their width, and the table scrolled sideways. */
+  .dt .add-col { display:none; }
+  .dt.has-add .add-col { display:table-cell; opacity:0; transform:translateX(10px); transition:opacity .3s ease, transform var(--spring-ms) var(--spring); }
+  .dt.has-add.show-add .add-col { opacity:1; transform:none; }
+  .dt .add-col.lit { opacity:1; }
+  .delta { display:inline-block; font-weight:700; color:#2f5bd8; }
+  body.dark .delta { color:#a9c1ff; }
+
+  /* ── NEW: COMPLETE THE TABLE ───────────────────────────────────────── */
+  .rule-chip { display:flex; align-items:center; gap:.5rem; background:var(--blue-tint); color:var(--blue-ink); border-radius:12px; padding:.55rem .75rem; font-size:.84rem; font-weight:600; margin-bottom:.8rem; }
+  .rule-chip .eq { font-variant-numeric:tabular-nums; }
+  .rule-tag { flex:none; font-size:.6rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; background:var(--blue); color:#fff; border-radius:6px; padding:.18rem .4rem; }
+  .ct-in { width:5.2rem; text-align:right; font:inherit; font-weight:600; font-variant-numeric:tabular-nums; color:var(--ink);
+    padding:.42rem .5rem; border:1.5px solid var(--border); border-radius:10px; background:var(--soft);
+    transition:border-color .18s ease, background .18s ease, box-shadow .18s ease; }
+  .ct-in:focus { outline:none; border-color:var(--blue); background:var(--white); box-shadow:0 0 0 3px rgba(74,124,246,.18); }
+  .ct-in::placeholder { color:#b6bfd2; font-weight:500; }
+  body.dark .ct-in { background:#1e2336; border-color:#2a3150; }
+  .ct-cell { display:inline-flex; flex-direction:column; align-items:flex-end; gap:.15rem; }
+  .ct-in.is-right { border-color:#10b981; background:#ecfdf5; color:#065f46; }
+  .ct-in.is-wrong { border-color:#ef4444; background:#fef2f2; color:#991b1b; text-decoration:line-through; text-decoration-thickness:1.5px; }
+  body.dark .ct-in.is-right { background:rgba(16,185,129,.14); color:#6ee7b7; }
+  body.dark .ct-in.is-wrong { background:rgba(239,68,68,.13); color:#fca5a5; }
+  .ct-fix { font-size:.74rem; font-weight:700; color:#065f46; animation:sfRise var(--spring-ms) var(--spring) both; }
+  body.dark .ct-fix { color:#6ee7b7; }
+  .ct-given td { color:var(--muted); }
+  .ct-tag { font-size:.6rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); border:1px solid var(--border); border-radius:999px; padding:.05rem .4rem; margin-left:.35rem; vertical-align:1px; }
+  .btn-check { margin-top:.85rem; width:100%; min-height:46px; border:0; border-radius:999px; background:var(--ink); color:#fff; font-size:.9rem; font-weight:600; cursor:pointer;
+    transition:transform var(--spring-fast-ms) var(--spring-fast), opacity .2s; }
+  body.dark .btn-check { background:#e9eeff; color:#141925; }
+  .btn-check:active:not(:disabled) { transform:scale(.97); transition-duration:80ms; }
+  .btn-check:disabled { opacity:.35; cursor:default; }
+  .mark { display:inline-block; width:18px; height:18px; flex:none; margin-left:auto; }
+  .mark path { stroke-dasharray:24; stroke-dashoffset:24; animation:drawMark .42s .1s cubic-bezier(.16,1,.3,1) forwards; }
+  @keyframes drawMark { to { stroke-dashoffset:0; } }
+
+  /* ── NEW: BUILD THE GRAPH ──────────────────────────────────────────── */
+  .bg-rows { display:flex; gap:.4rem; margin-bottom:.7rem; flex-wrap:wrap; }
+  .bg-row { display:inline-flex; align-items:center; gap:.4rem; font-size:.78rem; font-weight:600; font-variant-numeric:tabular-nums;
+    padding:.32rem .65rem .32rem .35rem; border-radius:999px; border:1.5px solid var(--border); color:var(--muted); background:var(--white);
+    transition:border-color .2s, color .2s, background .2s; }
+  .bg-row b { width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:.68rem; background:var(--soft); color:var(--muted); transition:background .2s, color .2s; }
+  .bg-row.is-now { border-color:var(--blue); color:var(--ink); }
+  .bg-row.is-now b { background:var(--blue); color:#fff; }
+  .bg-row.is-placed { color:var(--ink); }
+  .bg-row.is-placed b { background:var(--blue-tint); color:var(--blue-ink); }
+  .bg-row.is-right { border-color:#10b981; } .bg-row.is-right b { background:#10b981; color:#fff; }
+  .bg-row.is-wrong { border-color:#ef4444; } .bg-row.is-wrong b { background:#ef4444; color:#fff; }
+  .bg-plot { touch-action:none; user-select:none; -webkit-user-select:none; cursor:crosshair; }
+  .bg-plot.is-done { cursor:default; }
+  .bg-help { font-size:.76rem; color:var(--muted); margin-top:.45rem; min-height:1.2em; }
+
+  /* ── WHERE THEY APPEAR (the session strip) ─────────────────────────── */
+  .strip { margin-top:1.4rem; display:flex; gap:.45rem; overflow-x:auto; padding:.4rem .2rem 1rem; scroll-snap-type:x proximity; }
+  .st { flex:none; scroll-snap-align:start; width:96px; border-radius:14px; background:var(--white); border:1px solid var(--border); padding:.6rem .6rem .55rem; position:relative; }
+  .st small { display:block; font-size:.6rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-bottom:.25rem; font-variant-numeric:tabular-nums; }
+  .st span { display:block; font-size:.78rem; font-weight:600; line-height:1.3; }
+  .st.lesson { width:auto; display:flex; gap:.3rem; padding:.45rem; background:var(--white); }
+  .st.lesson .pg { width:78px; border-radius:10px; background:var(--soft); padding:.45rem .5rem; }
+  .st.lesson .pg span { font-size:.72rem; }
+  .st .pg.data, .st.data { background:var(--blue); border-color:var(--blue); color:#fff; box-shadow:0 10px 22px -12px rgba(74,124,246,.9); }
+  .st .pg.data small, .st.data small { color:rgba(255,255,255,.78); }
+  .st.maybe { border-style:dashed; border-color:var(--blue); background:var(--blue-tint); }
+  .st.maybe small { color:var(--blue-ink); }
+  .st.ghost { opacity:.55; }
+  .legend { display:flex; gap:1.1rem; flex-wrap:wrap; font-size:.78rem; color:var(--muted); margin-top:.2rem; }
+  .legend i { display:inline-block; width:12px; height:12px; border-radius:4px; vertical-align:-1px; margin-right:.35rem; }
+  .rules { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:.9rem; margin-top:1.3rem; }
+  .rule { background:var(--white); border:1px solid var(--border); border-radius:18px; padding:1rem 1.1rem; }
+  .rule h4 { font-size:.88rem; font-weight:700; margin-bottom:.3rem; }
+  .rule p { font-size:.85rem; line-height:1.55; color:var(--muted); }
+  .pick { width:100%; border-collapse:separate; border-spacing:0; margin-top:1.1rem; background:var(--white); border:1px solid var(--border); border-radius:18px; overflow:hidden; font-size:.88rem; }
+  .pick th, .pick td { text-align:left; padding:.7rem 1rem; border-bottom:1px solid var(--border); vertical-align:top; line-height:1.45; }
+  .pick tr:last-child td { border-bottom:0; }
+  .pick th { font-size:.68rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); background:var(--soft); }
+
+  /* ── CHART GALLERY ─────────────────────────────────────────────────── */
+  .gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:1.2rem; margin-top:1.4rem; }
+  .gcard { background:var(--white); border:1px solid var(--border); border-radius:22px; padding:.75rem; box-shadow:var(--shadow-card); }
+  .gcap { font-size:.8rem; line-height:1.5; color:var(--muted); margin:.7rem .3rem .2rem; }
+  .gcap b { color:var(--ink); font-weight:600; }
+
+  /* ── TEACHER ROW ───────────────────────────────────────────────────── */
+  .tr-card { background:var(--white); border:1px solid var(--border); border-radius:22px; padding:1.1rem 1.2rem; box-shadow:var(--shadow-card); }
+  .tr-top { display:flex; justify-content:space-between; gap:1rem; align-items:baseline; }
+  .tr-q { font-weight:600; font-size:.95rem; }
+  .tr-score { font-family:var(--serif); font-size:1.8rem; line-height:1; color:var(--blue-ink); font-variant-numeric:tabular-nums; }
+  .tr-meta { font-size:.75rem; color:var(--muted); margin:.25rem 0 .9rem; }
+  .tr-bar { height:8px; border-radius:99px; background:var(--border); overflow:hidden; margin-bottom:1rem; }
+  .tr-bar i { display:block; height:100%; width:62%; background:var(--blue); border-radius:inherit; }
+  .tr-common { font-size:.85rem; line-height:1.55; background:var(--soft); border-radius:12px; padding:.7rem .85rem; }
+  .tr-list { margin-top:.8rem; font-size:.82rem; }
+  .tr-list div { display:flex; justify-content:space-between; gap:1rem; padding:.45rem 0; border-bottom:1px solid var(--border); font-variant-numeric:tabular-nums; }
+  .tr-list div:last-child { border-bottom:0; }
+  .tr-list .ok { color:#1a9e80; font-weight:600; } .tr-list .no { color:#dc2626; font-weight:600; }
+
+  .foot-note { margin-top:4rem; font-size:.82rem; color:var(--muted); line-height:1.6; max-width:70ch; }
+
+  @media (max-width:980px) {
+    .demo { grid-template-columns:minmax(0,1fr); }
+    .demo .phone { justify-self:center; }
+    .top { flex-direction:column; }
+  }
+  @media (max-width:420px) {
+    .page { padding:1.6rem 0 4rem; }
+    .page > *:not(.demo):not(section) , section > *:not(.demo) { padding-left:16px; padding-right:16px; }
+    .phone { border-radius:0; box-shadow:none; padding:6px 12px 18px; width:100%; }
+    .strip { padding-left:16px; }
+  }
+
+  /* Reduced motion: no slides, no springs, no drawing on. Cross-fades only. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration:1ms !important; animation-delay:0ms !important; }
+    .seg-thumb, .fig-view, .fig-views, .dt .add-col { transition:opacity .2s ease !important; transform:none !important; }
+    .fig-view[hidden] { transform:none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="top">
+    <div>
+      <div class="kicker">Prototype · not in the app yet</div>
+      <h1>Tables, charts and graphs</h1>
+      <p class="lede">Everything below is the real session card, built with the app's own colours, type and spring
+        curves, so it looks the way it would. <b>Every card works: tap, type and drag.</b> Every number is drawn by
+        code from the data. The model would only ever write the numbers, never draw a line. All figures here are
+        sample notes.</p>
+    </div>
+    <div class="theme">
+      <div class="seg big theme-seg" role="tablist" aria-label="Theme" data-seg="theme">
+        <button role="tab" aria-selected="true" data-v="light">Light</button>
+        <button role="tab" aria-selected="false" data-v="dark">Dark</button>
+        <span class="seg-thumb"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═════════════════════════ WHEN ═════════════════════════ -->
+  <section class="block" id="when">
+    <span class="sec-num">First, the when</span>
+    <h2 class="sec">Where they appear in a session</h2>
+    <p class="lede">A science day whose notes contain numbers. The new pieces are blue; the dashed card is the one slot the
+      second data question can take, picked by what the data looks like.</p>
+
+    <div class="strip" aria-label="A session, in order">
+      <div class="st ghost"><small>Card 1</small><span>Welcome</span></div>
+      <div class="st lesson">
+        <div class="pg"><small>Lesson 1</small><span>The idea</span></div>
+        <div class="pg"><small>Lesson 2</small><span>How it works</span></div>
+        <div class="pg data"><small>Lesson 3</small><span>The numbers</span></div>
+        <div class="pg"><small>Lesson 4</small><span>Core concepts</span></div>
+        <div class="pg"><small>Lesson 5</small><span>Common traps</span></div>
+      </div>
+      <div class="st ghost"><small>Card 3</small><span>Flashcards</span></div>
+      <div class="st"><small>Q1</small><span>Multiple choice</span></div>
+      <div class="st"><small>Q2</small><span>Who's right?</span></div>
+      <div class="st data"><small>Q3 · ~25%</small><span>Read the table</span></div>
+      <div class="st"><small>Q4</small><span>Fill the gap</span></div>
+      <div class="st"><small>Q5</small><span>Sort it</span></div>
+      <div class="st"><small>Q6</small><span>Teach it back</span></div>
+      <div class="st maybe"><small>Q7 · ~60%</small><span>Complete the table <i style="font-style:normal;opacity:.7">or</i> Build the graph</span></div>
+      <div class="st"><small>Q8</small><span>Two-part</span></div>
+      <div class="st"><small>Q9</small><span>Order it</span></div>
+      <div class="st ghost"><small>…</small><span>Teach it back</span></div>
+      <div class="st ghost"><small>End</small><span>Results</span></div>
+    </div>
+    <div class="legend"><span><i style="background:var(--blue)"></i>New, always on a data day</span><span><i style="background:var(--blue-tint);box-shadow:inset 0 0 0 1.5px var(--blue)"></i>New, one of three, picked by the data</span><span><i style="background:var(--white);box-shadow:inset 0 0 0 1px var(--border)"></i>Cards that exist today</span></div>
+
+    <div class="rules">
+      <div class="rule"><h4>Only on days with real numbers</h4><p>The notes must contain a table or a run of figures. If the model has to invent numbers to illustrate, they are labelled "Example data" on the card, and that day gets no question about them.</p></div>
+      <div class="rule"><h4>Teach before testing</h4><p>"The numbers" sits inside the lesson, after <i>How it works</i>, so the data is evidence for the idea just explained. No data question comes before the learner has seen that page.</p></div>
+      <div class="rule"><h4>Easy to hard</h4><p>Reading a value (~25% into practice) comes before applying a rule (~60%). Building a graph, the hardest, sits in the second half. Never in the pre-test, never the first question.</p></div>
+      <div class="rule"><h4>Two at most, spaced out</h4><p>At most two data questions a session, at least three cards apart. They count toward the picture budget (25% of cards), so a data day draws fewer other pictures.</p></div>
+      <div class="rule"><h4>Not on maths or history days</h4><p>Maths stays about 80% solving (invariant 1). History keeps its timelines. Science, economics, geography, psychology and computing get these.</p></div>
+      <div class="rule"><h4>They come back</h4><p>A missed data question goes into spaced review like any other, and its walkthrough lights the row or cell that held the answer.</p></div>
+    </div>
+
+    <table class="pick">
+      <thead><tr><th style="width:38%">If the day's data looks like…</th><th>The second question is…</th></tr></thead>
+      <tbody>
+        <tr><td>Columns linked by a rule: a total, a price per item, a percentage</td><td><b>Complete the table</b>: apply the rule to fill the blanks</td></tr>
+        <tr><td>Pairs of numbers with a trend: mass and stretch, time and distance</td><td><b>Build the graph</b>: plot the points, then see the line</td></tr>
+        <tr><td>A chart, on a day about statistics, data or persuasion</td><td><b>Spot the bad graph</b>: at most once every few days</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ═════════════════════════ 1. THE NUMBERS ═════════════════════════ -->
+  <section class="block" id="numbers">
+    <span class="sec-num">1 · Inside the lesson</span>
+    <h2 class="sec">The numbers</h2>
+    <div class="demo">
+      <div class="notes">
+        <p>A page in the lesson card, between <i>How it works</i> and <i>Core concepts</i>. It opens with one sentence
+          saying what the numbers show, then the data, then the one thing to notice.</p>
+        <p>It opens on the chart when the data has a trend, because a shape is quicker to read than a column. It opens
+          on the table when the data is a list to look things up in. <b>Chart | Table</b> switches between them; the
+          thumb slides on a spring and the view slides the same way it is going.</p>
+        <p>The line draws itself once, left to right, the first time the page is seen. The point that matters is
+          labelled with its value.</p>
+        <div class="when"><h4>When</h4><ul>
+          <li>Lesson page 3 of 5 on any non-maths day with figures in the notes</li>
+          <li>One page per day, never more; a day without numbers simply has no such page</li>
+          <li>The same figure returns under a missed data question, as "Look at it again"</li>
+        </ul></div>
+        <p class="try"><b>Try:</b> switch Chart and Table. Swipe the table sideways at phone width.</p>
+      </div>
+      <div class="phone">
+        <div class="sbar"><span class="mark"></span><span class="tb"><i></i></span><span class="t">18:24</span></div>
+        <div class="session-card">
+          <div class="card-header"><div class="card-badge">✦ Lesson</div><h3>Light and the rate of photosynthesis</h3></div>
+          <div class="card-body">
+            <div class="lp-head"><span class="lp-label">The numbers</span><span class="lp-count">3 of 5</span></div>
+            <div class="lp-rail"><span class="lp-seg is-done"></span><span class="lp-seg is-done"></span><span class="lp-seg is-at"></span><span class="lp-seg"></span><span class="lp-seg"></span></div>
+            <p class="content-text" style="margin-bottom:.85rem">More light means more oxygen, <strong>until it doesn't</strong>.</p>
+            <div class="art-paper fig" data-fig="lux"></div>
+            <p class="content-text" style="margin-top:.85rem;font-size:.9rem"><strong>Notice:</strong> from 5,000 to 10,000 lux the output almost doubles. From 10,000 to 20,000 it barely moves. Light has stopped being what limits the plant.</p>
+          </div>
+          <div class="card-footer"><span class="footer-left">Lesson</span><button class="btn-next">Core concepts →</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════ 2. CHARTS ═════════════════════════ -->
+  <section class="block" id="charts">
+    <span class="sec-num">2 · The pictures</span>
+    <h2 class="sec">Four new charts, all drawn by code</h2>
+    <p class="lede">Each takes numbers and nothing else. It refuses to draw when the numbers can't make an honest picture:
+      a pie that doesn't add up, a trend from two points, a scatter with no spread. Every chart turns into its table and
+      back. Labels sit on the lines instead of in a legend, so nobody matches colours.</p>
+    <div class="gallery">
+      <div class="gcard"><div class="art-paper fig" data-fig="plants"></div>
+        <p class="gcap"><b>Two lines.</b> Sun plant against shade plant. Used when the notes compare two things over the same range. Science, geography.</p></div>
+      <div class="gcard"><div class="art-paper fig" data-fig="rain"></div>
+        <p class="gcap"><b>Grouped bars.</b> Two cities, four months. Bars always start at zero. Geography, economics.</p></div>
+      <div class="gcard"><div class="art-paper fig" data-fig="water"></div>
+        <p class="gcap"><b>Donut.</b> Only for parts of one whole, six slices at most, and code checks they add to 100%. Names sit in a list beside it, so a thin slice never loses its label.</p></div>
+      <div class="gcard"><div class="art-paper fig" data-fig="sleep"></div>
+        <p class="gcap"><b>Scatter with a trend line.</b> The line is calculated from the dots, never drawn by the model, and the card says a pattern is not proof. Psychology, science.</p></div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════ 3. READ THE TABLE ═════════════════════════ -->
+  <section class="block" id="read">
+    <span class="sec-num">3 · Question</span>
+    <h2 class="sec">Read the table</h2>
+    <div class="demo">
+      <div class="notes">
+        <p>Questions that are answered by looking things up: which row is biggest, what changed between two rows, where a
+          value crosses a line. <b>The code works out the right answer from the table itself</b>, so a slip in the
+          model's key can't mark a learner wrong.</p>
+        <p>After the answer, the evidence lights up. A "Rise" column slides in beside the data, the rows that prove it
+          stay bright, and everything else steps back.</p>
+        <div class="when"><h4>When</h4><ul>
+          <li>About a quarter of the way through practice, after a warm-up question</li>
+          <li>Uses the same data as the lesson's "The numbers" page, so it checks what was just taught</li>
+          <li>The first data question of the day, because looking up is the easiest data skill</li>
+        </ul></div>
+        <p class="try"><b>Try:</b> pick a wrong answer first; the card shows you why. Reset and pick the right one.</p>
+      </div>
+      <div class="phone">
+        <div class="sbar"><span class="mark"></span><span class="tb"><i style="width:41%"></i></span><span class="t">13:02</span><span class="pill">2/2</span></div>
+        <div class="session-card" id="read-card"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════ 4. COMPLETE THE TABLE ═════════════════════════ -->
+  <section class="block" id="complete">
+    <span class="sec-num">4 · Question</span>
+    <h2 class="sec">Complete the table</h2>
+    <div class="demo">
+      <div class="notes">
+        <p>A few cells are blank and follow a rule written above the table. The first row is done as an example. The
+          learner types numbers (a number keyboard on a phone) and Enter moves to the next blank.</p>
+        <p>The code checks each cell with a little leeway, so 1.5 and 1.50 both count. A wrong cell keeps what was typed,
+          crossed out, with the right number written under it. The mistake is fixed where it was made instead of being
+          explained somewhere else.</p>
+        <div class="when"><h4>When</h4><ul>
+          <li>Around 60% through practice, after the learner has read the data once</li>
+          <li>Only when the columns are linked by a rule (totals, prices per item, percentages, speed = distance ÷ time)</li>
+          <li>Economics and science most of all; geography for density or percentage tables</li>
+        </ul></div>
+        <p class="try"><b>Try:</b> type 1.5 and 1.3, then Check.</p>
+      </div>
+      <div class="phone">
+        <div class="sbar"><span class="mark"></span><span class="tb"><i style="width:63%"></i></span><span class="t">09:40</span><span class="pill">5/6</span></div>
+        <div class="session-card" id="complete-card"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════ 5. SPOT THE BAD GRAPH ═════════════════════════ -->
+  <section class="block" id="bad">
+    <span class="sec-num">5 · Question</span>
+    <h2 class="sec">Spot the bad graph</h2>
+    <div class="demo">
+      <div class="notes">
+        <p>A chart that is true but misleading: an axis that starts at 95, a squashed scale, a pie that adds to 130%. The
+          learner says what is wrong with it.</p>
+        <p>Then the card <b>fixes the graph in front of them</b>. The axis slides down to zero on a spring and the
+          "soaring" bars settle to nearly equal. Seeing the same numbers tell a different story is what makes it stick.</p>
+        <div class="when"><h4>When</h4><ul>
+          <li>Late in practice, once honest charts have been seen earlier that day</li>
+          <li>Only on days about statistics, data, advertising or economics, and at most once every few days</li>
+          <li>Built by code from the day's own numbers with one known distortion, so the answer is never a guess</li>
+        </ul></div>
+        <p class="try"><b>Try:</b> answer, then watch the axis.</p>
+      </div>
+      <div class="phone">
+        <div class="sbar"><span class="mark"></span><span class="tb"><i style="width:78%"></i></span><span class="t">06:15</span><span class="pill">7/9</span></div>
+        <div class="session-card" id="bad-card"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════ 6. BUILD THE GRAPH ═════════════════════════ -->
+  <section class="block" id="build">
+    <span class="sec-num">6 · Question · the stretch goal</span>
+    <h2 class="sec">Build the graph</h2>
+    <div class="demo">
+      <div class="notes">
+        <p>The learner makes the picture instead of reading one. Tap the grid to place each point from the table; the
+          point snaps to the nearest line and pops in. Drag a placed point to move it: it follows the finger exactly,
+          and springs onto the grid when let go.</p>
+        <p>On Check, right points turn green. A wrong point shows a ring where it should be and glides there. Then the
+          line draws itself through all of them, and the card says what the line means.</p>
+        <div class="when"><h4>When</h4><ul>
+          <li>The second half of practice. It is the hardest data card, so it never comes first</li>
+          <li>Only when the data is pairs of numbers with a pattern, three to six points</li>
+          <li>Instead of Complete the table, not as well as it: two data questions a session at most</li>
+        </ul></div>
+        <p class="try"><b>Try:</b> place one point in the wrong spot on purpose, then Check.</p>
+      </div>
+      <div class="phone">
+        <div class="sbar"><span class="mark"></span><span class="tb"><i style="width:70%"></i></span><span class="t">07:51</span><span class="pill">6/8</span></div>
+        <div class="session-card" id="build-card"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════ 7. TEACHER ═════════════════════════ -->
+  <section class="block" id="teacher">
+    <span class="sec-num">7 · For teachers</span>
+    <h2 class="sec">What the teacher sees</h2>
+    <div class="demo">
+      <div class="notes">
+        <p>The same cards work in assignments because the teacher builder shares the plan builder's question code. On
+          the results page each data question shows the class's first-try score and the most common wrong answer,
+          written out the way the students answered it.</p>
+        <p class="muted">That common wrong answer is often the lesson: here, most students who missed it divided the
+          wrong way round.</p>
+      </div>
+      <div class="tr-card">
+        <div class="tr-top"><span class="tr-q">Q6 · Complete the table: price per pen</span><span class="tr-score">62%</span></div>
+        <div class="tr-meta">First try · 13 of 21 right · 4 more got it when it came back</div>
+        <div class="tr-bar"><i></i></div>
+        <div class="tr-common"><b>Most common wrong answer</b>, 5 of 8 who missed it: <b>0.67, 0.83</b><br><span style="color:var(--muted)">That's pens ÷ total, the rule upside down.</span></div>
+        <div class="tr-list">
+          <div><span>Maya R.</span><span class="ok">1.50, 1.20</span></div>
+          <div><span>Leo K.</span><span class="no">0.67, 0.83</span></div>
+          <div><span>Sam T.</span><span class="ok">1.5, 1.2</span></div>
+          <div><span>Ana P.</span><span class="no">1.50, 1.30</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot-note">Motion follows the app's own rules: springs that settle without bounce for anything that changes
+    on its own (the thumb, the views, the axis), a little bounce only where a finger threw something (a placed point),
+    feedback on the press, and nothing that blocks input while it moves. With reduced motion on, every one of these
+    becomes a short cross-fade.</p>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════
+   DC - the data cards. ES5 on purpose, so the renderer can move into
+   sf-render.js as it stands. Every chart is laid out 1:1 at the width it is
+   shown at (as the concept map and readchart are), so 12px type is 12px on
+   a phone instead of shrinking with a fixed viewBox.
+   ════════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+  var FONT = "'DM Sans', system-ui, -apple-system, sans-serif";
+  var BRAND = '#4a7cf6', FOCAL = '#3563e9', INK = '#1a1d2e', MUTED = '#5b6478';
+  var RULE = '#cbd5e1', GRID = '#e6ebf3', SLATE = '#64748b', TINT = '#e9f0ff';
+  var REDUCE = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function fmt(n, dp) {
+    if (dp != null) return Number(n).toFixed(dp);
+    var a = Math.abs(n);
+    return a >= 1000 ? Math.round(n).toLocaleString('en-US') : String(Math.round(n * 100) / 100);
+  }
+  function textW(s, size, bold) { return String(s).length * size * (bold ? 0.56 : 0.52); }
+
+  /* A nice scale: round tick steps (1, 2, 5 x 10^n) that cover the data. */
+  function nice(min, max, count, fromZero) {
+    if (fromZero) min = Math.min(0, min);
+    if (max === min) max = min + 1;
+    var span = max - min, step = Math.pow(10, Math.floor(Math.log(span / count) / Math.LN10));
+    var err = count / span * step;
+    if (err <= 0.15) step *= 10; else if (err <= 0.35) step *= 5; else if (err <= 0.75) step *= 2;
+    var lo = Math.floor(min / step + 1e-9) * step, hi = Math.ceil(max / step - 1e-9) * step, ticks = [];
+    for (var v = lo; v <= hi + step / 2; v += step) ticks.push(Math.round(v / step) * step);
+    return { min: lo, max: hi, step: step, ticks: ticks };
+  }
+
+  /* ── springs, in JS, for values a script owns (the axis, a dragged point).
+     Apple's two parameters: damping ratio and response. Starts from the
+     CURRENT value and velocity, so a new target mid-flight never jumps. ── */
+  function spring(o) {
+    var w = 2 * Math.PI / (o.response || 0.4), k = w * w, c = 2 * (o.damping == null ? 1 : o.damping) * w;
+    var x = o.from, v = o.velocity || 0, to = o.to, last = null, id = 0, done = false;
+    var span = Math.max(1e-6, Math.abs(to - o.from));
+    if (REDUCE.matches) { o.update(to); if (o.done) o.done(); return { stop: function () {} }; }
+    function step(t) {
+      if (last == null) last = t;
+      var dt = Math.min(0.064, (t - last) / 1000), n = Math.max(1, Math.ceil(dt / 0.004)), h = dt / n, i;
+      last = t;
+      for (i = 0; i < n; i++) { var a = -k * (x - to) - c * v; v += a * h; x += v * h; }
+      if (Math.abs(x - to) < span * 0.0015 && Math.abs(v) < span * 0.02) { done = true; o.update(to); if (o.done) o.done(); return; }
+      o.update(x);
+      id = requestAnimationFrame(step);
+    }
+    id = requestAnimationFrame(step);
+    /* A hidden tab runs no frames: land it anyway. */
+    var guard = setTimeout(function () { if (!done) { cancelAnimationFrame(id); done = true; o.update(to); if (o.done) o.done(); } }, 2500);
+    return { stop: function () { cancelAnimationFrame(id); clearTimeout(guard); done = true; } };
+  }
+
+  /* ── drawing on: once, when first seen ── */
+  /* ?still: no drawing-on, for screenshots (a hidden browser pane runs no
+     frames, so a capture lands mid-line). */
+  var STILL = /still/.test(location.search);
+  function drawOn(svg) {
+    if (!svg || REDUCE.matches || STILL || !svg.animate) return;
+    var lines = svg.querySelectorAll('.dc-line'), i;
+    for (i = 0; i < lines.length; i++) {
+      var L = lines[i].getTotalLength ? lines[i].getTotalLength() : 0;
+      if (!L) continue;
+      lines[i].style.strokeDasharray = L; lines[i].style.strokeDashoffset = L;
+      lines[i].animate([{ strokeDashoffset: L }, { strokeDashoffset: 0 }], { duration: 900, delay: 120 + i * 180, easing: 'cubic-bezier(.33,0,.15,1)', fill: 'forwards' })
+        .onfinish = (function (el) { return function () { el.style.strokeDasharray = ''; el.style.strokeDashoffset = ''; }; })(lines[i]);
+    }
+    var dots = svg.querySelectorAll('.dc-dot');
+    for (i = 0; i < dots.length; i++) {
+      dots[i].style.transformBox = 'fill-box'; dots[i].style.transformOrigin = 'center';
+      dots[i].animate([{ opacity: 0, transform: 'scale(.3)' }, { opacity: 1, transform: 'none' }],
+        { duration: 420, delay: (lines.length ? 260 : 80) + i * 55, easing: 'cubic-bezier(.34,1.5,.64,1)', fill: 'backwards' });
+    }
+    var bars = svg.querySelectorAll('.dc-bar');
+    for (i = 0; i < bars.length; i++) {
+      bars[i].style.transformBox = 'fill-box'; bars[i].style.transformOrigin = '50% 100%';
+      bars[i].animate([{ transform: 'scaleY(0)' }, { transform: 'none' }], { duration: 640, delay: 80 + i * 45, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'backwards' });
+    }
+    var arcs = svg.querySelectorAll('.dc-arc');
+    for (i = 0; i < arcs.length; i++) {
+      var len = +arcs[i].getAttribute('data-len'), off = +arcs[i].getAttribute('stroke-dashoffset');
+      arcs[i].animate([{ strokeDasharray: '0 ' + 9999 }, { strokeDasharray: len + ' 9999' }], { duration: 520, delay: 80 + i * 230, easing: 'cubic-bezier(.33,0,.2,1)', fill: 'backwards' });
+    }
+    var late = svg.querySelectorAll('.dc-late');
+    for (i = 0; i < late.length; i++) late[i].animate([{ opacity: 0 }, { opacity: 1 }], { duration: 380, delay: 900 + i * 60, easing: 'ease-out', fill: 'backwards' });
+  }
+  var seen = window.IntersectionObserver ? new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) { seen.unobserve(e.target); var s = e.target.querySelector('svg'); drawOn(s); } });
+  }, { threshold: 0.35 }) : null;
+
+  /* ════════════════════ THE CHARTS ════════════════════ */
+
+  /* Line chart, one or more series, labels at the line ends. */
+  function lineChart(spec, W) {
+    var series = spec.series, all = [], i, j;
+    series.forEach(function (s) { s.pts.forEach(function (p) { all.push(p); }); });
+    var xs = all.map(function (p) { return p[0]; }), ys = all.map(function (p) { return p[1]; });
+    var yS = nice(Math.min.apply(null, ys), Math.max.apply(null, ys), 4, true);
+    var xS = nice(Math.min.apply(null, xs), Math.max.apply(null, xs), W < 360 ? 3 : 4, true);
+    var endW = 0;
+    series.forEach(function (s) { if (series.length > 1) endW = Math.max(endW, textW(s.name, 12, true)); });
+    var L = Math.max(30, textW(fmt(yS.max), 11.5) + 12), R = 10 + (endW ? endW + 10 : 6), T = 26, B = 42;
+    var H = Math.round(Math.max(190, Math.min(260, W * 0.62)));
+    var pw = W - L - R, ph = H - T - B;
+    function X(v) { return L + (v - xS.min) / (xS.max - xS.min) * pw; }
+    function Y(v) { return T + ph - (v - yS.min) / (yS.max - yS.min) * ph; }
+    var o = [];
+    o.push('<text x="' + 2 + '" y="12" font-size="11.5" font-weight="600" fill="' + MUTED + '">' + esc(spec.yLabel) + '</text>');
+    yS.ticks.forEach(function (t) {
+      o.push('<line x1="' + L + '" x2="' + (L + pw) + '" y1="' + Y(t) + '" y2="' + Y(t) + '" stroke="' + (t === 0 ? RULE : GRID) + '" stroke-width="1"/>');
+      o.push('<text x="' + (L - 8) + '" y="' + (Y(t) + 4) + '" font-size="11.5" fill="' + MUTED + '" text-anchor="end">' + fmt(t) + '</text>');
+    });
+    xS.ticks.forEach(function (t) {
+      o.push('<text x="' + X(t) + '" y="' + (T + ph + 17) + '" font-size="11.5" fill="' + MUTED + '" text-anchor="middle">' + (spec.xFmt ? spec.xFmt(t) : fmt(t)) + '</text>');
+    });
+    o.push('<text x="' + (L + pw / 2) + '" y="' + (H - 4) + '" font-size="11.5" font-weight="600" fill="' + MUTED + '" text-anchor="middle">' + esc(spec.xLabel) + '</text>');
+    var ends = [];
+    series.forEach(function (s, si) {
+      var tone = s.tone || BRAND, d = '';
+      s.pts.forEach(function (p, k) { d += (k ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1); });
+      o.push('<path class="dc-line" d="' + d + '" fill="none" stroke="' + tone + '" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>');
+      s.pts.forEach(function (p, k) {
+        var hl = spec.highlight && spec.highlight[0] === si && spec.highlight[1] === k;
+        o.push('<circle class="dc-dot" cx="' + X(p[0]).toFixed(1) + '" cy="' + Y(p[1]).toFixed(1) + '" r="' + (hl ? 5.5 : 3.6) + '" fill="' + (hl ? FOCAL : '#fff') + '" stroke="' + (hl ? '#fff' : tone) + '" stroke-width="' + (hl ? 2 : 2.2) + '"/>');
+        if (hl) o.push('<text class="dc-late" x="' + X(p[0]) + '" y="' + (Y(p[1]) - 11) + '" font-size="12.5" font-weight="700" fill="' + FOCAL + '" text-anchor="' + (X(p[0]) > L + pw - 30 ? 'end' : 'middle') + '">' + esc(spec.hlLabel || fmt(p[1])) + '</text>');
+      });
+      if (series.length > 1) { var lp = s.pts[s.pts.length - 1]; ends.push({ y: Y(lp[1]) + 4, x: X(lp[0]) + 9, name: s.name, tone: tone }); }
+    });
+    /* Two end labels never touch: push them apart, keeping their order. */
+    ends.sort(function (a, b) { return a.y - b.y; });
+    for (i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 15) ends[i].y = ends[i - 1].y + 15;
+    ends.forEach(function (e) { o.push('<text class="dc-late" x="' + e.x + '" y="' + e.y + '" font-size="12" font-weight="700" fill="' + e.tone + '">' + esc(e.name) + '</text>'); });
+    return svgWrap(W, H, o, spec.title);
+  }
+
+  /* Bars, grouped when there are two series. yMin lets "Spot the bad graph"
+     cut the axis - the ONLY caller that may; every honest chart starts at 0. */
+  function barChart(spec, W, yMinOverride) {
+    var cats = spec.cats, series = spec.series, i;
+    var vals = []; series.forEach(function (s) { vals = vals.concat(s.values); });
+    var yMin = yMinOverride != null ? yMinOverride : 0;
+    var yS = nice(yMin, Math.max.apply(null, vals), 4, yMinOverride == null);
+    if (yMinOverride != null) {
+      /* Fixed ticks for the morph, so the gridlines glide instead of jumping. */
+      var span = Math.max.apply(null, vals) * 1.04 - yMin, st = span > 40 ? 20 : span > 16 ? 5 : 2, lo = Math.floor(yMin / st) * st;
+      yS = { min: yMin, max: Math.max.apply(null, vals) * 1.04, ticks: [] };
+      /* The baseline is always labelled with its own value: the question
+         says "starts at 95", so 95 must be printed there (it read 96). While
+         the axis falls to zero, that label counts down with it. */
+      yS.ticks.push(Math.round(yMin));
+      for (var t = lo; t <= yS.max; t += st) if (t > yMin + st * 0.55) yS.ticks.push(t);
+    }
+    var legend = series.length > 1;
+    var L = Math.max(30, textW(fmt(yS.max), 11.5) + 12), R = 8, T = legend ? 40 : 26, B = 30;
+    var H = Math.round(Math.max(190, Math.min(250, W * 0.6)));
+    var pw = W - L - R, ph = H - T - B;
+    function Y(v) { return T + ph - (Math.max(yS.min, Math.min(yS.max, v)) - yS.min) / (yS.max - yS.min) * ph; }
+    var o = [];
+    o.push('<text x="2" y="12" font-size="11.5" font-weight="600" fill="' + MUTED + '">' + esc(spec.yLabel) + '</text>');
+    if (legend) {
+      var lx = 2;
+      series.forEach(function (s) {
+        o.push('<rect x="' + lx + '" y="21" width="10" height="10" rx="3" fill="' + s.tone + '"/>');
+        o.push('<text x="' + (lx + 15) + '" y="30" font-size="12" font-weight="600" fill="' + INK + '">' + esc(s.name) + '</text>');
+        lx += 15 + textW(s.name, 12, true) + 16;
+      });
+    }
+    yS.ticks.forEach(function (t) {
+      o.push('<line x1="' + L + '" x2="' + (L + pw) + '" y1="' + Y(t).toFixed(1) + '" y2="' + Y(t).toFixed(1) + '" stroke="' + GRID + '"/>');
+      o.push('<text x="' + (L - 8) + '" y="' + (Y(t) + 4).toFixed(1) + '" font-size="11.5" fill="' + MUTED + '" text-anchor="end">' + fmt(t) + '</text>');
+    });
+    var gw = pw / cats.length, bw = Math.min(34, gw * 0.62 / series.length), gap = series.length > 1 ? 3 : 0;
+    cats.forEach(function (c, ci) {
+      var gx = L + gw * ci + gw / 2, total = series.length * bw + (series.length - 1) * gap;
+      series.forEach(function (s, si) {
+        var v = s.values[ci], x = gx - total / 2 + si * (bw + gap), y = Y(v), h = Math.max(0, T + ph - y);
+        o.push('<rect class="dc-bar" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="' + Math.min(5, bw / 3).toFixed(1) + '" fill="' + s.tone + '"/>');
+        if (spec.values) o.push('<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (y - 6).toFixed(1) + '" font-size="12" font-weight="700" fill="' + INK + '" text-anchor="middle">' + fmt(v) + '</text>');
+      });
+      o.push('<text x="' + gx.toFixed(1) + '" y="' + (T + ph + 18) + '" font-size="11.5" fill="' + MUTED + '" text-anchor="middle">' + esc(c) + '</text>');
+    });
+    o.push('<line x1="' + L + '" x2="' + (L + pw) + '" y1="' + (T + ph) + '" y2="' + (T + ph) + '" stroke="' + RULE + '" stroke-width="1.2"/>');
+    if (yS.min > 0) {
+      /* An axis that does not start at zero is drawn honestly AS that: no
+         break symbol hides it. The bad-graph card is about noticing. */
+    }
+    return svgWrap(W, H, o, spec.title);
+  }
+
+  /* Donut. Parts of one whole only: refuses unless the slices sum to ~100.
+     The names sit in a list beside it (swatch, name, share), never on
+     leader lines: at phone width a leader from a slice on the far side has
+     to cross the ring, and a thin slice's label had nowhere to go. */
+  function donut(spec, W) {
+    var sum = spec.parts.reduce(function (a, p) { return a + p.value; }, 0);
+    if (Math.abs(sum - 100) > 0.6 || spec.parts.length > 6) return null;
+    var tones = ['#2f5fe0', '#86a8fa', '#c9d8fd', '#9fb3d6', '#dbe5fb', '#5b7fe0'];
+    var rowH = 46, H = Math.max(170, spec.parts.length * rowH + 30);
+    var r = Math.min(58, W * 0.17), sw = r * 0.5, cx = r + sw / 2 + 6, cy = H / 2;
+    var C = 2 * Math.PI * r, acc = 0, o = [];
+    spec.parts.forEach(function (p, i) {
+      var len = Math.max(1.5, p.value / 100 * C - 2), start = acc / 100 * C;
+      o.push('<circle class="dc-arc" data-len="' + len.toFixed(1) + '" cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + tones[i] + '" stroke-width="' + sw + '"' +
+        ' stroke-dasharray="' + len.toFixed(1) + ' ' + (C + 50).toFixed(1) + '" stroke-dashoffset="' + (-start).toFixed(1) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"/>');
+      acc += p.value;
+    });
+    o.push('<text x="' + cx + '" y="' + (cy + 5) + '" font-size="15" font-weight="700" fill="' + INK + '" text-anchor="middle">100%</text>');
+    var lx = cx + r + sw / 2 + 20, top = cy - (spec.parts.length * rowH) / 2 + 8;
+    spec.parts.forEach(function (p, i) {
+      var y = top + i * rowH;
+      o.push('<rect class="dc-late" x="' + lx + '" y="' + (y + 2) + '" width="10" height="10" rx="3" fill="' + tones[i] + '"' + (i === 2 ? ' stroke="#9db6f7" stroke-width="1"' : '') + '/>');
+      o.push('<text class="dc-late" x="' + (lx + 17) + '" y="' + (y + 11) + '" font-size="12.5" font-weight="600" fill="' + INK + '">' + esc(p.label) + '</text>');
+      o.push('<text class="dc-late" x="' + (lx + 17) + '" y="' + (y + 31) + '" font-size="17" font-weight="700" fill="' + (i === 0 ? FOCAL : INK) + '" letter-spacing="-.2">' + fmt(p.value) + '%</text>');
+    });
+    return svgWrap(W, H, o, spec.title);
+  }
+
+  /* Scatter with a least-squares line. The slope is computed here and is
+     the only claim the picture makes about the dots. */
+  function scatter(spec, W) {
+    var pts = spec.pts, n = pts.length, sx = 0, sy = 0, sxx = 0, sxy = 0;
+    pts.forEach(function (p) { sx += p[0]; sy += p[1]; sxx += p[0] * p[0]; sxy += p[0] * p[1]; });
+    var den = n * sxx - sx * sx; if (!den || n < 5) return null;
+    var m = (n * sxy - sx * sy) / den, b = (sy - m * sx) / n;
+    var xs = pts.map(function (p) { return p[0]; }), ys = pts.map(function (p) { return p[1]; });
+    var xS = nice(Math.min.apply(null, xs) - 0.25, Math.max.apply(null, xs) + 0.25, 4, false);
+    var yS = nice(Math.min.apply(null, ys) - 3, Math.max.apply(null, ys) + 3, 4, false);
+    var L = 34, R = 12, T = 26, B = 42, H = Math.round(Math.max(200, Math.min(260, W * 0.64)));
+    var pw = W - L - R, ph = H - T - B;
+    function X(v) { return L + (v - xS.min) / (xS.max - xS.min) * pw; }
+    function Y(v) { return T + ph - (v - yS.min) / (yS.max - yS.min) * ph; }
+    var o = [];
+    o.push('<text x="2" y="12" font-size="11.5" font-weight="600" fill="' + MUTED + '">' + esc(spec.yLabel) + '</text>');
+    yS.ticks.forEach(function (t) {
+      o.push('<line x1="' + L + '" x2="' + (L + pw) + '" y1="' + Y(t) + '" y2="' + Y(t) + '" stroke="' + GRID + '"/>');
+      o.push('<text x="' + (L - 8) + '" y="' + (Y(t) + 4) + '" font-size="11.5" fill="' + MUTED + '" text-anchor="end">' + fmt(t) + '</text>');
+    });
+    xS.ticks.forEach(function (t) { o.push('<text x="' + X(t) + '" y="' + (T + ph + 17) + '" font-size="11.5" fill="' + MUTED + '" text-anchor="middle">' + fmt(t) + '</text>'); });
+    o.push('<text x="' + (L + pw / 2) + '" y="' + (H - 4) + '" font-size="11.5" font-weight="600" fill="' + MUTED + '" text-anchor="middle">' + esc(spec.xLabel) + '</text>');
+    pts.forEach(function (p) {
+      o.push('<circle class="dc-dot" cx="' + X(p[0]).toFixed(1) + '" cy="' + Y(p[1]).toFixed(1) + '" r="4.6" fill="' + BRAND + '" fill-opacity=".78" stroke="#fff" stroke-width="1.5"/>');
+    });
+    var x0 = xS.min + 0.1, x1 = xS.max - 0.1;
+    o.push('<path class="dc-line" d="M' + X(x0).toFixed(1) + ' ' + Y(m * x0 + b).toFixed(1) + ' L' + X(x1).toFixed(1) + ' ' + Y(m * x1 + b).toFixed(1) + '" stroke="' + FOCAL + '" stroke-width="2.2" stroke-linecap="round" fill="none" stroke-dasharray=""/>');
+    /* The slope goes in the corner the line leaves empty (top-left when it
+       rises), never on the dots. */
+    var lbl = 'Trend: ' + (m >= 0 ? '+' : '−') + fmt(Math.abs(m), 1) + ' ' + spec.slopeUnit;
+    var up = m >= 0, lx = up ? L + 8 : L + pw - 8;
+    o.push('<text class="dc-late" x="' + lx.toFixed(1) + '" y="' + (T + 14) + '" font-size="12" font-weight="700" fill="' + FOCAL + '" text-anchor="' + (up ? 'start' : 'end') + '"' +
+      ' stroke="#f7f9fe" stroke-width="4" paint-order="stroke" stroke-linejoin="round">' + esc(lbl) + '</text>');
+    return svgWrap(W, H, o, spec.title);
+  }
+
+  function svgWrap(W, H, parts, label) {
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="' + esc(label) + '" font-family="' + FONT + '" style="font-variant-numeric:tabular-nums">' + parts.join('') + '</svg>';
+  }
+
+  /* ════════════════════ THE TABLE ════════════════════ */
+  function table(spec, opts) {
+    opts = opts || {};
+    var h = '<div class="dt-wrap"><table class="dt"' + (opts.id ? ' id="' + opts.id + '"' : '') + '>';
+    if (spec.caption) h += '<caption>' + esc(spec.caption) + '</caption>';
+    h += '<thead><tr>' + spec.cols.map(function (c, i) {
+      return '<th scope="col"' + (c.add ? ' class="add-col"' : '') + '>' + esc(c.name) + (c.unit ? '<small>' + esc(c.unit) + '</small>' : '') + '</th>';
+    }).join('') + '</tr></thead><tbody>';
+    spec.rows.forEach(function (r, ri) {
+      h += '<tr' + (r.cls ? ' class="' + r.cls + '"' : '') + '>' + r.cells.map(function (v, ci) {
+        var cls = spec.cols[ci] && spec.cols[ci].add ? ' class="add-col"' : '';
+        /* Model text is always escaped; only markup this file built ({html})
+           goes in raw - the inputs, the deltas, the example tag. */
+        return '<td' + cls + ' data-r="' + ri + '" data-c="' + ci + '">' + (v && v.html != null ? v.html : esc(v)) + '</td>';
+      }).join('') + '</tr>';
+    });
+    return h + '</tbody></table></div>';
+  }
+
+  /* ════════════════════ THE FIGURE: chart <-> table ════════════════════ */
+  function segInit(seg, onPick) {
+    var btns = seg.querySelectorAll('button'), thumb = seg.querySelector('.seg-thumb');
+    function place(b) {
+      thumb.style.width = b.offsetWidth + 'px';
+      thumb.style.transform = 'translateX(' + (b.offsetLeft - 2) + 'px)';
+    }
+    function pick(b, silent) {
+      for (var i = 0; i < btns.length; i++) btns[i].setAttribute('aria-selected', btns[i] === b ? 'true' : 'false');
+      place(b);
+      if (!silent) onPick(b.getAttribute('data-v'), b);
+    }
+    for (var i = 0; i < btns.length; i++) {
+      (function (b) {
+        /* Commit on the press: the thumb starts moving the instant the finger lands. */
+        b.addEventListener('pointerdown', function (e) { if (e.button === 0 && b.getAttribute('aria-selected') !== 'true') pick(b); });
+        b.addEventListener('click', function () { if (b.getAttribute('aria-selected') !== 'true') pick(b); });
+        b.addEventListener('keydown', function (e) {
+          if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+            var idx = Array.prototype.indexOf.call(btns, b) + (e.key === 'ArrowRight' ? 1 : -1);
+            if (btns[idx]) { btns[idx].focus(); pick(btns[idx]); }
+          }
+        });
+      })(btns[i]);
+    }
+    thumb.style.transition = 'none';
+    var cur = seg.querySelector('[aria-selected="true"]') || btns[0];
+    place(cur);
+    requestAnimationFrame(function () { thumb.style.transition = ''; });
+    return { pick: pick, place: function () { place(seg.querySelector('[aria-selected="true"]')); } };
+  }
+
+  var FIGS = {};
+  function figure(el, def) {
+    var start = def.start || 'chart';
+    el.innerHTML =
+      '<div class="fig-top"><div><div class="fig-title">' + esc(def.title) + '</div>' + (def.sub ? '<div class="fig-sub">' + esc(def.sub) + '</div>' : '') + '</div>' +
+      '<div class="seg" role="tablist" aria-label="Show as"><button role="tab" data-v="chart" aria-selected="' + (start === 'chart') + '">Chart</button>' +
+      '<button role="tab" data-v="table" aria-selected="' + (start === 'table') + '">Table</button><span class="seg-thumb"></span></div></div>' +
+      '<div class="fig-views"><div class="fig-view" data-v="chart"' + (start === 'chart' ? '' : ' hidden') + '></div>' +
+      '<div class="fig-view" data-v="table"' + (start === 'table' ? '' : ' hidden') + '>' + table(def.table) + '</div></div>' +
+      (def.note ? '<div class="fig-note">' + esc(def.note) + '</div>' : '') +
+      '<div class="fig-src' + (def.example ? ' example' : '') + '"><span class="dot"></span>' + (def.example ? 'Example data, shaped like the real thing, not from your notes' : 'From your notes') + '</div>';
+    var chartView = el.querySelector('.fig-view[data-v="chart"]'), views = el.querySelector('.fig-views');
+    function paint() {
+      var w = Math.floor(chartView.clientWidth || views.clientWidth || 320);
+      if (w < 200) w = 300;
+      chartView.innerHTML = def.draw(w) || '';
+    }
+    paint();
+    FIGS[def.key] = paint;
+    if (seen && start === 'chart') seen.observe(chartView);
+    segInit(el.querySelector('.seg'), function (v) {
+      var show = el.querySelector('.fig-view[data-v="' + v + '"]'), hide = el.querySelector('.fig-view:not([hidden])');
+      if (show === hide) return;
+      var dirLeft = v === 'chart';
+      var h0 = views.offsetHeight;
+      views.style.height = h0 + 'px';
+      hide.classList.toggle('from-left', !dirLeft);
+      hide.hidden = true;
+      show.classList.toggle('from-left', dirLeft);
+      show.hidden = false;
+      var h1 = show.offsetHeight;
+      requestAnimationFrame(function () { views.style.height = h1 + 'px'; });
+      /* Release to auto once the spring has landed (a timer, never transitionend). */
+      clearTimeout(views._t); views._t = setTimeout(function () { views.style.height = ''; }, 700);
+      if (v === 'chart' && !chartView._drawn) { chartView._drawn = true; drawOn(chartView.querySelector('svg')); }
+    });
+    if (start === 'chart') chartView._drawn = true;
+  }
+
+  /* ════════════════════ THE DATA (sample notes) ════════════════════ */
+  var LUX = [[1000, 0.8], [5000, 3.1], [10000, 5.9], [20000, 6.2]];
+  var luxFmt = function (t) { return t >= 1000 ? (t / 1000) + 'k' : String(t); };
+  var DEFS = {
+    lux: { key: 'lux', title: 'Oxygen made at each light level', sub: 'Pondweed at 20 °C', example: true,
+      table: { cols: [{ name: 'Light', unit: 'lux' }, { name: 'O₂ made', unit: 'mL per minute' }], rows: LUX.map(function (p) { return { cells: [fmt(p[0]), fmt(p[1], 1)] }; }) },
+      draw: function (w) { return lineChart({ title: 'Oxygen made at each light level', yLabel: 'O₂ (mL/min)', xLabel: 'Light (lux)', xFmt: luxFmt,
+        series: [{ name: 'Pondweed', pts: LUX }], highlight: [0, 2], hlLabel: '5.9' }, w); } },
+    plants: { key: 'plants', title: 'Sun plants and shade plants', sub: 'Oxygen made as light rises', example: true,
+      table: { cols: [{ name: 'Light', unit: 'lux' }, { name: 'Sun plant', unit: 'mL/min' }, { name: 'Shade plant', unit: 'mL/min' }],
+        rows: [[0, 0, 0], [2500, 1.2, 1.6], [5000, 3.1, 2.9], [10000, 5.9, 3.4], [20000, 8.4, 3.5]].map(function (r) { return { cells: [fmt(r[0]), fmt(r[1], 1), fmt(r[2], 1)] }; }) },
+      draw: function (w) { return lineChart({ title: 'Sun plants and shade plants', yLabel: 'O₂ (mL/min)', xLabel: 'Light (lux)', xFmt: luxFmt,
+        series: [{ name: 'Sun plant', tone: BRAND, pts: [[0, 0], [2500, 1.2], [5000, 3.1], [10000, 5.9], [20000, 8.4]] },
+                 { name: 'Shade plant', tone: SLATE, pts: [[0, 0], [2500, 1.6], [5000, 2.9], [10000, 3.4], [20000, 3.5]] }] }, w); } },
+    rain: { key: 'rain', title: 'Monsoon rain', sub: 'Average rainfall, June to September', example: true,
+      table: { cols: [{ name: 'Month' }, { name: 'Mumbai', unit: 'mm' }, { name: 'London', unit: 'mm' }],
+        rows: [['June', 520, 45], ['July', 760, 45], ['August', 510, 50], ['September', 300, 49]].map(function (r) { return { cells: [r[0], fmt(r[1]), fmt(r[2])] }; }) },
+      draw: function (w) { return barChart({ title: 'Monsoon rain', yLabel: 'Rain (mm)', cats: ['Jun', 'Jul', 'Aug', 'Sep'],
+        series: [{ name: 'Mumbai', tone: BRAND, values: [520, 760, 510, 300] }, { name: 'London', tone: SLATE, values: [45, 45, 50, 49] }] }, w); } },
+    water: { key: 'water', title: "Where Earth's fresh water is", sub: 'Only 3% of all water is fresh. This is where that 3% is.',
+      table: { cols: [{ name: 'Where' }, { name: 'Share', unit: '%' }], rows: [['Ice caps and glaciers', '68.7'], ['Groundwater', '30.1'], ['Lakes, rivers, air', '1.2']].map(function (r) { return { cells: r }; }) },
+      draw: function (w) { return donut({ title: "Where Earth's fresh water is", center: ['Fresh water', '3% of all water'],
+        parts: [{ label: 'Ice and glaciers', value: 68.7 }, { label: 'Groundwater', value: 30.1 }, { label: 'Lakes, rivers, air', value: 1.2 }] }, w); } },
+    sleep: { key: 'sleep', title: 'Sleep and test scores', sub: '11 students, the night before a test', example: true,
+      note: 'A pattern, not proof: these students may differ in other ways too.',
+      table: { cols: [{ name: 'Student' }, { name: 'Sleep', unit: 'hours' }, { name: 'Score', unit: '%' }],
+        rows: [[5, 62], [5.5, 66], [6, 64], [6.5, 71], [7, 74], [7, 69], [7.5, 78], [8, 81], [8, 76], [8.5, 84], [9, 82]].map(function (r, i) { return { cells: ['#' + (i + 1), fmt(r[0], 1), fmt(r[1])] }; }) },
+      draw: function (w) { return scatter({ title: 'Sleep and test scores', yLabel: 'Score (%)', xLabel: 'Hours of sleep', slopeUnit: 'points per hour',
+        pts: [[5, 62], [5.5, 66], [6, 64], [6.5, 71], [7, 74], [7, 69], [7.5, 78], [8, 81], [8, 76], [8.5, 84], [9, 82]] }, w); } }
+  };
+
+  /* ════════════════════ QUESTION CARDS ════════════════════ */
+  function shell(badge, title, body, score) {
+    return '<div class="card-header"><div class="card-badge">✦ ' + esc(badge) + '</div><h3>' + esc(title) + '</h3></div>' +
+      '<div class="card-body">' + body + '<div class="feedback-box" data-fb></div></div>' +
+      '<div class="card-footer"><span class="footer-left">' + score + '</span><button class="btn-next" data-next disabled>Next →</button></div>';
+  }
+  function meta(type, diff) { return '<div class="q-meta"><span class="q-type-label">' + type + '</span><span class="q-difficulty ' + diff.toLowerCase() + '">' + diff + '</span></div>'; }
+  function feedback(card, ok, text) {
+    var fb = card.querySelector('[data-fb]');
+    fb.className = 'feedback-box show ' + (ok ? 'correct-fb' : 'wrong-fb');
+    fb.innerHTML = '<div class="feedback-label">' + (ok ? 'Correct' : 'Not quite') + '</div><div class="feedback-text">' + text + '</div>';
+    card.querySelector('[data-next]').disabled = false;
+  }
+  function resetButton(card, fn) {
+    var n = card.querySelector('[data-next]');
+    n.textContent = 'Try again ↺';
+    n.onclick = fn;
+  }
+  var TICK = '<svg class="mark" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var CROSS = '<svg class="mark" viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+
+  /* ── 3. READ THE TABLE ──
+     The question names a comparison; the CODE computes every candidate from
+     the table and keys the smallest rise. The model never states the answer. */
+  function readCard() {
+    var card = document.getElementById('read-card');
+    var rows = LUX, deltas = [], i;
+    for (i = 1; i < rows.length; i++) deltas.push({ from: i - 1, to: i, d: Math.round((rows[i][1] - rows[i - 1][1]) * 10) / 10 });
+    var key = 0; deltas.forEach(function (d, k) { if (d.d < deltas[key].d) key = k; });
+    var spec = { caption: 'Pondweed at 20 °C', cols: [{ name: 'Light', unit: 'lux' }, { name: 'O₂ made', unit: 'mL/min' }, { name: 'Rise', unit: 'mL/min', add: true }],
+      rows: rows.map(function (p, ri) { return { cells: [fmt(p[0]), fmt(p[1], 1), { html: ri ? '<span class="delta">+' + fmt(deltas[ri - 1].d, 1) + '</span>' : '<span style="color:#9aa3b5">–</span>' }] }; }) };
+    var opts = deltas.map(function (d) { return fmt(rows[d.from][0]) + ' → ' + fmt(rows[d.to][0]) + ' lux'; });
+    card.innerHTML = shell('Read the table', 'Light and the rate of photosynthesis',
+      meta('Read the table', 'Medium') + table(spec, { id: 'read-dt' }) +
+      '<div class="q-text" style="margin-top:1rem">Between which two light levels did the oxygen output rise <u style="text-decoration-thickness:1.5px;text-underline-offset:3px">least</u>?</div>' +
+      '<div class="q-options">' + opts.map(function (o, k) { return '<button class="q-option" data-k="' + k + '"><span class="opt-letter">' + 'ABC'[k] + '</span><span>' + o + '</span></button>'; }).join('') + '</div>', '2/2');
+    var btns = card.querySelectorAll('.q-option');
+    Array.prototype.forEach.call(btns, function (b) {
+      b.addEventListener('click', function () {
+        var k = +b.getAttribute('data-k'), ok = k === key;
+        Array.prototype.forEach.call(btns, function (x) {
+          x.disabled = true;
+          var xk = +x.getAttribute('data-k');
+          if (xk === key) { x.classList.add('correct-ans'); x.insertAdjacentHTML('beforeend', TICK); }
+          else if (x === b) { x.classList.add('wrong-ans'); x.insertAdjacentHTML('beforeend', CROSS); }
+          else x.classList.add('dimmed');
+        });
+        /* The evidence lights up: the Change column slides in, the two rows
+           that hold the answer stay bright, everything else steps back. */
+        var dt = document.getElementById('read-dt'), d = deltas[key];
+        dt.classList.add('has-add');
+        void dt.offsetWidth;            /* lay the column out, then slide it in */
+        dt.classList.add('show-add');
+        setTimeout(function () {
+          dt.classList.add('is-lit');
+          Array.prototype.forEach.call(dt.querySelectorAll('tbody td'), function (td) {
+            var r = +td.getAttribute('data-r'), c = +td.getAttribute('data-c');
+            if ((r === d.from || r === d.to) && c < 2) td.classList.add('lit');
+            if (r === d.to && c === 2) td.classList.add('lit');
+          });
+        }, REDUCE.matches ? 0 : 260);
+        feedback(card, ok, ok
+          ? 'From 10,000 to 20,000 lux the output rose by only <b>0.3 mL/min</b>, even though the light doubled. Something other than light is now limiting the plant: carbon dioxide or temperature.'
+          : 'Look at the Rise column: the rises were <b>+2.3, +2.8 and +0.3</b>. The smallest is between 10,000 and 20,000 lux. Doubling the light there added almost nothing: light was no longer the limit.');
+        resetButton(card, readCard);
+      });
+    });
+  }
+
+  /* ── 4. COMPLETE THE TABLE ── */
+  function completeCard() {
+    var card = document.getElementById('complete-card');
+    var rows = [{ n: 24, t: 24, given: true }, { n: 4, t: 6 }, { n: 10, t: 12 }];
+    var spec = { caption: 'Packs of pens at one shop', cols: [{ name: 'Pens', unit: 'in the pack' }, { name: 'Total', unit: '$' }, { name: 'Per pen', unit: '$' }],
+      rows: rows.map(function (r, i) {
+        return { cls: r.given ? 'ct-given' : '', cells: [{ html: r.n + (r.given ? '<span class="ct-tag">example</span>' : '') }, (r.t).toFixed(2),
+          r.given ? (r.t / r.n).toFixed(2) : { html: '<span class="ct-cell"><input class="ct-in" inputmode="decimal" autocomplete="off" placeholder="?" aria-label="Price per pen for a pack of ' + r.n + '" data-i="' + i + '"></span>' }] };
+      }) };
+    card.innerHTML = shell('Complete the table', 'Unit price and value for money',
+      meta('Complete the table', 'Medium') +
+      '<div class="rule-chip"><span class="rule-tag">Rule</span><span class="eq">Per pen = Total ÷ Pens</span></div>' +
+      table(spec) + '<button class="btn-check" data-check disabled>Check</button>', '5/6');
+    var ins = card.querySelectorAll('.ct-in'), check = card.querySelector('[data-check]');
+    function ready() { check.disabled = !Array.prototype.every.call(ins, function (x) { return x.value.trim() !== ''; }); }
+    Array.prototype.forEach.call(ins, function (inp, k) {
+      inp.addEventListener('input', function () { inp.value = inp.value.replace(/[^\d.,$]/g, ''); ready(); });
+      inp.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        if (ins[k + 1]) ins[k + 1].focus(); else if (!check.disabled) check.click();
+      });
+    });
+    check.addEventListener('click', function () {
+      var right = 0, said = [];
+      Array.prototype.forEach.call(ins, function (inp) {
+        var r = rows[+inp.getAttribute('data-i')], want = r.t / r.n, got = parseFloat(inp.value.replace(/[$,]/g, ''));
+        said.push(inp.value);
+        inp.disabled = true;
+        var ok = isFinite(got) && Math.abs(got - want) <= Math.max(0.005, want * 0.01);
+        inp.classList.add(ok ? 'is-right' : 'is-wrong');
+        if (ok) right++;
+        else inp.parentNode.insertAdjacentHTML('beforeend', '<span class="ct-fix">' + want.toFixed(2) + '</span>');
+      });
+      check.disabled = true; check.textContent = right === ins.length ? 'All right' : right + ' of ' + ins.length + ' right';
+      feedback(card, right === ins.length, right === ins.length
+        ? '$6.00 ÷ 4 = <b>$1.50</b> and $12.00 ÷ 10 = <b>$1.20</b>. The bigger the pack, the less each pen costs: $1.50, then $1.20, then $1.00.'
+        : 'Divide the total by the number of pens: $6.00 ÷ 4 = <b>$1.50</b>, $12.00 ÷ 10 = <b>$1.20</b>. A common slip is dividing the other way round (pens ÷ total), which gives 0.67.');
+      resetButton(card, completeCard);
+    });
+  }
+
+  /* ── 5. SPOT THE BAD GRAPH ──
+     Drawn by code with ONE known distortion (the axis starts at 95). After
+     the answer the axis springs to zero; the gridlines glide with it. */
+  function badCard() {
+    var card = document.getElementById('bad-card');
+    var spec = { title: 'Sales are soaring!', yLabel: 'Sales ($1,000s)', cats: ['April', 'May', 'June'], values: true,
+      series: [{ name: 'Sales', tone: BRAND, values: [98, 100, 102] }] };
+    var opts = [['The vertical axis starts at 95, not at 0', true], ['It uses bars instead of a line', false], ['It only shows three months', false], ['The bars are all the same colour', false]];
+    card.innerHTML = shell('Spot the bad graph', 'Reading graphs in the news',
+      meta('Spot the bad graph', 'Medium') +
+      '<div class="art-paper fig"><div class="fig-top"><div><div class="fig-title" data-bt>"Sales are soaring!"</div><div class="fig-sub" data-bs>A shop\'s advert</div></div></div><div data-bad></div></div>' +
+      '<div class="q-text" style="margin-top:1rem">The shop says sales shot up. What makes this graph misleading?</div>' +
+      '<div class="q-options">' + opts.map(function (o, k) { return '<button class="q-option" data-k="' + k + '"><span class="opt-letter">' + 'ABCD'[k] + '</span><span>' + o[0] + '</span></button>'; }).join('') + '</div>', '7/9');
+    var host = card.querySelector('[data-bad]');
+    function paint(yMin) { var w = Math.floor(host.clientWidth || 300); host.innerHTML = barChart(spec, w, yMin); }
+    paint(95);
+    if (seen) { host._first = true; seen.observe(host); }
+    FIGS.bad = function () { paint(card._yMin == null ? 95 : card._yMin); };
+    card._yMin = 95;
+    var btns = card.querySelectorAll('.q-option');
+    Array.prototype.forEach.call(btns, function (b) {
+      b.addEventListener('click', function () {
+        var k = +b.getAttribute('data-k'), ok = opts[k][1];
+        Array.prototype.forEach.call(btns, function (x) {
+          x.disabled = true; var xk = +x.getAttribute('data-k');
+          if (opts[xk][1]) { x.classList.add('correct-ans'); x.insertAdjacentHTML('beforeend', TICK); }
+          else if (x === b) { x.classList.add('wrong-ans'); x.insertAdjacentHTML('beforeend', CROSS); }
+          else x.classList.add('dimmed');
+        });
+        /* The fix, in front of them: a beat to read the result, then the
+           axis drops to zero on a critically damped spring. */
+        setTimeout(function () {
+          spring({ from: 95, to: 0, damping: 1, response: 0.9, update: function (v) { card._yMin = v; paint(v); },
+            done: function () {
+              card.querySelector('[data-bt]').textContent = 'Same numbers, axis from 0';
+              card.querySelector('[data-bs]').textContent = 'Sales grew about 4% in two months';
+            } });
+        }, REDUCE.matches ? 0 : 450);
+        feedback(card, ok, (ok ? 'Starting the axis at 95 makes a <b>4%</b> rise look like sales tripled. ' : 'Look at the left edge: the axis starts at 95, so a small rise fills the whole chart. ') +
+          'Watch the chart: with the axis at zero, the three bars are nearly the same height.');
+        resetButton(card, badCard);
+      });
+    });
+  }
+
+  /* ── 6. BUILD THE GRAPH ──
+     Tap to place, snapped to the grid; drag a placed point 1:1 with pointer
+     capture, and it springs onto the nearest grid point when let go. */
+  function buildCard() {
+    var card = document.getElementById('build-card');
+    var data = [[100, 2], [200, 4], [300, 6]];
+    card.innerHTML = shell('Build the graph', 'Springs: stretch and mass',
+      meta('Build the graph', 'Hard') +
+      '<div class="q-text" style="margin-bottom:.7rem">Plot each row of the table on the graph.</div>' +
+      '<div class="bg-rows">' + data.map(function (d, i) { return '<span class="bg-row' + (i ? '' : ' is-now') + '" data-row="' + i + '"><b>' + (i + 1) + '</b>' + d[0] + ' g → ' + d[1] + ' cm</span>'; }).join('') + '</div>' +
+      '<div class="art-paper fig" style="padding:.5rem .45rem .35rem"><div data-plot></div></div>' +
+      '<div class="bg-help" data-help>Tap where 100 g and 2 cm meet.</div>' +
+      '<button class="btn-check" data-check disabled>Check</button>', '6/8');
+    var host = card.querySelector('[data-plot]'), help = card.querySelector('[data-help]'), check = card.querySelector('[data-check]');
+    var W = Math.floor(host.clientWidth || 300), H = Math.round(W * 0.78);
+    var L = 34, R = 12, T = 24, B = 38, pw = W - L - R, ph = H - T - B;
+    var XMAX = 350, YMAX = 8, XSTEP = 50, YSTEP = 1;
+    function X(v) { return L + v / XMAX * pw; } function Y(v) { return T + ph - v / YMAX * ph; }
+    function vX(px) { return (px - L) / pw * XMAX; } function vY(py) { return (T + ph - py) / ph * YMAX; }
+    function snap(v, s, max) { return Math.max(0, Math.min(max, Math.round(v / s) * s)); }
+    var g = [];
+    g.push('<text x="2" y="12" font-size="11.5" font-weight="600" fill="' + MUTED + '">Stretch (cm)</text>');
+    for (var y = 0; y <= YMAX; y += YSTEP) {
+      g.push('<line x1="' + L + '" x2="' + (L + pw) + '" y1="' + Y(y) + '" y2="' + Y(y) + '" stroke="' + (y ? GRID : RULE) + '" stroke-width="' + (y ? 1 : 1.2) + '"/>');
+      if (y % 2 === 0) g.push('<text x="' + (L - 8) + '" y="' + (Y(y) + 4) + '" font-size="11.5" fill="' + MUTED + '" text-anchor="end">' + y + '</text>');
+    }
+    for (var x = 0; x <= XMAX; x += XSTEP) {
+      g.push('<line x1="' + X(x) + '" x2="' + X(x) + '" y1="' + T + '" y2="' + (T + ph) + '" stroke="' + (x ? GRID : RULE) + '" stroke-width="' + (x ? 1 : 1.2) + '"/>');
+      if (x % 100 === 0) g.push('<text x="' + X(x) + '" y="' + (T + ph + 17) + '" font-size="11.5" fill="' + MUTED + '" text-anchor="middle">' + x + '</text>');
+    }
+    g.push('<text x="' + (L + pw / 2) + '" y="' + (H - 4) + '" font-size="11.5" font-weight="600" fill="' + MUTED + '" text-anchor="middle">Mass (g)</text>');
+    g.push('<circle cx="' + X(0) + '" cy="' + Y(0) + '" r="4" fill="' + MUTED + '"/>');
+    host.innerHTML = '<svg class="bg-plot" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" font-family="' + FONT + '" role="img" aria-label="An empty graph of stretch against mass">' +
+      g.join('') + '<g data-ans></g><g data-hover><circle r="10" fill="' + BRAND + '" fill-opacity=".12" stroke="' + BRAND + '" stroke-opacity=".35" stroke-dasharray="3 3" style="display:none"/></g><g data-pts></g></svg>';
+    var svg = host.querySelector('svg'), ptsG = svg.querySelector('[data-pts]'), ansG = svg.querySelector('[data-ans]'), hover = svg.querySelector('[data-hover] circle');
+    var pts = [], now = 0, done = false, NS = 'http://www.w3.org/2000/svg';
+    function local(e) { var r = svg.getBoundingClientRect(); return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height }; }
+    function rows() {
+      Array.prototype.forEach.call(card.querySelectorAll('.bg-row'), function (el, i) {
+        el.classList.toggle('is-now', !done && i === now && i < data.length);
+        el.classList.toggle('is-placed', !!pts[i]);
+      });
+      if (!done) help.textContent = now < data.length ? 'Tap where ' + data[now][0] + ' g and ' + data[now][1] + ' cm meet.' : 'All placed. Drag any point to move it, then Check.';
+      check.disabled = done || pts.filter(Boolean).length < data.length;
+    }
+    function makePoint(i, vx, vy) {
+      var c = document.createElementNS(NS, 'g');
+      c.innerHTML = '<circle r="16" fill="transparent"/><circle class="pt" r="7" fill="' + BRAND + '" stroke="#fff" stroke-width="2.5"/><text y="-12" font-size="11" font-weight="700" fill="' + FOCAL + '" text-anchor="middle">' + (i + 1) + '</text>';
+      c.style.cursor = 'grab';
+      ptsG.appendChild(c);
+      var p = { el: c, vx: vx, vy: vy, x: X(vx), y: Y(vy), i: i };
+      move(p, p.x, p.y);
+      if (!REDUCE.matches && c.animate) {
+        var dot = c.querySelector('.pt'); dot.style.transformBox = 'fill-box'; dot.style.transformOrigin = 'center';
+        dot.animate([{ transform: 'scale(.2)' }, { transform: 'scale(1.18)', offset: .55 }, { transform: 'none' }], { duration: 420, easing: 'cubic-bezier(.34,1.5,.64,1)' });
+      }
+      c.addEventListener('pointerdown', function (e) { if (done) return; e.stopPropagation(); grab(p, e); });
+      return p;
+    }
+    function move(p, x, y) { p.x = x; p.y = y; p.el.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ')'); }
+    /* Drag: 1:1 from where it was grabbed, then a spring to the grid. */
+    function grab(p, e) {
+      svg.setPointerCapture(e.pointerId);
+      if (p.sx) p.sx.stop(); if (p.sy) p.sy.stop();
+      var start = local(e), ox = start.x - p.x, oy = start.y - p.y, hist = [];
+      p.el.style.cursor = 'grabbing';
+      function mv(ev) {
+        var q = local(ev);
+        move(p, Math.max(L, Math.min(L + pw, q.x - ox)), Math.max(T, Math.min(T + ph, q.y - oy)));
+        hist.push({ x: p.x, y: p.y, t: performance.now() }); if (hist.length > 5) hist.shift();
+      }
+      function up() {
+        svg.removeEventListener('pointermove', mv); svg.removeEventListener('pointerup', up); svg.removeEventListener('pointercancel', up);
+        p.el.style.cursor = 'grab';
+        var vx = 0, vy = 0;
+        if (hist.length > 1) { var a = hist[0], b = hist[hist.length - 1], dt = Math.max(1, b.t - a.t) / 1000; vx = (b.x - a.x) / dt; vy = (b.y - a.y) / dt; }
+        p.vx = snap(vX(p.x), XSTEP, XMAX); p.vy = snap(vY(p.y), YSTEP, YMAX);
+        settle(p, vx, vy, 0.8);
+      }
+      svg.addEventListener('pointermove', mv); svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
+    }
+    /* X and Y each get their own spring (Apple: decompose 2D motion). A
+       little bounce only because a finger threw it. */
+    function settle(p, vx, vy, damping, after) {
+      var tx = X(p.vx), ty = Y(p.vy), cx = p.x, cy = p.y, n = 0;
+      function both() { if (++n === 2 && after) after(); }
+      p.sx = spring({ from: cx, to: tx, velocity: vx || 0, damping: damping, response: 0.32, update: function (v) { move(p, v, p.y); }, done: both });
+      p.sy = spring({ from: cy, to: ty, velocity: vy || 0, damping: damping, response: 0.32, update: function (v) { move(p, p.x, v); }, done: both });
+    }
+    svg.addEventListener('pointermove', function (e) {
+      if (done || e.pointerType === 'touch') return;
+      var q = local(e), sx = snap(vX(q.x), XSTEP, XMAX), sy = snap(vY(q.y), YSTEP, YMAX);
+      if (q.x < L - 8 || q.y > T + ph + 8) { hover.style.display = 'none'; return; }
+      hover.style.display = ''; hover.setAttribute('cx', X(sx)); hover.setAttribute('cy', Y(sy));
+    });
+    svg.addEventListener('pointerleave', function () { hover.style.display = 'none'; });
+    svg.addEventListener('pointerdown', function (e) {
+      if (done || now >= data.length) return;
+      var q = local(e);
+      if (q.x < L - 10 || q.x > L + pw + 10 || q.y < T - 10 || q.y > T + ph + 10) return;
+      var sx = snap(vX(q.x), XSTEP, XMAX), sy = snap(vY(q.y), YSTEP, YMAX);
+      /* The point lands where the finger is, then springs onto the grid. */
+      var p = makePoint(now, sx, sy); move(p, q.x, q.y); settle(p, 0, 0, 0.85);
+      pts[now] = p; now++;
+      rows();
+    });
+    check.addEventListener('click', function () {
+      done = true; check.disabled = true; svg.classList.add('is-done'); hover.style.display = 'none';
+      var right = 0;
+      pts.forEach(function (p, i) {
+        var want = data[i], ok = p.vx === want[0] && p.vy === want[1];
+        var row = card.querySelector('.bg-row[data-row="' + i + '"]');
+        row.classList.remove('is-placed'); row.classList.add(ok ? 'is-right' : 'is-wrong');
+        p.el.querySelector('.pt').setAttribute('fill', ok ? '#10b981' : '#ef4444');
+        if (ok) { right++; return; }
+        /* A ring where it belongs, then the point glides there. */
+        var ring = document.createElementNS(NS, 'circle');
+        ring.setAttribute('cx', X(want[0])); ring.setAttribute('cy', Y(want[1])); ring.setAttribute('r', 9);
+        ring.setAttribute('fill', 'none'); ring.setAttribute('stroke', '#10b981'); ring.setAttribute('stroke-width', 2); ring.setAttribute('stroke-dasharray', '3 3');
+        ansG.appendChild(ring);
+        setTimeout(function () {
+          p.vx = want[0]; p.vy = want[1];
+          settle(p, 0, 0, 1, function () { p.el.querySelector('.pt').setAttribute('fill', '#10b981'); });
+        }, REDUCE.matches ? 0 : 650);
+      });
+      /* Then the line through every right point, from the origin. */
+      setTimeout(function () {
+        var line = document.createElementNS(NS, 'path');
+        line.setAttribute('d', 'M' + X(0) + ' ' + Y(0) + ' L' + X(XMAX) + ' ' + Y(7));
+        line.setAttribute('stroke', FOCAL); line.setAttribute('stroke-width', 2.2); line.setAttribute('fill', 'none'); line.setAttribute('stroke-linecap', 'round');
+        line.setAttribute('class', 'dc-line');
+        ansG.appendChild(line);
+        var lab = document.createElementNS(NS, 'text');
+        /* Under the line, in the corner a rising line leaves empty - never
+           on the last point, where it first landed. */
+        lab.setAttribute('x', X(XMAX) - 4); lab.setAttribute('y', Y(1.6)); lab.setAttribute('text-anchor', 'end');
+        lab.setAttribute('font-size', 12); lab.setAttribute('font-weight', 700); lab.setAttribute('fill', FOCAL); lab.setAttribute('class', 'dc-late');
+        lab.textContent = '2 cm per 100 g';
+        ansG.appendChild(lab);
+        drawOn(svg);
+      }, REDUCE.matches ? 0 : 1200);
+      help.textContent = '';
+      feedback(card, right === data.length, right === data.length
+        ? 'A straight line through zero: <b>double the mass, double the stretch</b>. That is Hooke\'s law, and every 100 g adds 2 cm.'
+        : 'Each point sits where its mass (across) meets its stretch (up). The right spots make a straight line through zero: <b>double the mass, double the stretch</b>.');
+      resetButton(card, buildCard);
+    });
+    rows();
+  }
+
+  /* ════════════════════ BOOT ════════════════════ */
+  function boot() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-fig]'), function (el) { figure(el, DEFS[el.getAttribute('data-fig')]); });
+    readCard(); completeCard(); badCard(); buildCard();
+    var theme = document.querySelector('[data-seg="theme"]');
+    segInit(theme, function (v) { document.body.classList.toggle('dark', v === 'dark'); });
+    /* Re-lay out at the new width: charts are drawn 1:1, never scaled. */
+    var rt;
+    window.addEventListener('resize', function () {
+      clearTimeout(rt);
+      rt = setTimeout(function () { for (var k in FIGS) FIGS[k](); }, 120);
+    });
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(boot); else window.addEventListener('load', boot);
+  window.DC = { lineChart: lineChart, barChart: barChart, donut: donut, scatter: scatter, table: table, nice: nice };
+})();
+</script>
+</body>
+</html>
