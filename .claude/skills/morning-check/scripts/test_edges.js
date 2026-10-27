@@ -22,10 +22,14 @@ async function missMcq(page) {
 const state = (page, sel) => page.evaluate((s) => { const h = document.querySelector(s || '#session-card .sf-moment'); return h ? h.getAttribute('data-state') : null; }, sel);
 const VALVE_Q = "c.q.question === 'Why do veins need valves?'";
 
-async function scenario(name, mockFn, body) {
+async function scenario(name, mockFn, body, keepOff) {
   let mock = mockFn;
   const env = await h.open({ mock: async (p, n) => /^Draw ONE illustration/.test(p) ? ART : mock(p, n) });
   env.setMock = (m) => { mock = m; };
+  /* "Draw it for me" is switched off (MOMENT_ON = false, Oct 2026). These
+     scenarios check the code kept for a one-line revert, so they flip it back
+     on in the page; the first scenario checks the switched-off state. */
+  if (!keepOff) await env.page.evaluate(() => { MOMENT_ON = true; });
   await env.page.evaluate(() => { MOMENT_AUTO_MAX = 0; });   // the tap path
   console.log('\n## ' + name);
   try { await body(env); } catch (e) { assert(false, 'threw: ' + e.message); }
@@ -34,6 +38,20 @@ async function scenario(name, mockFn, body) {
 }
 
 (async () => {
+  await scenario('switched off: misses offer no drawing', async () => ({ json: { result: JSON.stringify(VALVES) } }), async (env) => {
+    const { page, calls } = env;
+    assert(await toCard(page, VALVE_Q), 'on the valves card');
+    await missMcq(page);
+    assert(await page.locator('.sf-moment, .sf-moment-btn').count() === 0, 'an MCQ miss shows no drawing chip');
+    assert(await toCard(page, "c.type === 'sequence'"), 'on the sequence card');
+    await page.evaluate(() => { const w = document.getElementById('seq-wrap'); const it = Array.from(w.querySelectorAll('.seq-item')); it.reverse().forEach(x => w.appendChild(x)); document.getElementById('seq-check-btn').click(); });
+    await page.waitForTimeout(300);
+    assert(await page.locator('.sf-moment, .sf-moment-btn').count() === 0, 'a sequence miss (recordMiss path) shows no drawing chip');
+    const any = await page.evaluate(() => ['mcq', 'truefalse', 'fill', 'estimate', 'classify', 'scenario'].some(t => momentCanDraw({ type: t, question: 'Q?', options: ['a', 'b'], correctIndex: 0, answer: '5' }, t)));
+    assert(!any, 'momentCanDraw is false for every format');
+    assert(calls.filter(c => /^A student just got/.test(c)).length === 0, 'no drawing call made');
+  }, true);
+
   await scenario('network failure, then Try again', async () => ({ abort: true }), async (env) => {
     const { page, calls } = env;
     assert(await toCard(page, VALVE_Q), 'on the valves card');

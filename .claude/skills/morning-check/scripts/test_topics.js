@@ -72,7 +72,11 @@ async function run(o) {
   const parts = ['Intervals (part of Harmony)', 'Triads (part of Harmony)', 'Time signatures (part of Rhythm)'];
   assert(a.days.length === 3 && a.days.every((d, i) => d.indexOf("TODAY'S PART OF THE NOTES: " + parts[i]) >= 0), '[music] day N is told its own part, in teaching order');
   assert(/It is also the last day/.test(a.days[2]) && !/It is also the last day/.test(a.days[0]), '[music] the last day, still in its first pass, keeps its part and connects it to the rest');
-  assert(/MUSIC — INTERVALS: .*Trace table/.test(a.days[0]) && /MUSIC — TRIADS: .*Label the diagram/.test(a.days[1]), '[music] each day\'s quota is its own part\'s mix');
+  /* Triads (material: parts) used to ask for "Label the diagram". Since Oct 2026
+     no model-drawn labelling card is asked for: noDrawn() in sf-questions.js turns
+     it into "Name them all" (recall) before the schema and the tally. */
+  assert(/MUSIC — INTERVALS: .*Trace table/.test(a.days[0]) && /MUSIC — TRIADS: .*Name them all/.test(a.days[1]) && !/MUSIC — TRIADS: .*Trace table/.test(a.days[1]), '[music] each day\'s quota is its own part\'s mix');
+  assert(a.days.every(d => !/Label the diagram/.test(d) && !/"type":"labeldiagram"/.test(d)), '[music] no day asks the model for a labelling drawing');
   assert(a.days.every(d => /a study day for a Music student/.test(d) && /knows no MUSIC at all/.test(d) && !/knows no GENERAL/.test(d)), '[music] the prompt names the field, not "General"');
   assert(/This part is a METHOD/.test(a.days[0]) && !/AT LEAST 3 "mcq" on the central claims/.test(a.days[0]), '[music] the part\'s own mandate replaces the subject-wide one');
   const p = a.plan || { days: [] };

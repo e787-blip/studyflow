@@ -48,8 +48,18 @@ async function scen(name, mock, body, opts) {
     const s = await cardState(page);
     assert(!s.lesson, 'moved on after the wait: now on ' + s.type);
   });
+  // E0. switched off (MOMENT_ON = false, Oct 2026): a miss draws nothing by itself
+  await scen('switched off: misses draw nothing', async (p) => /^A student just got/.test(p) ? { json: { result: JSON.stringify(VALVES) } } : { json: { result: '{"type":"none"}' } }, async ({ page, calls }) => {
+    await page.evaluate(() => { for (let i = 0; i < 40; i++) { const c = window.currentCard; if (c && c.q && !c.isPretest && c.q.question === 'Why do veins need valves?') return; showNextCard(); } });
+    await page.evaluate(() => { const o = Array.from(document.querySelectorAll('.q-option')).find(x => { const m = /answerMCQ\(this,(\d+),(\d+)/.exec(x.getAttribute('onclick') || ''); return m && m[1] !== m[2]; }); o.click(); });
+    await page.waitForTimeout(800);
+    assert(await page.locator('#session-card .sf-moment').count() === 0, 'a miss shows no drawing');
+    assert(calls.filter(c => /^A student just got/.test(c)).length === 0, 'and asks the model for none');
+  });
+  // E and F check the code kept for a one-line revert, with the switch flipped back on.
   // E. misses are drawn automatically, capped
   await scen('miss pictures draw by themselves, up to the cap', async (p) => /^A student just got/.test(p) ? { delay: 600, json: { result: JSON.stringify(VALVES) } } : { json: { result: '{"type":"none"}' } }, async ({ page, calls }) => {
+    await page.evaluate(() => { MOMENT_ON = true; });
     const states = [];
     for (let k = 0; k < 40 && states.length < 6; k++) {
       const info = await page.evaluate(() => { const c = window.currentCard; return c && c.q && !c.isPretest && !c.isSpacedRepeat && (document.querySelector('.q-option') || document.querySelector('.tf-btn')) ? true : false; });
@@ -75,6 +85,7 @@ async function scen(name, mock, body, opts) {
   });
   // F. automatic + "nothing to draw" says nothing
   await scen('auto + none = silent', async (p) => /^A student just got/.test(p) ? { json: { result: '{"type":"none"}' } } : { json: { result: '{"type":"none"}' } }, async ({ page }) => {
+    await page.evaluate(() => { MOMENT_ON = true; });
     await page.evaluate(() => { for (let i = 0; i < 40; i++) { const c = window.currentCard; if (c && c.q && !c.isPretest && c.q.question === 'Why do veins need valves?') return; showNextCard(); } });
     await page.evaluate(() => { const o = Array.from(document.querySelectorAll('.q-option')).find(x => { const m = /answerMCQ\(this,(\d+),(\d+)/.exec(x.getAttribute('onclick') || ''); return m && m[1] !== m[2]; }); o.click(); });
     await page.waitForTimeout(500);

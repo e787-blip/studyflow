@@ -2,7 +2,13 @@ const h = require('./harness'); const fs = require('fs');
 const VALVES = JSON.parse(fs.readFileSync(__dirname + '/valves.json', 'utf8'))[0].spec;
 (async () => {
   const { page, browser, calls, errors } = await h.open({ mock: async (p) => /^A student just got/.test(p) ? { json: { result: JSON.stringify(VALVES) } } : { json: { result: '{"type":"none"}' } } });
-  await page.evaluate(() => { MOMENT_AUTO_MAX = 1; });
+  /* Switched off (MOMENT_ON = false, Oct 2026): nothing draws by itself.
+     Checked first, then flipped back on to test the cap the kept code has. */
+  {
+    const off = await page.evaluate(() => { return MOMENT_ON === false && !momentCanDraw({ type: 'mcq', question: 'Why do veins need valves?', options: ['a', 'b'], correctIndex: 1 }, 'mcq'); });
+    console.log(off ? 'PASS switched off: no automatic drawing is offered' : 'FAIL switched off: momentCanDraw still says yes');
+  }
+  await page.evaluate(() => { MOMENT_ON = true; MOMENT_AUTO_MAX = 1; });
   const seen = [];
   for (let k = 0; k < 40 && seen.length < 2; k++) {
     const q = await page.evaluate(() => { const c = window.currentCard; return c && c.q && !c.isPretest && !c.isSpacedRepeat && document.querySelector('.q-option') ? c.q.question : null; });

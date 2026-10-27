@@ -260,7 +260,11 @@ async function toCard(page, type) {
       try { spec = SFWhiteboard.fromWrongAnswer(q, day); rendered = !!SFWhiteboard.render(mount, spec, function () {}); } catch (e) { rendered = 'threw ' + e.message; }
       mount.remove();
       const walk = sfPicWalkFor(q);
-      return { t: q.type, feyn: feynmanConcept(q), ans: correctAnswerText(q), draw: momentCanDraw(q), mAns: momentAnswer(q), rendered,
+      /* "Draw it for me" is switched off (MOMENT_ON = false, Oct 2026): `draw`
+         is what a learner gets today, `drawIfOn` what the kept code would
+         offer if that one line were flipped back. */
+      const drawNow = momentCanDraw(q); MOMENT_ON = true; const drawIfOn = momentCanDraw(q); MOMENT_ON = false;
+      return { t: q.type, feyn: feynmanConcept(q), ans: correctAnswerText(q), draw: drawNow, drawIfOn, mAns: momentAnswer(q), rendered,
         walkRows: walk ? walk.rows.map(x => x.label) : null, walkKind: walk && walk.kind };
     }), NEW);
     const by = {}; r.forEach(x => by[x.t] = x);
@@ -270,7 +274,8 @@ async function toCard(page, type) {
     assert(/look blue/.test(by.whosright.feyn) && /Heart rate during a run/.test(by.readchart.feyn), 'whosright and readchart teach-it-backs are their concept');
     assert(/Right atrium, Right ventricle/.test(by.recall.ans) && /^1 Arteries, 2 Capillaries$/.test(by.conceptmap.ans) && /: Because of how light/.test(by.whosright.ans) && /^8 — Working muscles/.test(by.readchart.ans),
       'the results list states each answer: ' + r.map(x => x.t + '=' + x.ans).join(' | '));
-    assert(!by.conceptmap.draw && !by.readchart.draw && by.recall.draw && by.selfcheck.draw && by.whosright.draw && by.whosright.mAns, '"Draw it for me" is offered on recall/selfcheck/whosright, never on the map or the chart');
+    assert(r.every(x => x.draw === false), '"Draw it for me" is switched off: offered on none of the five formats: ' + r.map(x => x.t + ':' + x.draw).join(' '));
+    assert(!by.conceptmap.drawIfOn && !by.readchart.drawIfOn && by.recall.drawIfOn && by.selfcheck.drawIfOn && by.whosright.drawIfOn && by.whosright.mAns, 'switched back on, "Draw it for me" would be offered on recall/selfcheck/whosright, never on the map or the chart');
     assert(r.every(x => x.rendered === true), 'every walkthrough board renders: ' + r.map(x => x.t + ':' + x.rendered).join(' '));
     assert(r.every(x => x.walkRows && x.walkRows.some(l => /answer/i.test(l)) && new Set(x.walkRows).size === x.walkRows.length),
       'every walkthrough states the answer, and no row twice: ' + r.map(x => x.t + '[' + (x.walkRows || []).join('/') + ']').join(' '));
