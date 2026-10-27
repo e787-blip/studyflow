@@ -662,6 +662,15 @@
     background:var(--white); color:var(--ink); font-family:var(--sans); font-size:1rem; font-weight:600; cursor:pointer;
     transition:border-color .15s, color .15s; }
   .accent-key:hover { border-color:var(--blue); color:var(--blue); }
+  /* Symbols for THIS question (mathKeysFor): the same keys, quieter, so a
+     row of them reads as a tool and not as part of the answer. */
+  .mx-keys { display:flex; flex-wrap:wrap; gap:.4rem; margin:.6rem 0 .1rem; }
+  .mx-key { min-width:44px; height:44px; padding:0 .7rem; border:1.5px solid var(--border); border-radius:12px;
+    background:var(--soft); color:var(--ink); font-family:var(--sans); font-size:1.08rem; font-weight:600; line-height:1; cursor:pointer;
+    -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+  .mx-key:hover { border-color:var(--blue); color:var(--blue); }
+  .mx-key:focus-visible { outline:2px solid var(--blue); outline-offset:1px; }
+  body.dark .mx-key { background:#1e2336; border-color:#222840; color:#e8eeff; }
   .accent-key:focus-visible { outline:2px solid var(--blue); outline-offset:1px; }
   .fill-input {
     width:100%; padding:.85rem 6.4rem .85rem 1.1rem;
@@ -1227,7 +1236,7 @@
   .tf-btn, .seq-item, .match-item, .classify-item, .hint-btn,
   .conf-btn, .fill-submit, .btn-next, .sfwb-explain, .write-submit, .swp-go,
   .lp-back, .fc-arrow, .dict-play, .dict-slow, .hear-btn, .sb-word, .cm-chip,
-  .accent-key, .sf-recall-btn, .sf-moment-btn, .btn-flag, .btn-review-lesson,
+  .accent-key, .mx-key, .sf-recall-btn, .sf-moment-btn, .btn-flag, .btn-review-lesson,
   .btn-recap-next, .btn-dashboard, .end-btn, .chat-send {
     transition:border-color .18s ease, background .18s ease, color .18s ease,
                transform var(--spring-fast-ms) var(--spring-fast), box-shadow .18s ease;
@@ -1245,7 +1254,7 @@
   .classify-item:active, .hint-btn:active, .conf-btn:active,
   .btn-next:active:not(:disabled), .write-submit:active:not(:disabled), .swp-go:active:not(:disabled),
   .lp-back:active, .fc-arrow:active:not(:disabled), .dict-play:active, .dict-slow:active, .hear-btn:active,
-  .sb-word:active:not(:disabled), .cm-chip:active:not(:disabled), .accent-key:active,
+  .sb-word:active:not(:disabled), .cm-chip:active:not(:disabled), .accent-key:active, .mx-key:active,
   .sf-recall-btn:active, .sf-moment-btn:active, .btn-flag:active, .btn-review-lesson:active,
   .btn-recap-next:active, .btn-dashboard:active, .end-btn:active, .chat-send:active {
     transform:scale(.96); transition-duration:80ms;
@@ -1687,6 +1696,7 @@
 <script src="/sf-data.js"></script>
 <script src="/sf-guide.js"></script>
 <script src="/sf-auth.js"></script>
+<script src="/sf-owner.js"></script>
 <script src="/whiteboard.js"></script>
 <script>
 
@@ -7316,6 +7326,7 @@
       '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
       '</div>' +
       accentBarHtml('fill-input') +
+      mathKeysHtml('fill-input', q.question, answer, { decimal: false }) +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Think carefully about the key concepts.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
@@ -7436,12 +7447,131 @@
       }
     } else el = document.getElementById(id);
     if (!el || el.disabled) return;
-    var ch = btn.textContent, a = el.selectionStart, b = el.selectionEnd;
+    var ch = btn.getAttribute('data-v') || btn.textContent, a = el.selectionStart, b = el.selectionEnd;
     if (typeof a !== 'number') { el.value += ch; }
     else { el.value = el.value.slice(0, a) + ch + el.value.slice(b); el.selectionStart = el.selectionEnd = a + ch.length; }
     try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
     try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (e2) { /* old browsers */ }
   }
+  /* ── SYMBOL KEYS (Oct 2026, the owner's ask) ─────────────────────────────
+     "Buttons that are not on the keyboard ... that are necessary for the
+     equation or the question." A learner solving -3x >= 12 could not type
+     the answer: there is no >= on a keyboard, and the number pad a phone
+     opens for a numeric box has no minus, no slash and no letters either.
+
+     This reads what the QUESTION needs and puts exactly those keys under the
+     answer box, never a calculator's worth: an inequality gets <= >= < >, a
+     quadratic gets +- and a root, a circle gets pi, a trig question gets the
+     degree sign and theta, calculus gets the integral and the prime. Anything
+     else the CORRECT ANSWER contains that a keyboard cannot type (a degree
+     sign in "36 °C", an omega, a subscript in "CO₂") is a key too, so the
+     answer can always be typed. A phone gets the three a number pad lacks
+     (minus, slash, percent) when the question wants them.
+
+     The grader reads every one of these the way the keyboard form is read
+     (sfCanon), so "x ≤ -4" and "x<=-4" are the same answer. Never on a
+     language day (the accent bar is that day's keys). */
+  var MX_KEYS = {
+    le: ['≤', '≤', 'less than or equal to'], ge: ['≥', '≥', 'greater than or equal to'],
+    lt: ['<', '<', 'less than'], gt: ['>', '>', 'greater than'], ne: ['≠', '≠', 'not equal to'],
+    pm: ['±', '±', 'plus or minus'], rt: ['√', '√', 'square root'],
+    sq: ['x²', '²', 'squared'], cu: ['x³', '³', 'cubed'], pw: ['xⁿ', '^', 'to the power of'],
+    pi: ['π', 'π', 'pi'], dg: ['°', '°', 'degrees'], th: ['θ', 'θ', 'theta'],
+    it: ['∫', '∫', 'integral'], pr: ['′', '′', 'prime, the derivative'], inf: ['∞', '∞', 'infinity'],
+    un: ['∪', '∪', 'union'], tm: ['×', '×', 'times'], dv: ['÷', '÷', 'divided by'],
+    pc: ['%', '%', 'percent'], mn: ['−', '-', 'minus'], sl: ['/', '/', 'divided by, a fraction bar']
+  };
+  function mxCoarse() {
+    try { return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); } catch (e) { return false; }
+  }
+  /* Which keys. The ANSWER decides first - a key is there because the answer
+     cannot be typed without it - and the question adds only what the answer
+     is built from: an inequality gets all four signs, so the learner picks
+     the direction rather than being shown it. Answers come in two spellings
+     (the model writes "x >= 4" and "3x^2" as often as "x ≥ 4" and "3x²"), so
+     both are read. A first version also guessed from the TOPIC - a quadratic
+     got a plus-minus and a root, a circle got pi - and put keys under
+     questions whose answer was "2, 3": keys nobody needed are noise. */
+  function mathKeysFor(question, answer, opts) {
+    opts = opts || {};
+    var t = (fmStr(question) + ' ' + (opts.equation ? fmStr(opts.equation) : '')).toLowerCase();
+    var a = fmStr(answer).toLowerCase(), out = [], seen = {};
+    function add(k) { if (MX_KEYS[k] && !seen[k]) { seen[k] = 1; out.push(k); } }
+    var coarse = opts.coarse != null ? opts.coarse : mxCoarse();
+
+    var ineqA = /[<>≤≥]|<=|>=/.test(a);
+    var ineqQ = /[<>≤≥]|<=|>=|inequalit|at least|at most|no more than|no less than/.test(t);
+    if (ineqA || ineqQ) { add('le'); add('ge'); add('lt'); add('gt'); }
+    if (/≠|!=|not equal/.test(a)) add('ne');
+    if (/±|\+-|\+\/-/.test(a)) add('pm');
+    if (/√|sqrt|\broot\b/.test(a)) add('rt');
+    if (/²|\^\s*\(?2\b/.test(a)) add('sq');
+    if (/³|\^\s*\(?3\b/.test(a)) add('cu');
+    if (/ⁿ|\^\s*\(?n\b/.test(a) || (coarse && /\^/.test(a))) add('pw');
+    if (/π|\bpi\b/.test(a)) add('pi');
+    if (/°|\bdeg\b|degrees/.test(a)) add('dg');
+    if (/θ|\btheta\b/.test(a)) add('th');
+    if (/∫|\bint\b/.test(a)) add('it');
+    if (/′|\bf'|\bdy\/dx|\bd\/dx/.test(a)) add('pr');
+    if (/∞|\binf(?:inity)?\b/.test(a)) add('inf');
+    if (/∪/.test(a)) add('un');
+    if (/×/.test(a)) add('tm');
+    if (/÷/.test(a)) add('dv');
+    /* The three a phone's number pad lacks, only where the answer has them. */
+    if (coarse && opts.decimal) {
+      if (/[-−]/.test(a)) add('mn');
+      if (/\//.test(a)) add('sl');
+      if (/%/.test(a)) add('pc');
+    }
+
+    var keys = out.slice(0, 9).map(function (k) { return { l: MX_KEYS[k][0], v: MX_KEYS[k][1], t: MX_KEYS[k][2] }; });
+    /* ...and any other character the answer has that no keyboard types: a
+       degree sign in "36 °C", an omega, a subscript in "CO₂", an arrow. */
+    var have = {}, i, c;
+    keys.forEach(function (k) { have[k.v] = 1; });
+    var A = fmStr(answer);
+    for (i = 0; i < A.length && keys.length < 12; i++) {
+      c = A.charAt(i);
+      if (c.charCodeAt(0) > 126 && c !== '−' && !have[c] && !/[ -‏ ]/.test(c) && !/[À-ɏ]/.test(c)) {
+        have[c] = 1;
+        keys.push({ l: c, v: c, t: 'Type ' + c });
+      }
+    }
+    return keys;
+  }
+  function mathKeysHtml(targetId, question, answer, opts) {
+    var L; try { L = resolveSubjectType(plan, day) === 'language'; } catch (e) { L = false; }
+    if (L) return '';
+    var keys = mathKeysFor(question, answer, opts);
+    if (!keys.length) return '';
+    return '<div class="mx-keys" role="group" aria-label="Symbols for this question">' +
+      keys.map(function (k) {
+        return '<button type="button" class="mx-key" data-t="' + escHtml(targetId) + '" data-v="' + escHtml(k.v) + '" ' +
+          'aria-label="' + escHtml(k.t) + '" title="' + escHtml(k.t) + '" onmousedown="event.preventDefault()" ' +
+          'onclick="insertAccent(this)">' + escHtml(k.l) + '</button>';
+      }).join('') + '</div>';
+  }
+
+  /* The keyboard form of an answer, so a key and a keyboard are the same
+     answer: real minus and dashes, times and divide signs, the two-character
+     comparisons, superscripts, subscripts, root and pi, mu and the arrow. */
+  function sfCanon(s) {
+    s = String(s == null ? '' : s).toLowerCase();
+    var SUP = { '\u2070': '0', '\u00b9': '1', '\u00b2': '2', '\u00b3': '3', '\u2074': '4', '\u2075': '5', '\u2076': '6', '\u2077': '7', '\u2078': '8', '\u2079': '9' };
+    return s
+      .replace(/[\u2212\u2013\u2014]/g, '-')
+      .replace(/[×·]/g, '*').replace(/÷/g, '/')
+      .replace(/≥/g, '>=').replace(/≤/g, '<=').replace(/≠/g, '!=')
+      .replace(/±/g, '+-').replace(/\+\/-/g, '+-')
+      .replace(/[\u2070\u00b9\u00b2\u00b3\u2074-\u2079]/g, function (c) { return '^' + SUP[c]; })
+      .replace(/ⁿ/g, '^n')
+      .replace(/[\u2080-\u2089]/g, function (c) { return String(c.charCodeAt(0) - 0x2080); })
+      .replace(/√/g, 'sqrt').replace(/π/g, 'pi').replace(/θ/g, 'theta').replace(/[\u00b5\u03bc]/g, 'u')
+      .replace(/→/g, '->').replace(/′/g, "'").replace(/∞/g, 'inf')
+      .replace(/\*\*/g, '^')
+      .replace(/\s+/g, '');
+  }
+
   /* One "look at the accents" per card - a prompt, not the answer. */
   var accentRetryUsed = false;
 
@@ -7838,7 +7968,9 @@
     else if (/^find\s+([fgh]\(-?[\d.]+\))$/i.test(parts.cond)) placeholder = /^find\s+(.+)$/i.exec(parts.cond)[1] + ' = ?';
     /* A simplified expression has letters in it ("2x + 12"); the decimal
        keypad a phone opens for inputmode="decimal" has none. */
-    var inputMode = /[a-z]/i.test(String(ans)) ? 'text' : 'decimal';
+    /* Decimal only for a plain number: a comparison, a root, a power or a
+       letter needs the full keyboard (the symbol keys sit under the box). */
+    var inputMode = /^\s*[-−+]?[\d.,\s]*\d[\d.,\s]*%?\s*$/.test(String(ans)) ? 'decimal' : 'text';
     /* The calculus rules sat in the panel, in the learner's way, before they
        had tried anything. They are help, so they live with the help. */
     if (topic.id === 'calculus' && hint.indexOf('Power rule') === -1) {
@@ -7857,6 +7989,7 @@
       '<input class="fill-input" id="fill-input" type="text" placeholder="' + escHtml(placeholder) + '" inputmode="' + inputMode + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>' +
       '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
       '</div>' +
+      mathKeysHtml('fill-input', q.question, ans, { equation: eq, decimal: inputMode === 'decimal' }) +
       '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show steps</button>' +
       '<div class="hint-box" id="hint-box">' + escHtml(hint) + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
@@ -11737,9 +11870,13 @@
 
     var valN = norm(val);
     var corN = norm(correct);
+    /* The same answer in keyboard form, spaces ignored: "x ≤ -4", "x<=-4"
+       and "x ≤ −4" are one answer (the symbol keys type the first and third). */
+    var cmpRe = /[<>≤≥≠]|<=|>=|!=/;
+    var valCmp = cmpRe.test(val), corCmp = cmpRe.test(String(correct));
 
     // 1. Exact match after normalization
-    if (valN === corN) {
+    if (valN === corN || (sfCanon(val) === sfCanon(correct) && sfCanon(val) !== '')) {
       isCorrect = true;
     }
 
@@ -11749,7 +11886,9 @@
     //    happens to contain the right digits anywhere ("the answer is NOT
     //    12 miles, I don't know") was being marked correct, because every
     //    non-digit character gets stripped before comparing.
-    if (!isCorrect) {
+    /* ...and never for an inequality: "x ≥ -4" has the digits of "x ≤ -4", and
+       stripping everything but the digits marked the wrong direction right. */
+    if (!isCorrect && !valCmp && !corCmp) {
       var valDigits = val.replace(/[^0-9.\-]/g, '');
       var valIsShortNumeric = val.trim().length <= 22 &&
         valDigits.replace(/[.\-]/g, '').length >= Math.max(1, val.replace(/\s/g, '').length * 0.3);
@@ -11763,7 +11902,10 @@
     }
 
     // 3. Contains match — answer contains what student typed (for multi-word answers)
-    if (!isCorrect && corN.length > 4 && valN.length >= 2) {
+    /* Steps 3 and 4 read WORDS, and a one-character word (the sign in
+       "x ≥ -4") is dropped from the word list - so they too leave a
+       comparison to the exact check above. */
+    if (!isCorrect && !valCmp && !corCmp && corN.length > 4 && valN.length >= 2) {
       if (corN.includes(valN) && valN.length >= Math.ceil(corN.length * 0.5)) {
         isCorrect = true;
       }
@@ -11774,7 +11916,7 @@
     //    happens to contain every correct word buried inside it, and
     //    (b) a typed answer that explicitly NEGATES the correct answer
     //    ("the answer is NOT 12 miles") but still contains all its words.
-    if (!isCorrect) {
+    if (!isCorrect && !valCmp && !corCmp) {
       var valWords = valN.split(' ').filter(function(w){ return w.length > 1; });
       var corWords = corN.split(' ').filter(function(w){ return w.length > 1; });
       var NEG_RE = /\b(not|isnt|arent|wasnt|werent|never|wrong|incorrect|none|no)\b/;
