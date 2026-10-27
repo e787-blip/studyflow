@@ -749,6 +749,46 @@ structure. Labelling is exactly that.
   and `psychology/bioCog` — the subtopics whose material has things with
   parts. **Not maths.**
 
+### Symbol keys under answer boxes — `mathKeysFor` (Oct 2026, branch `symbol-keys`)
+
+The owner: "have buttons that are not on the keyboard ... that are necessary for
+equations or questions". A learner solving `-3x ≥ 12` could not type `x ≤ -4`:
+no ≥ on a keyboard, and the number pad a phone opens for a numeric box has no
+minus, slash or percent either.
+
+- **The ANSWER decides which keys** (`mathKeysFor(question, answer, opts)`),
+  never the topic. A first version guessed from the topic (a quadratic got
+  ± and √, a circle got π) and put keys under questions whose answer was
+  "2, 3". Now: an inequality in the question or answer gets all four signs
+  (the learner picks the direction); then one key per symbol the answer
+  contains - ± √ ² ³ π ° θ ∫ ′ ∞ ∪ × ÷ ≠ - in either spelling (the model writes
+  `x >= 4` and `3x^2` as often as `x ≥ 4` and `3x²`); then ANY other
+  non-keyboard character in the answer ("36 °C", "H₂O", an arrow). On a
+  touch screen with a number pad, minus / slash / percent when the answer
+  has them. No keys at all for "5" or "mitochondrion".
+- **Where**: the equation card (`renderBigEquation`) and the fill card
+  (`renderFill`). Never on a language day (that day's keys are the accent
+  bar). Class `mx-key`, not `accent-key`, so a test counting accent keys is
+  unaffected. `insertAccent` inserts `data-v` when a key's label is not what
+  it types (the `x²` key types `²`). Mousedown is cancelled so the box keeps
+  focus and its caret.
+- **The input mode is the number pad only for a plain number** (the old rule
+  was "no letters"). A comparison, a root or a fraction needs the full
+  keyboard, and `3/4` had a pad with no slash.
+- **Grading reads a key and a keyboard as one answer** (`sfCanon`, step 1 of
+  `answerFill`): real minus and dashes, × ÷, ≤ ≥ ≠ as `<=` `>=` `!=`, ±,
+  superscripts, subscripts, √ π θ µ, →, spaces. So `x ≤ −4` = `x<=-4`,
+  `3x²` = `3x^2`, `CO₂` = `co2`, `25π` = `25pi`.
+- **A real bug found on the way, and the reason this is a grading change too:
+  an inequality was graded on its DIGITS ALONE.** `x ≥ -4` was marked right
+  against `x ≤ -4`, twice over: the numeric fallback strips everything but
+  digits and `-`, and the word-match step drops one-character "words" (the
+  sign itself). Both now leave any answer containing a comparison to the
+  exact check. Tested on the real card, 28 typed-vs-correct pairs.
+- **Not done**: the word-problem step boxes and the estimate box (numbers
+  only; they strip everything but digits, so a minus key there would need
+  their graders changed too), and the build-a-graph card.
+
 ### The CONTENT lock — because locking the type was not enough
 
 `holdToPalette` stops a science day returning `{"type":"wordproblem"}`. It
