@@ -428,6 +428,7 @@
   </div>
 </main>
 
+<script src="sf-owner.js"></script>
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendPasswordResetEmail, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -498,6 +499,8 @@
     };
     if (same && existing.grade) user.grade = existing.grade;
     if (extra) for (var k in extra) user[k] = extra[k];
+    /* sf-owner.js: the owner's own accounts are always VIP, on every device. */
+    if (window.SFOwner && window.SFOwner.is(user.email)) user.tier = 'vip';
     writeLS('studyflow_user', JSON.stringify(user));
     if ($('remember').checked || mode === 'signup') writeLS(LAST_EMAIL_KEY, fbUser.email);
     return user;
