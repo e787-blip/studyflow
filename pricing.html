@@ -684,6 +684,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script src="sf-owner.js"></script>
+<script src="sf-auth.js"></script>
 <script src="sf-smooth.js"></script>
 <script>
 (function () {
@@ -737,16 +738,12 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     user = JSON.parse(raw || '{}') || {};
   } catch (e) {}
 
-  /* Back from checkout with ?upgraded=<plan>: record the plan and go on to
-     the dashboard (kept from the old page; the Stripe success URL itself
-     lands on the dashboard directly). */
-  var upgraded = new URLSearchParams(window.location.search).get('upgraded');
-  if (upgraded) {
-    user.tier = upgraded;
-    try { localStorage.setItem('studyflow_user', JSON.stringify(user)); } catch (e) {}
-    window.location.href = 'dashboard.html?upgraded=' + encodeURIComponent(upgraded);
-    return;
-  }
+  /* ?upgraded=<plan> used to be written straight into the stored plan here,
+     so pricing.html?upgraded=vip was VIP for free. Gone (Oct 2026): the plan
+     is what api/account says (sf-auth.js), and Stripe now sends a buyer back
+     to dashboard.html?checkout=done. When the server's answer differs from
+     the stored one, the page is drawn again with it. */
+  window.addEventListener('sf-tier', function () { window.location.reload(); });
 
   var toastEl = document.getElementById('toast'), toastTimer = 0;
   /* Text goes in as text, never markup: an error message comes from the server. */
@@ -769,18 +766,32 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     overlay.classList.toggle('show', on);
     overlay.setAttribute('aria-hidden', on ? 'false' : 'true');
   }
-  function checkout(priceId, plan) {
+  function checkout(priceId) {
     if (busy) return;
+    /* A plan is bought by an account: api/checkout takes the email from the
+       sign-in, which is what the plan is read back by. A visitor used to be
+       sent to Stripe with no account at all, and paid for a plan nothing
+       could ever find. */
+    if (!signedIn) { window.location.href = 'login.html?mode=signup'; return; }
     setBusy(true);
-    fetch('api/checkout', {
+    (window.SFAuth ? SFAuth.apiFetch : fetch)('api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ priceId: priceId, plan: plan, email: user.email || '' })
+      body: JSON.stringify({ priceId: priceId })
     })
-    .then(function (r) { return r.json(); })
+    .then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        d = d && typeof d === 'object' ? d : {};
+        d._status = r.status;
+        return d;
+      });
+    })
     .then(function (data) {
       if (data.url) {
         window.location.href = data.url;
+      } else if (data._status === 401) {
+        setBusy(false);
+        toast('Your sign-in has expired.', 'login.html', 'Sign in again');
       } else {
         setBusy(false);
         toast('Error: ' + (data.error || 'Could not start checkout'));
@@ -798,7 +809,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   [].slice.call(document.querySelectorAll('[data-checkout]')).forEach(function (b) {
     b.addEventListener('click', function () {
       var plan = b.getAttribute('data-checkout');
-      checkout(PRICES[plan], plan);
+      checkout(PRICES[plan]);
     });
   });
 

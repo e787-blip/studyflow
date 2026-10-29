@@ -70,6 +70,8 @@ check visuals      "VISUALS OK"            node "$HERE/test_visuals.js"
 check eqcard       "EQCARD OK"             node "$HERE/test_eqcard.js"
 check deck         "DECK OK"               node "$HERE/test_deck.js"
 check chat         "CHAT OK"               node "$HERE/test_chat.js"
+# Paid plans and sign-in, enforced on the server: the api files with Firebase/Stripe stood in, then the pages.
+check account      "ACCOUNT OK"            node "$HERE/test_account.js"
 check language     "LANGUAGE OK"           node "$HERE/test_language.js"
 check languages    "LANGUAGES OK"          node "$HERE/test_languages.js"
 check history      "HISTORY OK"            node "$HERE/test_history.js"

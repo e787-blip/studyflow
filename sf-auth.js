@@ -19,7 +19,25 @@
    SFAuth.classFetch(url, opts, email)
                              -> fetch() with the token attached. Signed out, it
                                 resolves to a 401-shaped response instead of
-                                calling the server, so callers keep one path. */
+                                calling the server, so callers keep one path.
+   SFAuth.apiFetch(url, opts) -> fetch() to api/generate, api/chat,
+                                api/extract or api/checkout with the token of
+                                whoever is signed in here, when there is one.
+                                Signed out it still calls, and the server
+                                answers 401 (sign_in_required) - the pages
+                                show "Sign in again" on that status.
+   SFAuth.refreshTier(opts)  -> Promise<tier|null>. Asks api/account what the
+                                signed-in account has paid for and writes it
+                                into studyflow_user.tier, firing `sf-tier` on
+                                window when it changed. Runs by itself once per
+                                page load. Any failure (offline, signed out,
+                                another account's session) leaves the stored
+                                tier as it was.
+
+   Oct 2026: the plan used to live ONLY in studyflow_user.tier, which the
+   pages wrote themselves - dashboard.html?upgraded=vip was VIP for free, and
+   a paying learner was Free on a new device. That copy is now a cache of
+   what the server says, and the server enforces what matters itself. */
 (function () {
   var API_KEY = 'AIzaSyCY4FI-6L9tsAokNFl6o5bsmCt-JD0H8HI';
   var STORE_KEY = 'firebase:authUser:' + API_KEY + ':[DEFAULT]';
@@ -112,5 +130,57 @@
     });
   }
 
-  window.SFAuth = { user: user, idToken: idToken, classFetch: classFetch };
+  function withToken(opts, token) {
+    var o = {}, headers = {};
+    opts = opts || {};
+    for (var j in opts) if (Object.prototype.hasOwnProperty.call(opts, j)) o[j] = opts[j];
+    var h = opts.headers || {};
+    for (var k in h) if (Object.prototype.hasOwnProperty.call(h, k)) headers[k] = h[k];
+    if (token) headers.Authorization = 'Bearer ' + token;
+    o.headers = headers;
+    return o;
+  }
+
+  function apiFetch(url, opts) {
+    return idToken().then(function (token) { return fetch(url, withToken(opts, token)); });
+  }
+
+  function storedUser() {
+    try { return JSON.parse(window.localStorage.getItem('studyflow_user') || 'null'); } catch (e) { return null; }
+  }
+
+  var TIERS = { free: 1, pro: 1, vip: 1, classroom: 1, school: 1 };
+
+  function refreshTier(opts) {
+    opts = opts || {};
+    var u = storedUser();
+    if (!u || !u.email) return Promise.resolve(null);
+    /* Only this account's own session: a teacher signed in on a student's
+       laptop must not hand the student the teacher's plan. */
+    return idToken(u.email).then(function (token) {
+      if (!token) return null;
+      return fetch('/api/account' + (opts.fresh ? '?fresh=1' : ''), {
+        headers: { Authorization: 'Bearer ' + token }, cache: 'no-store'
+      }).then(function (r) { return r.ok ? r.json() : null; });
+    }).then(function (d) {
+      var tier = d && typeof d.tier === 'string' ? d.tier.toLowerCase() : '';
+      if (!TIERS[tier]) return null;
+      var now = storedUser();
+      if (!now || !same(now.email, u.email)) return null;   // signed out or switched meanwhile
+      if (now.tier !== tier) {
+        var was = now.tier || 'free';
+        now.tier = tier;
+        try { window.localStorage.setItem('studyflow_user', JSON.stringify(now)); } catch (e) {}
+        try { window.dispatchEvent(new CustomEvent('sf-tier', { detail: { tier: tier, was: was } })); } catch (e) {}
+      }
+      return tier;
+    }).catch(function () { return null; });
+  }
+
+  window.SFAuth = { user: user, idToken: idToken, classFetch: classFetch, apiFetch: apiFetch, refreshTier: refreshTier };
+
+  /* Once per page load, after the page's own script has read the stored
+     tier: a change arrives as `sf-tier`. */
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { refreshTier(); });
+  else refreshTier();
 })();

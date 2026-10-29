@@ -1,4 +1,6 @@
 'use strict';
+const { requireUser } = require('./_account');
+
 const FETCH_TIMEOUT_MS = 10000;
 const ALLOWED_PRICE_IDS = new Set([
   'price_1TTxA2FFG0oviXd9TJGT1aAJ',
@@ -16,11 +18,19 @@ function fetchWithTimeout(url, opts = {}) {
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || 'https://studyflow-ten-vert.vercel.app');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { priceId, plan, email } = req.body || {};
+  /* A purchase is recorded against the Stripe customer's email, and the
+     plan is read back by the signed-in account's email (api/_account.js). So
+     the email comes from the verified sign-in, never from the body: a typo
+     or another address at checkout meant paying for a plan the account never
+     got. */
+  const user = await requireUser(req, res);
+  if (!user) return;
+
+  const { priceId } = req.body || {};
 
   // Allowlist validation — prevents forged price IDs
   if (!priceId || !ALLOWED_PRICE_IDS.has(priceId))
@@ -34,16 +44,17 @@ module.exports = async function handler(req, res) {
       'mode': 'subscription',
       'line_items[0][price]': priceId,
       'line_items[0][quantity]': '1',
-      'success_url': `https://studyflow-ten-vert.vercel.app/dashboard.html?upgraded=${encodeURIComponent(plan || '')}`,
+      /* No tier in the address. It used to be ?upgraded=<plan>, and the
+         dashboard granted whatever it said - dashboard.html?upgraded=vip
+         was VIP for free. The dashboard now asks api/account. */
+      'success_url': 'https://studyflow-ten-vert.vercel.app/dashboard.html?checkout=done',
       'cancel_url': 'https://studyflow-ten-vert.vercel.app/pricing.html',
       'allow_promotion_codes': 'true',
       'billing_address_collection': 'auto',
     });
 
-    // Only attach email if it looks valid
-    if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      params.set('customer_email', email);
-    }
+    params.set('customer_email', user.email);
+    params.set('client_reference_id', user.uid);
 
     const response = await fetchWithTimeout('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',

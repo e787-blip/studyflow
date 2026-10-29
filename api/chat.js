@@ -1,5 +1,10 @@
 'use strict';
+const { requireUser, tierOf } = require('./_account');
+
 const MAX_MESSAGES = 10;
+/* The study tutor is a VIP feature. lesson.html only shows its button to a
+   VIP, but the button was the whole lock: the endpoint answered anyone. */
+const CHAT_TIERS = { vip: 1 };
 const FETCH_TIMEOUT_MS = 15000;
 
 function fetchWithTimeout(url, opts = {}) {
@@ -48,9 +53,16 @@ function sanitizeContext(c) {
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || 'https://studyflow-ten-vert.vercel.app');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const user = await requireUser(req, res);
+  if (!user) return;
+  let tier = 'free';
+  try { tier = await tierOf(user); } catch (e) { console.error('[chat.js] tier', e.message); }
+  if (!CHAT_TIERS[tier])
+    return res.status(403).json({ error: 'vip_required', message: 'The study tutor is part of VIP.' });
 
   const { messages, context } = req.body || {};
   if (!Array.isArray(messages) || messages.length === 0)

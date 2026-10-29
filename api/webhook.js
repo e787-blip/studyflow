@@ -3,13 +3,9 @@ const { serviceAccount, makeDb } = require('./_firestore');
 const FETCH_TIMEOUT_MS = 10000;
 const REPLAY_WINDOW_SECS = 300; // 5 minutes — Stripe standard
 
-// Explicitly map price IDs — unknown IDs fall back to 'free', not 'pro'
-const PRICE_TIERS = {
-  'price_1TTxA2FFG0oviXd9TJGT1aAJ': 'pro',
-  'price_1TTxAOFFG0oviXd97LZFacnr': 'vip',
-  'price_1TTxArFFG0oviXd9Nl39k8ZM': 'classroom',
-  'price_1TTxBDFFG0oviXd9wIKwRlUm': 'school',
-};
+/* Price ids -> tiers live in api/_account.js, which api/account.js also
+   uses to ask Stripe directly. Unknown ids fall back to 'free', not 'pro'. */
+const { PRICE_TIERS } = require('./_account');
 
 function fetchWithTimeout(url, opts = {}) {
   const ctrl = new AbortController();

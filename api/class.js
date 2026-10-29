@@ -25,7 +25,8 @@
    answers 503 rather than falling back to the open path. */
 
 const crypto = require('crypto');
-const { fetchWithTimeout, serviceAccount, makeDb } = require('./_firestore');
+const { serviceAccount, makeDb } = require('./_firestore');
+const { verifyUser } = require('./_account');
 
 /* Free classes hold 5 students; a paid Classroom plan holds 30 (the landing
    page's Schools section sells it as "up to 30 students"). A School plan is
@@ -57,33 +58,8 @@ class HttpError extends Error {
 }
 
 // ── Who is asking ─────────────────────────────────────────────────────────
-
-/* accounts:lookup rejects an expired or forged token, so a token that comes
-   back with a user is a real, current sign-in. Cached briefly: a teacher's
-   dashboard makes three calls on load. */
-const userCache = new Map();
-const USER_CACHE_MS = 5 * 60 * 1000;
-
-async function verifyUser(req, apiKey) {
-  const m = /^Bearer\s+(\S+)$/.exec(req.headers.authorization || '');
-  if (!m || m[1].length > 4096) return null;
-  const token = m[1];
-  const hit = userCache.get(token);
-  if (hit && hit.until > Date.now()) return hit.user;
-
-  const r = await fetchWithTimeout(
-    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: token }) }
-  );
-  const data = await r.json().catch(() => ({}));
-  const u = data.users && data.users[0];
-  if (!u || !u.localId || !u.email || u.disabled) return null;
-
-  const user = { uid: u.localId, email: String(u.email).toLowerCase().trim(), name: u.displayName || '' };
-  if (userCache.size > 500) userCache.clear();
-  userCache.set(token, { user, until: Date.now() + USER_CACHE_MS });
-  return user;
-}
+/* verifyUser moved to api/_account.js (Oct 2026): the AI endpoints check the
+   same Firebase ID token now, and one copy of the check is the one to fix. */
 
 /* Read, change, write, retrying when someone else wrote in between.
    `change` returns the new fields, or throws an HttpError to stop. */

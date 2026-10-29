@@ -689,7 +689,7 @@
     }, 20000);
 
     try {
-      global.fetch('/api/generate', {
+      (global.SFAuth ? global.SFAuth.apiFetch : global.fetch)('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: prompt })

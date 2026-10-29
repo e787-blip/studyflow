@@ -1350,17 +1350,16 @@
       return;
     }
 
-    // Handle Stripe redirect — update tier immediately after payment
+    /* Back from Stripe. The address used to carry the plan
+       (?upgraded=vip) and this page granted whatever it said, so typing it
+       was VIP for free. Now the address only says a checkout finished, and
+       the plan is whatever the server confirms (confirmCheckout). An old
+       ?upgraded= link is cleared and ignored. */
     var params = new URLSearchParams(window.location.search);
-    var upgraded = params.get('upgraded');
-    if (upgraded) {
-      var user = getUser();
-      user.tier = upgraded;
-      SFStore.setItem('studyflow_user', JSON.stringify(user));
+    var backFromCheckout = params.get('checkout') === 'done';
+    if (backFromCheckout || params.has('upgraded')) {
       window.history.replaceState({}, '', window.location.pathname);
-      setTimeout(function () {
-        toast('Welcome to StudyFlow ' + upgraded.charAt(0).toUpperCase() + upgraded.slice(1) + '. Your account is upgraded.', null, 4200);
-      }, 700);
+      if (backFromCheckout) confirmCheckout();
     }
 
     allPlans = readJSON('studyflow_plans', []);
@@ -1408,6 +1407,30 @@
     var st = $('empty-stack');
     setTimeout(function () { st.classList.add('in'); }, reduced() ? 0 : 140);
   }
+
+  /* After a payment: ask the server, straight from Stripe (?fresh=1), a few
+     times - the webhook that records the plan can land a few seconds after
+     Stripe sends the learner back. sf-auth.js writes the tier and fires
+     `sf-tier`, which repaints the menu and the plan limits. */
+  function confirmCheckout() {
+    var tries = 0;
+    setTimeout(function () { toast('Payment received. Setting up your plan…', null, 2600); }, 700);
+    (function ask() {
+      tries++;
+      if (!window.SFAuth || !SFAuth.refreshTier) return;
+      SFAuth.refreshTier({ fresh: true }).then(function (tier) {
+        if (tier && tier !== 'free') {
+          toast('Welcome to StudyFlow ' + tier.charAt(0).toUpperCase() + tier.slice(1) + '. Your account is upgraded.', null, 4200);
+          return;
+        }
+        if (tries < 6) { setTimeout(ask, 2500); return; }
+        toast('Your payment is still being confirmed. Refresh this page in a minute to see your plan.', null, 7000);
+      });
+    })();
+  }
+  /* The stored tier is only the server's last answer; sf-auth.js asks again
+     on every load and fires this when it changed. */
+  window.addEventListener('sf-tier', function () { renderChrome(); });
 
   /* Things that do not depend on a plan: account, tier, limits. */
   function renderChrome() {

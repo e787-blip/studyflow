@@ -788,7 +788,7 @@
   window.runClassroom = function (only) {
     CR.pass = 0; CR.fail = 0; CR.log = []; CR.done = false;
     var suites = [['api', apiSuite], ['webhook', webhookSuite], ['builder', builderSuite], ['student', studentSuite], ['returns', returnsSuite], ['results', resultsSuite]];
-    var chain = Promise.all(['api/_firestore.js', 'api/class.js', 'api/webhook.js'].map(loadSrc)).then(function () {
+    var chain = Promise.all(['api/_firestore.js', 'api/_account.js', 'api/class.js', 'api/webhook.js'].map(loadSrc)).then(function () {
       classHandler = makeModule('api/class.js', ENV);
     });
     suites.forEach(function (s) {

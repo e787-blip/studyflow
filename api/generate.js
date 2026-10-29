@@ -11,6 +11,8 @@
    Claude Haiku 4.5 takes a 200k-token context; 12000 chars is about 3k tokens.
    60000 leaves generous headroom over the current prompt plus the 3500-char
    notes budget app.html allows. */
+const { requireUser } = require('./_account');
+
 const MAX_PROMPT_CHARS = 60000;
 /* A real day comes back in about forty seconds - measured, not guessed -
    so a 45s abort left five seconds of headroom and days were being killed
@@ -30,9 +32,13 @@ function fetchWithTimeout(url, opts) {
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || 'https://studyflow-ten-vert.vercel.app');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  /* Signed-in learners and teachers only. This answered anyone, so anyone
+     could spend the Anthropic key from a script (api/_account.js). */
+  if (!(await requireUser(req, res))) return;
 
   const { prompt } = req.body || {};
   if (!prompt || typeof prompt !== 'string' || !prompt.trim())

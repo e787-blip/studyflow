@@ -1,12 +1,18 @@
+'use strict';
 // api/extract.js — Extract text from images using Claude Vision
 // Supports: JPG, PNG, WebP, GIF, HEIC
+/* CommonJS like every other endpoint (it was the one ES module), so it can
+   share the sign-in check in api/_account.js. Its CORS header was '*': any
+   site could have had its visitors' browsers read photos through our key. */
+const { requireUser } = require('./_account');
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || 'https://studyflow-ten-vert.vercel.app');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!(await requireUser(req, res))) return;
 
   try {
     const { imageData, mediaType, filename } = req.body;
@@ -74,4 +80,4 @@ Filename: ${filename || 'image'}`
     console.error('Extract error:', err);
     return res.status(500).json({ error: 'Failed to extract text from image' });
   }
-}
+};

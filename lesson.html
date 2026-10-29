@@ -2122,6 +2122,13 @@
     totalSeconds = totalMinutes * 60;
 
     if (userPlan === 'vip') document.getElementById('chat-fab').classList.add('show');
+    /* sf-auth.js asks the server what this account has paid for once the
+       page is up; the stored tier is only its last answer (Oct 2026). */
+    window.addEventListener('sf-tier', function (e) {
+      userPlan = (e && e.detail && e.detail.tier) || 'free';
+      var fab = document.getElementById('chat-fab');
+      if (fab) fab.classList.toggle('show', userPlan === 'vip');
+    });
 
     /* A finished day is finished. Without this the same lesson could be
        re-taken indefinitely, inflating the streak and letting a learner
@@ -3501,7 +3508,7 @@
       'Return ONLY a JSON array, no markdown:\n' +
       schema;
 
-    fetch('api/generate', {
+    (window.SFAuth ? SFAuth.apiFetch : fetch)('api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: prompt })
@@ -12456,7 +12463,7 @@
         ' ADVICE: [one concrete change that would make the argument stronger]\n\nNever be generic.'
       : 'You are a tutor grading a student explanation using the Feynman Technique. Be specific, honest, and encouraging.\n\nCONCEPT: ' + question + '\nCORRECT EXPLANATION: ' + modelAnswer + '\nSTUDENT WROTE: ' + answer + '\n\nRespond in this exact format:\n SCORE: X/10\n WHAT YOU NAILED: [1-2 specific things they got right, reference their exact words]\n KNOWLEDGE GAPS: [specific concepts they missed or got wrong — be precise]\n ADVICE: [one concrete tip to fill the biggest gap]\n\nBe specific — reference actual content from their answer. Never be generic.';
 
-    fetch('api/generate', {
+    (window.SFAuth ? SFAuth.apiFetch : fetch)('api/generate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: prompt })
     })
@@ -13021,7 +13028,9 @@
       chatBusy = false;
       if (thinking.parentNode) thinking.remove();
       if (failed) {
-        addChatMsg('Couldn’t reach the tutor. Check your connection.', 'error');
+        /* A string is the server's reason (signed out, not VIP); anything
+           else is the connection. */
+        addChatMsg(typeof failed === 'string' ? failed : 'Couldn’t reach the tutor. Check your connection.', 'error');
       } else {
         chatHistory.push({ role: 'assistant', content: reply });
         addChatMsg(reply, 'ai');
@@ -13030,15 +13039,24 @@
       chatRefresh(false);
     }
     var timer = setTimeout(function () { done('', true); }, 25000);
-    fetch('api/chat', {
+    (window.SFAuth ? SFAuth.apiFetch : fetch)('api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages: chatHistory.slice(-10), context: context })
     })
-    .then(function (r) { return r.json(); })
+    .then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        d = d && typeof d === 'object' ? d : {};
+        d._status = r.status;
+        return d;
+      });
+    })
     .then(function (data) {
       clearTimeout(timer);
       if (data && typeof data.reply === 'string' && data.reply.trim()) done(data.reply, false);
+      /* api/chat checks the sign-in and the plan itself now (Oct 2026). */
+      else if (data._status === 401) done('', 'Your sign-in has expired. Sign in again to use the tutor.');
+      else if (data._status === 403) done('', 'The study tutor is part of VIP.');
       else done('', true);
     })
     .catch(function () { clearTimeout(timer); done('', true); });

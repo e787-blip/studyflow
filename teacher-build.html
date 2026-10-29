@@ -486,9 +486,20 @@
     ctx.drawImage(canvasOrImg, 0, 0, c.width, c.height);
     return c.toDataURL('image/jpeg', 0.85).split(',')[1];
   }
+  /* api/generate and api/extract need a signed-in caller now (Oct 2026).
+     A 401 means the session is gone - the same as api() above. */
+  function signedOutCheck(r) {
+    if (r.status === 401) {
+      try { localStorage.removeItem('studyflow_teacher'); } catch (e) {}
+      window.location.replace('teacher-login.html');
+      throw new Error('signed out');
+    }
+    return r;
+  }
   function vision(b64, name) {
-    return fetch('api/extract', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    return (window.SFAuth ? SFAuth.apiFetch : fetch)('api/extract', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageData: b64, mediaType: 'image/jpeg', filename: name }) })
+      .then(signedOutCheck)
       .then(function (r) { return r.json(); })
       .then(function (d) { return d && d.text ? String(d.text) : ''; });
   }
@@ -653,7 +664,8 @@
       'NOTES:\n"""\n' + notesForPrompt() + '\n"""\n\nOUTPUT: ONLY the JSON object.';
   }
   function callModel(prompt) {
-    return fetch('api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: prompt }) })
+    return (window.SFAuth ? SFAuth.apiFetch : fetch)('api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: prompt }) })
+      .then(signedOutCheck)
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (d) {
         var raw = d && (d.result || d.plan) || '';

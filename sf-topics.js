@@ -789,7 +789,7 @@
         settled = true;
         reject(new Error('timeout'));
       }, ms || 20000);
-      fetch('api/generate', {
+      (window.SFAuth ? SFAuth.apiFetch : fetch)('api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: p })

@@ -1511,13 +1511,14 @@
     s = s || newSource(file.name, 'image', file);
     srcProgress(s, 'Reading the photo with AI…');
     prepareImage(file).then(function (img) {
-      return fetch('api/extract', {
+      return (window.SFAuth ? SFAuth.apiFetch : fetch)('api/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageData: img.data, mediaType: img.mediaType, filename: file.name })
       }).then(function (r) {
         return r.json().catch(function () { throw new Error('http ' + r.status); });
       }).then(function (data) {
+        if (data.error === 'sign_in_required') { srcFail(s, 'Your sign-in has expired. Sign in again, then add the photo.', false); return; }
         if (data.error || !data.text || !String(data.text).trim()) { srcFail(s, 'Couldn’t read any writing in this photo.'); return; }
         srcDone(s, data.text, 'Photo read by AI');
       });
@@ -1812,7 +1813,7 @@
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         return pg.render({ canvasContext: ctx, viewport: vp }).promise.then(function () {
           var data = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
-          return fetch('api/extract', {
+          return (window.SFAuth ? SFAuth.apiFetch : fetch)('api/extract', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ imageData: data, mediaType: 'image/jpeg',
@@ -3143,6 +3144,13 @@
     /* This used to replace the innerHTML of the "two quick questions" card,
        which destroyed the questions: after a failure, Start over was the
        only way back to them. */
+    /* api/generate answers signed-in learners only (Oct 2026). A 401 is
+       not a snag a retry fixes - the Firebase session is gone (a closed
+       browser after "Keep me signed in" was left off, say) while
+       studyflow_user still looks signed in. Retrying three times a day
+       would only make the learner wait for the same answer. */
+    var signInLost = false;
+
     function showFatalError(dayNum, retryFn) {
       var le = document.getElementById('loading');
       if (le) le.classList.remove('active');
@@ -3151,6 +3159,16 @@
       if (!box) return;
       generating = false;
       box.classList.add('active');
+      if (signInLost) {
+        box.innerHTML =
+          '<div style="text-align:center;padding:1rem .4rem;">' +
+          '<h2 style="margin-bottom:.5rem;">Sign in <em>again</em></h2>' +
+          '<p class="card-sub" style="margin:0 auto 1.4rem;">Your sign-in has expired. Your notes and answers are saved here, so you can pick up where you left off.</p>' +
+          '<div style="display:grid;gap:.5rem;max-width:340px;margin:0 auto;">' +
+          '<a id="gen-signin-btn" class="btn-next" href="login.html" style="text-align:center;text-decoration:none;">Sign in</a>' +
+          '</div></div>';
+        return;
+      }
       box.innerHTML =
         '<div style="text-align:center;padding:1rem .4rem;">' +
         '<div style="width:56px;height:56px;border-radius:18px;background:var(--bad-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">' +
@@ -3717,13 +3735,14 @@
             ? 'Retrying day ' + dayNum + ' (attempt ' + attempt + ' of ' + MAX_RETRIES + ')...'
             : 'Building your ' + strategy.label + ' plan \u2014 day ' + dayNum + ' of ' + totalDays + '...'
         );
-        fetch('api/generate', {
+        (window.SFAuth ? SFAuth.apiFetch : fetch)('api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: (attempt > 1 && /HTTP 50[24]|Failed to fetch|timeout|NetworkError|Load failed/i.test(lastFail)) ? SHORT_RETRY + prompt : prompt }),
           keepalive: true  // tells browser to keep this fetch alive even if tab goes background
         })
         .then(function(res) {
+          if (res.status === 401) { signInLost = true; throw new Error('Signed out'); }
           if (!res.ok) throw new Error('HTTP ' + res.status);
           return res.json();
         })
@@ -4007,6 +4026,7 @@
         .catch(function(err) {
           console.warn('[gen] day ' + dayNum + ' attempt ' + attempt + ':', err.message);
           lastFail = String(err && err.message || '');
+          if (signInLost) { callback(err); return; }
           if (attempt < MAX_RETRIES) {
             /* BACKOFF MUST OUTLAST THE CALL IT IS BACKING OFF FROM.
 

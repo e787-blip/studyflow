@@ -15,7 +15,7 @@ multi-step terminal workflows.
 | Hosting | Vercel — `studyflow-ten-vert.vercel.app` (also pushed to GitHub Pages) |
 | Backend | Vercel serverless, `api/*.js`, uses `module.exports` (not ESM) |
 | AI | Anthropic API, `claude-haiku-4-5`, key in `ANTHROPIC_API_KEY` env var on Vercel. `api/generate.js` caps the prompt at 60 000 chars — the whole prompt must fit, because the JSON schema sits at the end of it. |
-| Auth | localStorage only. Accounts in `studyflow_accounts`, session in `studyflow_user` |
+| Auth | Firebase Auth (`login.html`); the session is mirrored in `studyflow_user`. **The paid plan is the server's** (`api/account`), and the AI endpoints check the sign-in - see "Paid plans are the server's" |
 | Storage | All plan data in localStorage, namespaced per account via `SFStore` |
 
 There is no test runner, no `package.json` for the frontend, and no lint config.
@@ -40,7 +40,8 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** The marketing pages that sit in the nav's own links (Help, Our story, Plans) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `lesson`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. `index.html` keeps its own copy - see "The site nav" |
 | `sf-smooth.js` | ~11 KB | **Smooth wheel scrolling** for `index.html`, `about.html`, `pricing.html` (window.`SFSmooth`). Off for touch and reduced motion - see "Smooth scroll and the two showcases" |
 | `sf-guide.js` | ~40 KB | **The guided walkthrough.** The Walkthrough button opens a sheet over the question just answered and asks its steps one at a time, written for THAT question by one model call; on a cell lesson a drawn cell shows the protein travelling. Loaded by `lesson.html` after `sf-questions.js` - see "The guided walkthrough" |
-| `sf-auth.js` | ~5 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html` — see "The classroom" |
+| `sf-auth.js` | ~8 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase; `apiFetch` sends it with every AI call, and `refreshTier` writes the server's plan into `studyflow_user.tier` on every load. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html`, `teacher-build.html`, `pricing.html` — see "The classroom" and "Paid plans are the server's" |
+| `api/_account.js` / `api/account.js` | ~8 / ~1 KB | **Who is calling and what they paid for.** `requireUser` (the Firebase token check, moved out of `class.js`), `tierOf` (Firestore `users/{email}`, else Stripe), the price map and the owner list. `GET api/account` answers `{email, tier}` |
 | `teacher-login.html` / `teacher.html` | ~21 / ~60 KB | Teacher sign-in (Firebase Auth) and the class dashboard, whose first tab is now Assignments and their results - see "Assignments" |
 | `teacher-build.html` | ~78 KB | **The assignment builder** - `app.html` for a teacher: one question per screen, one call writes the lesson and a fixed set of questions, the teacher edits every one, then publishes |
 | `api/class.js` | ~35 KB | The classroom API. Checks a Firebase ID token on every call. Assignments and their submissions live here too |
@@ -157,6 +158,44 @@ landing page said $79). Still not agreed: the landing page sells a $299 School t
 `api/checkout.js`'s allowlist) but no button on the pricing page.
 `CAP_BY_TIER.school` is 200, not unlimited: the roster is one Firestore
 document.
+
+### Paid plans are the server's (Oct 2026)
+
+Before this the plan lived only in `studyflow_user.tier`, which the pages
+wrote themselves. Three holes, all closed, `test_account.js` (fails 17 ways
+on the code before):
+
+- **`dashboard.html?upgraded=vip` (and `pricing.html?upgraded=vip`) made any
+  account VIP.** Stripe now returns a buyer to `dashboard.html?checkout=done`,
+  which asks `api/account?fresh=1` (Stripe directly) every 2.5s, six times,
+  until the plan shows. An old `?upgraded=` is cleared and ignored.
+- **A paying learner was Free on a new device.** `sf-auth.js` asks
+  `api/account` on every page load and writes the answer into
+  `studyflow_user.tier`, firing `sf-tier` when it changed (the dashboard
+  repaints, the lesson shows or hides the tutor, pricing reloads). Only with
+  THIS account's own Firebase session; any failure keeps the stored tier.
+- **`api/generate`, `api/extract` and `api/chat` answered anyone.** All three
+  need a Firebase ID token now (`requireUser`, 401 `sign_in_required`; no
+  `FIREBASE_API_KEY` = 503 for everyone), and `api/chat` needs VIP (403
+  `vip_required`). The pages send the token through
+  `(window.SFAuth ? SFAuth.apiFetch : fetch)(...)`. A page with no session
+  still CALLS (the harness mocks need that) and shows "Sign in again" on a
+  401: the plan builder's own card with no retries, the tutor's message, a
+  photo source's message, the teacher builder's redirect to sign-in.
+
+`tierOf` reads Firestore `users/{email}` (written by `api/webhook.js`); with
+no record it asks Stripe (customers by email, then live subscriptions, the
+highest wins) and writes the answer back, so someone who paid before the
+webhook could write is found. Owners (`OWNERS` in `api/_account.js` AND
+`sf-owner.js`) are always VIP. **`api/checkout` needs a sign-in too** and
+sets `customer_email` from the token (a visitor is sent to sign up first):
+the plan is read back by that email, so a different address typed at Stripe
+meant paying for a plan nothing could find.
+
+**Still enforced only in the browser:** the plan COUNT and LENGTH limits
+(Free 1 plan/month and 7 days, Pro 5 and 14). A free account that edits
+localStorage can build more plans; it cannot use the tutor. Closing that
+needs a server-side count of plans started per month.
 
 ---
 
@@ -3501,8 +3540,9 @@ files. **The nav is not in that block**: it is `sf-nav.js`, see "The site nav".
   does `@supports not (backdrop-filter)`, so a browser without it never gets
   see-through glass with sharp text behind it. Neither page has a dark theme
   (neither did before); `studyflow_dark` is not read here.
-- **Pricing behaviour is unchanged, the markup is not.** `checkout(priceId,
-  plan)` posts the same body to `api/checkout`; the ids in `PRICES` must stay
+- **Pricing behaviour is unchanged, the markup is not.** `checkout(priceId)`
+  posts `{priceId}` to `api/checkout` with the sign-in token (Oct 2026: a
+  visitor goes to sign up first - see "Paid plans are the server's"); the ids in `PRICES` must stay
   in that file's allowlist. What did change: `alert()` is a toast (the
   server's error goes in as text, never markup); the dimmed sheet is not left
   up when Back from Stripe restores the page (`pageshow`); a second click
@@ -3941,6 +3981,16 @@ objects, strings-with-matching-concepts, strings-without, concepts-only, and
 genuinely nothing.
 
 ## Open items
+
+- **Paid plans on the server (Oct 2026): check on the live site after the
+  deploy.** Sign in, build a plan (generate must answer), open the tutor as
+  VIP (and as free: "part of VIP"), sign in on a second browser and see the
+  plan arrive, and make one real purchase and watch `?checkout=done` turn
+  into the plan. Needs `FIREBASE_API_KEY`, `FIREBASE_SERVICE_ACCOUNT` and
+  `STRIPE_SECRET_KEY` in Vercel - all three are already set. Not covered:
+  `api/illustration.js` is still open (CDN-cached per topic), and a buyer
+  whose Stripe email differs from the account only by capitals is not found
+  by the Stripe fallback (Stripe's email filter is exact).
 
 - **Tables, charts and data questions are built (branch `data-cards`), not
   seen from a real model.** Before merging: build a science, an economics and

@@ -202,7 +202,7 @@
     inflight[k] = new Promise(function (resolve, reject) {
       var done = false;
       var timer = setTimeout(function () { if (!done) { done = true; reject(new Error('timeout')); } }, GUIDE_TIMEOUT_MS);
-      fetch('api/generate', {
+      (window.SFAuth ? SFAuth.apiFetch : fetch)('api/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: prompt(f) })
       }).then(function (r) {
