@@ -116,6 +116,28 @@ is a bug in the site. For stills, headless Chrome works
 once the file exists - and its virtual clock catches entrance animations
 part-way, so add `*{animation:none!important}` to the page first.
 
+Two servers on one Mac share the out folder (it is under the system temp
+dir), so a second session's `suite.txt` overwrites yours. Give your server
+its own with `TMPDIR=<your scratch dir> python3 -I ... server.py <port>`.
+
+### Tests for features the owner switched off (updated 2026-10-26)
+
+Seven checks failed on `main` for weeks because they tested features the
+owner turned off in Oct 2026. They were rewritten, not deleted. Each one now
+**asserts the switched-off state first**, then (where the code was kept for a
+one-line revert) flips the switch back on in the page so that code is still
+covered:
+
+| Test | Why it failed | What it checks now |
+|---|---|---|
+| `moment`, `edges`, `on_the_spot`, `auto_cap` | "Draw it for me" / on-the-spot drawings are off (`MOMENT_ON = false` in lesson.html) | a miss, a `recordMiss` miss, the walkthrough and the results list offer no drawing and make no "A student just got..." call; then `MOMENT_ON = true` in the page for the old checks |
+| `newtypes` | its "Draw it for me is offered on recall/selfcheck/whosright" check | `momentCanDraw` is false on all five formats; the old rule is checked with the switch flipped on |
+| `draw_on` (step pictures) | waited for the opening worked-example card (`sfwb-brief`), which no subject gets any more | a maths day queues no `sfwb-brief`; the step pictures are checked on the same sideways board a missed equation's walkthrough opens (`sfwb-explain`) |
+| `topics_page` (music quota) | expected "Label the diagram" on the Triads day | `noDrawn()` gives "Name them all" there, and no day asks for a labelling drawing |
+
+If the owner turns either feature back on, these tests fail on purpose:
+update the switched-off assertions then.
+
 ## 2. Fix what is broken (max 3)
 
 For each failure: reproduce it from the log, find the cause with `grep`, fix

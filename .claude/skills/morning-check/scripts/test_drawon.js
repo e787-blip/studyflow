@@ -230,11 +230,29 @@ async function afterDrawing(page) {
   assert(env.errors.length === 0, 'no page errors: ' + env.errors.join(' | '));
   await env.browser.close();
 
-  // 7. The worked example: each step's own picture draws itself as its panel arrives,
-  // once - walking back to a panel does not redraw it.
+  // 7. The sideways worked board: each step's own picture draws itself as its panel
+  // arrives, once - walking back to a panel does not redraw it.
+  // The opening worked-example card (sfwb-brief) is gone from every subject, maths
+  // included (Oct 2026, the owner's call), so this used to wait for a card that never
+  // comes. The same board, step pictures and all, is still what a missed equation's
+  // walkthrough opens (sfwb-explain, from fromWrongAnswer), so it is checked there.
   const FX = require('./fixtures_more');
   env = await h.open({ plan: FX[1], mock: none, settle: 1500 });
-  await env.page.evaluate(() => { for (let i = 0; i < 12; i++) { if (window.currentCard && currentCard.type === 'sfwb-brief') return; showNextCard(); } });
+  r = await env.page.evaluate(() => sessionCards.filter(c => c && c.type === 'sfwb-brief').length);
+  assert(r === 0, 'a maths day opens with no worked-example card (' + r + ' sfwb-brief queued)');
+  r = await env.page.evaluate(() => {
+    window.SF_GUIDE_OFF = true;   // the board, not the guided sheet
+    for (let i = 0; i < 40; i++) { const c = window.currentCard; if (c && c.q && c.q.type === 'bigequation' && !c.isPretest) break; showNextCard(); }
+    if (!window.currentCard || !window.currentCard.q || currentCard.q.type !== 'bigequation') return 'no equation card';
+    // an explanation that writes its working out, so the board is the sideways one
+    const q = { type: 'bigequation', question: 'Solve for x', equation: '2x + 3 = 11', answer: '4', difficulty: 'Medium',
+      explanation: 'Subtract 3 from both sides: 2x = 8. Divide both sides by 2: x = 4.' };
+    sessionCards.splice(cardIndex, 0, Object.assign({}, currentCard, { q }));
+    showNextCard();
+    sfwbExplain(q.explanation, false, null);
+    return window.currentCard && window.currentCard.type;
+  });
+  assert(r === 'sfwb-explain', 'a missed equation opens the sideways board (' + r + ')');
   await wait(250);
   const seenSteps = [];
   for (let k = 0; k < 4; k++) {
@@ -249,7 +267,8 @@ async function afterDrawing(page) {
   }
   const withPic = seenSteps.filter(x => x.pic && !x.held);
   assert(withPic.length >= 2 && withPic.every(x => x.anims > 0), 'every step picture draws itself on arrival, the first panel included: ' + JSON.stringify(seenSteps));
-  assert(seenSteps.filter(x => x.held).every(x => x.anims === 0), 'a withheld answer keeps its picture back until tapped');
+  // A walkthrough opened after a wrong answer never withholds its last line (CLAUDE.md 15b).
+  assert(seenSteps.every(x => !x.held), 'the walkthrough withholds nothing: ' + JSON.stringify(seenSteps));
   await wait(2500);
   r = await env.page.evaluate(async () => {
     const prev = document.querySelector('#session-card .sfb-btn:not(.is-primary)');

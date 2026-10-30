@@ -2,14 +2,50 @@ const h = require('./harness');
 const fs = require('fs');
 const VALVES = JSON.parse(fs.readFileSync(__dirname + '/valves.json', 'utf8'))[0].spec;
 const assert = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + m); if (!c) process.exitCode = 1; };
+const wrongMcq = (page) => page.evaluate(() => {
+  const b = Array.from(document.querySelectorAll('.q-option')).find(x => { const m = /answerMCQ\(this,(\d+),(\d+)/.exec(x.getAttribute('onclick') || ''); return m && m[1] !== m[2]; });
+  if (b) b.click(); return !!b;
+});
 (async () => {
   const dark = process.argv.includes('--dark');
   const tag = dark ? '_dark' : '';
+
+  /* SWITCHED OFF (Oct 2026, the owner: "just get rid of that drawing, it just
+     keeps popping up"): MOMENT_ON = false in lesson.html. This first part is
+     what a learner gets today - a miss, the walkthrough and the results screen
+     offer no drawing and ask the model for none. */
+  {
+    const off = await h.open({ dark, mock: async (prompt) => /^A student just got/.test(prompt)
+      ? { json: { result: JSON.stringify(VALVES) } } : { json: { result: '{"type":"none"}' } } });
+    const p = off.page;
+    assert(await p.evaluate(() => MOMENT_ON === false), 'MOMENT_ON is false in lesson.html');
+    await p.evaluate(() => { for (let i = 0; i < 40; i++) { const c = window.currentCard; if (c && c.q && !c.isPretest && c.q.question === 'Why do veins need valves?') return; showNextCard(); } });
+    assert(await wrongMcq(p), 'off: missed the valves MCQ');
+    await p.waitForTimeout(500);
+    assert(await p.locator('.sf-moment').count() === 0 && await p.locator('.sf-moment-btn').count() === 0, 'off: a miss shows no drawing and no "Draw it for me"');
+    if (await p.locator('.sfwb-explain').count()) {
+      await p.evaluate(() => { window.SF_GUIDE_OFF = true; });
+      await p.locator('.sfwb-explain').first().click();
+      await p.waitForTimeout(700);
+      assert(await p.locator('.sf-moment').count() === 0, 'off: the walkthrough offers no drawing');
+    } else assert(false, 'off: walkthrough button present');
+    await p.evaluate(() => endSession());
+    await p.waitForTimeout(700);
+    assert(await p.locator('#results-wrap .wrong-reviews').count() === 1 && await p.locator('#results-wrap .sf-moment').count() === 0, 'off: the results list has no picture slots');
+    const n = off.calls.filter(c => /^A student just got/.test(c)).length;
+    assert(n === 0, 'off: no drawing call was made (' + n + ')');
+    assert(off.errors.length === 0, 'off: no page errors ' + off.errors.join(' | '));
+    await off.browser.close();
+  }
+
+  /* The rest checks the code kept for a one-line revert, with the switch
+     flipped back on in the page. */
   const { browser, page, calls, errors } = await h.open({ dark, mock: async (prompt) => {
     if (/^Draw ONE illustration/.test(prompt)) return { json: { result: '{"type":"none"}' } };
     if (/^A student just got/.test(prompt)) return { delay: 2500, json: { result: JSON.stringify(VALVES) } };
     return { status: 500, json: { error: 'unexpected' } };
   }});
+  await page.evaluate(() => { MOMENT_ON = true; });
   // A pre-test miss offers nothing.
   await page.evaluate(() => showNextCard());
   const pre = await page.evaluate(() => !!(window.currentCard && window.currentCard.isPretest));
