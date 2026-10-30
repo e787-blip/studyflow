@@ -489,6 +489,10 @@
   /* api/generate and api/extract need a signed-in caller now (Oct 2026).
      A 401 means the session is gone - the same as api() above. */
   function signedOutCheck(r) {
+    if (r.status === 429) {
+      toast('You\u2019ve used today\u2019s AI limit. It resets tomorrow.');
+      throw new Error('daily limit');
+    }
     if (r.status === 401) {
       try { localStorage.removeItem('studyflow_teacher'); } catch (e) {}
       window.location.replace('teacher-login.html');

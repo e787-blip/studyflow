@@ -66,9 +66,17 @@ function world(env) {
       }
       if (method === 'PATCH') {
         const f = JSON.parse(opts.body).fields, cur = W.db[p] || {};
-        Object.keys(f).forEach(k => { cur[k] = f[k].stringValue; });
+        Object.keys(f).forEach(k => { cur[k] = f[k].stringValue !== undefined ? f[k].stringValue : f[k].integerValue; });
         W.db[p] = cur; W.calls.writes.push(p);
         return reply(200, { fields: f, updateTime: 't2' });
+      }
+      if (method === 'POST') {          // create, with ?documentId=
+        const key = p + '/' + encodeURIComponent(u.searchParams.get('documentId'));
+        if (W.db[key]) return reply(409, { error: { code: 409, status: 'ALREADY_EXISTS' } });
+        const f = JSON.parse(opts.body).fields, cur = {};
+        Object.keys(f).forEach(k => { cur[k] = f[k].stringValue !== undefined ? f[k].stringValue : f[k].integerValue; });
+        W.db[key] = cur; W.calls.writes.push(key);
+        return reply(200, { fields: f, updateTime: 't1' });
       }
     }
     if (u.host === 'api.stripe.com') {
@@ -79,6 +87,10 @@ function world(env) {
         return reply(200, { data: ids.map(id => ({ id })) });
       }
       if (u.pathname === '/v1/subscriptions') return reply(200, { data: W.subs[u.searchParams.get('customer')] || [] });
+      if (u.pathname === '/v1/billing_portal/sessions') {
+        W.calls.portal = Object.fromEntries(new URLSearchParams(String(opts.body)));
+        return reply(200, { url: 'https://billing.stripe.com/p/session/test_1' });
+      }
       if (u.pathname === '/v1/checkout/sessions') {
         W.calls.sessions.push(Object.fromEntries(new URLSearchParams(String(opts.body))));
         return reply(200, { url: 'https://checkout.stripe.test/s' });
@@ -191,20 +203,85 @@ async function serverHalf() {
   r = await W.call('class', { method: 'GET', query: { type: 'teacher' } });
   ok(r.status === 401, 'class: still 401 with no token');
   ok(typeof W.handler('webhook') === 'function', 'webhook: loads with the shared price map');
+
+  // 7. A daily cap per account, on top of the sign-in.
+  W = world();
+  const A = W.handler('_account');
+  ok(A.DAILY.ai.free >= 100 && A.DAILY.chat.vip >= 100 && A.DAILY.chat.free === 0, 'the caps leave room for real studying (free ' + A.DAILY.ai.free + ' a day, tutor ' + A.DAILY.chat.vip + ')');
+  W.db['usage/free%40x.test'] = { email: 'free@x.test', day: new Date().toISOString().slice(0, 10), ai: String(A.DAILY.ai.free - 1), chat: '0' };
+  r = await gen({ tok: 'tok-free' });
+  ok(r.status === 200, 'the last call of the day is answered');
+  const before7 = W.calls.anthropic;
+  r = await gen({ tok: 'tok-free' });
+  ok(r.status === 429 && r.body.error === 'daily_limit' && W.calls.anthropic === before7, 'one more is 429 daily_limit and the model is never called');
+  r = await W.call('extract', { tok: 'tok-free', body: { imageData: 'AA', mediaType: 'image/jpeg' } });
+  ok(r.status === 429, 'the photo reader shares the same cap');
+  W.db['usage/free%40x.test'].day = '2000-01-01';
+  r = await gen({ tok: 'tok-free' });
+  ok(r.status === 200 && String(W.db['usage/free%40x.test'].ai) === '1', 'a new day starts the count again (' + W.db['usage/free%40x.test'].ai + ')');
+  r = await gen({ tok: 'tok-two' });
+  ok(r.status === 200 && W.db['usage/two%40x.test'] && String(W.db['usage/two%40x.test'].ai) === '1', 'a first call creates the account\'s count');
+  W.db['usage/vip%40x.test'] = { email: 'vip@x.test', day: new Date().toISOString().slice(0, 10), ai: '0', chat: String(A.DAILY.chat.vip) };
+  r = await W.call('chat', { tok: 'tok-vip', body: { messages: [{ role: 'user', content: 'hi' }], context: {} } });
+  ok(r.status === 429, 'the tutor has its own daily cap (' + r.status + ')');
+  W.db['usage/ethanhwang787%40gmail.com'] = { day: new Date().toISOString().slice(0, 10), ai: '99999', chat: '99999' };
+  r = await gen({ tok: 'tok-owner' });
+  ok(r.status === 200, 'the owner has no cap');
+
+  // 8. Plans a month and days a plan, counted on the server.
+  W = world();
+  const plan = (tok, body) => W.call('account', { method: 'POST', tok, body });
+  r = await plan('tok-free', { action: 'plan-check', days: 5 });
+  ok(r.status === 200 && r.body.ok && r.body.limit === 1 && r.body.used === 0, 'a free account may start its first plan');
+  r = await plan('tok-free', { action: 'plan-check', days: 10 });
+  ok(r.status === 403 && r.body.error === 'too_many_days' && r.body.maxDays === 7, 'a free plan longer than 7 days is refused');
+  r = await plan('tok-free', { action: 'plan-built', planId: '1730000000000' });
+  ok(r.status === 200 && r.body.used === 1, 'a built plan is counted');
+  r = await plan('tok-free', { action: 'plan-built', planId: '1730000000000' });
+  ok(r.body.used === 1, 'the same plan is never counted twice');
+  r = await plan('tok-free', { action: 'plan-check', days: 3 });
+  ok(r.status === 403 && r.body.error === 'plan_limit' && r.body.tier === 'free', 'the second free plan this month is refused');
+  W.db['usage/free%40x.test'].month = '2000-01';
+  r = await plan('tok-free', { action: 'plan-check', days: 3 });
+  ok(r.status === 200 && r.body.ok, 'a new month gives the plan back');
+  r = await plan('tok-vip', { action: 'plan-check', days: 30 });
+  ok(r.status === 200 && r.body.ok, 'VIP: unlimited plans and days');
+  r = await plan(null, { action: 'plan-check', days: 3 });
+  ok(r.status === 401, 'plan-check needs a sign-in');
+
+  // 9. One plan at a time, and Stripe's page to change it.
+  W = world();
+  r = await W.call('checkout', { tok: 'tok-paid', body: { priceId: 'price_1TTxA2FFG0oviXd9TJGT1aAJ' } });
+  ok(r.status === 409 && r.body.error === 'already_subscribed' && W.calls.sessions.length === 0, 'someone with a live plan cannot buy a second one (409)');
+  W.customers['free@x.test'] = ['cus_old'];
+  r = await W.call('checkout', { tok: 'tok-free', body: { priceId: 'price_1TTxAOFFG0oviXd97LZFacnr' } });
+  const s9 = W.calls.sessions[0] || {};
+  ok(r.status === 200 && s9.customer === 'cus_old' && !s9.customer_email, 'a returning customer is reused, not duplicated');
+  r = await W.call('account', { method: 'POST', tok: 'tok-paid', body: { action: 'portal' } });
+  ok(r.status === 200 && /^https:\/\/billing\.stripe\.com\//.test(r.body.url) && W.calls.portal && W.calls.portal.customer === 'cus_paid' && /portal=done/.test(W.calls.portal.return_url),
+     'Manage plan opens Stripe\'s page for the customer that holds the plan, and comes back to the dashboard');
+  r = await W.call('account', { method: 'POST', tok: 'tok-vip', body: { action: 'portal' } });
+  ok(r.status === 404 && r.body.error === 'no_subscription', 'no Stripe customer: 404 no_subscription, said in words by the page');
 }
 
 async function pageHalf() {
   let h; try { h = require('./harness'); } catch (e) { console.log('SKIP page half: no browser here'); return; }
   const fx = require('./fixture');
   const FB_KEY = 'firebase:authUser:AIzaSyCY4FI-6L9tsAokNFl6o5bsmCt-JD0H8HI:[DEFAULT]';
-  const seen = { account: [], chat: [], checkout: [], generate: [] };
-  const state = { tier: 'vip', freshTier: null, chat: 200, gen: 200 };
+  const seen = { account: [], chat: [], checkout: [], generate: [], posts: [] };
+  const state = { tier: 'vip', freshTier: null, chat: 200, gen: 200, post: {} };
   const auth = req => { const hd = req.headers() || {}; return hd.Authorization || hd.authorization || ''; };
   const env = await h.open({
     mock: () => ({ json: { result: '{"type":"none"}' } }),
     routes: [
       ['**/api/account**', async route => {
         const req = route.request(), a = auth(req), fresh = /fresh=1/.test(req.url());
+        if (/POST/i.test(req.method())) {
+          const body = JSON.parse(req.postData() || '{}');
+          seen.posts.push(body);
+          const ans = state.post[body.action] || { status: 200, json: { ok: true } };
+          return route.fulfill({ status: ans.status, contentType: 'application/json', body: JSON.stringify(ans.json) });
+        }
         seen.account.push({ a, fresh });
         if (a !== 'Bearer tok-x') return route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"sign_in_required"}' });
         const tier = fresh && state.freshTier ? state.freshTier.shift() || 'free' : state.tier;
@@ -223,6 +300,7 @@ async function pageHalf() {
       ['**/api/generate', async route => {
         seen.generate.push(auth(route.request()));
         if (state.gen === 401) return route.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"sign_in_required"}' });
+        if (state.gen === 429) return route.fulfill({ status: 429, contentType: 'application/json', body: '{"error":"daily_limit"}' });
         await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ result: '{"type":"none"}' }) });
       }]
     ]
@@ -309,6 +387,43 @@ async function pageHalf() {
   ok(await wait(() => seen.checkout.length > nc), 'a signed-in learner reaches api/checkout');
   const co = seen.checkout[seen.checkout.length - 1] || {};
   ok(co.a === 'Bearer tok-x' && co.body && co.body.priceId && !('email' in co.body) && !('plan' in co.body), 'checkout carries the token and no email or plan: ' + JSON.stringify(co));
+
+  // 8. Manage plan: on the dashboard for a paid plan, never for free.
+  await setUser('pro'); state.tier = 'pro';
+  await p.goto(BASE + 'dashboard.html'); await p.waitForTimeout(1200);
+  const menu = await p.evaluate(() => ({ manage: !document.getElementById('menu-manage').hidden, up: !document.getElementById('menu-upgrade').hidden }));
+  ok(menu.manage && !menu.up, 'a Pro account sees Manage plan, not Upgrade plan (' + JSON.stringify(menu) + ')');
+  state.post.portal = { status: 404, json: { error: 'no_subscription' } };
+  await p.evaluate(() => { const b = document.getElementById('menu-manage'); b.hidden = false; b.click(); });
+  ok(await wait(() => p.evaluate(() => /couldn.t find a paid plan/i.test(document.body.textContent))), 'Manage plan with nothing in Stripe says so in words');
+  ok(seen.posts.some(b => b.action === 'portal'), 'and it asked the server for Stripe\'s page');
+  await setUser('free'); state.tier = 'free';
+  await p.goto(BASE + 'dashboard.html'); await p.waitForTimeout(1200);
+  ok(await p.evaluate(() => document.getElementById('menu-manage').hidden), 'a free account has no Manage plan');
+
+  // 9. The plan builder asks the server before it builds.
+  await p.goto(BASE + 'app.html?cb=' + Date.now()); await p.waitForTimeout(1500);
+  state.post['plan-check'] = { status: 403, json: { ok: false, error: 'plan_limit', tier: 'free', used: 1, limit: 1 } };
+  await p.evaluate(() => { window.__went = 0; serverPlanCheck(3, function () { window.__went = 1; }); });
+  ok(await wait(() => p.evaluate(() => document.getElementById('upgrade-modal').style.display === 'flex')), 'over the monthly plan limit: the upgrade box shows');
+  ok(await p.evaluate(() => window.__went === 0 && /1 free plan/.test(document.getElementById('upgrade-modal-msg').textContent)), 'and nothing is built');
+  await p.evaluate(() => { document.getElementById('upgrade-modal').style.display = 'none'; });
+  state.post['plan-check'] = { status: 200, json: { ok: true } };
+  await p.evaluate(() => { window.__went = 0; serverPlanCheck(3, function () { window.__went = 1; }); });
+  ok(await wait(() => p.evaluate(() => window.__went === 1)), 'allowed: the build goes ahead');
+  state.post['plan-check'] = { status: 503, json: { error: 'down' } };
+  await p.evaluate(() => { window.__went = 0; serverPlanCheck(3, function () { window.__went = 1; }); });
+  ok(await wait(() => p.evaluate(() => window.__went === 1)), 'a broken check never stops a build');
+  delete state.post['plan-check'];
+
+  // 10. The daily limit, said in words.
+  state.gen = 429; seen.generate.length = 0;
+  await p.goto(BASE + 'app.html?cb=' + Date.now()); await p.waitForTimeout(1500);
+  await p.evaluate(() => { try { startGeneration('Photosynthesis turns light into sugar. Chlorophyll absorbs light. Glucose is made in the Calvin cycle.', 1, '', 'free'); } catch (e) { window.__genErr = String(e); } });
+  ok(await wait(() => p.evaluate(() => { const b = document.getElementById('gen-error'); return b && b.classList.contains('active') && /limit for today/i.test(b.textContent); }), 15000),
+     'a 429 while building says it is today\'s limit');
+  ok(seen.generate.length <= 2, 'and does not retry: ' + seen.generate.length + ' calls');
+  state.gen = 200;
 
   const errs = env.errors.filter(e => !/api\/(account|chat|checkout|generate)|401|403|Failed to load/.test(e));
   ok(errs.length === 0, 'no page errors: ' + errs.slice(0, 3).join(' | '));

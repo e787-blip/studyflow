@@ -26,6 +26,8 @@
                                 Signed out it still calls, and the server
                                 answers 401 (sign_in_required) - the pages
                                 show "Sign in again" on that status.
+   SFAuth.manageSubscription() -> Promise<{url}|{error}>: Stripe's page to
+                                switch or cancel a plan.
    SFAuth.refreshTier(opts)  -> Promise<tier|null>. Asks api/account what the
                                 signed-in account has paid for and writes it
                                 into studyflow_user.tier, firing `sf-tier` on
@@ -177,7 +179,24 @@
     }).catch(function () { return null; });
   }
 
-  window.SFAuth = { user: user, idToken: idToken, classFetch: classFetch, apiFetch: apiFetch, refreshTier: refreshTier };
+  /* Stripe's page for switching or cancelling a plan (api/account portal).
+     Resolves { url } (the caller goes there), or { error } - 'signed_out',
+     'no_subscription' or 'unavailable' - for the caller to say in words. */
+  function manageSubscription() {
+    return apiFetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'portal' }) })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          if (d && d.url && /^https:\/\/billing\.stripe\.com\//.test(d.url)) return { url: d.url };
+          if (r.status === 401) return { error: 'signed_out' };
+          if (r.status === 404) return { error: 'no_subscription' };
+          return { error: 'unavailable' };
+        });
+      }, function () { return { error: 'unavailable' }; });
+  }
+
+  window.SFAuth = { user: user, idToken: idToken, classFetch: classFetch, apiFetch: apiFetch, refreshTier: refreshTier,
+                    manageSubscription: manageSubscription };
 
   /* Once per page load, after the page's own script has read the stored
      tier: a change arrives as `sf-tier`. */

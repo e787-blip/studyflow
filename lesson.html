@@ -5169,10 +5169,13 @@
     return { topic: specific, broad: broad === specific ? '' : broad };
   }
 
-  function webFetchJson(url) {
+  /* `signed`: ?topic= calls the model and needs the sign-in (Oct 2026);
+     ?file= does not, and stays a plain request the CDN can share. */
+  function webFetchJson(url, signed) {
     var ctrl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, WEB_ART_TIMEOUT_MS);
-    return fetch(url, ctrl ? { signal: ctrl.signal } : {}).then(function (r) {
+    var go = signed && window.SFAuth ? SFAuth.apiFetch : fetch;
+    return go(url, ctrl ? { signal: ctrl.signal } : {}).then(function (r) {
       clearTimeout(timer);
       return r.json().catch(function () { return {}; }).then(function (j) { return { status: r.status, body: j || {} }; });
     }, function (e) { clearTimeout(timer); throw e; });
@@ -5258,7 +5261,7 @@
       var url = '/api/illustration?topic=' + encodeURIComponent(tp.topic) +
                 (tp.broad ? '&broad=' + encodeURIComponent(tp.broad) : '') +
                 '&subject=' + encodeURIComponent(webArtSubject(d));
-      p = webFetchJson(url).then(function (res) {
+      p = webFetchJson(url, true).then(function (res) {
         if (res.status !== 200 || !res.body || !Array.isArray(res.body.picks)) throw new Error('pick ' + res.status);
         var picks = res.body.picks.slice(0, 3), i = 0;
         function next() {
@@ -13057,6 +13060,7 @@
       /* api/chat checks the sign-in and the plan itself now (Oct 2026). */
       else if (data._status === 401) done('', 'Your sign-in has expired. Sign in again to use the tutor.');
       else if (data._status === 403) done('', 'The study tutor is part of VIP.');
+      else if (data._status === 429) done('', 'You\u2019ve used today\u2019s tutor messages. They reset tomorrow.');
       else done('', true);
     })
     .catch(function () { clearTimeout(timer); done('', true); });

@@ -43,9 +43,18 @@ function world(script) {
     if (/upload\.wikimedia\.org\//.test(url)) { calls.files.push(url); return script.file ? script.file(url) : reply(200, LABELLED, 'image/svg+xml'); }
     throw new Error('unexpected fetch ' + url);
   }
+  /* api/_account.js stand-in (Oct 2026): ?topic= needs a sign-in, counts
+     toward the daily cap, and keeps its picks in Firestore. */
+  const kept = {};
+  const account = {
+    requireUser: async (req, res) => { if (script.signedOut) { res.status(401).json({ error: 'sign_in_required' }); return null; } return { email: 't@x.test' }; },
+    allow: async (res) => { if (script.overCap) { res.status(429).json({ error: 'daily_limit' }); return false; } return true; },
+    cacheGet: async (n, k) => kept[n + k] || null,
+    cachePut: async (n, k, v) => { calls.kept = (calls.kept || 0) + 1; kept[n + k] = v; }
+  };
   const module = { exports: {} };
   new Function('require', 'module', 'exports', 'fetch', 'Buffer', 'process', 'console', SRC)(
-    () => ({}), module, module.exports, fetchMock, B64, { env: script.env || { ANTHROPIC_API_KEY: 'k' } },
+    name => (/_account/.test(name) ? account : {}), module, module.exports, fetchMock, B64, { env: script.env || { ANTHROPIC_API_KEY: 'k' } },
     { log() {}, warn() {}, error() {} });
   async function call(query, method) {
     const res = { code: 0, body: null, headers: {}, setHeader(k, v) { this.headers[k.toLowerCase()] = v; },
@@ -192,12 +201,20 @@ function world(script) {
   const p0 = r.body.picks[0] || {};
   ok(/^Illustration: Someone, Wikimedia Commons(, CC BY-SA 3\.0)?$/.test(p0.credit) && /^https:\/\/commons\.wikimedia\.org\/wiki\/File:/.test(p0.source) && p0.why === 'clear cycle',
      'each pick carries its credit, its source page and the judge\'s reason (' + p0.credit + ')');
-  ok(/s-maxage=\d{6,}/.test(r.headers['cache-control'] || ''), 'and the answer is cached at the CDN (' + r.headers['cache-control'] + ')');
+  ok(w.calls.kept === 1 && /^private/.test(r.headers['cache-control'] || ''), 'and the answer is kept for every learner (Firestore), not at the CDN (' + r.headers['cache-control'] + ')');
+  const judged = w.calls.judge.length;
+  const again = await w.call({ topic: 'causes of world war i' });
+  ok(again.code === 200 && w.calls.judge.length === judged && Array.isArray(again.body.picks), 'asked again, the kept answer comes back with no second judge call');
+  r = await world({ signedOut: true, api: async () => reply(200, {}) }).call({ topic: 'the heart' });
+  ok(r.code === 401, '?topic= needs a sign-in (' + r.code + ')');
+  const capped = world({ overCap: true, api: async () => reply(200, {}) });
+  r = await capped.call({ topic: 'the heart' });
+  ok(r.code === 429 && capped.calls.api.length === 0 && capped.calls.judge.length === 0, 'over the daily cap: 429 and nothing is searched or judged');
 
   // 3. "Nothing fits" is an answer and is cached; failures are not.
   w = world({ api: async q => reply(200, { query: { pages: q.generator ? [page('File:Nitrogen Cycle.svg'), page('File:Nitrogen Cycle 2.svg')] : [] } }) });
   r = await w.call({ topic: 'the nitrogen cycle' });
-  ok(r.code === 200 && r.body.picks.length === 0 && /s-maxage/.test(r.headers['cache-control']), '"none fits" is 200, empty, and cached');
+  ok(r.code === 200 && r.body.picks.length === 0 && w.calls.kept === 1, '"none fits" is 200, empty, and kept');
   w = world({ api: async q => reply(200, { query: { pages: q.generator ? [page('File:Nitrogen Cycle.svg'), page('File:Nitrogen Cycle 2.svg')] : [] } }),
               judge: async () => reply(200, { content: [{ text: 'I think the second one is nice.' }] }) });
   r = await w.call({ topic: 'the nitrogen cycle' });

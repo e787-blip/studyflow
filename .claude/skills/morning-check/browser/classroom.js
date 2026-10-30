@@ -765,7 +765,16 @@
     /* Two more students: one done with a shared wrong answer, one not started. */
     var built = JSON.parse(fsGet('classes/' + code + '/assignments/' + id).questions);
     var first = built.filter(function (q) { return q.type === 'mcq' || q.type === 'truefalse'; })[0];
-    var ans = {}; ans[first.aid] = { f: 0, a: CR.firstWrongText || 'Oxygen' };
+    /* The SAME wrong answer the first student gave, read off their stored
+       submission. CR.firstWrongText was never set anywhere, so the second
+       student always answered "Oxygen", whatever the first had picked, and
+       "2 of 2 who missed it" only passed when the first happened to pick
+       "Oxygen" too - it failed on main without any change to the pages. */
+    var sub0 = fsGet('classes/' + code + '/assignments/' + id + '/submissions/' + CR.KIDS[0].uid);
+    var a0 = null;
+    try { a0 = sub0 && JSON.parse(sub0.answers || '{}')[first.aid]; } catch (e) { a0 = null; }
+    var wrongText = (a0 && a0.f === 0 && a0.a) || CR.firstWrongText || 'Oxygen';
+    var ans = {}; ans[first.aid] = { f: 0, a: wrongText };
     return POST(CR.KIDS[1].tok, { action: 'submit', classCode: code, id: id, status: 'done', answers: ans }).then(function () {
       localStorage.clear();
       signInAs(TEACH);

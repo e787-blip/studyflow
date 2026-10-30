@@ -1123,7 +1123,8 @@
     if (upgradeReason === 'limit') return;
     var deadline = document.getElementById('deadline-input') ? document.getElementById('deadline-input').value : '';
     // Free plan cap of 7, from the same arithmetic the date screen showed
-    startGeneration(allNotes(), planDaysFor(daysUntil(deadline), 'free'), deadline, 'free');
+    var d7 = planDaysFor(daysUntil(deadline), 'free');
+    serverPlanCheck(d7, function () { startGeneration(allNotes(), d7, deadline, 'free'); });
   }
 
   // ── JOIN A CLASS ──
@@ -1519,6 +1520,7 @@
         return r.json().catch(function () { throw new Error('http ' + r.status); });
       }).then(function (data) {
         if (data.error === 'sign_in_required') { srcFail(s, 'Your sign-in has expired. Sign in again, then add the photo.', false); return; }
+        if (data.error === 'daily_limit') { srcFail(s, 'You\u2019ve used today\u2019s AI limit. Paste the text in instead, or try again tomorrow.', false); return; }
         if (data.error || !data.text || !String(data.text).trim()) { srcFail(s, 'Couldn’t read any writing in this photo.'); return; }
         srcDone(s, data.text, 'Photo read by AI');
       });
@@ -2196,7 +2198,49 @@
       return;
     }
 
-    startGeneration(notes, numDays, deadline, userPlan);
+    serverPlanCheck(numDays, function () { startGeneration(notes, numDays, deadline, userPlan); });
+  }
+
+  /* The plan limits, asked of the server (api/account plan-check, Oct 2026).
+     The checks above read this browser's copy of the plan and of the plans
+     list, and both can be edited; the server counts plans built this month
+     for the account and knows what it paid for. Anything but a clear "no"
+     (offline, slow, a server without the counter) lets the build go ahead:
+     a broken check must not stop a learner studying. */
+  function serverPlanCheck(days, go) {
+    if (!window.SFAuth || !SFAuth.apiFetch) return go();
+    /* `generating` is only set once the build starts; a second tap while
+       the server is being asked must not start a second build. */
+    if (serverPlanCheck.busy) return;
+    serverPlanCheck.busy = true;
+    var settled = false;
+    function proceed() { if (!settled) { settled = true; serverPlanCheck.busy = false; go(); } }
+    var timer = setTimeout(proceed, 6000);
+    SFAuth.apiFetch('/api/account', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'plan-check', days: days }) })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (d) { d = d || {}; d._status = r.status; return d; });
+      })
+      .then(function (d) {
+        clearTimeout(timer);
+        if (settled) return;
+        if (d._status === 403 && d.error === 'plan_limit') {
+          settled = true; serverPlanCheck.busy = false;
+          showUpgradeModal(
+            d.tier === 'pro'
+              ? 'You\'ve used all 5 Pro plans this month. Upgrade to VIP for unlimited plans.'
+              : 'You\'ve used your 1 free plan this month. Upgrade to Pro for 5 plans a month or VIP for unlimited.',
+            d.tier === 'pro' ? 'Pro plan: 5 plans per month' : 'Free plan: 1 plan per month', 'limit');
+          return;
+        }
+        if (d._status === 403 && d.error === 'too_many_days') {
+          settled = true; serverPlanCheck.busy = false;
+          showUpgradeModal('Your plan is ' + days + ' days long, and your plan covers ' + d.maxDays + '. Upgrade for longer plans, or start with ' + d.maxDays + ' days.',
+            days + ' days', 'days');
+          return;
+        }
+        proceed();
+      }, function () { clearTimeout(timer); proceed(); });
   }
 
   // ── Subject classification — pure local, no API call ──
@@ -3150,6 +3194,9 @@
        studyflow_user still looks signed in. Retrying three times a day
        would only make the learner wait for the same answer. */
     var signInLost = false;
+    /* 429: the account's daily AI cap (api/_account.js). Also not a snag a
+       retry fixes - it resets tomorrow. */
+    var limitHit = false;
 
     function showFatalError(dayNum, retryFn) {
       var le = document.getElementById('loading');
@@ -3166,6 +3213,16 @@
           '<p class="card-sub" style="margin:0 auto 1.4rem;">Your sign-in has expired. Your notes and answers are saved here, so you can pick up where you left off.</p>' +
           '<div style="display:grid;gap:.5rem;max-width:340px;margin:0 auto;">' +
           '<a id="gen-signin-btn" class="btn-next" href="login.html" style="text-align:center;text-decoration:none;">Sign in</a>' +
+          '</div></div>';
+        return;
+      }
+      if (limitHit) {
+        box.innerHTML =
+          '<div style="text-align:center;padding:1rem .4rem;">' +
+          '<h2 style="margin-bottom:.5rem;">That\u2019s the limit for <em>today</em></h2>' +
+          '<p class="card-sub" style="margin:0 auto 1.4rem;">Your account has used today\u2019s AI limit. It resets tomorrow, and your notes and answers are saved here until then.</p>' +
+          '<div style="display:grid;gap:.5rem;max-width:340px;margin:0 auto;">' +
+          '<a class="btn-next" href="dashboard.html" style="text-align:center;text-decoration:none;">Back to my dashboard</a>' +
           '</div></div>';
         return;
       }
@@ -3743,6 +3800,7 @@
         })
         .then(function(res) {
           if (res.status === 401) { signInLost = true; throw new Error('Signed out'); }
+          if (res.status === 429) { limitHit = true; throw new Error('Daily limit'); }
           if (!res.ok) throw new Error('HTTP ' + res.status);
           return res.json();
         })
@@ -4026,7 +4084,7 @@
         .catch(function(err) {
           console.warn('[gen] day ' + dayNum + ' attempt ' + attempt + ':', err.message);
           lastFail = String(err && err.message || '');
-          if (signInLost) { callback(err); return; }
+          if (signInLost || limitHit) { callback(err); return; }
           if (attempt < MAX_RETRIES) {
             /* BACKOFF MUST OUTLAST THE CALL IT IS BACKING OFF FROM.
 
@@ -4197,7 +4255,18 @@
                  place, the next "new plan" opened on this one's notes. */
               clearDrafts();
               cleanupBgHandlers();
-              window.location.href = 'dashboard.html';
+              /* The server counts plans built this month (api/account
+                 plan-built, Oct 2026). Waited for, briefly: leaving the page
+                 first would cancel the report. A slow server never holds the
+                 learner more than 1.5s. */
+              var left = false;
+              function leave() { if (!left) { left = true; window.location.href = 'dashboard.html'; } }
+              setTimeout(leave, 1500);
+              if (window.SFAuth && SFAuth.apiFetch) {
+                SFAuth.apiFetch('/api/account', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'plan-built', planId: String(newPlan.id) }) })
+                  .then(leave, leave);
+              } else leave();
       }
     }
 

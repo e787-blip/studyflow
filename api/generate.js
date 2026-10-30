@@ -11,7 +11,7 @@
    Claude Haiku 4.5 takes a 200k-token context; 12000 chars is about 3k tokens.
    60000 leaves generous headroom over the current prompt plus the 3500-char
    notes budget app.html allows. */
-const { requireUser } = require('./_account');
+const { requireUser, allow } = require('./_account');
 
 const MAX_PROMPT_CHARS = 60000;
 /* A real day comes back in about forty seconds - measured, not guessed -
@@ -38,7 +38,11 @@ module.exports = async function handler(req, res) {
 
   /* Signed-in learners and teachers only. This answered anyone, so anyone
      could spend the Anthropic key from a script (api/_account.js). */
-  if (!(await requireUser(req, res))) return;
+  const user = await requireUser(req, res);
+  if (!user) return;
+  /* And a daily cap per account (api/_account.js DAILY): a sign-in alone
+     still let one account run the model all day. 429 daily_limit. */
+  if (!(await allow(res, user, 'ai'))) return;
 
   const { prompt } = req.body || {};
   if (!prompt || typeof prompt !== 'string' || !prompt.trim())

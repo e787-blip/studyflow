@@ -792,6 +792,10 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       } else if (data._status === 401) {
         setBusy(false);
         toast('Your sign-in has expired.', 'login.html', 'Sign in again');
+      } else if (data._status === 409) {
+        /* One plan at a time (api/checkout, Oct 2026): a learner with a plan
+           switches it on Stripe's own page instead of buying a second. */
+        managePlan('You already have a plan. Opening your plan settings to switch…');
       } else {
         setBusy(false);
         toast('Error: ' + (data.error || 'Could not start checkout'));
@@ -800,6 +804,20 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     .catch(function (err) {
       setBusy(false);
       toast('Error: ' + err.message);
+    });
+  }
+  /* Stripe's page for switching or cancelling (SFAuth.manageSubscription).
+     "Downgrade" used to point to Contact: there was nothing behind it. */
+  function managePlan(note) {
+    if (!window.SFAuth || !SFAuth.manageSubscription) { setBusy(false); toast('To change or cancel your plan, contact us.', 'contact.html', 'Contact us'); return; }
+    setBusy(true);
+    if (note) toast(note);
+    SFAuth.manageSubscription().then(function (r) {
+      if (r.url) { window.location.href = r.url; return; }
+      setBusy(false);
+      if (r.error === 'signed_out') toast('Your sign-in has expired.', 'login.html', 'Sign in again');
+      else if (r.error === 'no_subscription') toast('We couldn\u2019t find a paid plan on this account.', 'contact.html', 'Contact us');
+      else toast('Plan settings aren\u2019t available right now.', 'contact.html', 'Contact us');
     });
   }
   /* Press Back from Stripe and the browser may restore this page exactly as
@@ -823,7 +841,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     else { freeBtn.classList.add('is-current'); freeBtn.setAttribute('aria-disabled', 'true'); }
     freeBtn.addEventListener('click', function () {
       if (tier === 'free') toast('You are on the Free plan. Upgrade to Pro or VIP for more features!');
-      else toast('To downgrade or cancel, contact us.', 'contact.html', 'Contact us');
+      else managePlan();
     });
   }
   /* Compared, not interpolated into a selector: the tier comes from storage. */

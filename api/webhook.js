@@ -5,7 +5,7 @@ const REPLAY_WINDOW_SECS = 300; // 5 minutes — Stripe standard
 
 /* Price ids -> tiers live in api/_account.js, which api/account.js also
    uses to ask Stripe directly. Unknown ids fall back to 'free', not 'pro'. */
-const { PRICE_TIERS } = require('./_account');
+const { PRICE_TIERS, stripeTier } = require('./_account');
 
 function fetchWithTimeout(url, opts = {}) {
   const ctrl = new AbortController();
@@ -121,6 +121,12 @@ async function updateUserTier(customerId, tier) {
   const sa = serviceAccount();
   if (!sa) throw new Error('Missing FIREBASE_SERVICE_ACCOUNT');
   const key = String(email).toLowerCase().trim();
+  /* The event names ONE subscription. If this account has another live one
+     (bought before checkout refused a second), cancelling either must not
+     set the account to free: ask Stripe what is still live. When Stripe
+     cannot be asked, the event's own answer stands. */
+  const live = await stripeTier(email);
+  if (live !== null) tier = live;
   await makeDb(sa).patch(`users/${encodeURIComponent(key)}`, {
     tier, email: key, updatedAt: new Date().toISOString()
   });

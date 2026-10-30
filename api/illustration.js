@@ -23,6 +23,14 @@
 
    Open, like api/generate.js: the cost per new topic is one small vision call,
    far below a day prompt. */
+/* Not open any more (Oct 2026): ?topic= is the part that calls the model, so
+   it needs a sign-in and counts toward the account's daily cap
+   (api/_account.js), like api/generate. A request carrying a sign-in is not
+   shared at the CDN, so the judged picks are kept in Firestore instead
+   (illustrationPicks/<subject|topic|broad>, 30 days): a topic is still judged
+   once for every learner. ?file= calls no model and stays open and
+   CDN-cached. */
+const account = require('./_account');
 
 const UA = 'StudyFlow/1.0 (+https://studyflow-ten-vert.vercel.app; lesson illustrations)';
 const API = 'https://commons.wikimedia.org/w/api.php';
@@ -492,6 +500,8 @@ function cleanSvg(s) {
 /* ── handlers ───────────────────────────────────────────────────────────── */
 
 const CACHE_OK = 'public, max-age=3600, s-maxage=2592000, stale-while-revalidate=86400';
+const CACHE_PRIVATE = 'private, max-age=86400';
+const PICKS_KEEP_MS = 30 * 24 * 3600 * 1000;
 
 async function pick(req, res) {
   const q = req.query || {};
@@ -500,6 +510,16 @@ async function pick(req, res) {
   if (!topic) return res.status(400).json({ error: 'topic is required' });
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Server misconfiguration' });
+
+  const user = await account.requireUser(req, res);
+  if (!user) return;
+  const key = [subject, topic, broad].join('|').toLowerCase();
+  const kept = await account.cacheGet('illustrationPicks', key, PICKS_KEEP_MS);
+  if (kept && Array.isArray(kept.picks)) {
+    res.setHeader('Cache-Control', CACHE_PRIVATE);
+    return res.status(200).json(kept);
+  }
+  if (!(await account.allow(res, user, 'ai'))) return;
 
   /* Strict matches for the lesson's own topic; failing that, for the broader
      one; only then topped up from whichever search was used. */
@@ -534,8 +554,10 @@ async function pick(req, res) {
                w: c.w, h: c.h, why: p.why, caption: p.caption || '' };
     });
   }
-  res.setHeader('Cache-Control', CACHE_OK);
-  return res.status(200).json({ topic: used, picks: picks });
+  const answer = { topic: used, picks: picks };
+  await account.cachePut('illustrationPicks', key, answer);
+  res.setHeader('Cache-Control', CACHE_PRIVATE);
+  return res.status(200).json(answer);
 }
 
 const FILE_RE = /^File:[^|#<>[\]{}\n\r\t\\]{1,200}\.svg$/i;

@@ -1,5 +1,5 @@
 'use strict';
-const { requireUser, tierOf } = require('./_account');
+const { requireUser, tierOf, allow } = require('./_account');
 
 const MAX_MESSAGES = 10;
 /* The study tutor is a VIP feature. lesson.html only shows its button to a
@@ -63,6 +63,7 @@ module.exports = async function handler(req, res) {
   try { tier = await tierOf(user); } catch (e) { console.error('[chat.js] tier', e.message); }
   if (!CHAT_TIERS[tier])
     return res.status(403).json({ error: 'vip_required', message: 'The study tutor is part of VIP.' });
+  if (!(await allow(res, user, 'chat'))) return;
 
   const { messages, context } = req.body || {};
   if (!Array.isArray(messages) || messages.length === 0)

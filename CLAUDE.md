@@ -41,7 +41,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `sf-smooth.js` | ~11 KB | **Smooth wheel scrolling** for `index.html`, `about.html`, `pricing.html` (window.`SFSmooth`). Off for touch and reduced motion - see "Smooth scroll and the two showcases" |
 | `sf-guide.js` | ~40 KB | **The guided walkthrough.** The Walkthrough button opens a sheet over the question just answered and asks its steps one at a time, written for THAT question by one model call; on a cell lesson a drawn cell shows the protein travelling. Loaded by `lesson.html` after `sf-questions.js` - see "The guided walkthrough" |
 | `sf-auth.js` | ~8 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase; `apiFetch` sends it with every AI call, and `refreshTier` writes the server's plan into `studyflow_user.tier` on every load. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html`, `teacher-build.html`, `pricing.html` — see "The classroom" and "Paid plans are the server's" |
-| `api/_account.js` / `api/account.js` | ~8 / ~1 KB | **Who is calling and what they paid for.** `requireUser` (the Firebase token check, moved out of `class.js`), `tierOf` (Firestore `users/{email}`, else Stripe), the price map and the owner list. `GET api/account` answers `{email, tier}` |
+| `api/_account.js` / `api/account.js` | ~16 / ~3 KB | **Who is calling and what they paid for.** `requireUser` (the Firebase token check, moved out of `class.js`), `tierOf` (Firestore `users/{email}`, else Stripe), the daily caps (`allow`), plans a month (`planCheck` / `planBuilt`), Stripe's Manage plan page (`portalUrl`), the price map and the owner list. `GET api/account` answers `{email, tier}`; `POST` takes `plan-check`, `plan-built`, `portal` |
 | `teacher-login.html` / `teacher.html` | ~21 / ~60 KB | Teacher sign-in (Firebase Auth) and the class dashboard, whose first tab is now Assignments and their results - see "Assignments" |
 | `teacher-build.html` | ~78 KB | **The assignment builder** - `app.html` for a teacher: one question per screen, one call writes the lesson and a fixed set of questions, the teacher edits every one, then publishes |
 | `api/class.js` | ~35 KB | The classroom API. Checks a Firebase ID token on every call. Assignments and their submissions live here too |
@@ -192,10 +192,43 @@ sets `customer_email` from the token (a visitor is sent to sign up first):
 the plan is read back by that email, so a different address typed at Stripe
 meant paying for a plan nothing could find.
 
-**Still enforced only in the browser:** the plan COUNT and LENGTH limits
-(Free 1 plan/month and 7 days, Pro 5 and 14). A free account that edits
-localStorage can build more plans; it cannot use the tutor. Closing that
-needs a server-side count of plans started per month.
+**The second round (Oct 2026), all in `api/_account.js`, `test_account.js`
+(70+ checks, fails on the code before):**
+
+- **A daily cap per account** (`DAILY`, counted in Firestore
+  `usage/{email}` per UTC day, written with an `updateTime` precondition so
+  two calls cannot both pass): `ai` - generate, extract and illustration -
+  free 150, pro 300, VIP/classroom/school 600; `chat` - VIP 200. A 14-day
+  plan with every retry is about 50 calls, so a learner never meets it; a
+  loop or a script does. Over it: 429 `daily_limit`, said in words by the
+  plan builder (its own card, no retries), the tutor, a photo source and the
+  teacher builder. Owners have no cap. **A broken counter lets the call
+  through** - the cap is a cost ceiling, not a lock.
+- **Plans a month and days a plan are counted on the server**
+  (`PLAN_LIMITS`, `POST api/account` `plan-check` / `plan-built`).
+  `app.html`'s `serverPlanCheck` asks before every build (the upgrade box on
+  a "no"; anything but a clear no - offline, slow, 503 - lets the build go)
+  and `saveAndGo` reports the saved plan (waits up to 1.5s, never counted
+  twice). A build that fails costs nothing. Someone who rewrites the page
+  could skip the report; the daily cap still holds them.
+- **One plan at a time.** `api/checkout` answers 409 `already_subscribed`
+  to an account with a live subscription and reuses a known Stripe customer.
+  The pricing page then opens **Manage plan**: `POST api/account` `portal`
+  -> Stripe's Customer Portal (switch or cancel), back to
+  `dashboard.html?portal=done`, which asks the server again. The dashboard's
+  account menu shows Manage plan for paid plans and Upgrade only for free;
+  pricing's "Downgrade" opens it too. **The Customer Portal must be switched
+  on in the Stripe dashboard**, with Pro and VIP as plans a customer may
+  switch between; until it is, Manage plan says it is not available.
+- **The webhook asks Stripe what is still live** (`stripeTier`) before it
+  writes, so cancelling one of two subscriptions never writes free.
+- **`api/illustration.js ?topic=` needs a sign-in and counts toward `ai`.**
+  A request with a sign-in is not shared at the CDN, so judged picks are
+  kept in Firestore (`illustrationPicks/<subject|topic|broad>`, 30 days):
+  a topic is still judged once for everyone. `?file=` calls no model and
+  stays open and CDN-cached. `lesson.html`'s `webFetchJson(url, signed)`.
+- Checkout's success and cancel addresses use `ALLOWED_ORIGIN` when it is
+  set, so a move to a custom domain is one Vercel variable.
 
 ---
 
@@ -3589,9 +3622,8 @@ files. **The nav is not in that block**: it is `sf-nav.js`, see "The site nav".
   while one is in flight does nothing; the current plan is marked for every
   tier (it was Pro and VIP only, by button index); and a visitor's Free
   button is "Start free" (it said "Current plan" to someone with no account).
-  **"Downgrade" has nothing behind it** - there is no billing-portal
-  endpoint - so it points to Contact instead of telling a Pro subscriber
-  "you are on the Free plan". Classroom is a wide panel under the three
+  **"Downgrade" opens Manage plan** (Stripe's Customer Portal, Oct 2026 -
+  see "Paid plans are the server's"); it used to point to Contact. Classroom is a wide panel under the three
   plans: it sat alone on a second row of a three-column grid.
 - **Our story keeps every word** of the old page, in order. The long paragraph
   is split in two and its last sentence is the pull quote, so it is said once.
@@ -4025,12 +4057,13 @@ genuinely nothing.
 - **Paid plans on the server (Oct 2026): check on the live site after the
   deploy.** Sign in, build a plan (generate must answer), open the tutor as
   VIP (and as free: "part of VIP"), sign in on a second browser and see the
-  plan arrive, and make one real purchase and watch `?checkout=done` turn
-  into the plan. Needs `FIREBASE_API_KEY`, `FIREBASE_SERVICE_ACCOUNT` and
-  `STRIPE_SECRET_KEY` in Vercel - all three are already set. Not covered:
-  `api/illustration.js` is still open (CDN-cached per topic), and a buyer
-  whose Stripe email differs from the account only by capitals is not found
-  by the Stripe fallback (Stripe's email filter is exact).
+  plan arrive, make one real purchase and watch `?checkout=done` turn into
+  the plan, then open Manage plan (needs the Stripe Customer Portal switched
+  on). Needs `FIREBASE_API_KEY`, `FIREBASE_SERVICE_ACCOUNT` and
+  `STRIPE_SECRET_KEY` in Vercel - all three are already set. Not covered: a
+  buyer whose Stripe email differs from the account only by capitals is not
+  found by the Stripe fallback (Stripe's email filter is exact). The owner's
+  checklist is `launch-checklist.xlsx` (not committed).
 
 - **Tables, charts and data questions are built (branch `data-cards`), not
   seen from a real model.** Before merging: build a science, an economics and
@@ -4276,15 +4309,9 @@ genuinely nothing.
   different product. Try something else before trying that again. The 3D
   hero keeps the ripple as its background.
 
-- **Nothing stops a subscriber buying a second plan.** `api/checkout.js`
-  always opens a new Checkout Session in `subscription` mode, with no
-  customer and no look at what the account already has, and the pricing page
-  leaves every card except the current one clickable. A Pro subscriber who
-  presses "Upgrade to VIP" ends up with two active subscriptions, and the
-  webhook sets the tier from whichever event arrives last. Changing plans
-  needs the Stripe customer portal or a subscription update; neither exists
-  yet. Cancelling has the same gap, which is why "Downgrade" only points to
-  Contact (see "Our story and Plans").
+- **A second subscription is refused, and Manage plan exists (Oct 2026)** -
+  see "Paid plans are the server's". Still to do in Stripe itself: switch
+  on the Customer Portal and allow switching between Pro and VIP.
 
 ## Conventions
 
