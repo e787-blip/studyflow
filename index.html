@@ -2223,6 +2223,31 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       layout();
       gl.built = true;
       gl.bornAt = performance.now();
+      prewarm(mats);
+    }
+
+    /* Pay every one-off cost now, while the page is still arriving. The four
+       day cards are hidden until the plan forms (about 63% of the way down
+       the hero), and they use a different shader from the paper sheets, so
+       their program was first compiled, and their four textures first
+       uploaded, in the middle of a scroll: a 100ms+ stall just as the cards
+       appeared, with the page frozen because a JS-driven scroll cannot go on
+       while the main thread is busy. Compiling is one step, then one texture
+       a frame, so none of it is a long task. */
+    function prewarm(mats) {
+      var tex = [], k;
+      for (k = 0; k < mats.length; k++) if (mats[k].map) tex.push(mats[k].map);
+      for (k = 0; k < gl.cards.length; k++) if (gl.cards[k].mesh.material.map) tex.push(gl.cards[k].mesh.material.map);
+      var compiled = false;
+      (function step() {
+        if (!gl) return;
+        try {
+          if (!compiled) { compiled = true; gl.renderer.compile(gl.scene, gl.camera); }
+          else if (tex.length && gl.renderer.initTexture) gl.renderer.initTexture(tex.pop());
+          else { gl.warm = true; return; }
+        } catch (e) { gl.warm = true; return; }
+        requestAnimationFrame(step);
+      })();
     }
 
     function resize() {
@@ -2468,7 +2493,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     return {
       init: init, kick: kick, applyMode: applyMode, updateNav: updateNav,
       setVisible: function (v) { if (v) { lastNow = 0; kick(); } },
-      debug: function () { return { mode: mode, p: shown, day: day, sheets: gl && gl.sheets.length, built: !!(gl && gl.built), quality: quality }; }
+      debug: function () { var i = gl && gl.renderer.info; return { mode: mode, p: shown, day: day, sheets: gl && gl.sheets.length, built: !!(gl && gl.built), quality: quality, warm: !!(gl && gl.warm), programs: i ? i.programs.length : 0, textures: i ? i.memory.textures : 0 }; }
     };
   })();
 
@@ -2487,11 +2512,15 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     function tick(now) {
       raf = null;
       var dt = Math.min(100, now - (last || now)); last = now;
-      var vh = window.innerHeight, moving = false;
-      for (var i = 0; i < items.length; i++) {
-        var it = items[i];
+      var vh = window.innerHeight, moving = false, i, it;
+      /* Every measure (a layout read) first, then every apply (style writes).
+         Interleaved, each item's write made the next item's read recalculate
+         layout from scratch: up to six forced layouts in one frame while a
+         showcase and its neighbours were all on screen. */
+      if (dirty) for (i = 0; i < items.length; i++) { it = items[i]; if (it.active || it.always) it.target = it.measure(vh); }
+      for (i = 0; i < items.length; i++) {
+        it = items[i];
         if (!it.active && !it.always) continue;
-        if (dirty) it.target = it.measure(vh);
         if (reduced) it.shown = it.target;
         else it.shown += (it.target - it.shown) * follow(soft(it.k || .14), dt);
         if (Math.abs(it.target - it.shown) < 0.0005) it.shown = it.target; else moving = true;

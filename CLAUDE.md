@@ -3493,6 +3493,46 @@ its own part in CSS from `--r`, its place in the face).
   out as a hand while the closing words and the one call to action arrive.
   The section is 720vh for that (6 steps + `FAN` 1.2). The hand is sized to
   its column (`fanK`) or it reaches over the rail on a narrow laptop.
+- **Glitch pass (Oct 2026, "sometimes it is glitchy").** A JS-driven scroll is
+  only as smooth as the main thread - native scrolling carries on while the
+  page is busy, this does not - so every long task on the page is a freeze.
+  Found and fixed, each measured:
+  - **A trackpad swipe lost events to the browser.** The engine left a wheel
+    event alone when its sideways part was bigger than its vertical part, and
+    a trackpad swipe is never purely vertical. Those events scrolled natively
+    while the rest were eased: in a test swipe a third of the events went
+    native, the page jumped 41-43px in single frames and part of the travel
+    was dropped. Now only a clearly sideways gesture (3x) is left alone.
+  - **A late frame lurched.** `dt` was capped at 64ms, so the first frame after
+    a stall covered four frames of distance at once. Capped at 34ms it carries
+    on instead.
+  - **Offsets are written on a device pixel** (`snap`), so a pinned scene does
+    not shiver by a pixel against its sticky stage.
+  - **The hero's four day cards compiled their shader and uploaded their
+    textures in the middle of a scroll** (hidden until about 63% down the
+    hero, a different program from the paper sheets'): 3 programs and 8
+    textures at load, 4 and 12 once the cards appeared. `prewarm` (end of
+    `populate`) compiles and uploads everything up front, one step per frame.
+    `__sf.hero()` reports `warm`, `programs` and `textures`; programs must
+    not rise when the cards appear.
+  - **`Scrub.tick` interleaved reads and writes** (each item's style write
+    made the next item's `getBoundingClientRect` recalculate layout). All
+    measures now run first, then all applies: main-thread cost per frame fell
+    about 25-30% over a full scroll (median 3.3 to 2.3ms).
+- **How to measure scroll smoothness when the browser pane is hidden** (it is
+  throttled to ~3 frames a second whenever the Claude window is covered, and
+  every `rAF` measurement is then meaningless): drive a separate headless
+  Chrome over its debugging port - `Emulation.setDeviceMetricsOverride`
+  (1280x800, scale 2), `Input.dispatchMouseEvent type=mouseWheel` for the real
+  wheel path (or `Input.synthesizeScrollGesture` for touch), record `rAF`
+  deltas in the page, and `Tracing.start` for what ran in a slow frame.
+  **Use a fresh `--user-data-dir` per run**: a warm profile keeps compiled
+  shaders and hides first-visit stalls. A stdlib-only Python client is ~60
+  lines (raw websocket, `PUT /json/new`). On this Mac the page held 16.7ms
+  frames everywhere except rare one-off 80-150ms stalls in the first run of a
+  Chrome instance; the GPU side of headless Chrome is not representative, so
+  heavy `backdrop-filter` over the live WebGL hero (nav, glass buttons) is the
+  next suspect on a slower machine and could not be measured here.
 - **Snap**: a WHEEL scroll that comes to rest mid-turn is finished by a short
   glide to the nearer step (`SFSmooth.onSettle`). Never after a finger or the
   keyboard.

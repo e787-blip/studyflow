@@ -17,6 +17,12 @@
    runs at 120: the smoothing is frame-rate independent (dt-normalised), so
    the feel is identical on every refresh rate, only finer.
 
+   A JS-driven scroll is only as smooth as the main thread: native scrolling
+   keeps going on the compositor while the page is busy, this does not. So the
+   page's own per-frame work is kept small, one-off costs (shader compiles,
+   texture uploads) are paid up front, and a late frame is carried on from, not
+   caught up (see DT cap below).
+
    WHAT IT DOES NOT TOUCH, deliberately:
    - Touch. A finger already scrolls with the system's own physics, which
      nothing written in a page can improve. On a touch-only device the
@@ -67,6 +73,8 @@
   function maxY() { return Math.max(0, root.scrollHeight - window.innerHeight); }
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
   function nowY() { return window.pageYOffset || root.scrollTop || 0; }
+  var dpr = window.devicePixelRatio || 1;
+  function snap(v) { return Math.round(v * dpr) / dpr; }
   /* easeOutExpo, normalised so it reaches exactly 1: the plain form ends at
      0.999, a visible 5px hop at the end of a long anchor glide. */
   function easeOut(t) { return t >= 1 ? 1 : (1 - Math.pow(2, -10 * t)) / (1 - Math.pow(2, -10)); }
@@ -87,7 +95,11 @@
 
   function frame(now) {
     raf = null;
-    var dt = last ? Math.min(64, now - last) : 16.667;
+    /* A frame that arrives late (the page was busy, a tab woke up) is treated
+       as at most two frames long. At the old 64ms cap, the first frame after
+       a 130ms stall covered four frames of distance in one go: the page froze,
+       then lurched. Capped here it simply carries on, a touch behind. */
+    var dt = last ? Math.min(34, now - last) : 16.667;
     last = now;
     var prev = current, done = false;
     if (anim) {
@@ -101,8 +113,11 @@
       if (Math.abs(target - current) < 0.25) { current = target; done = true; }
     }
     vel = (current - prev) / dt;
-    written = current;
-    window.scrollTo(0, current);
+    /* Written on a device pixel: a fractional offset is rounded by the
+       browser for the scroller and by layout for position:sticky, not always
+       the same way, and a pinned scene then shivers by a pixel as it moves. */
+    written = snap(current);
+    window.scrollTo(0, written);
     emit(now);
     if (!done) { raf = requestAnimationFrame(frame); return; }
     vel = 0; last = 0;
@@ -140,7 +155,12 @@
     var dx = e.deltaX, dy = e.deltaY;
     if (e.deltaMode === 1) { dx *= LINE; dy *= LINE; }
     else if (e.deltaMode === 2) { dx *= window.innerHeight; dy *= window.innerHeight; }
-    if (!dy || Math.abs(dx) > Math.abs(dy)) return;
+    /* A trackpad swipe is never purely vertical: a stray sideways part of
+       half the size is normal. Leaving those events to the browser handed
+       some wheel events to native scrolling and others to us, and the page
+       was moved by two systems at once (the engine saw the native move and
+       dropped its glide). Only a clearly sideways gesture is left alone. */
+    if (!dy || Math.abs(dx) > Math.abs(dy) * 3) return;
     if (nestedCanScroll(e.target, dy) || locked()) return;
     e.preventDefault();
     if (raf === null && !anim) sync();          /* something native moved it since */
@@ -270,7 +290,7 @@
   window.addEventListener('pointerdown', onPointer, true);
   window.addEventListener('touchstart', function () { if (raf !== null) stop(); }, { passive: true });
   document.addEventListener('click', onClick);
-  window.addEventListener('resize', function () { target = clamp(target, 0, maxY()); });
+  window.addEventListener('resize', function () { dpr = window.devicePixelRatio || 1; target = clamp(target, 0, maxY()); });
   [RM, WHEEL].forEach(function (mq) {
     if (!mq) return;
     if (mq.addEventListener) mq.addEventListener('change', decide); else if (mq.addListener) mq.addListener(decide);
