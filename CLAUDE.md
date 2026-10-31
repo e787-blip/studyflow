@@ -3649,9 +3649,17 @@ The bar is `#fdfdff` with a 1px border and 14px corners, floating 10px from the
 top (max 1240px wide); the links sit straight on it (`.nav-links`, no
 container), the page or section being read is a filled `#e3ecff` block with 8px
 corners (`aria-current`), "My Dashboard" is an outlined 10px block and "Build my
-plan" a solid blue one, both 40px tall. It is the same bar over the navy hero and
-over paper, so nothing turns light as the hero's daylight spreads: the `lit` /
-`on-light` classes and the hero's per-button daylight maths are gone. **Do not put
+plan" a solid blue one, both 40px tall. **The bar matches what is behind it** (the owner: "the background is dark but
+the floating bar is white; a transition from one color to white would be
+nice"): on `index.html` it is navy (`.on-dark`: `#181f3d`, white text, a faint
+white border) over the dark hero and over the night "Why it works" sheet, and
+fades to white (0.4s) once the picture behind it has turned light. `navTone()`
+decides, from where the hero and `#wo` are and the hero's `day` (is-day flips at
+day > .5, when the daylight behind the bar has crossed half-way), and toggles one
+class when the answer changes - nothing is written per frame. The page opens
+dark (the class is in the markup, so no white flash). Every other page is paper
+behind the bar, so `sf-nav.js` stays white. The old per-button `lit` / `on-light`
+daylight maths is gone. **Do not put
 a container around the links again** - that was the complaint. The links hide
 below 1080px (no overlap at 1081: 99px clear), "My Dashboard" below 640px, and
 on a phone the bar is 8px from the edges, 52px tall. The hero's own

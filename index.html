@@ -119,15 +119,16 @@ nav.site-nav {
   /* backwards, not both: a finished animation still "in effect" keeps the
      nav a stacking layer of its own for no reason. */
   animation: navIn .8s var(--ease-out) backwards;
+  transition: background-color .4s ease, border-color .4s ease, box-shadow .4s ease;
 }
 @keyframes navIn { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
 .nav-logo { display: inline-flex; flex-shrink: 0; text-decoration: none; }
 .nav-logo svg { width: 150px; height: 38px; }
-.logo-study { fill: var(--ink); }
+.logo-study { fill: var(--ink); transition: fill .4s ease; }
 .nav-links { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 2px; }
 .nav-links a {
   font-size: .88rem; font-weight: 500; line-height: 1.6; color: #4a5168; text-decoration: none; white-space: nowrap;
-  padding: .45rem .8rem; border-radius: 8px; transition: background-color .15s, color .15s;
+  padding: .45rem .8rem; border-radius: 8px; transition: background-color .15s, color .4s ease;
 }
 .nav-links a:hover { background: var(--blue-mist); color: var(--ink); }
 .nav-links a[aria-current] { background: var(--blue-soft); color: var(--blue-deep); }
@@ -136,7 +137,7 @@ nav.site-nav {
   display: inline-flex; align-items: center; height: 40px; font-size: .86rem; font-weight: 600; line-height: 1; white-space: nowrap;
   color: var(--ink); text-decoration: none; padding: 0 1rem; border-radius: 10px;
   background: #fff; border: 1px solid #d3dbee;
-  transition: background-color .15s, border-color .15s, color .15s;
+  transition: background-color .4s ease, border-color .4s ease, color .4s ease;
 }
 .nav-dashboard:hover { background: var(--blue-mist); border-color: var(--blue); }
 .nav-cta {
@@ -146,6 +147,21 @@ nav.site-nav {
 }
 .nav-cta:hover { background: var(--blue-deep); }
 nav.site-nav a:focus-visible { outline: 2.5px solid var(--blue); outline-offset: 2px; }
+/* ── The bar matches what is behind it. Over the navy hero and over the night
+   "Why it works" sheet a white bar was the loudest thing on the screen, so
+   there it is navy, and it fades to white (0.4s) as the page turns light.
+   The switch is a class (.on-dark), set by navTone() below; nothing is
+   written per frame. ── */
+nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .15); box-shadow: 0 2px 18px rgba(0, 0, 0, .35); }
+.on-dark .logo-study { fill: #fff; }
+.on-dark .nav-links a { color: rgba(255, 255, 255, .78); }
+.on-dark .nav-links a:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+.on-dark .nav-links a[aria-current] { background: rgba(255, 255, 255, .14); color: #fff; }
+.on-dark .nav-dashboard { color: #fff; background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .24); }
+.on-dark .nav-dashboard:hover { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .5); }
+.on-dark .nav-cta { background: #3b6fe8; }
+.on-dark .nav-cta:hover { background: #4a7cf6; }
+.on-dark a:focus-visible { outline-color: #9db8ff; }
 @media (prefers-contrast: more) {
   nav.site-nav, .nav-dashboard { border-color: #3b4363; }
   .nav-links a { color: var(--ink); }
@@ -946,7 +962,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   <symbol id="i-star" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
 </svg>
 
-<nav class="site-nav" aria-label="Main">
+<nav class="site-nav on-dark" aria-label="Main">
   <a href="#" class="nav-logo" aria-label="StudyFlow home">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 44" aria-hidden="true">
       <defs>
@@ -2306,7 +2322,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
         lastDay = day;
         hero.style.setProperty('--day', day.toFixed(3));
         var isDay = day > .5;
-        if (isDay !== hero.classList.contains('is-day')) hero.classList.toggle('is-day', isDay);
+        if (isDay !== hero.classList.contains('is-day')) { hero.classList.toggle('is-day', isDay); navTone(); }
       }
       updateBands(shown);
       if (gl && gl.built) { place(shown, (now - t0) / 1000, dt); render(); watchPerf(dt); }
@@ -2408,6 +2424,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     return {
       init: init, kick: kick, applyMode: applyMode,
       setVisible: function (v) { if (v) { lastNow = 0; kick(); } },
+      day: function () { return day; },
       debug: function () { var i = gl && gl.renderer.info; return { mode: mode, p: shown, day: day, sheets: gl && gl.sheets.length, built: !!(gl && gl.built), quality: quality, warm: !!(gl && gl.warm), programs: i ? i.programs.length : 0, textures: i ? i.memory.textures : 0 }; }
     };
   })();
@@ -2968,6 +2985,22 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     order.forEach(function (id) { var el = document.getElementById(id); if (el) io.observe(el); });
   })();
 
+  /* The nav's tone: navy while the bar sits over a dark ground, white over a
+     light one. Dark = the hero before its daylight reaches half-way, or the
+     night "Why it works" sheet while it covers the bar. The hero's own
+     background decides the first (is-day flips at day > .5, the same moment
+     the picture behind the bar has turned light). A class toggle with a CSS
+     transition, set when the answer changes, so scrolling pays nothing. */
+  var navEl = document.querySelector('nav.site-nav'), heroEl = document.getElementById('hero'), woEl = document.getElementById('wo');
+  function navTone() {
+    if (!navEl || !heroEl || !woEl) return;
+    var h = heroEl.getBoundingClientRect().bottom, w = woEl.getBoundingClientRect();
+    var dark = (h > 72 && !(Hero && Hero.day() > .5 && !reduced)) || (w.top < 52 && w.bottom > 52);
+    if (dark !== navEl.classList.contains('on-dark')) navEl.classList.toggle('on-dark', dark);
+  }
+  window.addEventListener('scroll', navTone, { passive: true });
+  window.addEventListener('resize', navTone);
+
   /* Phones: sticky call to action between the hero and the final section. */
   (function () {
     var cta = document.getElementById('sticky-cta'), edge = document.getElementById('edge-fade');
@@ -3020,6 +3053,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     sizeShows();
     Scrub.watch();
     Scrub.kick();
+    navTone();
     if (window.SFSmooth) SFSmooth.on(function (y, v, now) { Scrub.sync(now); Hero.kick(); });
     window.__sf = { hero: Hero.debug };
   }
