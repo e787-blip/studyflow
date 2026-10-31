@@ -38,7 +38,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `sf-illustrate.js` | ~22 KB | **Makes a real illustration ready for a phone** - the label re-setting, crop and credit, in an off-screen shadow root after a sanitise pass. ONE implementation for the offline pipeline (the 14 library files rebuild byte-identical through it) and for a picture found live - see "A real illustration for any lesson" |
 | `api/illustration.js` | ~22 KB | **Finds a real illustration for any lesson on Wikimedia Commons**: search, language-copy collapsing, licence/size/shape/noise filters, then a model that SEES the 5 best and refuses the wrong ones. `?file=` returns a cleaned SVG. CDN-cached 30 days |
 | `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** The marketing pages that sit in the nav's own links (Help, Our story, Plans) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `lesson`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. `index.html` keeps its own copy - see "The site nav" |
-| `sf-smooth.js` | ~11 KB | **Smooth wheel scrolling** for `index.html`, `about.html`, `pricing.html` (window.`SFSmooth`). Off for touch and reduced motion - see "Smooth scroll and the two showcases" |
+| `sf-smooth.js` | ~11 KB | **Smooth wheel scrolling** for `index.html`, `about.html`, `pricing.html` (window.`SFSmooth`). Off for touch and reduced motion - see "Smooth scroll and the two showcases" (now: the findings wall and the features sheet) |
 | `sf-guide.js` | ~40 KB | **The guided walkthrough.** The Walkthrough button opens a sheet over the question just answered and asks its steps one at a time, written for THAT question by one model call; on a cell lesson a drawn cell shows the protein travelling. Loaded by `lesson.html` after `sf-questions.js` - see "The guided walkthrough" |
 | `sf-auth.js` | ~8 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase; `apiFetch` sends it with every AI call, and `refreshTier` writes the server's plan into `studyflow_user.tier` on every load. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html`, `teacher-build.html`, `pricing.html` — see "The classroom" and "Paid plans are the server's" |
 | `api/_account.js` / `api/account.js` | ~16 / ~3 KB | **Who is calling and what they paid for.** `requireUser` (the Firebase token check, moved out of `class.js`), `tierOf` (Firestore `users/{email}`, else Stripe), the daily caps (`allow`), plans a month (`planCheck` / `planBuilt`), Stripe's Manage plan page (`portalUrl`), the price map and the owner list. `GET api/account` answers `{email, tier}`; `POST` takes `plan-check`, `plan-built`, `portal` |
@@ -3507,25 +3507,54 @@ either showcase holds 16.7ms frames (p95 17.7ms).
   and its follow is quicker while the engine is on (`soft()`): easing a scene
   on top of an eased page made it trail like something on a rope.
 
-**The two showcases are one system** (CSS block "PINNED SHOWCASES"): a rail of
-steps on the left (each bar fills with its share of the scroll, the step being
-read is lit, the buttons jump there - it replaced the dots), a centrepiece,
-and words on the right that leave upward and arrive word by word (`.swap`,
-`.sw`: the script writes ONE number per face, `--d`, and each word works out
-its own part in CSS from `--r`, its place in the face).
+**Why it works and Features are one scene now (Oct 2026, copied from Wispr
+Flow's scroll; the owner: replace the first scroll animation, drop the student
+feedback section, and make it transition into the second screenshot).** CSS
+block "WHY IT WORKS + FEATURES", script block "Why it works (a wall of
+findings), and the sheet of features that covers it". The old rail / odometer /
+night sheet / card stack / fan and the whole Testimonials section ("Students
+are scoring higher") are gone.
 
-- **Why it works** is a night sheet that docks: an inset card with round
-  corners whose sides reach the edges and corners square off as it fills the
-  screen, and round again as it leaves (`clip-path` on `#why-sheet`, from the
-  stage's distance to the screen edges). In it a counter rolls each digit
-  through the numbers between (200 → 50 passes 1, 2, 3, 4), right-hand digit
-  first. **The numbers are read off each card's `.face-stat`**, so the counter
-  and the card cannot disagree - edit the card.
-- **Features** deals app cards up from below the screen onto a stack (played
-  cards settle back, smaller and darker), and after the sixth, fans all six
-  out as a hand while the closing words and the one call to action arrive.
-  The section is 720vh for that (6 steps + `FAN` 1.2). The hand is sized to
-  its column (`fanK`) or it reaches over the rail on a narrow laptop.
+- **The wall** (`#wo`, 380vh, sticky `#cw-stage`): the six research findings as
+  cards in three columns that slide up past the headline at three speeds
+  (`COL_START`: a column that starts lower has further to go in the same
+  scroll, so it is faster - that is the parallax). Two big "lead" cards carry
+  one huge figure on a panel cut on a slant (`.cw-stat`, `clip-path`), the
+  others are serif quote cards (paper, pale blue, night). Each card leans by
+  its distance from the middle of the screen and straightens and scales to 1 as
+  it crosses it (`applyWall`). One radius (32) for every card, 8 for chips. The
+  numbers and sources are the site's own existing claims (Cepeda 2006, Kornell
+  2009, Roediger and Karpicke, Taylor and Rohrer 2010, Walker 2017, Feynman);
+  change a card's words, never invent a figure.
+- **The curtain** (`#rows-sheet`, `margin-top: -100vh`, so it overlaps the last
+  screen of the wall): a light sheet rises over the pinned stage; its top
+  corners flatten from 72px to 0 as it arrives (`--rt`, **unitless: the CSS
+  does `calc(var(--rt) * 1px)`** - writing "71px" into a `setVar` made the radius
+  invalid and the corners never showed), and the stage dims and sinks back
+  (`--cv`). **The stage sits exactly under the sheet's first screen**, so the
+  sheet may only turn see-through (to let the page's ruled paper show) once the
+  stage is `visibility: hidden` (`.is-covered`, set together with `.is-docked`).
+  The fade-out is only on `.is-docked`, so scrolling back up is instant.
+- **The rows** (`.row`, one per feature, app card on the left, words on the
+  right, the row text/visual from the old Features copy): `--a` (0..1) and
+  `--dy` are set per row from its distance to the middle of the screen
+  (`applyRows`); text opacity is `.22 + .78a`, the picture scales `.94 + .06a`.
+  Full strength inside a fifth of a screen of the middle, gone by 0.8. Ends with
+  "Start with one plan." and the one call to action (it still says the tutor and
+  insights come with VIP).
+- **`Scrub` items can opt in to `snap: true`**: their first measure sets `shown`
+  directly, so a scene first seen part-way through (a reload, a link, a jump)
+  starts there instead of sweeping in from 0.
+- **Below 1000px (the columns get too narrow), and with reduced motion** (one shared `@media`, and
+  `staticMode()` in the script): no pin, no parallax. The findings are cards in a
+  column on night (`--o` orders the lead cards first), and the light sheet just
+  overlaps them with 32px corners. Switching modes live calls `resetShows()`,
+  which removes every inline value the scroll wrote.
+- The nav is navy while the stage is under the bar and turns white when the
+  sheet reaches it (`navTone`).
+- Look at it, don't just run it: headless Chrome through the real wheel path,
+  screenshots at p = 0, .35, .55, .7, .85, 1 of `#wo`, then each row centered.
+
 - **Glitch pass (Oct 2026, "sometimes it is glitchy").** A JS-driven scroll is
   only as smooth as the main thread - native scrolling carries on while the
   page is busy, this does not - so every long task on the page is a freeze.
@@ -3566,13 +3595,6 @@ its own part in CSS from `--r`, its place in the face).
   Chrome instance; the GPU side of headless Chrome is not representative, so
   heavy `backdrop-filter` over the live WebGL hero (nav, glass buttons) is the
   next suspect on a slower machine and could not be measured here.
-- **Snap**: a WHEEL scroll that comes to rest mid-turn is finished by a short
-  glide to the nearer step (`SFSmooth.onSettle`). Never after a finger or the
-  keyboard.
-- Phones (≤860px) keep the old decision: no pin, every step a card; the Why
-  cards sit on a rounded night panel. Reduced motion: steps change whole.
-- The finale copy says the tutor and insights are VIP - "Start with one
-  plan" must not read as all six being free.
 
 ## Our story and Plans (`about.html`, `pricing.html`) — Liquid Glass, Oct 2026
 

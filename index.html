@@ -60,7 +60,7 @@
    containers, and a scroll container between a sticky element and the
    viewport stops it sticking: that is exactly how index.html once killed its
    two pinned showcases (see its comment on #how). `clip` clips without
-   becoming a scroll container, so #ws, #fs and the hero stage keep pinning. */
+   becoming a scroll container, so the findings stage and the hero stage keep pinning. */
 html { scroll-behavior: smooth; overflow-x: clip; -webkit-text-size-adjust: 100%; }
 body {
   font-family: var(--sans);
@@ -577,126 +577,105 @@ nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .1
 }
 
 /* ══════════════════════════════════════════
-   PINNED SHOWCASES, redesigned Oct 2026 (the Wispr Flow brief: "good but
-   kind of boring"). Both are one system, so they read as one site:
-   - a RAIL of steps on the left: each step's bar fills with the scroll, and
-     the step being read lights up. It is the progress, the map and the
-     buttons at once (it replaced a column of dots);
-   - the CENTREPIECE in the middle;
-   - the WORDS on the right, which leave upward and arrive from below word by
-     word (.swap / .sw), scrubbed, so a slide never just cross-fades.
-   Why it works is a night SHEET that docks: it rises as an inset card with
-   round corners, and its sides reach the edges and its corners square off as
-   it fills the screen (Wispr's scroll-scrubbed corners). In it a COUNTER
-   rolls each digit through the numbers in between, like a mechanical one.
-   Features deals app cards up from below onto a STACK, the old ones settling
-   back and darker, and at the end fans all six out as a hand, with the one
-   call to action. Everything is scrubbed and reverses on the way up.
-   Each step still holds still for most of its share of the scroll (detent),
-   and a scroll that stops mid-turn is finished by a short glide (snap).
+   WHY IT WORKS + FEATURES (Oct 2026, copied from Wispr Flow's scroll):
+   1. A pinned stage of findings. Three columns of cards slide up past a
+      headline at three different speeds, so the wall keeps re-composing
+      (parallax); each card straightens and fills as it crosses the middle.
+   2. The wall is then COVERED: a light sheet rises over the dark stage like a
+      curtain (its top corners flatten as it arrives), and the stage dims and
+      sinks back under it.
+   3. On the sheet, one feature per row: a picture of the app on the left, the
+      words on the right. The row at the middle of the screen is full strength;
+      the rest are dimmed, so the eye is led down the list.
+   All of it is scroll-scrubbed (Scrub), and everything below 860px, or with
+   reduced motion, is plain stacked cards.
 ══════════════════════════════════════════ */
-.sec-head { padding-inline: max(16px, 5vw); padding-top: clamp(5rem, 9vw, 7rem); }
-.show-outer { position: relative; height: 600vh; }
-.feat .show-outer { height: 720vh; }
-.show-stage { position: sticky; top: 0; height: 100vh; height: 100svh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(1.4rem, 5vh, 3.2rem); padding-inline: max(16px, 5vw); padding-top: 56px; }
-/* The heading is pinned with the thing it introduces, so the centrepiece
-   never floats alone in an empty screen. */
-.show-stage .sec-head { position: relative; padding: 0; }
-.show-stage .sec-head .h2 { font-size: clamp(2.2rem, 4.2vw, 3.6rem); }
-@media (max-height: 740px) and (min-width: 861px) {
-  .show-stage .sec-head .eyebrow { display: none; }
-  .show-stage .sec-head .h2 { font-size: clamp(1.9rem, 3.4vw, 2.7rem); }
+.why { position: relative; }
+.cw-outer { position: relative; height: 380vh; }
+.cw-stage {
+  position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; isolation: isolate;
+  background: var(--night); color: #e6ecff; --cv: 0;
 }
-.show-grid { position: relative; display: grid; grid-template-columns: 200px minmax(0, 1fr) minmax(0, 420px); gap: clamp(1.6rem, 4vw, 4.5rem); align-items: center; width: 100%; max-width: 1180px; }
-
-/* ── The rail ── */
-.rail { list-style: none; display: grid; gap: .1rem; --rail-ink: var(--ink); --rail-mute: var(--muted); --rail-track: var(--line); --rail-fill: var(--blue); }
-.rail button { display: grid; grid-template-columns: 3px 1.6rem minmax(0, 1fr); align-items: center; column-gap: .75rem; width: 100%; padding: .45rem .2rem .45rem 0; border: 0; background: none; color: var(--rail-ink); font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.rail-bar { position: relative; height: 2.05rem; border-radius: 2px; background: var(--rail-track); overflow: hidden; }
-.rail-bar::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--rail-fill); transform-origin: 50% 0; transform: scaleY(var(--f, 0)); }
-.rail-n { font-family: var(--mono); font-size: .7rem; letter-spacing: .06em; color: var(--rail-mute); opacity: calc(.5 + var(--a, 0) * .5); }
-.rail-l { font-size: .9rem; font-weight: 600; line-height: 1.25; opacity: calc(.4 + var(--a, 0) * .6); transform: translate3d(calc(var(--a, 0) * 5px), 0, 0); transition: scale .12s ease-out; }
-.rail button:active .rail-l { scale: .97; }
-.rail button:focus-visible { outline: 2px solid var(--rail-fill); outline-offset: 3px; border-radius: 8px; }
-
-/* ── Words that leave and arrive. A face's --d is where it stands: -1 still
-   to come, 0 on screen, 1 gone. Each word works out its own part of that
-   from its place in the face (--r, 0 first .. 1 last), so the first words
-   go first and the new face starts arriving as the old one's last words
-   leave. All in CSS: the script writes one number per face per frame. ── */
-.swap { --d: 0; }
-.js .swap .sw { display: inline-block; }
-.js .swap .sw, .js .swap .sw-b {
-  --in: clamp(0, calc((.62 + var(--d) - var(--r, 0) * .3) / .32), 1);
-  --out: clamp(0, calc((var(--d) - var(--r, 0) * .3) / .32), 1);
-  opacity: calc(var(--in) * (1 - var(--out)));
-  transform: translate3d(0, calc((1 - var(--in)) * .6em - var(--out) * .6em), 0);
+.cw-stage::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(60% 55% at 50% 50%, rgba(74, 124, 246, .24), transparent 70%), radial-gradient(40% 40% at 92% 0%, rgba(120, 150, 255, .10), transparent 70%);
 }
-.js .swap:not(:first-child) { visibility: hidden; }
+/* The rising sheet's shadow: the stage goes darker as it is covered. */
+.cw-stage::after { content: ""; position: absolute; inset: 0; z-index: 5; pointer-events: none; background: #050816; opacity: calc(var(--cv) * .6); }
+.cw-head { position: absolute; left: 0; right: 0; top: 50%; z-index: 1; transform: translate3d(0, -50%, 0); text-align: center; padding-inline: max(16px, 5vw); }
+.cw-head .eyebrow { color: #9db8ff; }
+.cw-head .h2 { color: #fff; font-size: clamp(2.8rem, 6.4vw, 5.6rem); line-height: 1.02; }
+.cw-head .h2 em { color: #9db8ff; }
+.cw-wall { position: absolute; inset: 0; z-index: 2; transform: scale(calc(1 - var(--cv) * .05)); transform-origin: 50% 40%; }
+.cw-col { position: absolute; top: 0; display: flex; flex-direction: column; gap: 20px; will-change: transform; }
+.cw-col:nth-child(1) { left: -2vw; width: 26vw; }
+.cw-col:nth-child(2) { left: 27.5vw; width: 26vw; }
+.cw-col:nth-child(3) { left: 56vw; width: 46vw; }
 
-/* ── Why it works: the night sheet ── */
-.why-stage { isolation: isolate; color: #e6ecff; }
-.why-sheet {
-  position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background:
-    radial-gradient(52% 46% at 50% 60%, rgba(74, 124, 246, .26), transparent 72%),
-    radial-gradient(38% 38% at 8% 4%, rgba(120, 150, 255, .12), transparent 70%),
-    linear-gradient(180deg, var(--night) 0%, var(--night-2) 100%);
-  clip-path: inset(0 calc(var(--m, 0) * 1px) round calc(var(--rt, 0) * 1px) calc(var(--rt, 0) * 1px) calc(var(--rb, 0) * 1px) calc(var(--rb, 0) * 1px));
+/* Cards: one radius (32) for every card, 8 for the chips on them. */
+.cw-card { position: relative; border-radius: 32px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; gap: 1.6rem; padding: clamp(1.3rem, 2.2vw, 2.1rem); min-height: clamp(280px, 42vh, 400px); will-change: transform; }
+.cw-paper { background: #fdfdff; color: var(--ink); }
+.cw-soft { background: #dfe8ff; color: var(--ink); }
+.cw-night { background: #172046; color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
+.cw-quote { font-family: var(--serif); font-weight: 400; font-size: clamp(1.7rem, 2.7vw, 2.8rem); line-height: 1.14; letter-spacing: -.012em; text-wrap: balance; }
+.cw-quote em { font-style: italic; color: var(--blue-deep); padding-right: .04em; }
+.cw-night .cw-quote em, .cw-lead .cw-quote em { color: #b9ccff; }
+.cw-src { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem .7rem; font-size: .84rem; line-height: 1.3; color: var(--muted); }
+.cw-night .cw-src, .cw-lead .cw-src { color: rgba(226, 233, 255, .75); }
+.cw-chip { display: inline-flex; align-items: center; height: 28px; padding: 0 .7rem; border-radius: 8px; font-size: .74rem; font-weight: 600; background: var(--blue-soft); color: var(--blue-deep); }
+.cw-soft .cw-chip { background: #fff; }
+.cw-night .cw-chip, .cw-lead .cw-chip { background: rgba(255, 255, 255, .14); color: #fff; }
+/* The big cards: words on the left, one huge figure on the right, set on a
+   panel whose left edge is cut on a slant (Wispr's photo cards, minus the photo). */
+.cw-lead { flex-direction: row; gap: 0; padding: 0; min-height: clamp(230px, 36vh, 330px); background: linear-gradient(135deg, #4a7cf6, #2851c8); color: #fff; }
+.cw-lead.cw-night { background: #172046; }
+.cw-lead-copy { flex: 1.15 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 1.2rem; padding: clamp(1.3rem, 2.2vw, 2.1rem); }
+.cw-lead .cw-quote { font-size: clamp(1.4rem, 2.05vw, 2.1rem); }
+.cw-stat {
+  flex: .85 1 0; min-width: 0; position: relative; display: flex; flex-direction: column; justify-content: flex-end; gap: .2rem;
+  padding: clamp(1.3rem, 2.2vw, 2.1rem) clamp(1.1rem, 1.8vw, 1.8rem) clamp(1.3rem, 2.2vw, 2.1rem) clamp(2.2rem, 3.6vw, 3.4rem);
+  background: radial-gradient(90% 80% at 100% 0%, rgba(74, 124, 246, .55), transparent 70%), #0e142a;
+  clip-path: polygon(18% 0, 100% 0, 100% 100%, 0 100%);
 }
-.why-sheet::after { content: ""; position: absolute; inset: 0; background-image: var(--grain); background-size: 180px 180px; opacity: .07; }
-.why .eyebrow { color: #9db8ff; }
-.why .h2 { color: #fff; }
-.why .h2 em { color: #9db8ff; }
-.why .rail { --rail-ink: #fff; --rail-mute: rgba(226, 233, 255, .72); --rail-track: rgba(226, 233, 255, .16); --rail-fill: #8fb0ff; }
+.cw-num { font-family: var(--serif); font-size: clamp(4.2rem, 7.6vw, 7.4rem); line-height: .9; letter-spacing: -.03em; color: #fff; }
+.cw-num small { font-size: .48em; letter-spacing: 0; }
+.cw-stat-l { font-size: .92rem; font-weight: 600; color: #fff; }
 
-.odo { display: grid; justify-items: center; text-align: center; }
-.odo-num { display: flex; font-family: var(--serif); font-size: clamp(6.6rem, 10.5vw, 10rem); line-height: 1; letter-spacing: 0; color: #8fb0ff; transform: translate3d(calc(var(--ox, 0) * 1em), 0, 0); }
-/* One window per digit. The strip behind it holds 0-9 and slides. */
-.odo-col { position: relative; width: .52em; height: 1.16em; overflow: hidden; -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 16%, #000 84%, transparent 100%); mask-image: linear-gradient(180deg, transparent 0, #000 16%, #000 84%, transparent 100%); }
-.odo-strip { position: absolute; left: 0; right: 0; top: 0; display: grid; opacity: var(--o, 1); transform: translate3d(0, calc(var(--pos, 0) * -1.16em + var(--dy, 0) * 1em), 0); }
-.odo-strip i { display: block; height: 1.16em; line-height: 1.16em; font-style: normal; text-align: center; }
-.odo-suf { position: relative; width: .44em; height: 1.16em; overflow: hidden; }
-.odo-suf i { position: absolute; left: .02em; bottom: .25em; font-size: .5em; line-height: 1; font-style: normal; opacity: var(--o, 0); transform: translate3d(0, calc(var(--dy, 0) * 2em), 0); }
-.odo-cap { position: relative; width: 100%; height: 3.6rem; margin-top: .3rem; }
-.odo-face { position: absolute; inset: 0; }
-.odo-face .big-l { color: #fff; font-size: 1.05rem; }
-.odo-face .big-c { color: rgba(226, 233, 255, .62); }
+/* The sheet. It is the page's paper, so once it has docked it turns
+   transparent and the notebook lines come back (a fade, not a pop). */
+.rows { position: relative; z-index: 3; margin-top: -100vh; margin-top: -100svh; }
+.rows-sheet {
+  position: relative; background: var(--paper);
+  border-radius: calc(var(--rt, 72) * 1px) calc(var(--rt, 72) * 1px) 0 0;
+  box-shadow: 0 -30px 80px -30px rgba(0, 0, 0, .6);
+  padding: clamp(5rem, 11vh, 8rem) max(16px, 5vw) clamp(4rem, 8vh, 6rem);
+}
+.rows-sheet.is-docked { background-color: rgba(245, 247, 252, 0); box-shadow: none; transition: background-color .5s ease; }
+.cw-stage.is-covered { visibility: hidden; }
+.rows-in { max-width: 1120px; margin: 0 auto; }
+.rows-head { text-align: center; margin-bottom: clamp(2.5rem, 7vh, 5rem); }
+.rows-head .h2 { font-size: clamp(2.5rem, 5vw, 4.2rem); line-height: 1.04; text-wrap: balance; }
 
-.why-cards { position: relative; height: 320px; }
-.why-card { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); }
-.why-card h3 { font-family: var(--serif); font-weight: 400; font-size: clamp(2rem, 3vw, 2.6rem); line-height: 1.08; letter-spacing: -.01em; color: #fff; margin-bottom: .9rem; }
-.why-card p { color: rgba(226, 233, 255, .76); font-size: .98rem; line-height: 1.72; max-width: 42ch; }
-.why-card .foot { margin-top: 1.2rem; padding-top: .9rem; border-top: 1px solid rgba(226, 233, 255, .14); font-size: .84rem; font-style: italic; color: rgba(226, 233, 255, .6); }
-.big { font-family: var(--serif); font-size: 6.4rem; line-height: .95; letter-spacing: -.03em; color: var(--blue); }
-.big small { font-size: .5em; }
-.big-l { font-size: 1rem; font-weight: 600; color: var(--ink); margin-top: .35rem; }
-.big-c { font-size: .8rem; color: var(--muted); font-style: italic; margin-top: .15rem; }
-.face-stat { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-
-/* ── Features: the stack, then the hand ── */
-.feat-stage { overflow: clip; }
-.feat-text { position: relative; height: 380px; }
-.ft { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); }
-.ft-tag { font-family: var(--mono); font-size: .76rem; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--blue-deep); margin-bottom: .8rem; }
-.ft-h { font-family: var(--serif); font-weight: 400; font-size: clamp(2rem, 3.4vw, 2.8rem); line-height: 1.08; letter-spacing: -.015em; margin-bottom: 1rem; text-wrap: balance; }
-.ft-h em { font-style: italic; color: var(--blue); }
-.ft-p { color: var(--muted); line-height: 1.75; max-width: 44ch; margin-bottom: 1.1rem; }
-.ft-list { list-style: none; display: grid; gap: .45rem; font-size: .92rem; font-weight: 500; }
+.row { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1fr); gap: clamp(2rem, 6vw, 5.5rem); align-items: center; min-height: 72vh; }
+.row-vis {
+  aspect-ratio: 1.15; border-radius: 28px; background: #e8eefc; box-shadow: inset 0 0 0 1px #d4def6;
+  display: grid; place-items: center; padding: clamp(1.2rem, 3vw, 2.4rem); overflow: hidden;
+  opacity: calc(.45 + var(--a, 1) * .55); transform: translate3d(0, calc(var(--dy, 0) * 26px), 0) scale(calc(.94 + var(--a, 1) * .06));
+}
+.row-text { opacity: calc(.22 + var(--a, 1) * .78); transform: translate3d(0, calc(var(--dy, 0) * 14px), 0); }
+.row-text h3 { font-family: var(--serif); font-weight: 400; font-size: clamp(2.1rem, 3.5vw, 3rem); line-height: 1.06; letter-spacing: -.015em; margin-bottom: 1rem; text-wrap: balance; }
+.row-text h3 em { font-style: italic; color: var(--blue); }
+.row-text p { color: var(--muted); font-size: 1.05rem; line-height: 1.75; max-width: 44ch; margin-bottom: 1.2rem; }
+.ft-list { list-style: none; display: grid; gap: .5rem; font-size: .94rem; font-weight: 500; }
 .ft-list li { display: flex; gap: .6rem; align-items: baseline; }
 .ft-list li::before { content: ""; flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--blue); transform: translateY(-2px); }
-.ft-end .ft-p { margin-bottom: 1.5rem; }
+.rows-end { text-align: center; padding-top: clamp(3rem, 8vh, 5rem); }
+.rows-end h3 { font-family: var(--serif); font-weight: 400; font-size: clamp(2.4rem, 4.4vw, 3.6rem); line-height: 1.05; letter-spacing: -.015em; margin-bottom: 1rem; }
+.rows-end h3 em { font-style: italic; color: var(--blue); }
+.rows-end p { color: var(--muted); max-width: 46ch; margin: 0 auto 1.6rem; }
 
-.pad-wrap { position: relative; height: 420px; perspective: 1600px; perspective-origin: 50% 30%; }
-.pad { position: absolute; inset: 0; margin: auto; width: min(100%, 380px); height: 330px; }
-.pad-sheet {
-  position: absolute; inset: 0; border-radius: 18px; background: var(--card); border: 1px solid var(--line);
-  box-shadow: 0 1px 2px rgba(26, 40, 90, .06), 0 34px 60px -32px rgba(26, 40, 90, .5); overflow: hidden;
-  transform-origin: 50% 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden;
-}
-.js .pad-sheet:not(:first-child) { opacity: 0; }
-/* A card settling back into the stack goes darker with each card laid on it. */
-.pad-sheet::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--night); opacity: var(--shade, 0); pointer-events: none; }
+/* The app cards on the left of each row. */
+.pad-sheet { position: relative; width: min(100%, 360px); border-radius: 18px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(26, 40, 90, .06), 0 30px 50px -28px rgba(26, 40, 90, .5); overflow: hidden; }
 .pad-sheet .card-header { padding: 1rem 1.3rem; }
 .pad-sheet .card-header h3 { font-size: 1.35rem; }
 .card-header.vip { background: linear-gradient(135deg, #2a3150, #1a1d2e); }
@@ -727,62 +706,26 @@ nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .1
 .chat .ai { background: rgba(255, 255, 255, .08); color: #e6ecff; border-radius: 4px 14px 14px 14px; }
 .chat .me { background: var(--blue-btn); color: #fff; border-radius: 14px 4px 14px 14px; justify-self: end; }
 
-/* Narrow desktops: the rail keeps its bars and numbers, the names go. */
-@media (max-width: 1120px) and (min-width: 861px) {
-  .show-grid { grid-template-columns: 2.6rem minmax(0, 1fr) minmax(0, 380px); }
-  .rail button { grid-template-columns: 3px minmax(0, 1fr); }
-  .rail-l { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-}
 
-@media (max-width: 860px) {
-  /* Phones keep the old decision: no pin. Every slide is a card, in order. */
-  .show-outer, .feat .show-outer { height: auto; }
-  .show-stage { position: relative; height: auto; display: block; padding-block: 0 1rem; }
-  .feat-stage { overflow: visible; }
-  .show-stage .sec-head { padding-top: clamp(4.5rem, 14vw, 6rem); margin-bottom: 2rem; }
-  .rail, .odo, .ft-end { display: none; }
-  .show-grid { display: block; }
-  .js .swap { --d: 0 !important; visibility: visible !important; }
-  /* The sheet is a rounded night panel the cards sit on. */
-  .why-stage { padding-bottom: 3.5rem; }
-  .why-sheet { inset: 0 8px; border-radius: 28px; clip-path: none; }
-  .why-cards { height: auto; display: grid; gap: 1rem; }
-  .why-card { position: relative; top: auto; transform: none; background: rgba(255, 255, 255, .05); border: 1px solid rgba(226, 233, 255, .12); border-radius: 20px; padding: 1.5rem 1.3rem; }
-  .face-stat { position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: normal; display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; margin-bottom: .8rem; }
-  .face-stat .big { font-size: 3.6rem; color: #8fb0ff; }
-  .face-stat .big-l { margin: 0; color: #fff; }
-  /* Phones get the app cards too, as a row you swipe, above the feature list. */
-  .feat-grid { display: flex; flex-direction: column; align-items: stretch; }
-  .feat-grid .pad-wrap { order: -1; }
-  .pad-wrap { height: auto; perspective: none; margin: 0 calc(-1 * max(16px, 5vw)) 1.5rem; }
-  .pad { position: static; width: auto; height: auto; margin: 0; display: flex; gap: .8rem; overflow-x: auto; scroll-snap-type: x mandatory; padding: .5rem max(16px, 5vw) 1.2rem; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .pad::-webkit-scrollbar { display: none; }
-  .pad-sheet { position: relative; inset: auto; flex: 0 0 min(82%, 340px); height: 330px; scroll-snap-align: center; transform: none !important; opacity: 1 !important; backface-visibility: visible; }
-  .pad-sheet::after { display: none; }
-  .feat-text { height: auto; display: grid; gap: 1rem; }
-  .ft { position: relative; top: auto; transform: none; background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 1.6rem 1.4rem; }
+@media (max-width: 1000px), (prefers-reduced-motion: reduce) {
+  /* No pin, no parallax: the findings are cards in a column on night, and the
+     light sheet simply overlaps them with round corners. */
+  .cw-outer { height: auto; }
+  .cw-stage { position: relative; height: auto; overflow: visible; padding: clamp(4.5rem, 14vw, 6rem) max(16px, 5vw) 5.5rem; }
+  .cw-stage::after { display: none; }
+  .cw-head { position: static; transform: none !important; opacity: 1 !important; padding: 0; margin-bottom: 2rem; }
+  .cw-wall { position: static; transform: none; display: flex; flex-direction: column; gap: 14px; }
+  .cw-col { position: static; width: auto !important; display: contents; transform: none !important; }
+  .cw-card { transform: none !important; min-height: 0; border-radius: 24px; order: var(--o, 5); }
+  .cw-lead { flex-direction: column; }
+  .cw-stat { clip-path: none; padding: 1.2rem 1.4rem; flex-direction: row; align-items: baseline; justify-content: flex-start; gap: .8rem; }
+  .cw-num { font-size: 3.4rem; }
+  .rows { margin-top: -32px; }
+  .rows-sheet { --rt: 32; padding-top: 4rem; transition: none; box-shadow: none; }
+  .row { grid-template-columns: 1fr; min-height: 0; gap: 1.4rem; padding-block: 1.6rem; }
+  .row-vis, .row-text { opacity: 1; transform: none; }
+  .row-vis { aspect-ratio: auto; padding: 1.4rem; }
 }
-
-/* ── TESTIMONIALS: a bento with one loud card ── */
-.tgrid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-rows: repeat(3, auto); gap: 1.2rem; margin-top: 3.5rem; perspective: 1400px; }
-.tcard { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 1.7rem; box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: 1.2rem; transition: opacity .9s var(--ease-out) var(--rd, 0s), transform 1s var(--ease-out) var(--rd, 0s), border-color .25s ease 0s; }
-.tcard:hover { border-color: var(--blue); }
-.tcard.feature { grid-row: 1 / span 3; background: var(--blue-btn); border-color: var(--blue-btn); color: #fff; padding: clamp(1.8rem, 4vw, 2.8rem); gap: 1.8rem; }
-.tcard.feature .who { margin-top: auto; }
-.tcard.feature:hover { border-color: #0f2a86; }
-.tcard blockquote { font-size: 1rem; line-height: 1.7; }
-.tcard.feature blockquote { font-family: var(--serif); font-size: clamp(1.7rem, 2.8vw, 2.35rem); line-height: 1.22; letter-spacing: -.01em; }
-.stars { display: flex; gap: 2px; color: var(--blue); }
-.stars svg { width: 15px; height: 15px; fill: currentColor; }
-.tcard.feature .stars { color: #cfe0ff; }
-.who { display: flex; align-items: center; gap: .75rem; }
-.who .av { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-weight: 700; font-size: .84rem; background: var(--blue-soft); color: var(--blue-deep); flex: none; }
-.who b { display: block; font-size: .92rem; }
-.who span { font-size: .8rem; color: var(--muted); }
-.tcard.feature .av { background: rgba(255, 255, 255, .18); color: #fff; }
-.tcard.feature .who span { color: rgba(255, 255, 255, .78); }
-.js .tgrid .tcard:not(.in) { opacity: 0; transform: rotateX(18deg) rotateY(-8deg) translate3d(0, 50px, -90px); }
-@media (max-width: 820px) { .tgrid { grid-template-columns: 1fr; } .tcard.feature { grid-row: auto; } }
 
 /* ── PRICING: three cards dealt out of one stack ── */
 .pgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.4rem; max-width: 1020px; margin: 3.6rem auto 0; perspective: 1600px; align-items: stretch; }
@@ -942,7 +885,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
-  .js [data-reveal], .js [data-reveal] .word, .js .tgrid .tcard, .js .pgrid .pcard, .js .how-step .how-tile, .js .how-step .how-copy { opacity: 1 !important; transform: none !important; }
+  .js [data-reveal], .js [data-reveal] .word, .js .pgrid .pcard, .js .how-step .how-tile, .js .how-step .how-copy { opacity: 1 !important; transform: none !important; }
   .tilt { transform: none; }
   .session { --re: 1; }
   .fan-inner { transform: rotateY(-10deg) rotateX(6deg); }
@@ -1147,97 +1090,66 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   </div>
 </section>
 
-<!-- WHY IT WORKS (pinned): a night sheet docks, a counter rolls -->
+<!-- WHY IT WORKS: a pinned wall of findings. The light sheet below rises over it. -->
 <section id="benefits" class="why" aria-labelledby="why-h">
-  <div id="wo" class="show-outer">
-    <div id="ws" class="show-stage why-stage">
-      <div class="why-sheet" id="why-sheet" aria-hidden="true"></div>
-      <div class="sec-head wrap center">
+  <div id="wo" class="cw-outer">
+    <div id="cw-stage" class="cw-stage">
+      <div id="cw-head" class="cw-head">
         <p class="eyebrow">Why it works</p>
-        <h2 class="h2" id="why-h" data-reveal="words">Stop cramming. <em>Start retaining.</em></h2>
+        <h2 class="h2" id="why-h">Stop cramming. <em>Start retaining.</em></h2>
       </div>
-      <div class="show-grid why-grid">
-        <ol class="rail" id="why-rail" aria-label="Research findings">
-          <li><button type="button" aria-current="step"><span class="rail-bar"></span><span class="rail-n">01</span><span class="rail-l">Spaced repetition</span></button></li>
-          <li><button type="button"><span class="rail-bar"></span><span class="rail-n">02</span><span class="rail-l">Pre-test effect</span></button></li>
-          <li><button type="button"><span class="rail-bar"></span><span class="rail-n">03</span><span class="rail-l">Active recall</span></button></li>
-          <li><button type="button"><span class="rail-bar"></span><span class="rail-n">04</span><span class="rail-l">Feynman technique</span></button></li>
-          <li><button type="button"><span class="rail-bar"></span><span class="rail-n">05</span><span class="rail-l">Desirable difficulty</span></button></li>
-          <li><button type="button"><span class="rail-bar"></span><span class="rail-n">06</span><span class="rail-l">Sleep consolidation</span></button></li>
-        </ol>
-        <div class="odo" aria-hidden="true">
-          <div class="odo-num" id="why-odo"></div>
-          <div class="odo-cap" id="why-cap">
-              <div class="odo-face swap"><p class="big-l">better retention</p><p class="big-c">Cepeda et al., 2006</p></div>
-              <div class="odo-face swap"><p class="big-l">more absorbed</p><p class="big-c">Kornell et al., 2009</p></div>
-              <div class="odo-face swap"><p class="big-l">better recall</p><p class="big-c">Roediger and Karpicke</p></div>
-              <div class="odo-face swap"><p class="big-l">gap detection</p><p class="big-c">Feynman Technique</p></div>
-              <div class="odo-face swap"><p class="big-l">stronger memory</p><p class="big-c">Taylor and Rohrer, 2010</p></div>
-              <div class="odo-face swap"><p class="big-l">better overnight</p><p class="big-c">Walker, 2017</p></div>
-          </div>
+      <div id="cw-wall" class="cw-wall">
+        <div class="cw-col">
+          <article class="cw-card cw-paper" style="--o:3">
+            <p class="cw-quote">Being tested before you fully know something primes your brain to absorb <em>50% more.</em></p>
+            <p class="cw-src"><span class="cw-chip">Pre-test effect</span><span>Kornell et al., 2009</span></p>
+          </article>
+          <article class="cw-card cw-night" style="--o:6">
+            <p class="cw-quote">Your brain locks in memories while you sleep: <em>30% better</em> overnight.</p>
+            <p class="cw-src"><span class="cw-chip">Sleep consolidation</span><span>Walker, 2017</span></p>
+          </article>
         </div>
-        <div class="why-cards" id="why-cards">
-          <article class="why-card swap"><div class="face-stat"><span class="big">200<small>%</small></span><span class="big-l">better retention</span></div><h3>Spaced repetition</h3><p>Review things right when you're about to forget them. The SM-2 algorithm works out exactly when each concept needs reviewing. Medical students around the world use it.</p><p class="foot">The gold standard for memory retention since 1987</p></article>
-          <article class="why-card swap"><div class="face-stat"><span class="big">50<small>%</small></span><span class="big-l">more absorbed</span></div><h3>Pre-test effect</h3><p>Being tested before you fully know something primes your brain to absorb it 50% faster. StudyFlow shows you questions before each lesson starts.</p><p class="foot">Primes the brain for deeper encoding of new material</p></article>
-          <article class="why-card swap"><div class="face-stat"><span class="big">4<small>x</small></span><span class="big-l">better recall</span></div><h3>Active recall</h3><p>Pulling information out of memory is 4x more effective than rereading it. Every StudyFlow session makes you answer from memory.</p><p class="foot">The most evidence-backed study technique in cognitive science</p></article>
-          <article class="why-card swap"><div class="face-stat"><span class="big">85<small>%</small></span><span class="big-l">gap detection</span></div><h3>Feynman technique</h3><p>Explain a concept simply. If you can't, you don't know it yet. StudyFlow's AI grades your explanation and shows you exactly where your understanding breaks down.</p><p class="foot">Nobel Prize physicist Richard Feynman's own learning method</p></article>
-          <article class="why-card swap"><div class="face-stat"><span class="big">40<small>%</small></span><span class="big-l">stronger memory</span></div><h3>Desirable difficulty</h3><p>Questions that feel slightly too hard build stronger memories. StudyFlow ramps up the difficulty as your exam gets closer, so the real test feels easier.</p><p class="foot">Struggling a little is what makes learning stick</p></article>
-          <article class="why-card swap"><div class="face-stat"><span class="big">30<small>%</small></span><span class="big-l">better overnight</span></div><h3>Sleep consolidation</h3><p>Your brain locks in memories while you sleep, so studying before bed helps you keep what you learned. StudyFlow reminds you to review your hardest topics last.</p><p class="foot">Why cramming the night before works once, then fades fast</p></article>
+        <div class="cw-col">
+          <article class="cw-card cw-paper" style="--o:5">
+            <p class="cw-quote">Explain it simply. If you can&rsquo;t, you don&rsquo;t know it yet. It finds <em>85% of the gaps.</em></p>
+            <p class="cw-src"><span class="cw-chip">Feynman technique</span><span>Richard Feynman&rsquo;s own method</span></p>
+          </article>
+          <article class="cw-card cw-soft" style="--o:4">
+            <p class="cw-quote">Questions that feel slightly too hard build a <em>40% stronger</em> memory.</p>
+            <p class="cw-src"><span class="cw-chip">Desirable difficulty</span><span>Taylor and Rohrer, 2010</span></p>
+          </article>
+        </div>
+        <div class="cw-col">
+          <article class="cw-card cw-lead " style="--o:1">
+            <div class="cw-lead-copy">
+              <p class="cw-src"><span class="cw-chip">Active recall</span></p>
+              <p class="cw-quote">Pulling information out of memory is <em>4x more effective</em> than rereading it.</p>
+              <p class="cw-src"><span>Roediger and Karpicke</span></p>
+            </div>
+            <div class="cw-stat" aria-hidden="true"><span class="cw-num">4<small>x</small></span><span class="cw-stat-l">better recall</span></div>
+          </article>
+          <article class="cw-card cw-lead cw-night" style="--o:2">
+            <div class="cw-lead-copy">
+              <p class="cw-src"><span class="cw-chip">Spaced repetition</span></p>
+              <p class="cw-quote">Review things right when you are about to forget them and you get <em>200% better</em> retention.</p>
+              <p class="cw-src"><span>Cepeda et al., 2006</span></p>
+            </div>
+            <div class="cw-stat" aria-hidden="true"><span class="cw-num">200<small>%</small></span><span class="cw-stat-l">better retention</span></div>
+          </article>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- TESTIMONIALS -->
-<section id="testimonials" class="sec">
-  <div class="wrap">
-    <h2 class="h2" data-reveal="words">Students are <em>scoring higher</em></h2>
-    <p class="lede" data-reveal="up">Real feedback from students who used StudyFlow before their exams.</p>
-    <div class="tgrid" id="tgrid">
-      <figure class="tcard feature">
-        <div class="stars" aria-label="5 out of 5 stars"><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg></div>
-        <blockquote>“I have ADHD and studying has always been a nightmare. StudyFlow breaks things into small focused sessions that actually work for my brain. I wish this existed years ago.”</blockquote>
-        <figcaption class="who"><span class="av">SM</span><span><b>Sofia M.</b><span>College Junior, Pre-Med</span></span></figcaption>
-      </figure>
-      <figure class="tcard">
-        <div class="stars" aria-label="5 out of 5 stars"><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg></div>
-        <blockquote>“I used to spend hours rereading my notes and still felt lost before exams. StudyFlow gave me a clear plan in seconds. I actually felt <strong>prepared</strong> for once.”</blockquote>
-        <figcaption class="who"><span class="av">MR</span><span><b>Maya R.</b><span>10th Grade, AP Biology</span></span></figcaption>
-      </figure>
-      <figure class="tcard">
-        <div class="stars" aria-label="5 out of 5 stars"><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg></div>
-        <blockquote>“As a college freshman juggling 5 classes, I was overwhelmed. StudyFlow broke everything down into sessions I could actually handle. My GPA went from a 2.8 to a <strong>3.6</strong> in one semester.”</blockquote>
-        <figcaption class="who"><span class="av">JT</span><span><b>Jordan T.</b><span>College Freshman, Computer Science</span></span></figcaption>
-      </figure>
-      <figure class="tcard">
-        <div class="stars" aria-label="5 out of 5 stars"><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg></div>
-        <blockquote>“I uploaded my history notes the night before a test and got a full study plan in like 30 seconds. Ended up getting an <strong>A-</strong>. This thing is actually crazy.”</blockquote>
-        <figcaption class="who"><span class="av">AK</span><span><b>Aiden K.</b><span>11th Grade, AP US History</span></span></figcaption>
-      </figure>
-    </div>
-  </div>
-</section>
-
-<!-- FEATURES (pinned): cards dealt onto a stack, then fanned out -->
-<section id="features" class="feat" aria-labelledby="feat-h">
-  <div id="fo" class="show-outer">
-    <div id="fs" class="show-stage feat-stage">
-      <div class="sec-head wrap center">
-        <h2 class="h2" id="feat-h" data-reveal="words">Your unfair <em>advantage</em> before every exam</h2>
-      </div>
-      <div class="show-grid feat-grid">
-        <ol class="rail" id="feat-rail" aria-label="Features">
-          <li><button type="button" aria-current="step"><span class="rail-bar"></span><span class="rail-n">01</span><span class="rail-l">Study plans</span></button></li>
-          <li><button type="button"><span class="rail-bar"></span><span class="rail-n">02</span><span class="rail-l">Spaced repetition</span></button></li>
-          <li><button type="button"><span class="rail-bar"></span><span class="rail-n">03</span><span class="rail-l">Difficulty ramp</span></button></li>
-          <li><button type="button"><span class="rail-bar"></span><span class="rail-n">04</span><span class="rail-l">Feynman technique</span></button></li>
-          <li><button type="button"><span class="rail-bar"></span><span class="rail-n">05</span><span class="rail-l">AI tutor</span></button></li>
-          <li><button type="button"><span class="rail-bar"></span><span class="rail-n">06</span><span class="rail-l">Insights dashboard</span></button></li>
-        </ol>
-        <div class="pad-wrap" aria-hidden="true">
-          <div class="pad" id="feat-pad">
-            <div class="pad-sheet">
+<!-- FEATURES: the light sheet that rises over the findings. One feature per row; the row at the middle of the screen is full strength. -->
+<section id="features" class="rows" aria-labelledby="feat-h">
+  <div id="rows-sheet" class="rows-sheet">
+    <div class="rows-in">
+      <div class="rows-head"><h2 class="h2" id="feat-h" data-reveal="words">Your unfair <em>advantage</em> before every exam</h2></div>
+      <div class="row" id="row0">
+        <div class="row-vis" aria-hidden="true">
+          <div class="pad-sheet">
               <div class="card-header"><span class="card-badge">Your plan</span><h3>Biology: Cell Division</h3></div>
               <div class="pad-body">
                 <div class="pl-row on"><span class="session-day">Mon</span><span>Mitosis overview</span><b>Today</b></div>
@@ -1246,7 +1158,16 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
                 <div class="pl-row"><span class="session-day">Thu</span><span>Final recap</span></div>
               </div>
             </div>
-            <div class="pad-sheet">
+        </div>
+        <div class="row-text">
+          <h3>AI generates your <em>exact study plan</em></h3>
+          <p>Paste your notes and set your exam date. StudyFlow reads your content and builds a multi-day plan with daily sessions in under 60 seconds.</p>
+          <ul class="ft-list"><li>Detects the subject from your notes</li><li>Adjusts difficulty to your goal</li><li>Works for any subject</li></ul>
+        </div>
+      </div>
+      <div class="row" id="row1">
+        <div class="row-vis" aria-hidden="true">
+          <div class="pad-sheet">
               <div class="card-header"><span class="card-badge">Try again</span><h3>Cell cycle</h3></div>
               <div class="pad-body">
                 <p class="q-text sm">When does a cell copy its DNA?</p>
@@ -1254,7 +1175,16 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
                 <p class="pad-note">You missed this on Monday. It comes back in 3 days.</p>
               </div>
             </div>
-            <div class="pad-sheet">
+        </div>
+        <div class="row-text">
+          <h3>Spaced repetition <em>built right in</em></h3>
+          <p>Questions you get wrong come back automatically. The SM-2 algorithm works out exactly when each concept needs another look.</p>
+          <ul class="ft-list"><li>SM-2, the gold standard since 1987</li><li>200% better retention</li><li>Fully automatic</li></ul>
+        </div>
+      </div>
+      <div class="row" id="row2">
+        <div class="row-vis" aria-hidden="true">
+          <div class="pad-sheet">
               <div class="card-header"><span class="card-badge">Pre-test</span><h3>Day 4: hard mode</h3></div>
               <div class="pad-body">
                 <div class="diff-row"><span>Difficulty</span><span class="pips"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></div>
@@ -1262,7 +1192,16 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
                 <p class="pad-note">Day 1 asked for definitions. By day 4 it asks you to explain.</p>
               </div>
             </div>
-            <div class="pad-sheet">
+        </div>
+        <div class="row-text">
+          <h3>Difficulty ramps <em>as exams approach</em></h3>
+          <p>Easy recall on day one. Hard application by day four. The pre-test effect primes your brain before each session.</p>
+          <ul class="ft-list"><li>Pre-test effect warms up recall</li><li>Harder questions as the exam nears</li><li>Confidence tracked per question</li></ul>
+        </div>
+      </div>
+      <div class="row" id="row3">
+        <div class="row-vis" aria-hidden="true">
+          <div class="pad-sheet">
               <div class="card-header"><span class="card-badge">Teach it back</span><h3>Explain it in your own words</h3></div>
               <div class="pad-body">
                 <p class="q-text sm">How does DNA replication make sure the copy is accurate?</p>
@@ -1270,7 +1209,16 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
                 <div class="score-row"><span class="score-num">8<small>/10</small></span><span>Missed: the proofreading step</span></div>
               </div>
             </div>
-            <div class="pad-sheet dark">
+        </div>
+        <div class="row-text">
+          <h3>Feynman technique <em>graded by AI</em></h3>
+          <p>Explain a concept in plain language. StudyFlow's AI scores your answer and tells you exactly what you missed.</p>
+          <ul class="ft-list"><li>Write explanations in your own words</li><li>AI scores accuracy out of 10</li><li>Points to exactly what you missed</li></ul>
+        </div>
+      </div>
+      <div class="row" id="row4">
+        <div class="row-vis" aria-hidden="true">
+          <div class="pad-sheet dark">
               <div class="card-header vip"><span class="card-badge">VIP</span><h3>AI tutor</h3></div>
               <div class="pad-body chat">
                 <p class="ai">I saw meiosis II tripped you up. Want me to explain it a different way?</p>
@@ -1278,7 +1226,16 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
                 <p class="ai">In meiosis II the centromere splits, so the sister chromatids pull apart. It works a lot like mitosis…</p>
               </div>
             </div>
-            <div class="pad-sheet">
+        </div>
+        <div class="row-text">
+          <h3>An AI tutor that <em>knows your lesson</em></h3>
+          <p>Ask anything about today's content. The AI has read your notes, knows what you got wrong, and gives specific answers.</p>
+          <ul class="ft-list"><li>Reads your actual lesson notes</li><li>Knows your session accuracy</li><li>VIP only</li></ul>
+        </div>
+      </div>
+      <div class="row" id="row5">
+        <div class="row-vis" aria-hidden="true">
+          <div class="pad-sheet">
               <div class="card-header vip"><span class="card-badge">VIP</span><h3>Predicted score: 87%</h3></div>
               <div class="pad-body">
                 <div class="ins-top"><span class="stat-pill">12 sessions</span><span class="streak-pill" aria-label="9 day streak"><svg class="streak-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.4 2.6c.4 2.6 2 3.9 3.1 5.4a5.6 5.6 0 0 1 1.1 3.5 4.6 4.6 0 1 1-9.2 0c0-2 .9-3.3 2-4.5.2 1 .7 1.7 1.3 2.1.6-2.3 1-4.3 1.7-6.5Z"/></svg><span>9</span></span></div>
@@ -1288,17 +1245,17 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
                 <p class="pad-note">Meiosis is your weakest topic. Tomorrow starts there.</p>
               </div>
             </div>
-          </div>
         </div>
-        <div class="feat-text" id="feat-text">
-          <div class="ft swap" id="ft0"><p class="ft-tag">Plans</p><h3 class="ft-h">AI generates your <em>exact study plan</em></h3><p class="ft-p">Paste your notes and set your exam date. StudyFlow reads your content and builds a multi-day plan with daily sessions in under 60 seconds.</p><ul class="ft-list"><li>Detects the subject from your notes</li><li>Adjusts difficulty to your goal</li><li>Works for any subject</li></ul></div>
-          <div class="ft swap" id="ft1"><p class="ft-tag">Memory</p><h3 class="ft-h">Spaced repetition <em>built right in</em></h3><p class="ft-p">Questions you get wrong come back automatically. The SM-2 algorithm works out exactly when each concept needs another look.</p><ul class="ft-list"><li>SM-2, the gold standard since 1987</li><li>200% better retention</li><li>Fully automatic</li></ul></div>
-          <div class="ft swap" id="ft2"><p class="ft-tag">Difficulty</p><h3 class="ft-h">Difficulty ramps <em>as exams approach</em></h3><p class="ft-p">Easy recall on day one. Hard application by day four. The pre-test effect primes your brain before each session.</p><ul class="ft-list"><li>Pre-test effect warms up recall</li><li>Harder questions as the exam nears</li><li>Confidence tracked per question</li></ul></div>
-          <div class="ft swap" id="ft3"><p class="ft-tag">Explaining</p><h3 class="ft-h">Feynman technique <em>graded by AI</em></h3><p class="ft-p">Explain a concept in plain language. StudyFlow's AI scores your answer and tells you exactly what you missed.</p><ul class="ft-list"><li>Write explanations in your own words</li><li>AI scores accuracy out of 10</li><li>Points to exactly what you missed</li></ul></div>
-          <div class="ft swap" id="ft4"><p class="ft-tag">VIP tutor</p><h3 class="ft-h">An AI tutor that <em>knows your lesson</em></h3><p class="ft-p">Ask anything about today's content. The AI has read your notes, knows what you got wrong, and gives specific answers.</p><ul class="ft-list"><li>Reads your actual lesson notes</li><li>Knows your session accuracy</li><li>VIP only</li></ul></div>
-          <div class="ft swap" id="ft5"><p class="ft-tag">VIP insights</p><h3 class="ft-h">A personal <em>insights dashboard</em></h3><p class="ft-p">Topic accuracy, predicted exam score, weekly trends, and the concepts you keep missing, updated after every session.</p><ul class="ft-list"><li>Topic-by-topic accuracy</li><li>Predicted exam score</li><li>Weekly performance trends</li></ul></div>
-          <div class="ft ft-end swap" id="ft-end"><p class="ft-tag">All six</p><h3 class="ft-h">Start with <em>one plan.</em></h3><p class="ft-p">Your first one is free and takes about a minute to build. The tutor and the insights come with VIP.</p><span class="sw"><a href="login.html?mode=signup" class="btn btn-blue">Build my study plan →</a></span></div>
+        <div class="row-text">
+          <h3>A personal <em>insights dashboard</em></h3>
+          <p>Topic accuracy, predicted exam score, weekly trends, and the concepts you keep missing, updated after every session.</p>
+          <ul class="ft-list"><li>Topic-by-topic accuracy</li><li>Predicted exam score</li><li>Weekly performance trends</li></ul>
         </div>
+      </div>
+      <div class="rows-end" data-reveal="up">
+        <h3>Start with <em>one plan.</em></h3>
+        <p>Your first one is free and takes about a minute to build. The tutor and the insights come with VIP.</p>
+        <a href="login.html?mode=signup" class="btn btn-blue">Build my study plan &rarr;</a>
       </div>
     </div>
   </div>
@@ -2449,7 +2406,14 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
          Interleaved, each item's write made the next item's read recalculate
          layout from scratch: up to six forced layouts in one frame while a
          showcase and its neighbours were all on screen. */
-      if (dirty) for (i = 0; i < items.length; i++) { it = items[i]; if (it.active || it.always) it.target = it.measure(vh); }
+      if (dirty) for (i = 0; i < items.length; i++) {
+        it = items[i];
+        if (!(it.active || it.always)) continue;
+        it.target = it.measure(vh);
+        /* A scene first seen while the page is already part-way through it
+           (a reload, a link, a jump) must start there, not sweep in from 0. */
+        if (it.snap && !it.seen) { it.seen = true; it.shown = it.target; }
+      }
       for (i = 0; i < items.length; i++) {
         it = items[i];
         if (!it.active && !it.always) continue;
@@ -2496,245 +2460,108 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   Scrub.add({ el: fan, shown: .5, measure: function (vh) { var r = fan.getBoundingClientRect(); return clamp((vh - r.top) / (vh + r.height), 0, 1); },
     apply: function (v) { setVar(fan, '--p', v, '_p'); } });
 
-  /* ── Pinned showcases (redesigned Oct 2026; see the CSS block) ──
-     u runs 0..units through the pin; step i owns u in [i, i+1]. Detent easing:
-     each step holds still for most of its share and turns quickly around the
-     boundary, so a step is readable at rest. Features has FAN more units
-     after its last card, for the hand. */
-  function detent(u, n) { var e = 0; for (var b = 1; b < n; b++) e += smooth(u, b - .22, b + .22); return e; }
-  var mobileShow = window.matchMedia('(max-width: 860px)');
-  var FAN = 1.2;
-  var SHOWS = { wo: { units: 6, n: 6 }, fo: { units: 6 + FAN, n: 6 } };
-  function showcase(outerId, onApply) {
-    var outer = document.getElementById(outerId), units = SHOWS[outerId].units;
-    return Scrub.add({ el: outer, k: .12, measure: function (vh) {
-      var range = outer.offsetHeight - vh;
-      if (range <= 0) return 0;
-      return clamp(-outer.getBoundingClientRect().top / range, 0, 1) * units;
-    }, apply: onApply });
-  }
-  function yFor(outerId, u) {
-    var outer = document.getElementById(outerId), range = outer.offsetHeight - window.innerHeight;
-    return outer.getBoundingClientRect().top + window.pageYOffset + (u / SHOWS[outerId].units) * range;
-  }
-  function goTo(outerId, i) {
-    var y = yFor(outerId, i + .5);
-    if (window.SFSmooth) SFSmooth.scrollTo(y);
-    else window.scrollTo({ top: y, behavior: reduced ? 'auto' : 'smooth' });
-  }
-  window.whyGoTo = function (i) { goTo('wo', i); };
-  window.featGoTo = function (i) { goTo('fo', i); };
+  /* ── Why it works (a wall of findings), and the sheet of features that covers it ──
+     (Oct 2026; see the CSS block "WHY IT WORKS + FEATURES".) Three Scrub items:
+       wall     the pinned stage: three columns slide up at three speeds
+       curtain  the light sheet rising over the stage: its corners flatten, the
+                stage dims, and once it has docked it turns to see-through paper
+       rows     the feature row at the middle of the screen is full strength */
+  var mobileShow = window.matchMedia('(max-width: 1000px)');
+  function staticMode() { return mobileShow.matches || reduced; }
 
-  /* Split a face into words (.sw) and whole blocks (.sw-b: list rows, whose
-     bullet must travel with them), each told its place in the face (--r). */
-  function splitSwap(face) {
-    var units = [];
-    (function walk(node) {
-      [].slice.call(node.childNodes).forEach(function (ch) {
-        if (ch.nodeType === 3) {
-          if (!/\S/.test(ch.textContent)) return;
-          var frag = document.createDocumentFragment();
-          ch.textContent.split(/(\s+)/).forEach(function (part) {
-            if (!part) return;
-            if (/^\s+$/.test(part)) { frag.appendChild(document.createTextNode(part)); return; }
-            var w = document.createElement('span'); w.className = 'sw'; w.textContent = part; frag.appendChild(w); units.push(w);
-          });
-          node.replaceChild(frag, ch);
-        } else if (ch.nodeType === 1) {
-          if (ch.classList.contains('sw')) units.push(ch);
-          else if (ch.tagName === 'LI') { ch.classList.add('sw-b'); units.push(ch); }
-          else if (!ch.classList.contains('face-stat')) walk(ch);
-        }
-      });
-    })(face);
-    var n = Math.max(1, units.length - 1);
-    units.forEach(function (w, i) { w.style.setProperty('--r', (i / n).toFixed(3)); });
-  }
-  /* d = where each face stands: -1 to come, 0 here, 1 gone. Off-screen faces
-     are hidden outright, so a screen reader and the Tab key see one. */
-  function placeFaces(faces, e) {
-    for (var i = 0; i < faces.length; i++) {
-      var f = faces[i], d = clamp(e - i, -1, 1);
-      setVar(f, '--d', d, '_d', .002);
-      var vis = Math.abs(e - i) < .995 ? 'visible' : 'hidden';
-      if (f._vis !== vis) { f._vis = vis; f.style.visibility = vis; }
-    }
-  }
-  /* The rail: each bar fills with its own share of the scroll; the step
-     being read is lit, and is the one the buttons say is current. */
-  function rail(id, outerId) {
-    var btns = [].slice.call(document.querySelectorAll('#' + id + ' button')), cur = 0;
-    btns.forEach(function (b, i) { b.addEventListener('click', function () { goTo(outerId, i); }); });
-    return function (u, e, all) {
-      for (var i = 0; i < btns.length; i++) {
-        setVar(btns[i], '--f', clamp(u - i, 0, 1), '_f', .003);
-        setVar(btns[i], '--a', Math.max(clamp(1 - Math.abs(e - i), 0, 1), all || 0), '_a', .005);
-      }
-      var c = clamp(Math.round(e), 0, btns.length - 1);
-      if (c !== cur) { btns[cur].removeAttribute('aria-current'); btns[c].setAttribute('aria-current', 'step'); cur = c; }
-    };
-  }
+  var cwOuter = document.getElementById('wo'), cwStage = document.getElementById('cw-stage'), cwHead = document.getElementById('cw-head');
+  var cwWall = document.getElementById('cw-wall'), rowsSheet = document.getElementById('rows-sheet');
+  var cwCols = [].slice.call(cwWall.querySelectorAll('.cw-col'));
+  var rowEls = [].slice.call(rowsSheet.querySelectorAll('.row'));
 
-  /* ── Why it works ── */
-  var whySheet = document.getElementById('why-sheet'), whyStage = document.getElementById('ws');
-  var whyCards = [].slice.call(document.querySelectorAll('#why-cards .why-card'));
-  var whyCaps = [].slice.call(document.querySelectorAll('#why-cap .odo-face'));
-  whyCards.concat(whyCaps).forEach(splitSwap);
-  var whyRail = rail('why-rail', 'wo');
-
-  /* The counter. Each stat is read off its own card ("200%"), so the words
-     and the number cannot disagree; numbers are right-aligned in 3 columns. */
-  var odoEl = document.getElementById('why-odo');
-  var stats = whyCards.map(function (c) {
-    var m = /^(\d{1,3})(\D*)$/.exec((c.querySelector('.face-stat .big') || {}).textContent.replace(/\s/g, '') || '');
-    var ds = m ? m[1].split('').map(Number) : [0];
-    while (ds.length < 3) ds.unshift(null);
-    return { d: ds, s: m ? m[2] : '' };
-  });
-  var sufs = [];
-  stats.forEach(function (st) { if (sufs.indexOf(st.s) < 0) sufs.push(st.s); });
-  var odoStrips = [], odoSufs = [];
-  (function () {
-    var html = '';
-    for (var c = 0; c < 3; c++) html += '<span class="odo-col"><span class="odo-strip"><i>0</i><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i><i>6</i><i>7</i><i>8</i><i>9</i></span></span>';
-    html += '<span class="odo-suf">' + sufs.map(function (s) { return '<i>' + escHtml(s) + '</i>'; }).join('') + '</span>';
-    odoEl.innerHTML = html;
-    odoStrips = [].slice.call(odoEl.querySelectorAll('.odo-strip'));
-    odoSufs = [].slice.call(odoEl.querySelectorAll('.odo-suf i'));
-  })();
-  function escHtml(t) { return String(t).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); }
-  var COL_EM = .52;
-  function odo(e) {
-    var n = stats.length, i0 = Math.floor(e), f = e - i0;
-    if (i0 >= n - 1) { i0 = n - 1; f = 0; }
-    var A = stats[i0], B = stats[Math.min(i0 + 1, n - 1)];
-    var tRight = 0;
-    for (var c = 0; c < 3; c++) {
-      /* The right-hand digit leads, like the carry on a real counter. */
-      var lead = (2 - c) * .1, t = smooth(f, lead, lead + .8);
-      if (c === 2) tRight = t;
-      var a = A.d[c], b = B.d[c], pos = 0, o = 0, dy = 0;
-      if (a !== null && b !== null) { pos = a + (b - a) * t; o = 1; }
-      else if (a === null && b !== null) { pos = b; o = t; dy = (1 - t) * .4; }
-      else if (a !== null && b === null) { pos = a; o = 1 - t; dy = -t * .4; }
-      var s = odoStrips[c];
-      setVar(s, '--pos', pos, '_pos', .002);
-      setVar(s, '--o', o, '_o', .005);
-      setVar(s, '--dy', dy, '_dy', .002);
-    }
-    /* Keep the number centred as leading digits come and go. */
-    var vis = function (st) { return st.d.filter(function (x) { return x !== null; }).length; };
-    var v = vis(A) + (vis(B) - vis(A)) * smooth(f, .1, .9);
-    setVar(odoEl, '--ox', -(3 - v) * COL_EM / 2, '_ox', .001);
-    for (var k = 0; k < sufs.length; k++) {
-      var so = 0, sdy = 0;
-      if (A.s === B.s) so = sufs[k] === A.s ? 1 : 0;
-      else if (sufs[k] === A.s) { so = 1 - tRight; sdy = -tRight * .4; }
-      else if (sufs[k] === B.s) { so = tRight; sdy = (1 - tRight) * .4; }
-      setVar(odoSufs[k], '--o', so, '_o', .005);
-      setVar(odoSufs[k], '--dy', sdy, '_dy', .002);
-    }
-  }
-  showcase('wo', function (u) {
-    if (mobileShow.matches) return;
-    var e = detent(u, 6);
-    if (reduced) e = Math.round(e);
-    whyRail(u, e);
-    odo(e);
-    placeFaces(whyCards, e);
-    placeFaces(whyCaps, e);
-  });
-
-  /* The sheet docks: rising, it is an inset card with round corners; as its
-     top reaches the top of the screen its sides reach the edges and the top
-     corners square off. Leaving, the bottom corners round again. Wispr's
-     corners, measured from the distance to the screen edge. */
-  var SHEET_R = 44, sheetM = 24;
-  function sizeSheet() { sheetM = Math.max(14, Math.min(48, window.innerWidth * .032)); }
-  Scrub.add({ el: document.getElementById('wo'), k: .2, shown: 1, measure: function (vh) {
-    var r = whyStage.getBoundingClientRect();
-    if (r.top > 0) return clamp(r.top / (vh * .55), 0, 1);
-    if (r.bottom < vh) return -clamp((vh - r.bottom) / (vh * .55), 0, 1);
-    return 0;
-  }, apply: function (s) {
-    if (mobileShow.matches) return;
-    var a = Math.abs(s), rad = SHEET_R * Math.min(1, a * 3);
-    setVar(whySheet, '--m', sheetM * a, '_m', .05);
-    setVar(whySheet, '--rt', s > 0 ? rad : 0, '_rt', .05);
-    setVar(whySheet, '--rb', s < 0 ? rad : 0, '_rb', .05);
-  } });
-
-  /* ── Features ── */
-  var fts = [0, 1, 2, 3, 4, 5].map(function (i) { return document.getElementById('ft' + i); }).concat(document.getElementById('ft-end'));
-  fts.forEach(splitSwap);
-  var sheets = [].slice.call(document.querySelectorAll('#feat-pad .pad-sheet'));
-  var featRail = rail('feat-rail', 'fo');
-  var enterY = 500, cardH = 330, fanK = 1, padWrap = document.querySelector('#fs .pad-wrap');
-  /* The hand is sized to its column, so on a narrow laptop it opens less
-     instead of reaching over the rail or the closing words. */
-  function sizeStack() {
-    enterY = window.innerHeight * .62;
-    cardH = sheets[0] ? sheets[0].offsetHeight || 330 : 330;
-    fanK = clamp(((padWrap && padWrap.clientWidth) || 430) - 240, 0, 190) / 190;
-    fanK = Math.max(.5, fanK);
-  }
-  showcase('fo', function (u) {
-    if (mobileShow.matches) return;
-    var e = detent(Math.min(u, 6), 6);
-    var fan = smooth(u, 6.02, 6.9);          /* the hand opens */
-    var fanT = smooth(u, 6, 6.6);            /* the closing words arrive a little first */
-    if (reduced) { e = Math.round(e); fan = Math.round(fan); fanT = fan; }
-    featRail(Math.min(u, 6), e + fanT, fanT);
-    placeFaces(fts, e + fanT);
-    for (var i = 0; i < 6; i++) {
-      var s = sheets[i], d = e - i, x = 0, y, rx = 0, rz = 0, sc = 1, sh = 0, op = 1;
-      if (d < 0) {
-        /* Still to come: dealt up from below the screen, tipped back, and
-           laid flat as it lands on the stack. */
-        var p = clamp(1 + d, 0, 1);
-        y = (1 - p) * enterY; rx = (1 - p) * 18; op = p > 0 ? 1 : 0;
-      } else {
-        /* Played: settles back and down, a little darker per card on top. */
-        var k = Math.min(d, 3);
-        sc = 1 - k * .055; y = -k * 16 - (1 - sc) * cardH; sh = k * .16;
-        op = d > 3 ? clamp(4 - d, 0, 1) : 1;
-      }
-      /* The hand: every card at once, fanned from a point below the stack. */
-      var fi = smooth(fan, i * .05, .72 + i * .05);
-      if (fi > 0) {
-        var c = i - 2.5;
-        x = lerp(x, c * 30 * fanK, fi); y = lerp(y, c * c * 4.5 * fanK - 24, fi); rz = lerp(rz, c * 5 * fanK, fi);
-        sc = lerp(sc, .7 - (1 - fanK) * .12, fi); rx = lerp(rx, 0, fi); sh = lerp(sh, 0, fi); op = lerp(op, 1, fi);
-      }
-      var tf = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0) rotateX(' + rx.toFixed(2) + 'deg) rotateZ(' + rz.toFixed(2) + 'deg) scale(' + sc.toFixed(4) + ')';
-      if (s._tf !== tf) { s._tf = tf; s.style.transform = tf; }
-      op = Math.round(op * 100) / 100;
-      if (s._op !== op) { s._op = op; s.style.opacity = op; }
-      setVar(s, '--shade', sh, '_sh', .01);
-    }
-  });
-
-  function sizeShows() { if (!mobileShow.matches) { sizeSheet(); sizeStack(); } }
-
-  /* Snap: a wheel scroll that comes to rest in the middle of a turn is
-     finished by a short glide to the nearer step, so the page never rests
-     on two half-slides. Only after the wheel (the engine knows), never
-     against a finger or the keyboard. */
-  if (window.SFSmooth) SFSmooth.onSettle(function () {
-    if (reduced || mobileShow.matches) return;
+  /* A column that starts lower has further to go in the same scroll, so it
+     travels faster: that difference is the parallax. */
+  var COL_START = [1.04, 1.30, 1.12];     /* in screen heights below the top */
+  var wallGeom = [], rowGeom = [];
+  function measureWall() {
+    if (staticMode()) return;
     var vh = window.innerHeight;
-    Object.keys(SHOWS).forEach(function (id) {
-      var outer = document.getElementById(id), r = outer.getBoundingClientRect(), range = outer.offsetHeight - vh;
-      if (range <= 0 || r.top > 0 || r.bottom < vh) return;
-      var u = (-r.top / range) * SHOWS[id].units;
-      for (var b = 1; b < SHOWS[id].n; b++) {
-        if (Math.abs(u - b) < .22) {
-          SFSmooth.glideTo(yFor(id, smooth(u, b - .22, b + .22) >= .5 ? b + .24 : b - .24));
-          return;
-        }
-      }
+    wallGeom = cwCols.map(function (col, ci) {
+      var cards = [].slice.call(col.querySelectorAll('.cw-card')).map(function (el, k) {
+        return { el: el, top: el.offsetTop, h: el.offsetHeight, dir: (ci + k) % 2 ? 1 : -1, tf: '' };
+      });
+      var h = col.offsetHeight;
+      return { el: col, start: vh * COL_START[ci], end: -h - 24, cards: cards, tf: '' };
     });
-  });
+  }
+  function measureRows() {
+    if (staticMode()) return;
+    var st = rowsSheet.getBoundingClientRect().top;
+    rowGeom = rowEls.map(function (r) { var b = r.getBoundingClientRect(); return { el: r, c: b.top - st + b.height / 2 }; });
+  }
+  function applyWall(p) {
+    if (staticMode()) return;
+    if (!wallGeom.length) measureWall();
+    var vh = window.innerHeight, half = vh * .5;
+    for (var i = 0; i < wallGeom.length; i++) {
+      var g = wallGeom[i], y = lerp(g.start, g.end, p);
+      var tf = 'translate3d(0,' + y.toFixed(1) + 'px,0)';
+      if (g.tf !== tf) { g.tf = tf; g.el.style.transform = tf; }
+      /* A card straightens and fills as it crosses the middle of the screen,
+         and leans a little the other way as it leaves (it arrives, it is read,
+         it goes), so no card ever sits still and flat for long. */
+      for (var k = 0; k < g.cards.length; k++) {
+        var c = g.cards[k], d = clamp((y + c.top + c.h * .5 - half) / half, -1.3, 1.3);
+        var ct = 'rotate(' + (c.dir * d * 2.4).toFixed(2) + 'deg) scale(' + (1 - Math.min(1, Math.abs(d)) * .05).toFixed(4) + ')';
+        if (c.tf !== ct) { c.tf = ct; c.el.style.transform = ct; }
+      }
+    }
+    /* The headline is the first thing on the stage and the first to give way. */
+    var ho = 1 - smooth(p, .03, .2);
+    var hv = ho.toFixed(3), ht = 'translate3d(0,' + (-50 - p * 8).toFixed(2) + '%,0)';
+    if (cwHead._o !== hv) { cwHead._o = hv; cwHead.style.opacity = hv; }
+    if (cwHead._t !== ht) { cwHead._t = ht; cwHead.style.transform = ht; }
+  }
+  var SHEET_R = 72;
+  function applyCurtain(t) {
+    if (staticMode()) return;
+    /* t: 1 while the sheet is still below the screen, 0 once its top is at the top. */
+    setVar(rowsSheet, '--rt', SHEET_R * smooth(t, 0, .85), '_rt', .05);
+    setVar(cwStage, '--cv', 1 - t, '_cv', .004);
+    var docked = t <= .004;
+    if (docked !== rowsSheet.classList.contains('is-docked')) { rowsSheet.classList.toggle('is-docked', docked); cwStage.classList.toggle('is-covered', docked); }
+  }
+  function applyRows(top) {
+    if (staticMode()) return;
+    if (!rowGeom.length) measureRows();
+    var half = window.innerHeight * .5;
+    for (var i = 0; i < rowGeom.length; i++) {
+      var g = rowGeom[i], d = (top + g.c - half) / half;
+      /* Full strength within a fifth of a screen of the middle, gone by 0.8. */
+      var a = clamp(1 - (Math.abs(d) - .2) / .6, 0, 1); a = a * a * (3 - 2 * a);
+      setVar(g.el, '--a', a, '_a', .01);
+      setVar(g.el, '--dy', clamp(d, -1, 1), '_dy', .01);
+    }
+  }
+  Scrub.add({ el: cwOuter, k: .14, snap: true, measure: function (vh) {
+    var range = cwOuter.offsetHeight - vh;
+    return range <= 0 ? 0 : clamp(-cwOuter.getBoundingClientRect().top / range, 0, 1);
+  }, apply: applyWall });
+  Scrub.add({ el: rowsSheet, k: .2, snap: true, measure: function (vh) { return clamp(rowsSheet.getBoundingClientRect().top / vh, 0, 1); }, apply: applyCurtain });
+  Scrub.add({ el: rowsSheet, k: .16, snap: true, measure: function () { return rowsSheet.getBoundingClientRect().top; }, apply: applyRows });
+
+  /* Going between the stacked layout and the pinned one (a resize, rotating a
+     phone, reduced motion switched on or off): every inline value the scroll
+     wrote is removed, and the next frame writes them again if they are wanted. */
+  function resetShows() {
+    wallGeom = []; rowGeom = [];
+    cwCols.forEach(function (c) { c.style.transform = ''; });
+    [].slice.call(cwWall.querySelectorAll('.cw-card')).forEach(function (c) { c.style.transform = ''; });
+    cwHead.style.opacity = ''; cwHead.style.transform = ''; cwHead._o = cwHead._t = undefined;
+    rowEls.forEach(function (r) { r.style.removeProperty('--a'); r.style.removeProperty('--dy'); r._a = r._dy = undefined; });
+    rowsSheet.style.removeProperty('--rt'); rowsSheet._rt = undefined;
+    cwStage.style.removeProperty('--cv'); cwStage._cv = undefined;
+    rowsSheet.classList.remove('is-docked'); cwStage.classList.remove('is-covered');
+  }
+  function remeasureShows() { if (staticMode()) return; wallGeom = []; rowGeom = []; measureWall(); measureRows(); }
+  var showsTimer = null;
+  window.addEventListener('resize', function () { clearTimeout(showsTimer); showsTimer = setTimeout(function () { remeasureShows(); Scrub.kick(); }, 120); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { remeasureShows(); Scrub.kick(); });
 
   /* ════════════════════════════════════════
      THE ONE INTERACTIVE MOMENT: hold to build the plan.
@@ -2882,8 +2709,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     }
     wrapText(el);
   });
-  var tcards = [].slice.call(document.querySelectorAll('#tgrid .tcard'));
-  tcards.forEach(function (c, i) { c.style.setProperty('--rd', (i * .12) + 's'); });
   var pcards = [].slice.call(document.querySelectorAll('#pgrid .pcard'));
   pcards.forEach(function (c, i) { c.style.setProperty('--rd', ([.1, 0, .1][i]) + 's'); });
 
@@ -2891,7 +2716,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     el.classList.add('in');
     if (el.getAttribute('data-reveal') === 'words') setTimeout(function () { el.classList.add('done'); }, 1600);
   }
-  var toReveal = [].slice.call(document.querySelectorAll('[data-reveal], [data-reveal-step]')).concat(tcards, pcards);
+  var toReveal = [].slice.call(document.querySelectorAll('[data-reveal], [data-reveal-step]')).concat(pcards);
   if ('IntersectionObserver' in window && !reduced) {
     var rio = new IntersectionObserver(function (es) {
       es.forEach(function (e) { if (e.isIntersecting) { revealIn(e.target); rio.unobserve(e.target); } });
@@ -2899,7 +2724,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     toReveal.forEach(function (el) { rio.observe(el); });
   } else toReveal.forEach(revealIn);
   /* The grids reveal as groups, so one observer on the grid lets them in. */
-  ['tgrid', 'pgrid'].forEach(function (id) {
+  ['pgrid'].forEach(function (id) {
     var g = document.getElementById(id);
     if (!('IntersectionObserver' in window) || reduced) return;
     var gio = new IntersectionObserver(function (es) {
@@ -2991,11 +2816,12 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
      background decides the first (is-day flips at day > .5, the same moment
      the picture behind the bar has turned light). A class toggle with a CSS
      transition, set when the answer changes, so scrolling pays nothing. */
-  var navEl = document.querySelector('nav.site-nav'), heroEl = document.getElementById('hero'), woEl = document.getElementById('wo');
+  var navEl = document.querySelector('nav.site-nav'), heroEl = document.getElementById('hero'), woEl = document.getElementById('wo'), sheetEl = document.getElementById('rows-sheet');
   function navTone() {
-    if (!navEl || !heroEl || !woEl) return;
-    var h = heroEl.getBoundingClientRect().bottom, w = woEl.getBoundingClientRect();
-    var dark = (h > 72 && !(Hero && Hero.day() > .5 && !reduced)) || (w.top < 52 && w.bottom > 52);
+    if (!navEl || !heroEl || !woEl || !sheetEl) return;
+    var h = heroEl.getBoundingClientRect().bottom, w = woEl.getBoundingClientRect(), sh = sheetEl.getBoundingClientRect().top;
+    /* Dark over the hero, and over the findings stage until the sheet reaches the bar. */
+    var dark = (h > 72 && !(Hero && Hero.day() > .5 && !reduced)) || (w.top < 52 && w.bottom > 52 && sh > 52);
     if (dark !== navEl.classList.contains('on-dark')) navEl.classList.toggle('on-dark', dark);
   }
   window.addEventListener('scroll', navTone, { passive: true });
@@ -3036,21 +2862,21 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   /* Reduced motion, honoured live in both directions. */
   function onRM() {
     reduced = RM.matches;
+    resetShows(); remeasureShows();
     Hero.applyMode();
     if (reduced) {
       toReveal.forEach(revealIn);
-      tcards.concat(pcards).forEach(revealIn);
+      pcards.forEach(revealIn);
     }
     Scrub.kick();
   }
   if (RM.addEventListener) RM.addEventListener('change', onRM); else if (RM.addListener) RM.addListener(onRM);
-  mobileShow.addEventListener && mobileShow.addEventListener('change', function () { sizeShows(); Scrub.kick(); });
-  window.addEventListener('resize', sizeShows);
+  mobileShow.addEventListener && mobileShow.addEventListener('change', function () { resetShows(); remeasureShows(); Scrub.kick(); });
 
 
   function boot() {
     Hero.init();
-    sizeShows();
+    remeasureShows();
     Scrub.watch();
     Scrub.kick();
     navTone();
