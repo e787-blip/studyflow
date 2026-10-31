@@ -578,9 +578,9 @@ nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .1
 
 /* ══════════════════════════════════════════
    WHY IT WORKS + FEATURES (Oct 2026, copied from Wispr Flow's scroll):
-   1. A pinned stage of findings. Three columns of cards slide up past a
-      headline at three different speeds, so the wall keeps re-composing
-      (parallax); each card straightens and fills as it crosses the middle.
+   1. A pinned stage of findings, one card at a time: each card slides in from
+      the bottom-left along a diagonal, settles at the middle of the screen
+      while it is read, and leaves toward the top-right as the next one arrives.
    2. The wall is then COVERED: a light sheet rises over the dark stage like a
       curtain (its top corners flatten as it arrives), and the stage dims and
       sinks back under it.
@@ -591,7 +591,7 @@ nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .1
    reduced motion, is plain stacked cards.
 ══════════════════════════════════════════ */
 .why { position: relative; }
-.cw-outer { position: relative; height: 380vh; }
+.cw-outer { position: relative; height: 660vh; }
 .cw-stage {
   position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; isolation: isolate;
   background: var(--night); color: #e6ecff; --cv: 0;
@@ -607,17 +607,13 @@ nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .1
 .cw-head .h2 { color: #fff; font-size: clamp(2.8rem, 6.4vw, 5.6rem); line-height: 1.02; }
 .cw-head .h2 em { color: #9db8ff; }
 .cw-wall { position: absolute; inset: 0; z-index: 2; transform: scale(calc(1 - var(--cv) * .05)); transform-origin: 50% 40%; }
-.cw-col { position: absolute; top: 0; display: flex; flex-direction: column; gap: 20px; will-change: transform; }
-.cw-col:nth-child(1) { left: -2vw; width: 26vw; }
-.cw-col:nth-child(2) { left: 27.5vw; width: 26vw; }
-.cw-col:nth-child(3) { left: 56vw; width: 46vw; }
-
-/* Cards: one radius (32) for every card, 8 for the chips on them. */
-.cw-card { position: relative; border-radius: 32px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; gap: 1.6rem; padding: clamp(1.3rem, 2.2vw, 2.1rem); min-height: clamp(280px, 42vh, 400px); will-change: transform; }
+/* Cards: one radius (32) for every card, 8 for the chips on them. They all sit
+   at the middle of the stage; the script moves each along the diagonal. */
+.cw-card { position: absolute; left: 50%; top: 50%; translate: -50% -50%; width: min(32vw, 500px); border-radius: 32px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; gap: 1.8rem; padding: clamp(1.4rem, 2.4vw, 2.4rem); min-height: clamp(300px, 46vh, 430px); will-change: transform, opacity; }
 .cw-paper { background: #fdfdff; color: var(--ink); }
 .cw-soft { background: #dfe8ff; color: var(--ink); }
 .cw-night { background: #172046; color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
-.cw-quote { font-family: var(--serif); font-weight: 400; font-size: clamp(1.7rem, 2.7vw, 2.8rem); line-height: 1.14; letter-spacing: -.012em; text-wrap: balance; }
+.cw-quote { font-family: var(--serif); font-weight: 400; font-size: clamp(1.9rem, 3.1vw, 3.3rem); line-height: 1.14; letter-spacing: -.012em; text-wrap: balance; }
 .cw-quote em { font-style: italic; color: var(--blue-deep); padding-right: .04em; }
 .cw-night .cw-quote em, .cw-lead .cw-quote em { color: #b9ccff; }
 .cw-src { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem .7rem; font-size: .84rem; line-height: 1.3; color: var(--muted); }
@@ -627,17 +623,17 @@ nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .1
 .cw-night .cw-chip, .cw-lead .cw-chip { background: rgba(255, 255, 255, .14); color: #fff; }
 /* The big cards: words on the left, one huge figure on the right, set on a
    panel whose left edge is cut on a slant (Wispr's photo cards, minus the photo). */
-.cw-lead { flex-direction: row; gap: 0; padding: 0; min-height: clamp(230px, 36vh, 330px); background: linear-gradient(135deg, #4a7cf6, #2851c8); color: #fff; }
+.cw-lead { flex-direction: row; gap: 0; padding: 0; width: min(54vw, 860px); min-height: clamp(280px, 44vh, 400px); background: linear-gradient(135deg, #4a7cf6, #2851c8); color: #fff; }
 .cw-lead.cw-night { background: #172046; }
 .cw-lead-copy { flex: 1.15 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 1.2rem; padding: clamp(1.3rem, 2.2vw, 2.1rem); }
-.cw-lead .cw-quote { font-size: clamp(1.4rem, 2.05vw, 2.1rem); }
+.cw-lead .cw-quote { font-size: clamp(1.6rem, 2.5vw, 2.7rem); }
 .cw-stat {
   flex: .85 1 0; min-width: 0; position: relative; display: flex; flex-direction: column; justify-content: flex-end; gap: .2rem;
   padding: clamp(1.3rem, 2.2vw, 2.1rem) clamp(1.1rem, 1.8vw, 1.8rem) clamp(1.3rem, 2.2vw, 2.1rem) clamp(2.2rem, 3.6vw, 3.4rem);
   background: radial-gradient(90% 80% at 100% 0%, rgba(74, 124, 246, .55), transparent 70%), #0e142a;
   clip-path: polygon(18% 0, 100% 0, 100% 100%, 0 100%);
 }
-.cw-num { font-family: var(--serif); font-size: clamp(4.2rem, 7.6vw, 7.4rem); line-height: .9; letter-spacing: -.03em; color: #fff; }
+.cw-num { font-family: var(--serif); font-size: clamp(4.6rem, 8.4vw, 8.4rem); line-height: .9; letter-spacing: -.03em; color: #fff; }
 .cw-num small { font-size: .48em; letter-spacing: 0; }
 .cw-stat-l { font-size: .92rem; font-weight: 600; color: #fff; }
 
@@ -715,8 +711,7 @@ nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .1
   .cw-stage::after { display: none; }
   .cw-head { position: static; transform: none !important; opacity: 1 !important; padding: 0; margin-bottom: 2rem; }
   .cw-wall { position: static; transform: none; display: flex; flex-direction: column; gap: 14px; }
-  .cw-col { position: static; width: auto !important; display: contents; transform: none !important; }
-  .cw-card { transform: none !important; min-height: 0; border-radius: 24px; order: var(--o, 5); }
+  .cw-card { position: relative; left: auto; top: auto; translate: none; width: auto !important; transform: none !important; opacity: 1 !important; min-height: 0; border-radius: 24px; order: var(--o, 5); }
   .cw-lead { flex-direction: column; }
   .cw-stat { clip-path: none; padding: 1.2rem 1.4rem; flex-direction: row; align-items: baseline; justify-content: flex-start; gap: .8rem; }
   .cw-num { font-size: 3.4rem; }
@@ -1099,44 +1094,38 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
         <h2 class="h2" id="why-h">Stop cramming. <em>Start retaining.</em></h2>
       </div>
       <div id="cw-wall" class="cw-wall">
-        <div class="cw-col">
-          <article class="cw-card cw-paper" style="--o:3">
-            <p class="cw-quote">Being tested before you fully know something primes your brain to absorb <em>50% more.</em></p>
-            <p class="cw-src"><span class="cw-chip">Pre-test effect</span><span>Kornell et al., 2009</span></p>
-          </article>
-          <article class="cw-card cw-night" style="--o:6">
-            <p class="cw-quote">Your brain locks in memories while you sleep: <em>30% better</em> overnight.</p>
-            <p class="cw-src"><span class="cw-chip">Sleep consolidation</span><span>Walker, 2017</span></p>
-          </article>
-        </div>
-        <div class="cw-col">
-          <article class="cw-card cw-paper" style="--o:5">
-            <p class="cw-quote">Explain it simply. If you can&rsquo;t, you don&rsquo;t know it yet. It finds <em>85% of the gaps.</em></p>
-            <p class="cw-src"><span class="cw-chip">Feynman technique</span><span>Richard Feynman&rsquo;s own method</span></p>
-          </article>
-          <article class="cw-card cw-soft" style="--o:4">
-            <p class="cw-quote">Questions that feel slightly too hard build a <em>40% stronger</em> memory.</p>
-            <p class="cw-src"><span class="cw-chip">Desirable difficulty</span><span>Taylor and Rohrer, 2010</span></p>
-          </article>
-        </div>
-        <div class="cw-col">
-          <article class="cw-card cw-lead " style="--o:1">
-            <div class="cw-lead-copy">
-              <p class="cw-src"><span class="cw-chip">Active recall</span></p>
-              <p class="cw-quote">Pulling information out of memory is <em>4x more effective</em> than rereading it.</p>
-              <p class="cw-src"><span>Roediger and Karpicke</span></p>
-            </div>
-            <div class="cw-stat" aria-hidden="true"><span class="cw-num">4<small>x</small></span><span class="cw-stat-l">better recall</span></div>
-          </article>
-          <article class="cw-card cw-lead cw-night" style="--o:2">
-            <div class="cw-lead-copy">
-              <p class="cw-src"><span class="cw-chip">Spaced repetition</span></p>
-              <p class="cw-quote">Review things right when you are about to forget them and you get <em>200% better</em> retention.</p>
-              <p class="cw-src"><span>Cepeda et al., 2006</span></p>
-            </div>
-            <div class="cw-stat" aria-hidden="true"><span class="cw-num">200<small>%</small></span><span class="cw-stat-l">better retention</span></div>
-          </article>
-        </div>
+        <article class="cw-card cw-lead " style="--o:1">
+          <div class="cw-lead-copy">
+            <p class="cw-src"><span class="cw-chip">Active recall</span></p>
+            <p class="cw-quote">Pulling information out of memory is <em>4x more effective</em> than rereading it.</p>
+            <p class="cw-src"><span>Roediger and Karpicke</span></p>
+          </div>
+          <div class="cw-stat" aria-hidden="true"><span class="cw-num">4<small>x</small></span><span class="cw-stat-l">better recall</span></div>
+        </article>
+        <article class="cw-card cw-paper" style="--o:2">
+          <p class="cw-quote">Being tested before you fully know something primes your brain to absorb <em>50% more.</em></p>
+          <p class="cw-src"><span class="cw-chip">Pre-test effect</span><span>Kornell et al., 2009</span></p>
+        </article>
+        <article class="cw-card cw-lead cw-night" style="--o:3">
+          <div class="cw-lead-copy">
+            <p class="cw-src"><span class="cw-chip">Spaced repetition</span></p>
+            <p class="cw-quote">Review things right when you are about to forget them and you get <em>200% better</em> retention.</p>
+            <p class="cw-src"><span>Cepeda et al., 2006</span></p>
+          </div>
+          <div class="cw-stat" aria-hidden="true"><span class="cw-num">200<small>%</small></span><span class="cw-stat-l">better retention</span></div>
+        </article>
+        <article class="cw-card cw-paper" style="--o:4">
+          <p class="cw-quote">Explain it simply. If you can&rsquo;t, you don&rsquo;t know it yet. It finds <em>85% of the gaps.</em></p>
+          <p class="cw-src"><span class="cw-chip">Feynman technique</span><span>Richard Feynman&rsquo;s own method</span></p>
+        </article>
+        <article class="cw-card cw-soft" style="--o:5">
+          <p class="cw-quote">Questions that feel slightly too hard build a <em>40% stronger</em> memory.</p>
+          <p class="cw-src"><span class="cw-chip">Desirable difficulty</span><span>Taylor and Rohrer, 2010</span></p>
+        </article>
+        <article class="cw-card cw-night" style="--o:6">
+          <p class="cw-quote">Your brain locks in memories while you sleep: <em>30% better</em> overnight.</p>
+          <p class="cw-src"><span class="cw-chip">Sleep consolidation</span><span>Walker, 2017</span></p>
+        </article>
       </div>
     </div>
   </div>
@@ -2471,24 +2460,21 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 
   var cwOuter = document.getElementById('wo'), cwStage = document.getElementById('cw-stage'), cwHead = document.getElementById('cw-head');
   var cwWall = document.getElementById('cw-wall'), rowsSheet = document.getElementById('rows-sheet');
-  var cwCols = [].slice.call(cwWall.querySelectorAll('.cw-col'));
+  var cwCards = [].slice.call(cwWall.querySelectorAll('.cw-card'));
   var rowEls = [].slice.call(rowsSheet.querySelectorAll('.row'));
 
-  /* A column that starts lower has further to go in the same scroll, so it
-     travels faster: that difference is the parallax. */
-  var COL_START = [1.04, 1.30, 1.12];     /* in screen heights below the top */
-  var wallGeom = [], rowGeom = [];
-  function measureWall() {
-    if (staticMode()) return;
-    var vh = window.innerHeight;
-    wallGeom = cwCols.map(function (col, ci) {
-      var cards = [].slice.call(col.querySelectorAll('.cw-card')).map(function (el, k) {
-        return { el: el, top: el.offsetTop, h: el.offsetHeight, dir: (ci + k) % 2 ? 1 : -1, tf: '' };
-      });
-      var h = col.offsetHeight;
-      return { el: col, start: vh * COL_START[ci], end: -h - 24, cards: cards, tf: '' };
-    });
-  }
+  /* One card at a time. Each card travels a diagonal from the bottom-left to
+     the top-right of the stage. Its position along it is `g`, which is
+     eased so the card hangs about the middle (where it is read) and rushes
+     through the ends, so the next card is already coming in at a corner
+     while this one is still being read, and the last one is leaving at the
+     opposite corner. CARD_GAP is how far apart (in position along the path)
+     neighbouring cards sit. */
+  var CARD_GAP = .8, HANG = 1.7;
+  var rowGeom = [];
+  var SIDE = [0, 1, 0, 1, 0, 1];             /* which way a card leans */
+  var DRIFT = [0, -5, 4, -4, 5, -3];         /* a little drift off the diagonal, in vh */
+  function measureWall() {}
   function measureRows() {
     if (staticMode()) return;
     var st = rowsSheet.getBoundingClientRect().top;
@@ -2496,24 +2482,26 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   }
   function applyWall(p) {
     if (staticMode()) return;
-    if (!wallGeom.length) measureWall();
-    var vh = window.innerHeight, half = vh * .5;
-    for (var i = 0; i < wallGeom.length; i++) {
-      var g = wallGeom[i], y = lerp(g.start, g.end, p);
-      var tf = 'translate3d(0,' + y.toFixed(1) + 'px,0)';
-      if (g.tf !== tf) { g.tf = tf; g.el.style.transform = tf; }
-      /* A card straightens and fills as it crosses the middle of the screen,
-         and leans a little the other way as it leaves (it arrives, it is read,
-         it goes), so no card ever sits still and flat for long. */
-      for (var k = 0; k < g.cards.length; k++) {
-        var c = g.cards[k], d = clamp((y + c.top + c.h * .5 - half) / half, -1.3, 1.3);
-        var ct = 'rotate(' + (c.dir * d * 2.4).toFixed(2) + 'deg) scale(' + (1 - Math.min(1, Math.abs(d)) * .05).toFixed(4) + ')';
-        if (c.tf !== ct) { c.tf = ct; c.el.style.transform = ct; }
-      }
+    var vw = window.innerWidth, vh = window.innerHeight, n = cwCards.length;
+    var rx = vw * .62, ry = vh * .98;                       /* how far along the diagonal a card goes */
+    var U = lerp(-1.5, n - 1 + 1.5, p);                      /* which card is at the middle (0 = the first) */
+    for (var i = 0; i < n; i++) {
+      var c = cwCards[i], s = clamp((U - i) * CARD_GAP, -1.25, 1.25), a = Math.abs(s);
+      var g = (s < 0 ? -1 : 1) * Math.pow(a, HANG);
+      var x = g * rx, y = -g * ry + DRIFT[i] * vh * .01 * (1 - Math.min(1, a));
+      var rot = (SIDE[i] ? 1 : -1) * 2.6 * g;
+      var sc = 1 - .14 * Math.min(1, a);
+      var op = 1 - .55 * smooth(a, .8, 1.2);
+      var tf = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0) rotate(' + rot.toFixed(2) + 'deg) scale(' + sc.toFixed(4) + ')';
+      if (c._tf !== tf) { c._tf = tf; c.style.transform = tf; }
+      var o = op.toFixed(3);
+      if (c._o !== o) { c._o = o; c.style.opacity = o; }
+      var z = String(100 - Math.round(a * 60));
+      if (c._z !== z) { c._z = z; c.style.zIndex = z; }
     }
     /* The headline is the first thing on the stage and the first to give way. */
-    var ho = 1 - smooth(p, .03, .2);
-    var hv = ho.toFixed(3), ht = 'translate3d(0,' + (-50 - p * 8).toFixed(2) + '%,0)';
+    var ho = 1 - smooth(p, .02, .14);
+    var hv = ho.toFixed(3), ht = 'translate3d(0,' + (-50 - p * 10).toFixed(2) + '%,0)';
     if (cwHead._o !== hv) { cwHead._o = hv; cwHead.style.opacity = hv; }
     if (cwHead._t !== ht) { cwHead._t = ht; cwHead.style.transform = ht; }
   }
@@ -2549,16 +2537,15 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
      phone, reduced motion switched on or off): every inline value the scroll
      wrote is removed, and the next frame writes them again if they are wanted. */
   function resetShows() {
-    wallGeom = []; rowGeom = [];
-    cwCols.forEach(function (c) { c.style.transform = ''; });
-    [].slice.call(cwWall.querySelectorAll('.cw-card')).forEach(function (c) { c.style.transform = ''; });
+    rowGeom = [];
+    cwCards.forEach(function (c) { c.style.transform = ''; c.style.opacity = ''; c.style.zIndex = ''; c._tf = c._o = c._z = undefined; });
     cwHead.style.opacity = ''; cwHead.style.transform = ''; cwHead._o = cwHead._t = undefined;
     rowEls.forEach(function (r) { r.style.removeProperty('--a'); r.style.removeProperty('--dy'); r._a = r._dy = undefined; });
     rowsSheet.style.removeProperty('--rt'); rowsSheet._rt = undefined;
     cwStage.style.removeProperty('--cv'); cwStage._cv = undefined;
     rowsSheet.classList.remove('is-docked'); cwStage.classList.remove('is-covered');
   }
-  function remeasureShows() { if (staticMode()) return; wallGeom = []; rowGeom = []; measureWall(); measureRows(); }
+  function remeasureShows() { if (staticMode()) return; rowGeom = []; measureWall(); measureRows(); }
   var showsTimer = null;
   window.addEventListener('resize', function () { clearTimeout(showsTimer); showsTimer = setTimeout(function () { remeasureShows(); Scrub.kick(); }, 120); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { remeasureShows(); Scrub.kick(); });

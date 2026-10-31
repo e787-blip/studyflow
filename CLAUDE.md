@@ -3515,17 +3515,22 @@ findings), and the sheet of features that covers it". The old rail / odometer /
 night sheet / card stack / fan and the whole Testimonials section ("Students
 are scoring higher") are gone.
 
-- **The wall** (`#wo`, 380vh, sticky `#cw-stage`): the six research findings as
-  cards in three columns that slide up past the headline at three speeds
-  (`COL_START`: a column that starts lower has further to go in the same
-  scroll, so it is faster - that is the parallax). Two big "lead" cards carry
-  one huge figure on a panel cut on a slant (`.cw-stat`, `clip-path`), the
-  others are serif quote cards (paper, pale blue, night). Each card leans by
-  its distance from the middle of the screen and straightens and scales to 1 as
-  it crosses it (`applyWall`). One radius (32) for every card, 8 for chips. The
-  numbers and sources are the site's own existing claims (Cepeda 2006, Kornell
-  2009, Roediger and Karpicke, Taylor and Rohrer 2010, Walker 2017, Feynman);
-  change a card's words, never invent a figure.
+- **The wall** (`#wo`, 660vh, sticky `#cw-stage`): the six research findings as
+  cards that come ONE AT A TIME along a diagonal (the owner: "one at a time,
+  scrolling diagonally"). Every card sits at the middle of the stage
+  (`translate: -50% -50%`); `applyWall` moves each along a bottom-left to
+  top-right path by its position `g = sign(s) * |s|^HANG` (`s = (U - i) *
+  CARD_GAP`, `U` running from -1.5 to n+0.5 over the pin). The power makes a card
+  hang near the middle, where it is read, and rush through the ends, so the next
+  card is already entering at one corner while the last is leaving at the other.
+  Cards lean with `g`, shrink to .86 and fade at the ends, and the one nearest
+  the middle is on top. Two big "lead" cards carry one huge figure on a panel cut
+  on a slant (`.cw-stat`, `clip-path`), the others are serif quote cards (paper,
+  pale blue, night). One radius (32) for every card, 8 for chips. The numbers and
+  sources are the site's own existing claims (Cepeda 2006, Kornell 2009, Roediger
+  and Karpicke, Taylor and Rohrer 2010, Walker 2017, Feynman); change a card's
+  words, never invent a figure. The cards are in `.cw-wall` in reading order
+  (no columns; `--o` orders them on a phone).
 - **The curtain** (`#rows-sheet`, `margin-top: -100vh`, so it overlaps the last
   screen of the wall): a light sheet rises over the pinned stage; its top
   corners flatten from 72px to 0 as it arrives (`--rt`, **unitless: the CSS
