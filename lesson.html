@@ -1626,13 +1626,14 @@
   .sc-idea.is-missed { border-color:#ef4444; }
 
   /* CONCEPTMAP - the figure is SVG on paper; the word bank is real buttons */
-  .cm-fig { padding:.55rem; margin-bottom:.75rem; }
+  .cm-fig { padding:.75rem .5rem; margin-bottom:.9rem; border-radius:18px; }
   .cm-fig svg { display:block; width:100%; height:auto; }
   .cm-blank { cursor:pointer; outline:none; }
   .cm-blank:focus-visible rect.cm-box { stroke-width:3; }
   .cm-bank { display:flex; flex-wrap:wrap; gap:.45rem; min-height:40px; }
-  .cm-chip { padding:.5rem .8rem; border:1.5px solid var(--border); border-radius:10px; background:var(--white);
-    color:var(--ink); font-family:var(--sans); font-size:.88rem; font-weight:600; cursor:pointer; }
+  .cm-chip { padding:.55rem .95rem; border:1.5px solid var(--border); border-radius:999px; background:var(--white);
+    color:var(--ink); font-family:var(--sans); font-size:.88rem; font-weight:600; line-height:1.25; text-align:left;
+    cursor:pointer; box-shadow:0 1px 2px rgba(26,29,46,.06); max-width:100%; }
   .cm-chip:hover:not(:disabled) { border-color:var(--blue); }
   .cm-chip:disabled { cursor:default; opacity:.4; }
   .cm-help { font-size:.78rem; color:var(--muted); margin:.1rem 0 .55rem; }
@@ -11126,12 +11127,23 @@
       else { lines.push(cur); cur = w; }
     });
     if (cur) lines.push(cur);
-    return lines.slice(0, 3);
+    return lines.slice(0, 5);
   }
   /* Where every node and link goes. Pure: model in, geometry out. */
   function cmLayout(m, W) {
     var n = m.nodes.length, perRow = W >= 380 ? 3 : 2, CH = 7.1, LINE = 16, i, j;
-    var slotW = W / perRow, boxMax = Math.min(150, slotW - 12), chars = Math.max(8, Math.floor((boxMax - 18) / CH));
+    /* A chain (one box a row) gets wide boxes, so a sentence fits in two lines
+       instead of four; a busy row keeps them narrow. */
+    var dep0 = [0], cnt0 = {}, adj0 = [];
+    for (i = 0; i < n; i++) adj0.push([]);
+    m.links.forEach(function (l) { adj0[l.from].push(l.to); adj0[l.to].push(l.from); });
+    var seen0 = { 0: 1 }, q0 = [0], dd = { 0: 0 };
+    for (i = 0; i < q0.length; i++) adj0[q0[i]].forEach(function (y) {
+      if (!seen0[y]) { seen0[y] = 1; dd[y] = dd[q0[i]] + 1; q0.push(y); }
+    });
+    var rowMax = 1;
+    for (i = 0; i < n; i++) { var dk = dd[i] == null ? 99 : dd[i]; cnt0[dk] = (cnt0[dk] || 0) + 1; rowMax = Math.max(rowMax, Math.min(perRow, cnt0[dk])); }
+    var slotW = W / rowMax, boxMax = Math.min(rowMax === 1 ? 250 : 170, slotW - 14), chars = Math.max(8, Math.floor((boxMax - 22) / CH));
     function box(text) {
       var lines = cmWrap(text, chars), w = 0;
       lines.forEach(function (l) { w = Math.max(w, l.length); });
@@ -11288,28 +11300,29 @@
     var F = 'font-family="DM Sans, system-ui, sans-serif"';
     s += '<svg viewBox="0 0 ' + L.W + ' ' + L.H + '" width="' + L.W + '" role="img" aria-label="' +
       escHtml('Concept map of ' + m.nodes[0]) + '"><defs><marker id="cmArrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
-      'markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,1 L10,5 L0,9 z" fill="#94a3b8"/></marker></defs>';
+      'markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1,1.5 L8.5,5 L1,8.5" fill="none" stroke="#8b9ab5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>' +
+      '<filter id="cmLift" x="-10%" y="-20%" width="120%" height="150%"><feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#1a1d2e" flood-opacity=".10"/></filter></defs>';
     L.edges.forEach(function (e) {
       var d = e.c ? 'M' + e.p0.x.toFixed(1) + ' ' + e.p0.y.toFixed(1) + ' Q' + e.c.x.toFixed(1) + ' ' + e.c.y.toFixed(1) + ' ' + e.p1.x.toFixed(1) + ' ' + e.p1.y.toFixed(1)
                   : 'M' + e.p0.x.toFixed(1) + ' ' + e.p0.y.toFixed(1) + ' L' + e.p1.x.toFixed(1) + ' ' + e.p1.y.toFixed(1);
-      s += '<path d="' + d + '" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#cmArrow)"/>';
+      s += '<path d="' + d + '" fill="none" stroke="#b6c2d9" stroke-width="1.6" stroke-linecap="round" marker-end="url(#cmArrow)"/>';
     });
     L.pills.forEach(function (p) {
       s += '<rect x="' + (p.x - p.w / 2).toFixed(1) + '" y="' + (p.y - 9).toFixed(1) + '" width="' + p.w.toFixed(1) +
-        '" height="18" rx="9" fill="#ffffff" stroke="#e2e8f0"/>' +
+        '" height="18" rx="9" fill="#f4f6fb" stroke="none"/>' +
         '<text x="' + p.x.toFixed(1) + '" y="' + (p.y + 4).toFixed(1) + '" text-anchor="middle" font-size="11.5" font-weight="600" ' +
-        'fill="#475569" ' + F + '>' + escHtml(p.label) + '</text>';
+        'fill="#5b6b86" ' + F + '>' + escHtml(p.label) + '</text>';
     });
     for (i = 0; i < m.nodes.length; i++) {
       var b = L.pos[i], bi = m.blanks.indexOf(i), x0 = b.x - b.w / 2, y0 = b.y - b.h / 2;
-      var fill = '#eef3ff', stroke = '#c7d7fb', ink = '#1a1d2e', dash = '', words = b.lines, wt = '600', extra = '';
+      var fill = '#ffffff', stroke = '#dbe4f7', ink = '#1a1d2e', dash = '', words = b.lines, wt = '600', extra = '';
       if (i === 0) { fill = '#3563e9'; stroke = '#3563e9'; ink = '#ffffff'; wt = '700'; }
       if (bi !== -1) {
         var placed = st.placed[i], res = st.result && st.result[i];
-        fill = '#ffffff'; stroke = '#94a3b8'; dash = ' stroke-dasharray="5 4"';
+        fill = '#f7f9ff'; stroke = '#a8b6d3'; dash = ' stroke-dasharray="4 4"';
         words = placed != null ? cmWrap(st.bank[placed], 99) : ['?'];
         ink = placed != null ? '#1a1d2e' : '#94a3b8';
-        if (!st.done && st.active === i) { fill = '#f5f8ff'; stroke = '#3563e9'; dash = ''; }
+        if (!st.done && st.active === i) { fill = '#ffffff'; stroke = '#3563e9'; dash = ''; }
         if (res) {
           dash = '';
           if (res.ok) { fill = '#ecfdf5'; stroke = '#10b981'; ink = '#065f46'; }
@@ -11325,15 +11338,16 @@
           'onclick="cmPick(' + i + ')" onkeydown="cmKey(event,' + i + ')">';
       }
       s += '<rect class="cm-box" x="' + x0.toFixed(1) + '" y="' + y0.toFixed(1) + '" width="' + b.w.toFixed(1) + '" height="' + b.h.toFixed(1) +
-        '" rx="10" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + (bi !== -1 && (st.active === i || (st.result && st.result[i])) ? 2.2 : 1.5) + '"' + dash + '/>';
+        '" rx="14" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + (bi !== -1 && (st.active === i || (st.result && st.result[i])) ? 2.2 : 1.3) + '"' + dash +
+        (dash ? '' : ' filter="url(#cmLift)"') + '/>';
       var ly = b.y - (words.length - 1) * 8 + 4.5;
       words.forEach(function (w, k) {
         s += '<text x="' + b.x.toFixed(1) + '" y="' + (ly + k * 16).toFixed(1) + '" text-anchor="middle" font-size="13" ' +
           'font-weight="' + wt + '" fill="' + ink + '" ' + F + '>' + escHtml(w) + '</text>';
       });
       if (bi !== -1) {
-        s += '<circle cx="' + (x0 + 3).toFixed(1) + '" cy="' + (y0 + 3).toFixed(1) + '" r="9" fill="#3563e9"/>' +
-          '<text x="' + (x0 + 3).toFixed(1) + '" y="' + (y0 + 7).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="800" fill="#ffffff" ' + F + '>' + (bi + 1) + '</text>' +
+        s += '<circle cx="' + (x0 + 2).toFixed(1) + '" cy="' + (y0 + 2).toFixed(1) + '" r="9" fill="#3563e9" stroke="#fff" stroke-width="2"/>' +
+          '<text x="' + (x0 + 2).toFixed(1) + '" y="' + (y0 + 6).toFixed(1) + '" text-anchor="middle" font-size="11" font-weight="800" fill="#ffffff" ' + F + '>' + (bi + 1) + '</text>' +
           extra + '</g>';
       }
     }

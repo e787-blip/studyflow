@@ -150,6 +150,15 @@
       return String(v == null ? '' : v).replace(/<[^>]*>/g, ' ').replace(/[<>]/g, ' ')
         .replace(/\s+/g, ' ').trim().slice(0, n || 200);
     }
+    /* Cut at a WORD, never inside one: "Colonists had no vote in Parliam" is
+       what a plain slice made of a perfectly good node. A single word longer
+       than the cap is the only thing still cut. */
+    function scCut(v, n) {
+      var t = scText(v, 400);
+      if (t.length <= n) return t;
+      var c = t.slice(0, n + 1), k = c.lastIndexOf(' ');
+      return k > n * 0.5 ? c.slice(0, k).replace(/[,;:\-–]+$/, '') : t.slice(0, n);
+    }
     /* Lowercase words with single spaces round them, for "is X printed in Y". */
     function scWords(v) {
       return ' ' + String(v == null ? '' : v).toLowerCase().replace(/[^a-z0-9à-ÿ]+/g, ' ').trim() + ' ';
@@ -223,7 +232,7 @@
     function sanitizeConceptMap(q) {
       var nodes = [], idx = {}, seen = {};
       (Array.isArray(q.nodes) ? q.nodes : []).forEach(function (n, i) {
-        var v = scText(n && typeof n === 'object' ? (n.label || n.name || '') : n, 32);
+        var v = scCut(n && typeof n === 'object' ? (n.label || n.name || '') : n, 46);
         var k = v.toLowerCase();
         if (!v || seen[k]) return;
         seen[k] = 1; idx[i] = nodes.length; nodes.push(v);
@@ -233,7 +242,7 @@
       (Array.isArray(q.links) ? q.links : []).forEach(function (l) {
         if (!l) return;
         var a = idx[parseInt(l.from, 10)], b = idx[parseInt(l.to, 10)];
-        var lab = scText(l.label, 28);
+        var lab = scCut(l.label, 30);
         if (a === undefined || b === undefined || a === b || !lab || lab.split(' ').length > 5) return;
         var pk = Math.min(a, b) + '-' + Math.max(a, b);
         if (pairs[pk]) return;
