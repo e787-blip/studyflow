@@ -3642,18 +3642,25 @@ changed the nav. **`sf-nav.js` is now the nav for all of them.** A page loads
 it as the first thing in `<body>`, `<script src="sf-nav.js"></script>`, and the
 nav appears where the tag is (after the skip link, on pages that have one).
 
-- **It is `index.html`'s nav in the state that page shows once you scroll past
-  the hero**: the bare logo, the light glass pill with the lens under the
-  current page, "My Dashboard", the blue "Build my plan", all on the frosted
-  bar. Checked by measuring, not by eye: load `index.html` and `terms.html` in
-  iframes at the same width, force index's nav into its light state (`on-light`
-  on the nav, `lit` on the logo, pill, dashboard link and button, transitions
-  off) and compare every part's rectangle and computed style. They matched on
-  17 measurements at 1280px, and on position, size and colour at 1000 and
-  390px. Do it again after changing either file.
-- **`index.html` keeps its own copy.** Its nav turns from white-on-navy into
-  this one as the 3D hero scrolls away, and its script drives that, so it was
-  not moved. **Change the nav in `sf-nav.js` AND in `index.html`.**
+**The look (Oct 2026, the owner: "blocky, like Wispr Flow's and Wix's - liquid
+glass with another thing around it makes it look bad"): ONE solid block.**
+No `backdrop-filter`, no glass, no pill around the links, no sliding lens.
+The bar is `#fdfdff` with a 1px border and 14px corners, floating 10px from the
+top (max 1240px wide); the links sit straight on it (`.nav-links`, no
+container), the page or section being read is a filled `#e3ecff` block with 8px
+corners (`aria-current`), "My Dashboard" is an outlined 10px block and "Build my
+plan" a solid blue one, both 40px tall. It is the same bar over the navy hero and
+over paper, so nothing turns light as the hero's daylight spreads: the `lit` /
+`on-light` classes and the hero's per-button daylight maths are gone. **Do not put
+a container around the links again** - that was the complaint. The links hide
+below 1080px (no overlap at 1081: 99px clear), "My Dashboard" below 640px, and
+on a phone the bar is 8px from the edges, 52px tall. The hero's own
+`.btn-glass` ("See how it works") is a button, not the nav, and is unchanged.
+
+- **`index.html` keeps its own copy** (it sits inside the hero page and uses the
+  page's own tokens). **Change the nav in `sf-nav.js` AND in `index.html`.** Its
+  script only marks the section being read (`aria-current`); it no longer drives
+  any colour.
 - **It is a script, not a stylesheet**, so the CSS lands in the same moment as
   the markup: a `<link>` added by a script is not render-blocking and the nav
   would flash unstyled. It carries its own fonts - Terms and Privacy never
@@ -3663,13 +3670,13 @@ nav appears where the tag is (after the skip link, on pages that have one).
   different body line-heights (Terms is 1.7). A page must not keep its own
   `nav {}` rule: delete it, or it leaks into this one.
 - **A page clears the nav itself.** It is `position: fixed`, so it takes no
-  room; the page leaves about 57px at the top (the Terms card moved from
+  room; the bar's bottom edge is at 66px (10px + 56px), and the page leaves room for that (the Terms card moved from
   `margin: 3rem` to `6.5rem`, Help's hero got more top padding).
 - **It does not animate in.** `index.html`'s nav slides in once on arrival; on a
   page you clicked to, a nav that re-enters every time reads as a different nav.
 - **The current page** comes from the address, or from `data-current` on the
   tag (Help, Our story and Plans set it). Terms and Privacy are footer links,
-  not pill links, so they get no lens.
+  not bar links, so nothing is marked.
 - A signed-in student's "Build my plan" goes straight to `app.html`, for every
   such link on the page, once the page has loaded: the script runs before the
   page's own buttons exist.
@@ -3685,7 +3692,8 @@ nav appears where the tag is (after the skip link, on pages that have one).
   <script src="sf-nav.js" data-mode="app" data-home="dashboard.html" data-id="topbar"></script>
   ```
 
-  Same frosted bar, logo, height and padding as the site pages (measured
+  Same solid bar, logo and button styles as the site pages (full width and flat at
+  the top of the page, since it takes room in the layout instead of floating) (measured
   equal on all of them at 1280, 375 and 320), but **sticky**, so it takes
   room. The template's children are MOVED onto the right before the page's
   script runs - ids, inline `onclick` and delegated `data-action` still
@@ -4286,10 +4294,10 @@ genuinely nothing.
     - **Shader** (`paperMaterial`): the back is paper with the writing faintly
       showing through, mirrored; a sheet seen nearly edge-on is dimmed, because
       a lit sliver reads as a white hairline glitch.
-  - **The nav's entrance animation fills `backwards`, not `both`.** A
-    finished animation that stays "in effect" makes the nav a backdrop root,
-    and then its frosted bar has nothing to blur: headings scrolled under
-    the logo as sharp ghosts.
+  - **The nav's entrance animation fills `backwards`, not `both`**, so a
+    finished animation does not stay in effect over the bar. (It used to matter
+    more: the old frosted bar had nothing to blur behind a backdrop root. The
+    bar is solid now.)
   - **`overflow-x: clip`, never `hidden`**, on `html` and `body`. `hidden`
     creates a scroll container and every pinned (`position: sticky`) section
     stops pinning.

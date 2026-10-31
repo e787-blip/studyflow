@@ -104,100 +104,55 @@ button { font: inherit; color: inherit; }
 }
 @media (max-width: 720px) { .env::after { display: none; } }
 
-/* ── NAV: floating glass pill (kept from index.html) ── */
+/* ── NAV: one solid block (Oct 2026, the owner: "blocky, like Wispr Flow's and
+   Wix's; liquid glass with another thing around it looks bad"). No blur, no
+   glass, no pill around the links, no sliding lens: the links sit straight on
+   the bar, the page you are reading is a filled square-ish block, buttons have
+   10px corners. It is the same solid bar over the navy hero and over paper,
+   so nothing turns light as the daylight spreads. sf-nav.js is the other copy
+   of this, for every other page: change both. ── */
 nav.site-nav {
-  position: fixed; top: calc(1rem + env(safe-area-inset-top, 0px)); left: 0; right: 0; z-index: 100;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 max(16px, 2rem);
-  pointer-events: none;
-  transition: top .35s var(--ease-out);
-  /* backwards, not both: a finished animation still "in effect" makes the nav
-     a backdrop root, and the frosted bar below then had nothing to blur, so
-     headings scrolled under the logo as sharp ghosts. */
+  position: fixed; z-index: 100; top: calc(10px + env(safe-area-inset-top, 0px));
+  left: max(12px, calc((100vw - 1240px) / 2)); right: max(12px, calc((100vw - 1240px) / 2));
+  height: 56px; display: flex; align-items: center; gap: 1rem; padding: 0 8px 0 14px;
+  background: #fdfdff; border: 1px solid #dde4f2; border-radius: 14px; box-shadow: 0 2px 10px rgba(14, 20, 42, .08);
+  /* backwards, not both: a finished animation still "in effect" keeps the
+     nav a stacking layer of its own for no reason. */
   animation: navIn .8s var(--ease-out) backwards;
 }
 @keyframes navIn { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
-.nav-logo { pointer-events: auto; display: inline-flex; text-decoration: none; }
+.nav-logo { display: inline-flex; flex-shrink: 0; text-decoration: none; }
 .nav-logo svg { width: 150px; height: 38px; }
-.logo-study { fill: #fff; transition: fill .35s; }
-.nav-pill {
-  position: absolute; left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: .15rem;
-  background: rgba(255, 255, 255, .07);
-  -webkit-backdrop-filter: blur(22px) saturate(170%);
-  backdrop-filter: blur(22px) saturate(170%);
-  border: 1px solid rgba(255, 255, 255, .16);
-  border-radius: 999px; padding: .38rem .45rem;
-  /* The one top-edge highlight is what makes a panel read as glass rather
-     than tinted film (Apple's Liquid Glass specular edge). */
-  box-shadow: 0 4px 24px rgba(0, 0, 0, .18), inset 0 1.5px 0 rgba(255, 255, 255, .24), inset 0 -1px 0 rgba(255, 255, 255, .05);
-  pointer-events: auto;
-  transition: background-color .35s, border-color .35s, box-shadow .35s;
+.logo-study { fill: var(--ink); }
+.nav-links { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 2px; }
+.nav-links a {
+  font-size: .88rem; font-weight: 500; line-height: 1.6; color: #4a5168; text-decoration: none; white-space: nowrap;
+  padding: .45rem .8rem; border-radius: 8px; transition: background-color .15s, color .15s;
 }
-.nav-pill a {
-  font-size: .84rem; font-weight: 500; color: rgba(255, 255, 255, .84); text-decoration: none;
-  padding: .42rem .85rem; border-radius: 999px; white-space: nowrap;
-  transition: background-color .2s, color .2s;
-}
-.nav-pill a { position: relative; z-index: 1; }
-.nav-pill a:hover { background: rgba(255, 255, 255, .14); color: #fff; }
-/* iOS 26 tab bars slide a lens to the selected tab. Here it slides to the
-   section you are reading. */
-.nav-lens {
-  position: absolute; left: 0; top: .38rem; bottom: .38rem; width: var(--lw, 0px); border-radius: 999px; pointer-events: none;
-  transform: translateX(var(--lx, 0px)); opacity: var(--lo, 0);
-  background: rgba(255, 255, 255, .15); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .3);
-  transition: transform .6s var(--ease-out), width .6s var(--ease-out), opacity .3s ease, background-color .35s;
-}
-.nav-pill a[aria-current] { color: #fff; }
-.nav-right { display: flex; align-items: center; gap: .6rem; pointer-events: auto; }
+.nav-links a:hover { background: var(--blue-mist); color: var(--ink); }
+.nav-links a[aria-current] { background: var(--blue-soft); color: var(--blue-deep); }
+.nav-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; }
 .nav-dashboard {
-  display: inline-flex; align-items: center; font-size: .84rem; font-weight: 600; white-space: nowrap;
-  color: rgba(255, 255, 255, .9); text-decoration: none;
-  padding: .5rem 1.05rem; border-radius: 999px;
-  background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .22);
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-  transition: background-color .2s, border-color .2s, color .2s;
+  display: inline-flex; align-items: center; height: 40px; font-size: .86rem; font-weight: 600; line-height: 1; white-space: nowrap;
+  color: var(--ink); text-decoration: none; padding: 0 1rem; border-radius: 10px;
+  background: #fff; border: 1px solid #d3dbee;
+  transition: background-color .15s, border-color .15s, color .15s;
 }
-.nav-dashboard:hover { background: rgba(255, 255, 255, .16); border-color: rgba(255, 255, 255, .42); }
+.nav-dashboard:hover { background: var(--blue-mist); border-color: var(--blue); }
 .nav-cta {
-  display: inline-flex; align-items: center; font-size: .84rem; font-weight: 700; white-space: nowrap;
-  color: var(--night); background: #f7f9ff; text-decoration: none;
-  padding: .52rem 1.15rem; border-radius: 999px; box-shadow: 0 2px 14px rgba(0, 0, 0, .18);
-  transition: background-color .2s, color .2s, box-shadow .2s;
+  display: inline-flex; align-items: center; height: 40px; font-size: .86rem; font-weight: 700; line-height: 1; white-space: nowrap;
+  color: #fff; background: var(--blue-btn); text-decoration: none; padding: 0 1.1rem; border-radius: 10px;
+  transition: background-color .15s;
 }
-.nav-cta:hover { background: var(--blue-soft); }
-nav.site-nav.on-light { top: calc(.6rem + env(safe-area-inset-top, 0px)); }
-/* Past the hero, the logo sat straight on top of headings and on the dark
-   schools panel. A frosted bar behind the whole nav keeps it on paper. */
-nav.site-nav::before {
-  content: ""; position: absolute; z-index: -1; left: 0; right: 0; pointer-events: none;
-  top: calc(-.6rem - env(safe-area-inset-top, 0px)); bottom: -.6rem;
-  background: rgba(245, 247, 252, .93); -webkit-backdrop-filter: blur(16px) saturate(160%); backdrop-filter: blur(16px) saturate(160%);
-  border-bottom: 1px solid rgba(26, 40, 90, .07); box-shadow: 0 1px 0 rgba(255, 255, 255, .7);
-  opacity: 0; transition: opacity .35s;
+.nav-cta:hover { background: var(--blue-deep); }
+nav.site-nav a:focus-visible { outline: 2.5px solid var(--blue); outline-offset: 2px; }
+@media (prefers-contrast: more) {
+  nav.site-nav, .nav-dashboard { border-color: #3b4363; }
+  .nav-links a { color: var(--ink); }
 }
-@media (prefers-reduced-transparency: reduce) {
-  .nav-pill, .nav-dashboard, .btn-glass, nav.site-nav::before { -webkit-backdrop-filter: none; backdrop-filter: none; }
-  .nav-pill { background: rgba(20, 26, 52, .94); }
-  .nav-pill.lit { background: var(--card); }
-  nav.site-nav::before { background: var(--paper); }
-}
-nav.site-nav.on-light::before { opacity: 1; }
-/* Each part of the nav turns dark-on-light on its own (.lit), at the moment
-   the hero's daylight reaches it, so nothing is ever white on a light ground. */
-.nav-logo.lit .logo-study { fill: var(--ink); }
-.nav-pill.lit { background: rgba(253, 253, 255, .8); border-color: rgba(26, 29, 46, .08); box-shadow: 0 2px 20px rgba(26, 40, 90, .10), inset 0 1.5px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(26, 40, 90, .05); }
-.nav-pill.lit a { color: var(--muted); }
-.nav-pill.lit a:hover { background: var(--blue-mist); color: var(--ink); }
-.nav-pill.lit .nav-lens { background: var(--blue-soft); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .9), 0 1px 3px rgba(26, 40, 90, .1); }
-.nav-pill.lit a[aria-current] { color: var(--blue-deep); }
-.nav-dashboard.lit { color: var(--blue-deep); background: rgba(74, 124, 246, .08); border-color: rgba(74, 124, 246, .24); }
-.nav-dashboard.lit:hover { background: rgba(74, 124, 246, .14); border-color: rgba(74, 124, 246, .4); }
-.nav-cta.lit { background: var(--blue-btn); color: #fff; box-shadow: 0 4px 16px -4px rgba(53, 103, 224, .55); }
-.nav-cta.lit:hover { background: var(--blue-deep); }
-@media (max-width: 1080px) { .nav-pill { display: none; } }
+@media (max-width: 1080px) { .nav-links { display: none; } }
 @media (max-width: 640px) {
+  nav.site-nav { top: calc(8px + env(safe-area-inset-top, 0px)); left: 8px; right: 8px; height: 52px; }
   .nav-dashboard { display: none; }
   .nav-logo svg { width: 132px; height: 34px; }
 }
@@ -219,6 +174,7 @@ nav.site-nav.on-light::before { opacity: 1; }
 .btn-blue:hover { background: var(--blue-deep); }
 .btn-outline { background: var(--card); color: var(--blue-deep); border-color: var(--line-strong); }
 .btn-outline:hover { border-color: var(--blue); }
+@media (prefers-reduced-transparency: reduce) { .btn-glass { -webkit-backdrop-filter: none; backdrop-filter: none; } }
 @media (pointer: coarse) { .btn, .nav-cta, .nav-dashboard { min-height: 44px; } }
 /* Phones: the one action stays in the thumb zone once the hero is behind you,
    and gets out of the way at the final call to action. */
@@ -1012,8 +968,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       </text>
     </svg>
   </a>
-  <div class="nav-pill" id="nav-pill">
-    <span class="nav-lens" aria-hidden="true"></span>
+  <div class="nav-links" id="nav-links">
     <a href="#how">How it works</a>
     <a href="#features">Features</a>
     <a href="#pricing">Plans</a>
@@ -1568,7 +1523,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     var hero = document.getElementById('hero');
     var stage = document.getElementById('hero-stage');
     var canvas = document.getElementById('hero-3d');
-    var nav = document.querySelector('nav.site-nav');
     var bands = [];
     var mode = 'none';            // 'journey' | 'still' | 'flat'
     var gl = null;                // the three.js world, once built
@@ -1704,43 +1658,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       var range = heroH - stageH;
       if (range <= 0) return 0;
       return clamp(-r.top / range, 0, 1);
-    }
-
-    /* Each button flips on its own: measured from the right cluster's centre,
-       the Dashboard button stayed white for a moment after the light had
-       already reached it. The Dashboard link is injected after load, so the
-       list is collected at measure time. */
-    var navParts = [];
-    /* Is this screen point inside the daylight circle the shader is drawing? */
-    /* The nav is position:fixed and the stage is pinned at the top while the
-       daylight grows, so part centres are measured once per resize, never per
-       frame (a layout read after the band writes would force a reflow). */
-    var navPts = null;
-    function measureNav() {
-      navParts = [].slice.call(nav.querySelectorAll('.nav-logo, .nav-pill, .nav-dashboard, .nav-cta'));
-      navPts = navParts.map(function (el) { var b = el.getBoundingClientRect(); return b.width ? { x: b.left + b.width / 2, y: b.top + b.height / 2 } : null; });
-    }
-    function litAt(el, i) {
-      if (!gl || !gl.w) return false;
-      if (!navPts) measureNav();
-      var pt = navPts[i];
-      if (!pt) return false;
-      var px = pt.x, py = pt.y, mn = Math.min(gl.w, gl.h);
-      var ux = (px * 2 - gl.w) / mn - gl.bgU.uShift.value.x, uy = (gl.h - py * 2) / mn - gl.bgU.uShift.value.y;
-      /* R - 0.275 is where the shader's daylight blend crosses 50%. */
-      return Math.sqrt(ux * ux + uy * uy) < day * gl.bgU.uReach.value - 0.275;
-    }
-    var heroBottom = 1e9;
-    function updateNav(bottom) {
-      if (bottom !== undefined) heroBottom = bottom; else heroBottom = hero.getBoundingClientRect().bottom;
-      var past = heroBottom < 70, all = true;
-      if (!navPts) measureNav();
-      navParts.forEach(function (el, i) {
-        var lit = past || (mode === 'journey' && day > 0 && litAt(el, i));
-        if (!lit && navPts[i]) all = false;   /* a hidden part (no box) does not hold the bar back */
-        if (lit !== el.classList.contains('lit')) el.classList.toggle('lit', lit);
-      });
-      if (all !== nav.classList.contains('on-light')) nav.classList.toggle('on-light', all);
     }
 
     /* ════ the three.js world ════ */
@@ -2254,7 +2171,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       if (!gl) return;
       var w = stage.clientWidth, h = stage.clientHeight;
       if (!w || !h) return;
-      measureHero(); navPts = null;
+      measureHero();
       var caps = w < 760 ? [1, 1.25, 1.5] : [1, 1.35, 1.75];
       var dpr = Math.min(window.devicePixelRatio || 1, caps[quality]);
       gl.renderer.setPixelRatio(dpr);
@@ -2392,7 +2309,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
         if (isDay !== hero.classList.contains('is-day')) hero.classList.toggle('is-day', isDay);
       }
       updateBands(shown);
-      updateNav(lastBottom);
       if (gl && gl.built) { place(shown, (now - t0) / 1000, dt); render(); watchPerf(dt); }
       else if (gl) { gl.bgU.time.value = (now - t0) / 1000 * 2.4; render(); }
       if (mode === 'journey' && visible && !document.hidden) rafId = requestAnimationFrame(frame);
@@ -2433,7 +2349,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       hero.style.removeProperty('--day');
       hero.classList.remove('is-day');
       day = 0; lastDay = -1;
-      updateNav();
     }
 
     function applyMode() {
@@ -2491,7 +2406,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     }
 
     return {
-      init: init, kick: kick, applyMode: applyMode, updateNav: updateNav,
+      init: init, kick: kick, applyMode: applyMode,
       setVisible: function (v) { if (v) { lastNow = 0; kick(); } },
       debug: function () { var i = gl && gl.renderer.info; return { mode: mode, p: shown, day: day, sheets: gl && gl.sheets.length, built: !!(gl && gl.built), quality: quality, warm: !!(gl && gl.warm), programs: i ? i.programs.length : 0, textures: i ? i.memory.textures : 0 }; }
     };
@@ -3033,19 +2948,14 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     }
   })();
 
-  /* Nav lens: slides to the link for the section being read. */
+  /* The nav link for the section being read is marked (aria-current), and the
+     bar shows it as a filled block. */
   (function () {
-    var pill = document.getElementById('nav-pill');
-    if (!pill || !('IntersectionObserver' in window)) return;
-    var links = [].slice.call(pill.querySelectorAll('a'));
+    var bar = document.getElementById('nav-links');
+    if (!bar || !('IntersectionObserver' in window)) return;
+    var links = [].slice.call(bar.querySelectorAll('a'));
     var map = { how: links[0], features: links[1], pricing: links[2] }, order = ['how', 'features', 'pricing'];
     var seen = {}, active = null;
-    function place() {
-      if (!active) { pill.style.setProperty('--lo', '0'); return; }
-      pill.style.setProperty('--lx', active.offsetLeft + 'px');
-      pill.style.setProperty('--lw', active.offsetWidth + 'px');
-      pill.style.setProperty('--lo', '1');
-    }
     function pick() {
       var next = null;
       order.forEach(function (id) { if (seen[id]) next = map[id]; });
@@ -3053,11 +2963,9 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       if (active) active.removeAttribute('aria-current');
       active = next;
       if (active) active.setAttribute('aria-current', 'location');
-      place();
     }
     var io = new IntersectionObserver(function (es) { es.forEach(function (e) { seen[e.target.id] = e.isIntersecting; }); pick(); }, { rootMargin: '-45% 0px -54% 0px' });
     order.forEach(function (id) { var el = document.getElementById(id); if (el) io.observe(el); });
-    window.addEventListener('resize', place);
   })();
 
   /* Phones: sticky call to action between the hero and the final section. */
@@ -3106,7 +3014,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   mobileShow.addEventListener && mobileShow.addEventListener('change', function () { sizeShows(); Scrub.kick(); });
   window.addEventListener('resize', sizeShows);
 
-  window.addEventListener('scroll', function () { Hero.updateNav(); }, { passive: true });
 
   function boot() {
     Hero.init();
