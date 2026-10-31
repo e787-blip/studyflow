@@ -3515,7 +3515,7 @@ findings), and the sheet of features that covers it". The old rail / odometer /
 night sheet / card stack / fan and the whole Testimonials section ("Students
 are scoring higher") are gone.
 
-- **The wall** (`#wo`, 660vh, sticky `#cw-stage`): the six research findings as
+- **The wall** (`#wo`, 420vh, sticky `#cw-stage`; was 660vh, "too long"): the six research findings as
   cards that come ONE AT A TIME along a diagonal (the owner: "one at a time,
   scrolling diagonally"). Every card sits at the middle of the stage
   (`translate: -50% -50%`); `applyWall` moves each along a bottom-left to
@@ -3540,20 +3540,27 @@ are scoring higher") are gone.
   sheet may only turn see-through (to let the page's ruled paper show) once the
   stage is `visibility: hidden` (`.is-covered`, set together with `.is-docked`).
   The fade-out is only on `.is-docked`, so scrolling back up is instant.
-- **The rows** (`.row`, one per feature, app card on the left, words on the
-  right, the row text/visual from the old Features copy): `--a` (0..1) and
-  `--dy` are set per row from its distance to the middle of the screen
-  (`applyRows`); text opacity is `.22 + .78a`, the picture scales `.94 + .06a`.
-  Full strength inside a fifth of a screen of the middle, gone by 0.8. Ends with
-  "Start with one plan." and the one call to action (it still says the tutor and
-  insights come with VIP).
+- **The features are ONE pinned stage that swaps as you scroll** (`#fx-outer`
+  400vh, sticky `#fx-stage` inside the sheet; the owner: the six tall rows felt
+  too long, "make it shorter so that as you scroll it changes"). Seven faces
+  (`.fx-face`: the six features, then "Start with one plan.") are stacked in
+  `#fx-body`; `applyFx` uses a detent (`e = sum of smooth(u, b-.22, b+.22)`, `u =
+  p * 6.8`) so each holds for most of its ~44vh and turns quickly. **Fade
+  through, never overlap**: opacity is `clamp((.5 - |d|) / .2)`, so the old face
+  is out before the new one is in (two at once read as a double exposure; an
+  earlier overlap was visibly messy). The picture moves 46px and the words 66px
+  per unit so they part as they swap. A row of six step buttons under the
+  heading shows where you are (`aria-current`) and jumps to a feature. The CTA
+  is the seventh face (it still says the tutor and insights come with VIP).
+  Total scroll for wall + curtain + features is about 720vh (it was ~1180vh).
+  The stage's `padding-top` clears the nav (86px).
 - **`Scrub` items can opt in to `snap: true`**: their first measure sets `shown`
   directly, so a scene first seen part-way through (a reload, a link, a jump)
   starts there instead of sweeping in from 0.
 - **Below 1000px (the columns get too narrow), and with reduced motion** (one shared `@media`, and
   `staticMode()` in the script): no pin, no parallax. The findings are cards in a
-  column on night (`--o` orders the lead cards first), and the light sheet just
-  overlaps them with 32px corners. Switching modes live calls `resetShows()`,
+  column on night (`--o` orders the lead cards first), the features are stacked
+  (picture above words), and the light sheet just overlaps them with 32px corners. Switching modes live calls `resetShows()`,
   which removes every inline value the scroll wrote.
 - The nav is navy while the stage is under the bar and turns white when the
   sheet reaches it (`navTone`).
