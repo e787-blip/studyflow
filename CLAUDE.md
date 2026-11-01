@@ -3816,6 +3816,24 @@ question already in the session, only types that render whole
 - `recordMiss` now counts toward "Let's slow down a bit", same rule as
   `handleResult` (pre-test excluded).
 
+**A review ends, and is not asked twice** (Oct 2026, the owner: after the
+review "it shows that you have finished the review part, and then it gets
+back to the actual lesson"). Both review blocks - yesterday's misses before
+the welcome, and the mixed review every third day after the flashcards -
+open on an intro card and close on a done card (`review-done`,
+`interleave-done`, `sfReviewDoneCard`): "Review finished", the review's own
+score ("2 of 3 right", from the score noted when the intro was shown; the
+two cards share one `block` object), "Everything from here is new", and the
+lesson that comes next by the welcome card's own title. The mixed review
+had no end and **asked yesterday's misses a second and third time** (they
+are in every earlier day's list); it now skips anything the day review
+asked. Leaving and coming back rebuilds the queue, so a finished review is
+remembered (`studyflow_reviewed` = plan id | day, written by the done card)
+and not asked again: the welcome card says "Your review is already done".
+Never in an assignment. `test_review_return.js`, fails 8 ways on the code
+before. Due-review cards (`isDue`) are spread through practice and have no
+block - each wears the "Review Question" header.
+
 **The answer log keeps the miss** (`sfLogFlush`): `w` what was answered,
 `r` what was right (`correctAnswerText`), 80 chars each, on misses only.
 

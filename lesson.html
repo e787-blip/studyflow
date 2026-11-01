@@ -318,6 +318,26 @@
 
   /* CONTENT */
   .content-text { font-size:0.95rem; color:var(--ink); line-height:1.85; font-weight:300; }
+  /* The end of a review (Oct 2026): one quiet block that says the review is
+     over, how it went, and that what follows is today's lesson. */
+  .rv-done { text-align:center; }
+  .rv-tick { width:52px; height:52px; margin:.25rem auto .9rem; border-radius:50%;
+    background:var(--blue-tint); color:var(--blue-ink); display:flex; align-items:center; justify-content:center;
+    animation:rvPop var(--spring-ms) var(--spring) backwards; }
+  .rv-tick svg { width:26px; height:26px; }
+  .rv-tick path { stroke-dasharray:24; stroke-dashoffset:0; animation:rvDraw .42s .18s ease-out backwards; }
+  @keyframes rvPop { from { transform:scale(.6); opacity:0; } }
+  @keyframes rvDraw { from { stroke-dashoffset:24; } }
+  .rv-score { font-size:1.05rem; font-weight:600; color:var(--ink); margin:0 0 .35rem; }
+  .rv-done .content-text { margin:0 auto; max-width:30rem; }
+  .rv-next { margin:1.25rem auto 0; max-width:30rem; text-align:left; padding:.85rem 1rem; border-radius:14px;
+    background:var(--soft); border:1px solid var(--border); }
+  .rv-next span { display:block; font-size:.72rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:.2rem; }
+  .rv-next strong { display:block; font-weight:600; color:var(--ink); line-height:1.35; }
+  .rv-earlier { display:flex; align-items:center; gap:.5rem; margin:0 0 .9rem; padding:.55rem .8rem; border-radius:12px;
+    background:var(--blue-tint); color:var(--blue-ink); font-size:.86rem; font-weight:500; line-height:1.4; }
+  .rv-earlier svg { width:16px; height:16px; flex:none; }
+  @media (prefers-reduced-motion: reduce) { .rv-tick, .rv-tick path { animation:none; } }
   .content-text p { margin-bottom:.85rem; }
   .content-text p:last-child { margin-bottom:0; }
   .content-text strong { font-weight:600; color:var(--ink); }
@@ -2023,6 +2043,54 @@
     });
   } // { q, reinjectAt } — reinject at specific cardIndex
 
+  /* ── THE END OF A REVIEW (Oct 2026) ───────────────────────────────────
+     buildQueue gives each review block one shared `block` object, carried
+     by its intro card and its done card. The intro notes the score when it
+     is shown; the done card subtracts, so it can say "2 of 3 right" about
+     the review alone, and records that this lesson's review is finished
+     (studyflow_reviewed: plan id | day), so leaving and coming back does
+     not ask it again. One key, overwritten: only the lesson in progress
+     matters. Never in an assignment - its queue is the teacher's. */
+  var SF_RV_TICK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  function sfReviewKey() {
+    return (plan && plan.id != null ? String(plan.id) : '') + '|' + dayIndex;
+  }
+  function sfReviewedToday() {
+    if (assignMode) return false;
+    try { return SFStore.getItem('studyflow_reviewed') === sfReviewKey(); } catch (e) { return false; }
+  }
+  function sfReviewStart(block) {
+    if (block && !block.mark) block.mark = { c: correctCount, t: totalAnswered };
+  }
+  function sfReviewDoneCard(card) {
+    var block = card.block || {};
+    var mixed = card.type === 'interleave-done';
+    /* Worked out once: a re-render (the theme toggle) must not recount. */
+    if (!block.res) {
+      var m = block.mark || { c: correctCount, t: totalAnswered };
+      block.res = { right: Math.max(0, correctCount - m.c), asked: Math.max(0, totalAnswered - m.t) };
+      if (!assignMode) { try { SFStore.setItem('studyflow_reviewed', sfReviewKey()); } catch (e) {} }
+    }
+    var r = block.res;
+    var score = r.asked ? (r.right + ' of ' + r.asked + ' right') : '';
+    var line;
+    if (!r.asked) line = 'That\'s the review done.';
+    else if (r.right >= r.asked) line = 'All of them right this time. That\'s the review done.';
+    else line = 'That\'s the review done. The ' + (r.asked - r.right === 1 ? 'one' : 'ones') + ' you missed will come back in a later session.';
+    /* The title the welcome card prints next, so the two read as one place. */
+    var topic = escHtml(day.title || feynmanTopic(day) || ('Day ' + (dayIndex + 1)));
+    var dayLabel = day.isFinal ? 'Final Exam Day' : 'Day ' + (dayIndex + 1);
+    var body = '<div class="rv-done">' +
+      '<div class="rv-tick">' + SF_RV_TICK + '</div>' +
+      (score ? '<p class="rv-score">' + score + '</p>' : '') +
+      '<p class="content-text">' + line + ' Everything from here is new.</p>' +
+      '<div class="rv-next"><span>' + (mixed ? 'Back to today' : 'Up next: today\'s lesson') + '</span>' +
+        '<strong>' + dayLabel + ' · ' + topic + '</strong></div>' +
+      '</div>';
+    return buildCard(mixed ? 'Mixed review done' : 'Review done', mixed ? 'Mixed review finished' : 'Review finished', false,
+      body, '', mixed ? 'Back to today\'s questions →' : 'Start today\'s lesson →', false);
+  }
+
   /* ── DUE FOR REVIEW (Oct 2026) ────────────────────────────────────────
      Every answer has updated an SM-2 record since TIER 3 went in, and
      getDueQuestions had no caller: the schedule was computed and never read.
@@ -2188,7 +2256,7 @@
     /* Where does the teaching end and practice begin? */
     var TEACHING = { welcome: 1, lesson: 1, terms: 1, flashcards: 1, 'sfwb-brief': 1,
                      'pretest-intro': 1, 'pretest-done': 1,
-                     'review-intro': 1, 'review-done': 1, 'interleave-intro': 1 };
+                     'review-intro': 1, 'review-done': 1, 'interleave-intro': 1, 'interleave-done': 1 };
     var firstPractice = rest.length;
     for (i = 0; i < rest.length; i++) {
       /* A pre-test or day-start review question is not practice. It is the
@@ -2605,17 +2673,35 @@
       sessionCards.push({ type: 'pretest-done' });
     }
 
+    /* A review is a block with a beginning and an END (Oct 2026). The owner:
+       after the review "it shows that you have finished the review part, and
+       then it gets back to the actual lesson (so they know that they're not
+       just repeating)". Two things made it feel like repeating:
+         - the mixed review (every third day) had an intro and no end, so its
+           five old questions ran straight on into today's practice;
+         - a learner who left and came back the same day got the whole day
+           rebuilt, review included, and answered it all over again.
+       So every review ends on a done card that says how it went and what
+       comes next, and a review finished today (sfReviewedToday, written
+       when that card is shown) is not asked again on the way back in. */
+    var reviewedEarlier = sfReviewedToday();
+    var reviewSkipped = false;
+    var reviewTaken = {};
+
     // FEATURE 2: Day start review — show 3 hardest missed from previous day
     if (dayIndex > 0) {
       var prevDay = plan.days[dayIndex - 1];
       var missedKey = 'studyflow_missed_day_' + (dayIndex - 1);
       var prevMissed = JSON.parse(SFStore.getItem(missedKey) || '[]');
-      if (prevMissed.length > 0) {
-        sessionCards.push({ type: 'review-intro', count: Math.min(prevMissed.length, 3) });
+      if (prevMissed.length > 0 && reviewedEarlier) reviewSkipped = true;
+      else if (prevMissed.length > 0) {
+        var dayBlock = { kind: 'day' };
+        sessionCards.push({ type: 'review-intro', count: Math.min(prevMissed.length, 3), block: dayBlock });
         prevMissed.slice(0, 3).forEach(function(q) {
+          reviewTaken[fmStr(q.question)] = 1;
           sessionCards.push({ type: cardTypeFor(q), q: q, isReview: true });
         });
-        sessionCards.push({ type: 'review-done' });
+        sessionCards.push({ type: 'review-done', block: dayBlock });
       }
     }
 
@@ -2643,11 +2729,29 @@
         var dm = JSON.parse(SFStore.getItem(mk) || '[]');
         allPrevMissed = allPrevMissed.concat(dm);
       }
-      if (allPrevMissed.length > 0) {
-        sessionCards.push({ type: 'interleave-intro', count: Math.min(allPrevMissed.length, 5) });
+      /* Yesterday's misses are in this list too, and the day-start review
+         has just asked them: asking again two minutes later is the
+         repetition this block must not be. */
+      allPrevMissed = allPrevMissed.filter(function (q) {
+        var k = fmStr(q && q.question);
+        if (!k || reviewTaken[k]) return false;
+        reviewTaken[k] = 1;
+        return true;
+      });
+      if (allPrevMissed.length > 0 && reviewedEarlier) reviewSkipped = true;
+      else if (allPrevMissed.length > 0) {
+        var mixBlock = { kind: 'mixed' };
+        sessionCards.push({ type: 'interleave-intro', count: Math.min(allPrevMissed.length, 5), block: mixBlock });
         allPrevMissed.slice(0, 5).sort(function(){ return Math.random() - 0.5; }).forEach(function(q) {
           sessionCards.push({ type: cardTypeFor(q), q: q, isReview: true });
         });
+        sessionCards.push({ type: 'interleave-done', block: mixBlock });
+      }
+    }
+
+    if (reviewSkipped) {
+      for (var wc = 0; wc < sessionCards.length; wc++) {
+        if (sessionCards[wc].type === 'welcome') { sessionCards[wc].reviewedEarlier = true; break; }
       }
     }
 
@@ -6928,16 +7032,16 @@
         '', 'Start the lesson →', false);
     }
     else if (card.type === 'review-intro') {
-      html = buildCard(' Quick Review', 'From yesterday\'s session', false,
+      sfReviewStart(card.block);
+      html = buildCard(' Quick Review', 'From your last session', false,
         '<p class="content-text" style="text-align:center;">You missed <strong>' + card.count + ' question' + (card.count > 1 ? 's' : '') + '</strong> last session. Let\'s try them again before today\'s new material — this is spaced repetition in action!</p>',
         'Science-backed review', 'Let\'s review →', false);
     }
-    else if (card.type === 'review-done') {
-      html = buildCard('Review complete!', 'Now for today\'s new content', false,
-        '<p class="content-text" style="text-align:center;">Great — reviewing yesterday\'s missed questions reinforces your memory right before it fades. Now let\'s build on top of that!.</p>',
-        '', 'Continue →', false);
+    else if (card.type === 'review-done' || card.type === 'interleave-done') {
+      html = sfReviewDoneCard(card);
     }
     else if (card.type === 'interleave-intro') {
+      sfReviewStart(card.block);
       html = buildCard(' Mixed Review', 'Questions from all your previous days', false,
         '<p class="content-text" style="text-align:center;">Today is an <strong>interleaved review day</strong>. Research shows mixing questions from different days is one of the most powerful ways to build lasting memory. You\'ll see ' + card.count + ' questions from earlier sessions.</p>',
         'Science-backed technique', 'Let\'s mix it up →', false);
@@ -6957,6 +7061,7 @@
       // Micro-topic pill if available
       var microPill = buildTopicPath(day.microTopic, day.subject);
       html = buildCard(dayLabel, day.title || 'Day ' + (dayIndex+1), false,
+        (card.reviewedEarlier ? '<p class="rv-earlier">' + SF_RV_TICK + 'Your review is already done, so it\'s straight into the lesson.</p>' : '') +
         microPill + '<p class="content-text">' + (day.briefing || '') + '</p>',
         'Session: ' + totalMinutes + ' min', 'Let\'s go →', false);
     }

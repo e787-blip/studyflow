@@ -43,6 +43,7 @@
     ['e2e_cards', 'E2E CARDS OK', S + 'test_e2e_cards.js'],
     ['lint', 'LINT OK', S + 'test_lint.js'],
     ['review_queue', 'REVIEW QUEUE OK', S + 'test_review.js'],
+    ['review_return', 'REVIEW RETURN OK', S + 'test_review_return.js'],
     ['data', 'DATA OK', S + 'test_data.js'],
     ['data_page', 'DATA PAGE OK', S + 'test_data_page.js'],
     ['census', '__census__', S + 'census.js', ['0'], { FX: S + 'bigday' }],

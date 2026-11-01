@@ -46,7 +46,7 @@ function twoDayPlan() {
       const firstQ = sessionCards.findIndex(c => c.q && !c.isPretest && !c.isReview);
       const welcome = sessionCards.findIndex(c => c.type === 'welcome');
       const d0 = plan.days[0].questions.map(q => q.question);
-      const OPEN = { welcome: 1, lesson: 1, flashcards: 1, 'sfwb-brief': 1, 'review-intro': 1, 'review-done': 1, 'interleave-intro': 1 };
+      const OPEN = { welcome: 1, lesson: 1, flashcards: 1, 'sfwb-brief': 1, 'review-intro': 1, 'review-done': 1, 'interleave-intro': 1, 'interleave-done': 1 };
       let practiceStart = 0; sessionCards.forEach((c, i) => { if (OPEN[c.type] || c.isPretest || /^pretest/.test(c.type)) practiceStart = i + 1; });
       return { n: due.length, idx: due.map(x => x.i), welcome, firstQ, practiceStart,
                fromDay0: due.every(x => d0.indexOf(x.c.q.question) !== -1),
