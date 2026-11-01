@@ -602,7 +602,7 @@ nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .1
 }
 /* The rising sheet's shadow: the stage goes darker as it is covered. */
 .cw-stage::after { content: ""; position: absolute; inset: 0; z-index: 5; pointer-events: none; background: #050816; opacity: calc(var(--cv) * .6); }
-.cw-head { position: absolute; left: 0; right: 0; top: 50%; z-index: 1; transform: translate3d(0, -50%, 0); text-align: center; padding-inline: max(16px, 5vw); }
+.cw-head { position: absolute; left: 0; right: 0; top: 40%; z-index: 1; transform: translate3d(0, -50%, 0); text-align: center; padding-inline: max(16px, 5vw); }
 .cw-head .eyebrow { color: #9db8ff; }
 .cw-head .h2 { color: #fff; font-size: clamp(2.8rem, 6.4vw, 5.6rem); line-height: 1.02; }
 .cw-head .h2 em { color: #9db8ff; }
@@ -2491,14 +2491,19 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   var fxSteps = [].slice.call(document.querySelectorAll('#fx-steps button'));
   var FX_UNITS = 6.8;                          /* scroll length of the stage, in features (the last one holds the end) */
 
-  /* One card at a time. Each card travels a diagonal from the bottom-left to
-     the top-right of the stage. Its position along it is `g`, which is
-     eased so the card hangs about the middle (where it is read) and rushes
-     through the ends, so the next card is already coming in at a corner
-     while this one is still being read, and the last one is leaving at the
-     opposite corner. CARD_GAP is how far apart (in position along the path)
-     neighbouring cards sit. */
-  var CARD_GAP = .6, HANG = 1.45;
+  /* One card at a time. Each card travels a diagonal from the bottom-right to
+     the top-left of the stage (the owner's call: in from the bottom-right, then
+     up to the top-left as you scroll down). Its position along it is `g`, which
+     is eased so the card hangs about the middle (where it is read) and rushes
+     through the ends, so the next card is already coming in at a corner while
+     this one is still being read, and the last one is leaving at the opposite
+     corner. CARD_GAP is how far apart (in position along the path) neighbouring
+     cards sit, and it is chosen so that two neighbours never touch. They are
+     closest when they straddle the middle equally, where the centres are
+     `2 * (CARD_GAP / 2)^HANG * ry` apart (415px on an 800px screen at .8); that
+     has to beat the two cards' heights halved and added (about 360px, with a
+     little for the lean). Measured: 41 scroll positions, no overlap. */
+  var CARD_GAP = .8, HANG = 1.45;
   var SIDE = [0, 1, 0, 1, 0, 1];             /* which way a card leans */
   var DRIFT = [0, -5, 4, -4, 5, -3];         /* a little drift off the diagonal, in vh */
   function measureWall() {}
@@ -2506,13 +2511,15 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     if (staticMode()) return;
     var vw = window.innerWidth, vh = window.innerHeight, n = cwCards.length;
     var rx = vw * .62, ry = vh * .98;                       /* how far along the diagonal a card goes */
-    /* Which card is at the middle (0 = the first): the first is there at 8% of the
-       pin, the last at 68%, and the sheet starts to rise at about 70%. */
-    var U = (p - .08) * ((n - 1) / .6);
+    /* Which card is at the middle (0 = the first). The headline is alone on the
+       stage until 6% of the pin; the first card is at the middle at 16% (so it
+       is still below the headline's zone while the headline is leaving), the
+       last at 70%, and the sheet starts to rise at about 69%. */
+    var U = (p - .16) * ((n - 1) / .54);
     for (var i = 0; i < n; i++) {
       var c = cwCards[i], s = clamp((U - i) * CARD_GAP, -1.25, 1.25), a = Math.abs(s);
       var g = (s < 0 ? -1 : 1) * Math.pow(a, HANG);
-      var x = g * rx, y = -g * ry + DRIFT[i] * vh * .01 * (1 - Math.min(1, a));
+      var x = -g * rx, y = -g * ry + DRIFT[i] * vh * .01 * (1 - Math.min(1, a));
       var rot = (SIDE[i] ? 1 : -1) * 2.6 * g;
       var sc = 1 - .14 * Math.min(1, a);
       var op = 1 - .55 * smooth(a, .8, 1.2);
@@ -2524,7 +2531,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       if (c._z !== z) { c._z = z; c.style.zIndex = z; }
     }
     /* The headline is the first thing on the stage and the first to give way. */
-    var ho = 1 - smooth(p, 0, .1);
+    var ho = 1 - smooth(p, 0, .06);
     var hv = ho.toFixed(3), ht = 'translate3d(0,' + (-50 - p * 10).toFixed(2) + '%,0)';
     if (cwHead._o !== hv) { cwHead._o = hv; cwHead.style.opacity = hv; }
     if (cwHead._t !== ht) { cwHead._t = ht; cwHead.style.transform = ht; }

@@ -3514,22 +3514,33 @@ findings), and the sheet of features that covers it". The old rail / odometer /
 night sheet / card stack / fan and the whole Testimonials section ("Students
 are scoring higher") are gone.
 
-- **The wall** (`#wo`, 420vh, sticky `#cw-stage`; was 660vh, "too long"): the six research findings as
-  cards that come ONE AT A TIME along a diagonal (the owner: "one at a time,
-  scrolling diagonally"). Every card sits at the middle of the stage
-  (`translate: -50% -50%`); `applyWall` moves each along a bottom-left to
-  top-right path by its position `g = sign(s) * |s|^HANG` (`s = (U - i) *
-  CARD_GAP`, `U` running from -1.5 to n+0.5 over the pin). The power makes a card
-  hang near the middle, where it is read, and rush through the ends, so the next
-  card is already entering at one corner while the last is leaving at the other.
+- **The wall** (`#wo`, 420vh, sticky `#cw-stage`; was 660vh, "too long"): the six
+  research findings as cards that come ONE AT A TIME along a diagonal, **in from
+  the bottom-right and out to the top-left** (the owner's call; it was the
+  mirror image first). Every card sits at the middle of the stage
+  (`translate: -50% -50%`); `applyWall` moves each along the path by its
+  position `g = sign(s) * |s|^HANG` (`s = (U - i) * CARD_GAP`, `x = -g * rx`,
+  `y = -g * ry`). The power (`HANG` 1.45) makes a card hang near the middle,
+  where it is read, and rush through the ends.
+  **Timing** (`U = (p - .16) * (n - 1) / .54`): the headline is alone on the
+  stage until 6% of the pin, the first card is at the middle at 16%, the last
+  at 70%, and the sheet starts to rise at about 69%.
+  **Nothing may overlap** (the owner saw the headline covered by the first
+  card): the headline fades by 6% while card 0 is still below the middle, and
+  `CARD_GAP` .8 keeps neighbours apart. Two cards are closest when they
+  straddle the middle equally, `2 * (CARD_GAP/2)^HANG * ry` between centres,
+  which must beat their heights halved and added (~360px on an 800px screen).
+  Checked by sampling 41 scroll positions at 1280x800, 1440x900 and 1100x680 and
+  intersecting the on-screen boxes of the heading and every card: 0 overlaps
+  (cards parked off-screen share a spot, so count only what is in the viewport).
   Cards lean with `g`, shrink to .86 and fade at the ends, and the one nearest
-  the middle is on top. Two big "lead" cards carry one huge figure on a panel cut
-  on a slant (`.cw-stat`, `clip-path`), the others are serif quote cards (paper,
-  pale blue, night). One radius (32) for every card, 8 for chips. The numbers and
-  sources are the site's own existing claims (Cepeda 2006, Kornell 2009, Roediger
-  and Karpicke, Taylor and Rohrer 2010, Walker 2017, Feynman); change a card's
-  words, never invent a figure. The cards are in `.cw-wall` in reading order
-  (no columns; `--o` orders them on a phone).
+  the middle is on top. Two big "lead" cards carry one huge figure on a panel
+  cut on a slant (`.cw-stat`, `clip-path`), the others are serif quote cards
+  (paper, pale blue, night). One radius (32) for every card, 8 for chips. The
+  numbers and sources are the site's own existing claims (Cepeda 2006, Kornell
+  2009, Roediger and Karpicke, Taylor and Rohrer 2010, Walker 2017, Feynman);
+  change a card's words, never invent a figure. The cards are in `.cw-wall` in
+  reading order (no columns; `--o` orders them on a phone).
 - **The curtain** (`#rows-sheet`, `margin-top: -100vh`, so it overlaps the last
   screen of the wall): a light sheet rises over the pinned stage; its top
   corners flatten from 72px to 0 as it arrives (`--rt`, **unitless: the CSS
