@@ -48,7 +48,6 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `api/_firestore.js` | ~8 KB | Firestore as the service account, shared by `class.js` and `webhook.js`. The underscore keeps Vercel from serving it |
 | `sf-questions.js` | ~42 KB | **The question templates and validators** (`qtpl`, `buildQuestionSchema`, `tallyFor`, `sanitizeDayQuestions`, `repairJSON`), moved out of `app.html` byte for byte so the teacher builder uses the same ones, plus the **question lint** (`lintQuestion`, `lintDay`). Loaded by `app.html`, `teacher-build.html` and (for the top-up's lint) `lesson.html` - see "Question lint, spaced review and pitch" |
 | `firestore.rules` | | Deny-all. Paste into the Firebase console; only the service account reaches Firestore |
-| `draw-lab.html` / `api/draw-lab.js` / `lab/` | | **Internal.** Draws the same lessons with Haiku, Sonnet and Opus through the real lesson prompt, beside Servier Medical Art (CC BY 3.0), to decide which model draws for Pro. Linked from nothing. The endpoint is **locked**: 403 unless `DRAW_LAB_KEY` (12+ chars) is set in Vercel and sent as `x-lab-key`, so a deploy costs nothing. Delete all three when the comparison is done |
 | `sf-data.js` | ~30 KB | **A lesson's numbers** (Oct 2026): checks the table the model copied from the notes, draws its chart (line, bars, donut, scatter) and table, and BUILDS the data questions from it - Read the table, Complete the table, Spot the bad graph - so every answer key is arithmetic on the learner's figures. Loaded by `app.html` and `lesson.html` - see "Tables, charts and data questions" |
 | `sf-topics.js` | ~38 KB | **The subtopic skill.** Reads the notes of ANY subject into parts, groups them to fit the days, and composes each day's question mix. Loaded by `app.html`. See "Subtopics made from the notes" |
 
@@ -3662,8 +3661,8 @@ files. **The nav is not in that block**: it is `sf-nav.js`, see "The site nav".
 - **Our story keeps every word** of the old page, in order. The long paragraph
   is split in two and its last sentence is the pull quote, so it is said once.
   The row naming the three techniques is new; its lines come from the
-  landing's feature cards. "200% better retention" has no source anywhere in
-  the repo (it is also on the landing's SM-2 card).
+  landing's feature cards. The unsourced "200% better retention" claim was removed from
+  the landing and this page (Nov 2026); no number is claimed now.
 - **The browser pane throttles frames while hidden** (about 1 fps), so reveals
   finish late in screenshots. Add `.in` to every `[data-reveal]` and wait, or
   check values in JS.
@@ -3755,7 +3754,7 @@ on a phone the bar is 8px from the edges, 52px tall. The hero's own
 - **The logo keeps its mark and drops its word** only where the controls
   need the room: on a phone when there is a mid slot (the lesson, so the
   timer fits), and at 360px or less on any app page.
-- **What is not on it**: `draw-lab.html` (internal) and `index.html`'s hero
+- **What is not on it**: `index.html`'s hero
   state (white on navy until you scroll - its own copy, deliberately).
 - **On a phone the nav is just the logo and "Build my plan"**, exactly as on
   `index.html`, so a signed-in learner has no link back to the dashboard from
