@@ -924,13 +924,28 @@ question passes through it** — the plan's and the top-up's.
 
 ## Invariants — do not break these
 
-### 1. Math must stay ~80% solving work, and must not be one shape repeated
+### 1. Math must stay ~90% equations, and must not be one shape repeated
 
 ```js
-var MATH_MIX = { bigequation: 0.80, wordproblem: 0.13 };
-var MATH_DAY_QUESTIONS = 12;      // denominator, and the floor on day length
+var MATH_MIX = { bigequation: 0.90, wordproblem: 0.05 };
+var MATH_DAY_QUESTIONS = 20;      // denominator, and the floor on day length
 var MATH_CORE_TYPES   = { bigequation: 1, wordproblem: 1 };
 ```
+
+**Oct 2026, the owner: "90% equations, a lot of equations for repetition".**
+It was 80% of 12 (10 equations a day). A maths day is now **18 equations,
+1 word problem, 1 error spot** (20 questions): the plan builder asks the
+model for 12 equations in a rotation of forms (solve, simplify, evaluate,
+expand or factor, easy first and hard last) and `enforceFormatMix` generates
+the rest. The repetition comes from volume and from ORDER, not from research
+copy on the card: the queue puts easy equations first, spreads the generated
+equations among the model's instead of tacking them on the end, and puts the
+word problem near the middle; the top-up asks for 9 equations in 10; and the
+review cards on a maths day are plain ("Let's try them again") - no
+"science-backed" line. Interleaving forms and spaced returns are what
+question-design.md §3 supports for maths; nothing about it is printed.
+`test_math_day.js` (fails 8 ways on the code before). The session timer
+still ends the day, so a learner may not reach all 20 in a short session.
 
 **Do NOT add `errorspot` or `sequence` to `MATH_CORE_TYPES`.** It looks like a
 reasonable idea — error-spotting is solving practice — but `MATH_CORE_TYPES`
@@ -944,8 +959,8 @@ the generator only produced a word problem on every third item, so a day short b
 one or two got equations and nothing else — always 7 equations, always exactly 1
 word problem, whatever the model sent.
 
-A math day should produce **10 bigequation, 2 wordproblem, 1 errorspot**
-(≈77% / 15% / 8%), **0 vocabulary match cards, 0 definition sequence cards, 0 fill
+A math day should produce **18 bigequation, 1 wordproblem, 1 errorspot**
+(90% / 5% / 5%), **0 vocabulary match cards, 0 definition sequence cards, 0 fill
 cards**. Use that as a regression check. `MATH_DAY_QUESTIONS` is the one number to
 change if sessions should be longer or shorter.
 
@@ -1834,7 +1849,7 @@ Tested on a real page load (cell day): five organelle pins over the lesson's
 own cell, graded 4/5 with the wrong pin corrected in place; the atmosphere
 exemplar labels its four layers + ozone; a concept web is refused; across all
 10 subjects 0 dropped, 0 duplicated, opening unchanged, maths gets no card and
-still 10 bigequation / 2 wordproblem.
+still 18 bigequation / 1 wordproblem.
 
 ### Drawn on the spot, for the question just answered — `requestMomentArt`
 
@@ -2807,7 +2822,7 @@ What to check after any `buildQueue` or renderer change:
 5. Whiteboard `briefFor().render()` returns true on all 10 subjects, and
    `fromWrongAnswer().render()` returns true for every question type
 6. No question's answer appears on the opening board
-7. Math still yields 10 bigequation / 2 wordproblem / 0 match / 0 sequence / 0 fill
+7. Math still yields 18 bigequation / 1 wordproblem / 1 errorspot / 0 match / 0 sequence / 0 fill
 8. Every card in every session renders without throwing
 9. The whiteboard sits between `welcome` and `lesson` in every session — check
    this with a real page load (an iframe with a cache-busting query works), not

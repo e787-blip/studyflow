@@ -3013,15 +3013,14 @@
   var SUBJECT_FORMAT_MANDATE = {
     math:
       'MATH IS PROCEDURAL, AND THIS QUOTA IS THE HARDEST RULE IN THIS PROMPT.\n' +
-      'Of 9 questions, 7 OR 8 must be "bigequation" or "wordproblem". Nothing else ' +
-      'counts toward that number - not errorspot, not sequence, not fill, not mcq.\n' +
+      'Of 14 questions, 13 must be "bigequation" or "wordproblem" - about 90% equations. ' +
+      'Nothing else counts toward that number - not errorspot, not sequence, not fill, not mcq.\n' +
       '  - bigequation: an expression the learner solves, simplifies, expands, ' +
-      'factors or evaluates. Aim for 4-5 of these.\n' +
-      '  - wordproblem: a situation solved in staged sub-steps. Aim for 3-4.\n' +
-      'The remaining 1-2 may be errorspot, mcq or truefalse, and ONLY for a concept ' +
-      'that genuinely cannot be computed (naming a property, stating a rule).\n' +
+      'factors or evaluates. Aim for 12 of these, in a mix of forms.\n' +
+      '  - wordproblem: a situation solved in staged sub-steps. Aim for 1.\n' +
+      'The remaining 1 may be an errorspot.\n' +
       'ZERO "fill". Typing a remembered term is not practice at solving.\n' +
-      'If the notes seem too thin for 7 solvable problems, they are not: vary the ' +
+      'If the notes seem too thin for 12 solvable equations, they are not: vary the ' +
       'numbers, vary the form, apply the same method to a new situation. Write ' +
       'easier problems on the same material. Never switch format to fill the count.'
     /* Maths only. The other subjects had a paragraph each here that
@@ -3308,8 +3307,18 @@
            in every maths day as recognition work the mix has no room for.
            Concepts still reach the learner: the key-terms card, the whiteboard
            brief and the two Feynman prompts are all conceptual. */
-        questionInstructions = '\n\nMATH: 6 bigequation (real equations), 1 errorspot (EXACTLY 1 hasError:true), 1 wordproblem. All answers must be real values.\n';
-        questionSchema = '{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Simplify","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Evaluate","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Expand or factor","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"bigequation","question":"Solve for x","equation":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"errorspot","question":"Find the mistake:","steps":[{"text":"","hasError":false},{"text":"","hasError":false},{"text":"","hasError":true}],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"wordproblem","scenario":"","question":"What is the answer?","steps":[{"prompt":"","answer":"","unit":"","hint":""},{"prompt":"Now use {1} to find...","answer":"","unit":""}],"answer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
+        /* Oct 2026, the owner: maths should be ~90% equations, "a lot of equations
+           for repetition". The day is asked for 12 of them (the lesson tops it up
+           to MATH_DAY_QUESTIONS with its generators, so 18 of 20 are equations),
+           in a rotation of forms - what keeps repetition from being one shape -
+           easy first and harder at the end. */
+        questionInstructions = '\n\nMATH: 12 bigequation (real equations: every one with different numbers, mixing solve, simplify, evaluate and expand or factor; start easy and get harder), 1 errorspot (EXACTLY 1 hasError:true), 1 wordproblem. All answers must be real values. Keep every hint to one short line.\n';
+        var mathForms = ['Solve for x','Simplify','Evaluate','Solve for x','Expand or factor','Solve for x','Simplify','Solve for x','Evaluate','Expand or factor','Solve for x','Simplify'];
+        var mathEqSchema = mathForms.map(function (f, ei) {
+          var ed = ei < 3 ? 'Easy' : (ei >= 9 ? (d === 'Easy' ? 'Medium' : 'Hard') : d);
+          return '{"type":"bigequation","question":"' + f + '","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + ed + '"}';
+        }).join(',');
+        questionSchema = mathEqSchema + ',' + '{"type":"errorspot","question":"Find the mistake:","steps":[{"text":"","hasError":false},{"text":"","hasError":false},{"text":"","hasError":true}],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"wordproblem","scenario":"","question":"What is the answer?","steps":[{"prompt":"","answer":"","unit":"","hint":""},{"prompt":"Now use {1} to find...","answer":"","unit":""}],"answer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       } else if (subjectType === 'science') {
         /* The sequence question replaces a third MCQ. lesson.html used to bolt a
            "put these in order" card onto every science day, built from the
@@ -3345,7 +3354,7 @@
         questionSchema = '{"type":"mcq","question":"","options":["","","",""],"correctIndex":0,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":1,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"mcq","question":"","options":["","","",""],"correctIndex":2,"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"True","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"truefalse","question":"","correct":"False","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"fill","question":"","answer":"","hint":"","explanation":"","difficulty":"'+d+'"},{"type":"write","question":"Explain a key concept from your notes.","modelAnswer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       }
 
-      var prompt =
+      var promptHead =
         'You are a careful teacher preparing a study day for a ' + (strategy.label||'General') + ' student.\n' +
         'Your job is to test what the notes actually say, at the level the notes are written.\n\n' +
         'SUBJECT: ' + subject + '\nSTUDENT NOTES:\n' + notesForPrompt + '\n\n' +
@@ -3750,8 +3759,9 @@
                 '{"type":"cell","label":"animal cell"}  <- cell structure. Say "animal" or "plant" in the label.\n' +
                 '{"type":"concept","center":"Homeostasis","items":["Feedback","Balance"]}  <- fallback for abstract ideas\n' +
         'Labels must come from the actual notes. Keep each label under 20 characters.\n' +
-        '\nFINAL CHECK: Before outputting, reread every question you wrote. Verify each one is about "' + subject + '". Replace anything that is not.\n' +
-        '\nOUTPUT: ONLY valid compact JSON. No markdown. Replace ALL empty strings with REAL content.\n\n' +
+        '\nFINAL CHECK: Before outputting, reread every question you wrote. Verify each one is about "' + subject + '". Replace anything that is not.\n';
+      var OUT_LINE = '\nOUTPUT: ONLY valid compact JSON. No markdown. Replace ALL empty strings with REAL content.\n\n';
+      var lessonShape =
         '{"title":"","microTopic":"","briefing":"","content":"","steps":[],"diagram":{"type":"none","relation":"","label":""},' +
         /* The main-ideas card draws one row per concept and asks each for its
            own picture. Without "visual" in the shape here the model returns
@@ -3771,7 +3781,38 @@
            word list rather than a worked example. */
         (false ? '"workedExample":{"problem":"","steps":[{"title":"","line":"","why":""},{"title":"","line":"","why":""},{"title":"","line":"","why":""}]},' : '') +
         '"visual":{"type":"concept","center":"","items":[]},' +
-        '"duration":30,"isFinal":' + isLast + ',"completed":false,"questions":[' + questionSchema + ']}';
+        '"duration":30,"isFinal":' + isLast + ',"completed":false}';
+
+      /* ── A DAY IS TWO CALLS (Oct 2026) ──────────────────────────────────
+         One call wrote the whole day - lesson, flashcards and every question,
+         16-20k characters - and took 41-49s against the 55s the server allows.
+         Over the line, the reply was thrown away and the day started again
+         from nothing: "Retrying day 1 (attempt 2 of 3)" on most builds, and a
+         timeout cost a full 55s each time. Now the lesson is one call and the
+         questions another, each about half as long (~20s), so a timeout is
+         rare and costs half. A half that worked is KEPT: if the questions
+         fail, only the questions are asked for again.
+
+         Questions are asked after the lesson and are shown it, so they test
+         the lesson that was actually written - two independent calls could
+         each pick a different part of the notes for the same day. */
+      var lessonPrompt = promptHead +
+        '\nTHIS CALL WRITES THE LESSON ONLY. Do NOT write any questions: they are written in a second call that is shown this lesson.\n' +
+        OUT_LINE + lessonShape;
+      function questionsPrompt(lesson) {
+        var names = [];
+        (lesson.keyTerms || []).slice(0, 8).forEach(function (k) { names.push(String(k && (k.term || k) || '').slice(0, 60)); });
+        var ideas = [];
+        (lesson.concepts || []).slice(0, 5).forEach(function (c) { ideas.push(String(c && (c.name || c) || '').slice(0, 80)); });
+        var ctx = '\nTODAY\'S LESSON, ALREADY WRITTEN. Every question must test THIS lesson, from the notes above, and nothing outside it:\n' +
+          'Title: ' + String(lesson.title || '').slice(0, 120) + '\n' +
+          (lesson.microTopic ? 'Topic: ' + String(lesson.microTopic).slice(0, 160) + '\n' : '') +
+          (ideas.length ? 'Main ideas: ' + ideas.join('; ') + '\n' : '') +
+          (names.length ? 'Key terms: ' + names.join('; ') + '\n' : '');
+        return promptHead + ctx +
+          '\nTHIS CALL WRITES THE QUESTIONS ONLY. Return exactly this shape and nothing else - no lesson fields:\n' +
+          OUT_LINE + '{"questions":[' + questionSchema + ']}';
+      }
 
       /* MEASURED, Oct 2026: a full day is 16-20k characters of JSON and takes
          41-49s against the 55s the server allows (before the whiteboard beats
@@ -3785,24 +3826,73 @@
         'sentence under 120 characters; content 3 sentences; workedExample 3 steps; at most 3\n' +
         'concepts; leave out every optional "visual" field.\n\n';
 
-      function tryFetch() {
-        attempt++;
-        setProgress(
-          attempt > 1
-            ? 'Retrying day ' + dayNum + ' (attempt ' + attempt + ' of ' + MAX_RETRIES + ')...'
-            : 'Building your ' + strategy.label + ' plan \u2014 day ' + dayNum + ' of ' + totalDays + '...'
-        );
-        (window.SFAuth ? SFAuth.apiFetch : fetch)('api/generate', {
+      /* Each half is asked for until it works; a half that worked is kept
+         across attempts. `short` is set for a half that timed out, so its
+         next try asks for it SHORT (SHORT_RETRY). */
+      var partLesson = null, partQs = null, short = { lesson: false, qs: false };
+      var timeoutLike = /HTTP 50[24]|Failed to fetch|timeout|NetworkError|Load failed/i;
+
+      function askPart(which, text) {
+        var t0 = Date.now();
+        return (window.SFAuth ? SFAuth.apiFetch : fetch)('api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: (attempt > 1 && /HTTP 50[24]|Failed to fetch|timeout|NetworkError|Load failed/i.test(lastFail)) ? SHORT_RETRY + prompt : prompt }),
+          body: JSON.stringify({ prompt: (short[which] ? SHORT_RETRY : '') + text }),
           keepalive: true  // tells browser to keep this fetch alive even if tab goes background
         })
         .then(function(res) {
           if (res.status === 401) { signInLost = true; throw new Error('Signed out'); }
           if (res.status === 429) { limitHit = true; throw new Error('Daily limit'); }
-          if (!res.ok) throw new Error('HTTP ' + res.status);
+          if (!res.ok) { short[which] = true; throw new Error('HTTP ' + res.status); }
           return res.json();
+        })
+        .then(function(data) {
+          var raw = data.result || data.plan || '';
+          if (!raw || raw.trim().length < 10) throw new Error('Empty API response');
+          var obj = repairJSON(raw);
+          if (!obj || typeof obj !== 'object') throw new Error('JSON unrecoverable');
+          console.log('[gen] day ' + dayNum + ' ' + which + ': ' + Math.round((Date.now() - t0) / 1000) + 's' +
+                      (data.out ? ', ' + data.out + ' tokens' : '') + (data.truncated ? ', TRUNCATED' : ''));
+          return obj;
+        }, function(err) {
+          if (timeoutLike.test(String(err && err.message || ''))) short[which] = true;
+          throw err;
+        });
+      }
+
+      function tryFetch() {
+        attempt++;
+        var label = 'day ' + dayNum + ' of ' + totalDays;
+        function say(part) {
+          setProgress(
+            attempt > 1
+              ? 'Retrying day ' + dayNum + ' (attempt ' + attempt + ' of ' + MAX_RETRIES + ')...'
+              : 'Building your ' + strategy.label + ' plan \u2014 ' + label + ' (' + part + ')...'
+          );
+        }
+        var chain = Promise.resolve();
+        if (!partLesson) {
+          say('writing the lesson');
+          chain = askPart('lesson', lessonPrompt).then(function (o) {
+            /* repairJSON's last resort returns a day with a made-up title and
+               no lesson. That is not a lesson; ask again. */
+            if (!String(o.content || '').trim() && !(Array.isArray(o.concepts) && o.concepts.length) && !(Array.isArray(o.steps) && o.steps.length))
+              throw new Error('Lesson unusable');
+            partLesson = o;
+          });
+        }
+        chain = chain.then(function () {
+          if (partQs) return;
+          say('writing the questions');
+          return askPart('qs', questionsPrompt(partLesson)).then(function (o) {
+            partQs = Array.isArray(o.questions) ? o : { questions: [] };
+          });
+        })
+        .then(function () {
+          var merged = {};
+          Object.keys(partLesson).forEach(function (k) { merged[k] = partLesson[k]; });
+          merged.questions = partQs.questions;
+          return { result: JSON.stringify(merged) };
         })
         .then(function(data) {
           var raw = data.result || data.plan || '';
@@ -4077,8 +4167,10 @@
              not a short one: repairJSON's last resort keeps the title and
              little else. Ask again; on the last attempt keep what there is
              rather than lose the day. */
-          if (day.questions.length < 3 && attempt < MAX_RETRIES)
+          if (day.questions.length < 3 && attempt < MAX_RETRIES) {
+            partQs = null;   // ask for the questions again; the lesson was fine
             throw new Error('Only ' + day.questions.length + ' questions survived');
+          }
           callback(null, day);
         })
         .catch(function(err) {

@@ -2783,7 +2783,30 @@
         var t = fmStr(q.type);
         return t === 'bigequation' || t === 'wordproblem';
       });
-      if (coreFirst.length) {
+      if (qType === 'math' && coreFirst.length) {
+        /* A maths day is ~18 equations (MATH_MIX), so ORDER is what keeps it
+           from reading as one card eighteen times. Easy first and harder at
+           the end (a learner starting a skill should not meet its hardest
+           form cold), the generated equations spread among the model's
+           instead of arriving as a block at the end, and the day's word
+           problem near the middle as a change of shape. */
+        var mxRank = function (q) { var m = fmStr(q.difficulty).toLowerCase(); return m === 'easy' ? 0 : (m === 'hard' ? 2 : 1); };
+        var mxAuth = coreFirst.filter(function (q) { return fmStr(q.type) === 'bigequation' && !q._generated; })
+          .map(function (q, i) { return { q: q, i: i }; })
+          .sort(function (a, b) { return (mxRank(a.q) - mxRank(b.q)) || (a.i - b.i); })
+          .map(function (x) { return x.q; });
+        var mxMade = coreFirst.filter(function (q) { return fmStr(q.type) === 'bigequation' && q._generated; });
+        var mxWp = coreFirst.filter(function (q) { return fmStr(q.type) !== 'bigequation'; });
+        var mxEq = [], mxAi = 0, mxMi = 0, mxTotal = mxAuth.length + mxMade.length;
+        for (var ei = 0; ei < mxTotal; ei++) {
+          /* take from whichever list is further behind its share */
+          if (mxMi < mxMade.length && (mxAi >= mxAuth.length || mxMi / mxMade.length < mxAi / mxAuth.length)) mxEq.push(mxMade[mxMi++]);
+          else mxEq.push(mxAuth[mxAi++]);
+        }
+        var mxOut = mxEq.slice();
+        mxWp.forEach(function (w, wi) { mxOut.splice(Math.round(mxOut.length * (wi + 1) / (mxWp.length + 1)) + wi, 0, w); });
+        shuffled = mxOut.concat(shuffled);
+      } else if (coreFirst.length) {
         /* Alternate: solving, solving, one recognition question, repeat. That
            keeps some variety without burying the practice. */
         var merged = [], ci = 0, ri = 0;
@@ -3507,14 +3530,14 @@
     var FORMAT_RULES = {
       math:
         '7. FORMAT (this rule outranks the others on question style): of 10 questions,\n' +
-        '   7 or 8 MUST be "bigequation" or "wordproblem". Nothing else counts.\n' +
+        '   9 MUST be "bigequation" - about 90% equations, for repetition.\n' +
         '   - bigequation: an expression the learner solves, simplifies, expands or\n' +
-        '     evaluates. Put it in the "equation" field. Aim for 4-5.\n' +
-        '   - wordproblem: a situation solved in 2-4 staged sub-steps, in "steps".\n' +
-        '     Each step asks for ONE quantity; reference an earlier result with {1}.\n' +
-        '     Aim for 3-4.\n' +
-        '   At most 2 may be mcq or truefalse, and only for something that genuinely\n' +
-        '   cannot be computed. ZERO "fill".\n',
+        '     evaluates. Put it in the "equation" field. Every one has different\n' +
+        '     numbers; mix the forms (solve, simplify, evaluate, expand or factor).\n' +
+        '   - the 10th may be one "wordproblem": a situation solved in 2-4 staged\n' +
+        '     sub-steps, in "steps". Each step asks for ONE quantity; reference an\n' +
+        '     earlier result with {1}.\n' +
+        '   ZERO mcq, truefalse or "fill".\n',
       cs:
         '7. FORMAT: at least 3 "errorspot" (buggy code to fix) or "sequence", at least\n' +
         '   2 "write" where the learner traces or produces code. At most 3 mcq.\n',
@@ -7033,18 +7056,20 @@
     }
     else if (card.type === 'review-intro') {
       sfReviewStart(card.block);
+      var rvMath = resolveSubjectType(plan, day) === 'math';
       html = buildCard(' Quick Review', 'From your last session', false,
-        '<p class="content-text" style="text-align:center;">You missed <strong>' + card.count + ' question' + (card.count > 1 ? 's' : '') + '</strong> last session. Let\'s try them again before today\'s new material — this is spaced repetition in action!</p>',
-        'Science-backed review', 'Let\'s review →', false);
+        '<p class="content-text" style="text-align:center;">You missed <strong>' + card.count + ' question' + (card.count > 1 ? 's' : '') + '</strong> last session. Let\'s try ' + (card.count > 1 ? 'them' : 'it') + ' again before today\'s new material' + (rvMath ? '.' : ' — this is spaced repetition in action!') + '</p>',
+        rvMath ? '' : 'Science-backed review', 'Let\'s review →', false);
     }
     else if (card.type === 'review-done' || card.type === 'interleave-done') {
       html = sfReviewDoneCard(card);
     }
     else if (card.type === 'interleave-intro') {
       sfReviewStart(card.block);
+      var mixMath = resolveSubjectType(plan, day) === 'math';
       html = buildCard(' Mixed Review', 'Questions from all your previous days', false,
-        '<p class="content-text" style="text-align:center;">Today is an <strong>interleaved review day</strong>. Research shows mixing questions from different days is one of the most powerful ways to build lasting memory. You\'ll see ' + card.count + ' questions from earlier sessions.</p>',
-        'Science-backed technique', 'Let\'s mix it up →', false);
+        '<p class="content-text" style="text-align:center;">' + (mixMath ? 'A few from your earlier days, mixed in. You\'ll see ' : 'Today is an <strong>interleaved review day</strong>. Research shows mixing questions from different days is one of the most powerful ways to build lasting memory. You\'ll see ') + card.count + ' question' + (card.count > 1 ? 's' : '') + ' from earlier sessions.</p>',
+        mixMath ? '' : 'Science-backed technique', 'Let\'s mix it up →', false);
     }
     else if (card.type === 'elaboration') {
       var q = card.q;
@@ -13796,15 +13821,17 @@
      than left to chance, because they are what stops the day reading as the
      same card eleven times. */
   var MATH_MIX = {
-    bigequation: 0.80,   /* the bulk of the day */
-    wordproblem: 0.13    /* 10-15%: a genuine minority, not a token */
+    bigequation: 0.90,   /* the day: Oct 2026, the owner wanted "a lot of equations for repetition" */
+    wordproblem: 0.05    /* one a day: still not a token, but no longer a tenth of the work */
   };
 
   /* Denominator for those shares, and the floor on a maths day's length. A day
      the model returned short is topped up to this before the shares are taken,
      so a thin day cannot satisfy the mix with two questions. Raise or lower
-     this one number to make maths days longer or shorter. */
-  var MATH_DAY_QUESTIONS = 12;
+     this one number to make maths days longer or shorter. It was 12 (10
+     equations); 20 gives 18 equations, one word problem and the day's error
+     spot. */
+  var MATH_DAY_QUESTIONS = 20;
 
   /* No single format may exceed this share on a non-procedural subject, so a
      history day cannot arrive as nine multiple-choice questions. */
