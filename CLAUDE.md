@@ -711,6 +711,44 @@ guidance in the prompt, and a renderer branch.
   is era + civics. Matters when the notes-map call fails; when it works the
   model picks the shape.
 
+### Reading days (Oct 2026) — the method first, then the passages
+
+The owner: for reading comprehension, teach the method in the first part of the
+lesson, then go to the reading passages, several of them, "with a little bit of
+mix up in between". `test_reading_run.js` (fails on the code before).
+
+- **Which subtopics (the research decides, not the subject name).** A strategy
+  is learned from explicit instruction with a modelled example, then applying
+  ONE method to many different texts (NRP 2000; Shanahan et al. 2010, IES
+  practice guide), and blocked practice of one skill is better when the cases
+  share a method; interleaving earns its place where the cases are confusable
+  (question-design.md §3). So: `english/reading` (three reading sets),
+  `english/literature` and `language/reading` (two each). **Not**
+  `english/grammar` (comma splice vs fragment vs run-on ARE confusable, so it
+  stays mixed) and not the history mixes (sourcing, corroboration and context
+  are different skills, and are meant to alternate).
+- **The method is the lesson card.** A subtopic's `method` string (SUBTOPICS in
+  `app.html`) is printed under rule 4 of the day prompt: `steps` become the 3-4
+  moves of the strategy, `content` shows it on one sentence thought aloud, no
+  quizzing. The lesson card's "How it works" part prints them. A subtopic with
+  no `method` is prompted exactly as before. Mixes dropped their plain `mcq`
+  (english/reading, language/reading) because each passage already carries
+  three questions.
+- **The run** (`buildQueue`, where the reading sets are placed): two or more
+  `readingset` questions make a READING DAY. The sets go one after another,
+  passage then its own questions, with ONE other card between neighbours - never
+  a plain multiple-choice - and the remaining formats after the last passage.
+  Due-review cards follow the first passage; the labelling card (built on
+  arrival) stays last. Content-driven, so a made subtopic with two sets gets
+  it too; **one set keeps the old spread**. Pre-test and review blocks sit
+  before `practiceStart` and are untouched. Card type for a multiple-choice is
+  `'question'`, not `'mcq'` (a first draft sorted on `'mcq'` and put one in
+  the gap).
+- **Output cost:** a third set adds ~2k characters to the questions call
+  (the day is two calls, ~20s each, so it has room). Not seen from a real model.
+- Made subtopics (`sf-topics.js`) still compose ONE reading set for text
+  material, so a made reading part has no run yet.
+
 ### The five formats of Oct 2026 — recall, selfcheck, conceptmap, whosright, readchart
 
 Evidence, design reasons and what was rejected:

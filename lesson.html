@@ -3182,7 +3182,7 @@
       return q.type === 'readingset' && q.passage &&
              Object.prototype.toString.call(q.questions) === '[object Array]' && q.questions.length;
     });
-    readingSets.forEach(function (set, i) {
+    var readingBlocks = readingSets.map(function (set) {
       var block = [{ type: 'reading-passage', q: set }];
       set.questions.forEach(function (sq) {
         var copy = {}, k;
@@ -3193,8 +3193,44 @@
         if (!copy.difficulty) copy.difficulty = set.difficulty;
         block.push({ type: 'passage', q: copy });
       });
-      Array.prototype.splice.apply(sessionCards, [injectSpread(i, readingSets.length, 0), 0].concat(block));
+      return block;
     });
+    if (readingBlocks.length >= 2) {
+      /* A READING DAY: the method was taught on the lesson card, so the
+         practice is the passages, one after another, with ONE other card
+         between them (Oct 2026, the owner: "go to the reading passages and
+         multiple of those ... a little bit of mix up in between"). A strategy
+         is learned by applying the same method to several different texts
+         before the kinds of question are mixed; the other formats come after
+         the last passage. Review cards stay out of the run and follow the
+         first passage. The pre-test and the review blocks sit before
+         practiceStart and are untouched. */
+      var rdTail = sessionCards.slice(practiceStart);
+      var rdLoose = [], rdReview = [], rdLate = [];
+      rdTail.forEach(function (c) {
+        if (c && c.q && !c.isPretest && !c.isReview && !c.isDue) rdLoose.push(c);
+        else if (c && (c.isReview || c.isDue)) rdReview.push(c);
+        else rdLate.push(c);              // cards built on arrival (the labelling card)
+      });
+      /* The mix cards are the ones that differ most from a passage question:
+         anything but a plain multiple-choice (card type 'question') first. */
+      rdLoose.sort(function (a, b) {
+        return (a.type === 'question' ? 1 : 0) - (b.type === 'question' ? 1 : 0);
+      });
+      var rdOut = [];
+      readingBlocks.forEach(function (block, bi) {
+        Array.prototype.push.apply(rdOut, block);
+        if (bi === 0) Array.prototype.push.apply(rdOut, rdReview);
+        if (bi < readingBlocks.length - 1 && rdLoose.length) rdOut.push(rdLoose.shift());
+      });
+      Array.prototype.push.apply(rdOut, rdLoose);
+      Array.prototype.push.apply(rdOut, rdLate);
+      sessionCards = sessionCards.slice(0, practiceStart).concat(rdOut);
+    } else {
+      readingBlocks.forEach(function (block, i) {
+        Array.prototype.splice.apply(sessionCards, [injectSpread(i, readingBlocks.length, 0), 0].concat(block));
+      });
+    }
 
     sessionCards = applyFeynmanOrder(sessionCards, day);
 

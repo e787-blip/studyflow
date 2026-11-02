@@ -544,6 +544,23 @@ subjects get them through `sf-topics.js`'s kind cores.
   concept maps and real misconceptions at a useful rate is unknown until a
   plan is generated against the live endpoint.
 
+## 12. Reading days: the method, then the passages (Oct 2026)
+
+Explicit comprehension-strategy instruction (what the move is, a modelled
+think-aloud on one sentence, why it works) followed by gradual release is among
+the best-supported practices for reading (National Reading Panel 2000; Duke &
+Pearson 2002; Shanahan et al. 2010, IES practice guide). The practice that
+follows is the same method applied to several different texts, which is what
+carries a strategy to new text; the formats are mixed only after that.
+
+**Which subtopics:** reading comprehension, literary analysis and reading in a
+language, because each is one method applied to many texts. **Not** grammar
+(its cases are the confusable ones interleaving is for, section 3) and not the
+history mixes (distinct skills that should alternate). **Does not establish:**
+the exact count (three passages) or the single card between them; those are
+design choices, and the gap card is there so a long run does not read as a
+worksheet.
+
 ## What none of this establishes
 
 - **The specific counts.** That reading comprehension gets four passage
