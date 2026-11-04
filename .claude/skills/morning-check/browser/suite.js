@@ -16,6 +16,8 @@
     ['predraw', 'PREDRAW OK', S + 'test_predraw.js'],
     ['auto_cap', 'no page errors', S + 'test_cap.js'],
     ['app_predraw', 'APP PREDRAW OK', S + 'test_appdraw.js'],
+    ['split_day', 'SPLIT DAY OK', S + 'test_split_day.js'],
+    ['forgiving_fill', 'FORGIVING FILL OK', S + 'test_forgiving_fill.js'],
     ['walk_label', 'no page errors', S + 'walk_pic.js', ['label', 'wl']],
     ['walk_picture', 'no page errors', S + 'walk_pic.js', ['veins', 'wv']],
     ['walk_model', 'no page errors', S + 'walk_model.js'],

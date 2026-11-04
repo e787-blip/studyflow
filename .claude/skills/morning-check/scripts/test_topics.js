@@ -57,7 +57,7 @@ async function run(o) {
   }
   const plan = await page.evaluate(() => { try { const u = JSON.parse(localStorage.getItem('studyflow_user')); return JSON.parse(localStorage.getItem('sfu:' + u.email + '|studyflow_plan') || 'null'); } catch (e) { return null; } });
   await b.close();
-  const maps = calls.filter(c => MAP.test(c)), days = calls.filter(c => !MAP.test(c) && !/^Draw ONE illustration/.test(c));
+  const maps = calls.filter(c => MAP.test(c)), days = calls.filter(c => !MAP.test(c) && !/^Draw ONE illustration/.test(c) && /THIS CALL WRITES THE QUESTIONS ONLY/.test(c));  // a day is two calls (lesson, questions); the questions prompt carries the whole head and the schema
   const firstDay = calls.findIndex(c => !MAP.test(c) && !/^Draw ONE/.test(c));
   return { calls, maps, days, plan, errors, covers, coversHtml, reached: !!plan,
            mapToFirstDay: firstDay >= 0 ? (times[firstDay] - t0) / 1000 : -1 };

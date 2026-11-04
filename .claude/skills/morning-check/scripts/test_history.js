@@ -62,7 +62,7 @@ const plan = { id: 'hist', subject: 'History: causes of the American Revolution'
     startGeneration('Rome fell in 476 after invasions, weak emperors and a split into east and west.', 1, new Date(Date.now() + 86400000).toISOString().slice(0, 10), 'vip'); });
   let qs = null;
   for (let i = 0; i < 100 && !qs; i++) { await pg.waitForTimeout(150); qs = await pg.evaluate(() => { try { return JSON.parse(localStorage.getItem('sfu:hist@t.com|studyflow_plan')).days[0].questions; } catch (e) { return null; } }).catch(() => null); }
-  const schema = pr.slice(pr.indexOf('"completed":false,"questions":['));
+  const schema = (function (i) { return pr.slice(i < 0 ? pr.indexOf('"completed":false,"questions":[') : i); })(pr.lastIndexOf('{"questions":[{"type"'));
   assert(/"mode":"claim"/.test(schema) && /"categoryA":"Changed"/.test(schema) && /"questionType":"perspective"/.test(schema) && !/"type":"truefalse"/.test(schema), 'the history prompt asks for a claim, a change sort and a perspective, and no true/false');
   assert(/answer EITHER way/.test(pr) && /today.s values/.test(pr), 'and says how to write them (debatable question; the presentism trap)');
   const modes = (qs || []).filter(q => q.type === 'write').map(q => q.mode || '-').join(',');

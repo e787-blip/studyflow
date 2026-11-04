@@ -198,7 +198,7 @@ meant paying for a plan nothing could find.
   `usage/{email}` per UTC day, written with an `updateTime` precondition so
   two calls cannot both pass): `ai` - generate, extract and illustration -
   free 150, pro 300, VIP/classroom/school 600; `chat` - VIP 200. A 14-day
-  plan with every retry is about 50 calls, so a learner never meets it; a
+  plan with every retry is about 100 calls (a day is two), so a learner never meets it; a
   loop or a script does. Over it: 429 `daily_limit`, said in words by the
   plan builder (its own card, no retries), the tutor, a photo source and the
   teacher builder. Owners have no cap. **A broken counter lets the call
@@ -4130,6 +4130,41 @@ different things.
   explanation)` is the shared path; call it from any grader that does not
   go through `handleResult`.
 
+### A typed answer that means the same thing is right (Nov 2026)
+
+The owner: a typo, or a few extra words that say the same thing, should be
+correct; spelling practice should not; extra words that go off topic should
+not. `answerFill` in `lesson.html` (module "A TYPED ANSWER THAT MEANS THE SAME
+THING", just above `answerFill`):
+
+- **Safe, local, no call (`fzGrade`)**: capitals, a plural / -ed / -ing, a
+  dropped, doubled or swapped letter in a word of 5+ letters (2 at 9+), and
+  filler ("I think it is the ..."). Leftover words must be filler or words the
+  question or the answer already used. **A typed word that is itself a word
+  the lesson uses (`fzKnown`) is another word, never a typo** (meiosis for
+  mitosis, affect for effect); and a SUBSTITUTED letter is never forgiven
+  locally (proton / photon), only the model may.
+- **One model check (`fzJudge`, `api/generate`, 8s cap)** for the rest: a
+  synonym, extra words that may or may not be on topic, a substitution. It
+  answers same / different and is told to say different when unsure. The
+  card shows "Checking your answer..." while it waits and holds the input
+  (`data-judging`). "Same" is shown with "You wrote ... that counts" and the
+  real spelling. **If the call cannot be made, the card grades the old broad
+  way** (`lenientOK`: all the answer's words present, up to 4 extra, no
+  negation) - a failure never changes a grade. The old rule alone is what let
+  "nucleus and also pizza" pass; with the check on, it no longer does.
+- **Never on**: a language day, a question or day that mentions "spell",
+  `dictation`, `q.exact`, or `mustBeCorrect` (equation cards) - `fzStrict`;
+  a number or an equation answer (arithmetic, not opinion); a negation the
+  answer does not have ("not mitosis", "I don't know" - wrong at once).
+- The recall card (`rcMatch`) has the same two guards: filler is fine, and a
+  typo may not turn into a lesson word.
+- `window.SF_JUDGE_OFF = true` turns the model check off; **`harness.js`
+  sets it unless `opts.judge`**. `test_forgiving_fill.js` (fails on the code
+  before). Each check counts toward the daily `ai` cap. **Not seen against
+  the real model**: try "nucleus and also pizza", a synonym and a typo on
+  the live site and read what it decides.
+
 ### Plan generation must survive a lost day
 
 A day takes ~40 seconds. Every day used to fire at once, and the first to
@@ -4150,6 +4185,27 @@ on a **three**-day plan during testing.
   `vercel.json`. It stops short of the platform limit on purpose: the
   function returns a JSON error rather than being killed, and the client
   cannot tell a platform kill apart from a network failure.
+- **A day is TWO calls (Nov 2026, `app.html` `generateDay`).** The lesson
+  (title, flashcards, concepts) is one call and the questions another, each
+  about half the output, ~20s, so neither meets the 55s line. `promptHead` is
+  the whole guidance; the lesson call adds "THIS CALL WRITES THE LESSON
+  ONLY" and the lesson shape, the questions call adds the lesson it is
+  shown (title, ideas, key terms - so two calls cannot pick different parts of
+  the notes) and `{"questions":[...]}`. **A half that worked is kept across
+  attempts**: a failed questions call is asked again alone, and a half that
+  timed out is asked SHORT (`SHORT_RETRY`) the next time. A "lesson" with no
+  content (repairJSON's made-up "Study Session") is refused; fewer than 3
+  questions re-asks the questions only. Calls run one after the other (the
+  lesson first), not together: **whether they may run together depends on
+  Anthropic's per-minute token limits, which nobody has read yet** -
+  `api/generate.js` now logs one JSON line per call (ms, tokens in and out,
+  the `anthropic-ratelimit-*` numbers) and returns `ms` and `out`; read
+  those in the Vercel logs and the Limits page before raising the
+  concurrency. Prompts go out twice per day (input tokens double; the cap
+  counts two calls). `test_split_day.js` (fails on the one-call code);
+  `test_e2e_cards.js` answers the lesson half separately, and tests that read
+  the day prompt now read the questions call (`THIS CALL WRITES THE
+  QUESTIONS ONLY`), which carries the whole head and the schema.
 - **A day must FIT in 55s, and it did not (Oct 2026).** The owner saw
   "Retrying day 1 (attempt 3 of 3)" on most builds. Two real cell-division
   day prompts both came back 504 at 55.3s: the prompt asked for ~20k

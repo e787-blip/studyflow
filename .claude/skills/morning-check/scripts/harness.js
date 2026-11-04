@@ -42,6 +42,10 @@ async function open(opts) {
   }, { plan, user: fx.user, dark: !!opts.dark, day: opts.day || 0, seed: opts.seed || null, modelArt: opts.modelArt !== false });
   await page.goto((process.env.SF_BASE || 'http://localhost:8765/') + 'lesson.html?cb=' + Date.now(), { waitUntil: 'load' });
   await page.waitForTimeout(opts.settle || 1200);
+  /* A wrong fill-in asks the model whether it means the same thing (lesson.html
+     fzJudge). Tests that answer fill-ins wrong expect an answer at once, so the
+     call is off unless a test asks for it: opts.judge. */
+  if (!opts.judge) await page.evaluate(() => { window.SF_JUDGE_OFF = true; });
   return { browser, page, calls, errors };
 }
 module.exports = { open };
