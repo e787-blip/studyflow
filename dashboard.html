@@ -180,28 +180,40 @@
 
   /* ── PAGE ───────────────────────────────────────────────────────────── */
   .page { max-width: 1180px; margin: 0 auto; padding: 18px var(--gutter) 96px; }
-  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 6px 0 22px; }
-  .greet { font-size: .95rem; color: var(--muted); margin-bottom: 2px; }
-  .greet strong { color: var(--ink-2); font-weight: 500; }
+  /* The head is two lines and a rhythm: a small greeting, the plan's name at
+     a size that holds on one or two lines (it was 52px and wrapped into a
+     tower with a stray chevron), and the facts as chips instead of one long
+     grey string. The action sits level with the name, not under it. */
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin: 4px 0 26px; }
+  .greet { font-size: .88rem; font-weight: 500; letter-spacing: .005em; color: var(--muted); margin-bottom: 6px; }
+  .greet strong { color: var(--ink-2); font-weight: 600; }
   .plan-switch {
-    display: block; max-width: 100%;
-    background: none; border: 0; padding: 2px 8px 2px 0; margin-left: -2px; border-radius: 14px; text-align: left;
-    transform-origin: left center; transition: transform var(--spring-fast-ms) var(--spring-fast);
+    display: inline-flex; align-items: center; gap: 10px; max-width: 100%;
+    background: none; border: 0; padding: 4px 10px 4px 0; margin: 0 0 0 -2px; border-radius: 16px; text-align: left;
+    transform-origin: left center; transition: transform var(--spring-fast-ms) var(--spring-fast), background-color .2s;
   }
   .plan-switch:active { transform: scale(.985); transition-duration: 80ms; }
+  @media (hover: hover) { .plan-switch:hover { background: var(--blue-tint); } }
   .plan-switch h1 {
-    font-size: clamp(2.15rem, 4.6vw, 3.25rem); line-height: 1.04; letter-spacing: -.022em; text-wrap: balance;
-    overflow-wrap: anywhere;
+    font-size: clamp(1.85rem, 3.4vw, 2.6rem); line-height: 1.08; letter-spacing: -.02em; text-wrap: balance;
+    overflow-wrap: anywhere; min-width: 0;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   }
   .switch-chev {
-    width: 30px; height: 30px; border-radius: 999px; display: inline-grid; place-items: center; vertical-align: .32em;
-    margin-left: 12px; background: var(--surface); border: 1px solid var(--line); color: var(--ink-2);
+    width: 28px; height: 28px; border-radius: 999px; display: grid; place-items: center; flex-shrink: 0;
+    background: var(--surface); border: 1px solid var(--line-2); color: var(--ink-2);
     transition: border-color .2s, color .2s, transform var(--spring-ms) var(--spring);
   }
   .plan-switch:hover .switch-chev { border-color: var(--blue); color: var(--blue-ink); }
   .plan-switch[aria-expanded="true"] .switch-chev { transform: rotate(180deg); border-color: var(--blue); color: var(--blue-ink); }
-  .plan-sub { color: var(--muted); font-size: .93rem; margin-top: 6px; }
-  .head-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .plan-meta { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .plan-meta li { display: inline-flex; align-items: center; gap: .4rem; height: 28px; padding: 0 11px; border-radius: 999px;
+                  font-size: .8rem; font-weight: 500; color: var(--ink-2); background: var(--surface); border: 1px solid var(--line);
+                  font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .plan-meta li svg { color: var(--muted); }
+  .plan-meta li.soon { color: var(--blue-ink); border-color: rgba(74,124,246,.35); background: var(--blue-tint); }
+  .plan-meta li.soon svg { color: var(--blue-ink); }
+  .head-actions { display: flex; gap: 8px; flex-shrink: 0; padding-bottom: 2px; }
 
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) 352px; gap: 22px; align-items: start; }
   .col-main, .col-side { display: grid; gap: 22px; min-width: 0; }
@@ -647,7 +659,8 @@
   @media (max-width: 720px) {
     .hide-phone { display: none !important; }
     .page { padding-top: 8px; padding-bottom: calc(118px + env(safe-area-inset-bottom)); }
-    .page-head { margin-bottom: 16px; }
+    .page-head { margin-bottom: 18px; }
+    .plan-meta { margin-top: 10px; }
     .col-side { grid-template-columns: minmax(0, 1fr); }
     .grid, .col-main, .col-side { gap: 16px; }
     /* The picture shrinks so the one button on this page is on the first
@@ -817,14 +830,12 @@
     <div class="page-head rise">
       <div style="min-width:0;flex:1;">
         <p class="greet"><span id="greeting-time">Good day</span>, <strong id="user-name">there</strong></p>
-        <!-- The chevron rides at the end of the title's last line. Beside a
-             wrapped title as a flex item it floated off to the right edge of
-             the box, nowhere near the words it belongs to. -->
         <button class="plan-switch" id="plan-switch" data-action="plans" aria-haspopup="dialog" aria-expanded="false" aria-controls="plans-layer">
-          <h1><span id="plan-title">Your plan</span><span class="switch-chev" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></h1>
-          <span class="sr-only">, switch plan</span>
+          <h1 id="plan-title">Your plan</h1>
+          <span class="switch-chev" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+          <span class="sr-only">Switch plan</span>
         </button>
-        <p class="plan-sub" id="welcome-sub"></p>
+        <ul class="plan-meta" id="welcome-sub" aria-label="About this plan"></ul>
       </div>
       <div class="head-actions hide-phone">
         <button class="btn btn-quiet" data-action="share-progress">
@@ -1543,12 +1554,17 @@
     $('greeting-time').textContent = 'Good ' + getGreeting();
     $('user-name').textContent = String(name).split(' ')[0];
     $('plan-title').textContent = plan.subject || 'Your study plan';
-    var parts = [daysOf(plan).length + '-day plan'];
+    var chips = [{ t: daysOf(plan).length + '-day plan', i: 'M3 5h18v16H3zM3 10h18M8 3v4M16 3v4' }];
     var ex = examDate();
-    if (ex) parts.push('exam ' + fmtDate(ex, true));
+    if (ex) {
+      var until = dayDiff(new Date(), ex);
+      chips.push({ t: 'Exam ' + fmtDate(ex, true), i: 'M12 3v18M5 8l7-5 7 5M5 21h14', soon: until >= 0 && until <= 3 });
+    }
     var subs = plan.topics && (plan.topics.subtopics || plan.topics.parts);
-    if (Array.isArray(subs) && subs.length > 1) parts.push(plural(subs.length, 'part') + ' of your notes');
-    $('welcome-sub').textContent = parts.join(' · ');
+    if (Array.isArray(subs) && subs.length > 1) chips.push({ t: plural(subs.length, 'part') + ' of your notes', i: 'M4 6h16M4 12h10M4 18h7' });
+    $('welcome-sub').innerHTML = chips.map(function (c) {
+      return '<li' + (c.soon ? ' class="soon"' : '') + '><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + c.i + '"/></svg>' + esc(c.t) + '</li>';
+    }).join('');
     document.title = (plan.subject ? plan.subject + ' — ' : '') + 'StudyFlow';
   }
 
