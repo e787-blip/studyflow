@@ -79,6 +79,11 @@ module.exports = async function handler(req, res) {
     .slice(-MAX_MESSAGES)
     .filter(m => m && typeof m.role === 'string' && typeof m.content === 'string')
     .map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content.slice(0, 1000) }));
+  /* The conversation must open on the student's turn. The page sends its
+     last 10 messages, and from the 6th question on that window starts on
+     one of the tutor's replies - a reply to nothing, which the API refuses,
+     so the tutor went quiet after five questions. */
+  while (validMessages.length && validMessages[0].role === 'assistant') validMessages.shift();
 
   if (validMessages.length === 0)
     return res.status(400).json({ error: 'No valid messages' });

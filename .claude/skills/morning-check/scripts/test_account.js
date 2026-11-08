@@ -96,7 +96,7 @@ function world(env) {
         return reply(200, { url: 'https://checkout.stripe.test/s' });
       }
     }
-    if (u.host === 'api.anthropic.com') { W.calls.anthropic++; return reply(200, { content: [{ text: '{"ok":1}' }], stop_reason: 'end_turn' }); }
+    if (u.host === 'api.anthropic.com') { W.calls.anthropic++; try { W.calls.lastAI = JSON.parse(String(opts.body)); } catch (e) {} return reply(200, { content: [{ text: '{"ok":1}' }], stop_reason: 'end_turn' }); }
     throw new Error('unexpected fetch ' + url);
   }
   const procEnv = Object.assign({ ANTHROPIC_API_KEY: 'k', FIREBASE_API_KEY: 'web',
@@ -157,6 +157,15 @@ async function serverHalf() {
   ok(r.status === 200, 'chat: the owner is answered with no record at all');
   r = await chat('tok-paid');
   ok(r.status === 200, 'chat: a VIP who paid before the webhook could write is found through Stripe');
+  /* The page sends its last 10 messages; after five questions that window
+     opens on a tutor reply, which the API refuses - the tutor went quiet. */
+  const talk = [];
+  for (let k = 0; k < 5; k++) talk.push({ role: 'user', content: 'q' + k }, { role: 'assistant', content: 'a' + k });
+  talk.push({ role: 'user', content: 'q5' });
+  r = await W.call('chat', { tok: 'tok-vip', body: { messages: talk.slice(-10), context: {} } });
+  const sent = (W.calls.lastAI && W.calls.lastAI.messages) || [];
+  ok(r.status === 200 && sent.length && sent[0].role === 'user' && sent[sent.length - 1].content === 'q5',
+     'chat: the sixth question still opens on the student\'s turn (' + sent.map(m => m.role[0]).join('') + ')');
 
   // 4. api/account: what the account has paid for.
   W = world();

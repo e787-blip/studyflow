@@ -172,7 +172,7 @@ async function lookUpTier(user, opts) {
 /* A sign-in is not a limit: a free account could still run the AI all day
    from a script. These caps are the real cost ceiling, counted per account
    per UTC day in usage/{email}. They are far above what studying needs - a
-   14-day plan with every retry is about 50 calls, a lesson about 10 - so a
+   14-day plan with every retry is about 100 calls (a day is two), a lesson about 10 - so a
    learner never meets them and a runaway loop or a script does. */
 const DAILY = {
   ai:   { free: 150, pro: 300, vip: 600, classroom: 600, school: 600 },  // generate, extract, illustration
