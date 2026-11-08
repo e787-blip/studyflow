@@ -164,18 +164,8 @@
       <div class="contact-method">
         <div class="contact-icon">@</div>
         <div>
-          <h4>Email us</h4>
-          <p>For general questions and support</p>
-          <a href="mailto:support@studyflow.app">support@studyflow.app</a>
-        </div>
-      </div>
-
-      <div class="contact-method">
-        <div class="contact-icon">✦</div>
-        <div>
-          <h4>Feature requests</h4>
-          <p>Have an idea to make StudyFlow better?</p>
-          <a href="mailto:ideas@studyflow.app">ideas@studyflow.app</a>
+          <h4>Write to us</h4>
+          <p>Questions, problems and ideas all go through the form on this page.</p>
         </div>
       </div>
 
@@ -245,7 +235,7 @@
     </div>
     <div class="faq-item">
       <button class="faq-q" onclick="toggleFaq(this)">How do I cancel my subscription? <span class="faq-icon">+</span></button>
-      <div class="faq-a">You can cancel anytime: open the account menu on your dashboard and choose <strong>Manage plan</strong>. No questions asked. If you need help, just email us at <a href="mailto:support@studyflow.app">support@studyflow.app</a>.</div>
+      <div class="faq-a">You can cancel anytime: open the account menu on your dashboard and choose <strong>Manage plan</strong>. No questions asked. If you need help, send us a message with the form on this page.</div>
     </div>
     <div class="faq-item">
       <button class="faq-q" onclick="toggleFaq(this)">Is my data private? <span class="faq-icon">+</span></button>
@@ -310,12 +300,9 @@
       }
     })
     .catch(function() {
-      // Fallback — open email client
-      var subject = encodeURIComponent('[StudyFlow] ' + (topic ? topic.textContent : 'Message'));
-      var body = encodeURIComponent('Name: ' + name + '\n\n' + message);
-      window.open('mailto:support@studyflow.app?subject=' + subject + '&body=' + body);
+      // No email address to fall back to: say it did not send, and keep what they wrote.
       btn.disabled = false;
-      btn.textContent = 'Send message →';
+      btn.textContent = 'Couldn\u2019t send \u2014 try again';
     });
   }
 </script>

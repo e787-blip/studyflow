@@ -153,10 +153,13 @@ the owner's decision): a paid Classroom holds 30**, a free class 5, as the
 landing page's Schools section always said. The cap is read on `join` from
 the teacher's `users/{email}.tier`, which `api/webhook.js` writes. The
 price is **$79.99** on both pages (the owner's decision, Oct 2026; the
-landing page said $79). Still not agreed: the landing page sells a $299 School tier that has a Stripe price (in
-`api/checkout.js`'s allowlist) but no button on the pricing page.
-`CAP_BY_TIER.school` is 200, not unlimited: the roster is one Firestore
-document.
+landing page said $79). The $299 School tier is sold on the landing page
+only, with no button on the pricing page: **schools contact the owner** (the
+owner's decision, Nov 2026). Its Stripe price stays in `api/checkout.js`'s
+allowlist. The landing page says **up to 200 students**, which is
+`CAP_BY_TIER.school` (it said "unlimited"; the roster is one Firestore
+document). The Help page (`contact.html`) shows no email address, only the
+form (the owner's decision, Nov 2026).
 
 ### Paid plans are the server's (Oct 2026)
 
