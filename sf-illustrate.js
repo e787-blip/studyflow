@@ -250,6 +250,10 @@
         lines = lines.map(norm).filter(Boolean);
       } else if (spans.length > 1) {
         var lastY = null;
+        /* A tspan INSIDE a line's tspan (a small "(I-VII)" after "Vertebrae") is part of
+           that line, not another: counted, the suffix was printed twice. */
+        var direct = Array.prototype.filter.call(t.children, function (c) { return c.localName === 'tspan'; });
+        if (direct.length > 1) spans = direct;
         spans.forEach(function (s) {
           var y = s.getBBox ? Math.round(s.getBBox().y) : 0, v = norm(s.textContent);
           if (!v) return;

@@ -157,6 +157,24 @@
       "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
       "source": "https://commons.wikimedia.org/wiki/File:Mitosis_schematic_diagram-en.svg",
       "credit": "Illustration: Jpablo Cad, Juliana Osorio and M3.dahl, Wikimedia Commons, CC BY-SA 3.0"
+    },
+    "ear": {
+      "id": "ear",
+      "title": "The human ear",
+      "author": "Lars Chittka",
+      "license": "CC BY 2.5",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.5",
+      "source": "https://commons.wikimedia.org/wiki/File:Anatomy_of_the_Human_Ear.svg",
+      "credit": "Illustration: Lars Chittka, Wikimedia Commons, CC BY 2.5"
+    },
+    "skeleton": {
+      "id": "skeleton",
+      "title": "The human skeleton",
+      "author": "LadyofHats Mariana Ruiz Villarreal",
+      "license": "Public domain",
+      "licenseUrl": "",
+      "source": "https://commons.wikimedia.org/wiki/File:Human_skeleton_front_en.svg",
+      "credit": "Illustration: LadyofHats Mariana Ruiz Villarreal, Wikimedia Commons"
     }
   };
   /* END CREDITS */
@@ -197,6 +215,13 @@
       words: /\bflowers?\b|\bflowering plants?\b|\bpollinat|\bstamens?\b|\bpistils?\b|\bpetals?\b|\bplant reproduction\b|\breproduction in plants\b/i },
     { id: 'rock-cycle', title: 'The rock cycle', subjects: ['science', 'geography', 'general'],
       words: /\brock cycle\b|\btypes of rocks?\b|\bigneous\b|\bsedimentary\b|\bmetamorphic\b|\brocks and minerals\b/i },
+    /* Nov 2026: promoted from pictures the live search found and the judge picked. */
+    { id: 'ear', title: 'The human ear', subjects: ['science', 'psychology', 'general'],
+      words: /\bears?\b|\bcochlea\b|\beardrum\b|\bhow we hear\b|\bhuman hearing\b|\bauditory system\b/i,
+      not: /\bear of corn\b|\bears? (?:of|to) (?:the )?(?:corn|wheat)|\bplay(?:ing)? by ear\b|\bearly\b/i },
+    { id: 'skeleton', title: 'The human skeleton', subjects: ['science', 'general'],
+      words: /\bskeleton\b|\bskeletal system\b|\bbones?\b|\bskull\b|\bvertebra|\bfemur\b|\brib ?cage\b|\bmusculoskeletal\b/i,
+      not: /\bskeleton (?:crew|key|staff|code|framework)|\bessay skeleton|\bskeleton (?:of|for) (?:an? )?(?:essay|speech|story|plan|argument)|\bbone (?:china|dry)|\bfunny bone|\bskeleton in the closet/i },
     { id: 'subduction', title: 'How plates move', subjects: ['science', 'geography', 'general'],
       words: /\bplate tectonics?\b|\btectonic plates?\b|\bplate boundar|\bsubduction\b|\bcontinental drift\b|\bsea[- ]?floor spreading\b|\bmid-ocean ridges?\b|\bocean(?:ic)? trench/i }
   ];

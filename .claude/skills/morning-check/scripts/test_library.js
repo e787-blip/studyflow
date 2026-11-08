@@ -59,13 +59,19 @@ async function toLessonCard(page) {
       batch2Not: [m('Meiosis', 'science'), m('Cellular respiration', 'science'), m('Neural networks', 'general'),
                   m('Flowers for Algernon', 'english'), m('Eyewitness testimony', 'psychology'), m('The eye of the storm', 'geography'),
                   m('Kafka: The Metamorphosis', 'general'), m('Cell phones and society', 'general')].join(','),
+      // Nov 2026: the ear and the skeleton, promoted from pictures the live search found
+      batch3: [m('The human ear', 'science'), m('Sound and the cochlea', 'science'), m('The skeletal system', 'science'),
+               m('Bones and joints', 'science'), m('The human skeleton', 'general')].join(','),
+      batch3Not: [m('A court hearing', 'general'), m('Parts of an ear of corn', 'science'), m('Early Rome', 'history'),
+                  m('Skeleton key ciphers', 'general'), m('Essay skeleton', 'general'), m('The Bone Collector', 'english'),
+                  m('Bones in the Bible', 'history')].join(','),
       heartHistory: m('The heart of the Industrial Revolution', 'history'), heartOf: m('The heart of the matter: cells', 'science'),
       evap: m('Evaporation and condensation', 'science'), market: m('The Market Revolution', 'history'),
       clean, bad: /<script|onload|onclick|foreignObject|<image|javascript:|evil/i.test(clean), keeps: /url\(#ok\)/.test(clean) && /fine/.test(clean),
       notSvg: L.sanitize('<html><body>x</body></html>'), broken: L.sanitize('<svg><path></svg')
     };
   });
-  assert(r.loaded && r.n === 14, 'sf-library.js is on the lesson page with ' + r.n + ' illustrations');
+  assert(r.loaded && r.n === 16, 'sf-library.js is on the lesson page with ' + r.n + ' illustrations');
   assert(r.leaf === 'leaf-cross-section' && r.heart === 'heart' && r.cell === 'plant-cell' && r.volcano === 'volcano' && r.water === 'water-cycle',
     'a title that names it gets it (' + [r.leaf, r.heart, r.cell, r.volcano, r.water].join(', ') + ')');
   assert(r.viaMicro === 'leaf-cross-section', 'the micro-topic counts as a title');
@@ -74,6 +80,8 @@ async function toLessonCard(page) {
   assert(r.batch2 === 'animal-cell,mitosis,mitosis,mitosis,digestive-system,flower,eye,eye,lungs,neuron,rock-cycle,subduction,subduction,plant-cell',
     'the second batch answers its titles (' + r.batch2 + ')');
   assert(r.batch2Not === ',,,,,,,', 'and refuses their near-misses: meiosis alone, cellular respiration, neural networks, a novel, eyewitnesses (' + r.batch2Not + ')');
+  assert(r.batch3 === 'ear,ear,skeleton,skeleton,skeleton', 'the ear and the skeleton answer their titles (' + r.batch3 + ')');
+  assert(r.batch3Not === ',,,,,,', 'and refuse a court hearing, an ear of corn, "early", a skeleton key, an essay skeleton, a novel, and history (' + r.batch3Not + ')');
   assert(!r.bad && r.keeps, 'the sanitiser drops script, handlers, foreignObject, images, javascript: and outside URLs, and keeps local ones');
   assert(r.notSvg === null && r.broken === null, 'a non-SVG or broken file is refused');
   r = await env.page.evaluate(() => {
@@ -165,7 +173,7 @@ async function toLessonCard(page) {
     sizes.push(id + ' ' + Math.round(gz / 1024) + 'KB');
     if (gz > 80 * 1024) problems.push(id + ': ' + Math.round(gz / 1024) + 'KB gzipped');
   });
-  assert(ids.length === 14 && problems.length === 0, 'every illustration is present, credited, safe and under 80KB gzipped (' + (problems.join('; ') || sizes.join(', ')) + ')');
+  assert(ids.length === 16 && problems.length === 0, 'every illustration is present, credited, safe and under 80KB gzipped (' + (problems.join('; ') || sizes.join(', ')) + ')');
 
   console.log(fails ? fails + ' FAILED' : 'LIBRARY OK');
 })().catch(e => { console.log('FAIL threw ' + (e && e.stack || e)); process.exitCode = 1; });

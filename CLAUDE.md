@@ -34,7 +34,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
 | `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
 | `sf-render.js` | ~30 KB | **Pictures drawn by code.** Charts, number lines and to-scale timelines from figures and dates the model wrote; the model never places a mark. Loaded after `sf-icons.js` on `app.html` and `lesson.html` - see "Pictures drawn by code"
-| `sf-library.js` + `illustrations/` | ~11 KB + 14 SVGs | **Real illustrations** (leaf, heart, plant cell, animal cell, volcano, water cycle, lungs, digestive system, eye, neuron, mitosis, flower, rock cycle, plate boundaries) from Wikimedia Commons, each with its credit inside the picture. Shown when the lesson's TITLE names one; the model no longer draws lesson pictures - see "Real illustrations"
+| `sf-library.js` + `illustrations/` | ~11 KB + 16 SVGs | **Real illustrations** (leaf, heart, plant cell, animal cell, volcano, water cycle, lungs, digestive system, eye, neuron, mitosis, flower, rock cycle, plate boundaries, ear, skeleton) from Wikimedia Commons, each with its credit inside the picture. Shown when the lesson's TITLE names one; the model no longer draws lesson pictures - see "Real illustrations"
 | `sf-illustrate.js` | ~22 KB | **Makes a real illustration ready for a phone** - the label re-setting, crop and credit, in an off-screen shadow root after a sanitise pass. ONE implementation for the offline pipeline (the 14 library files rebuild byte-identical through it) and for a picture found live - see "A real illustration for any lesson" |
 | `api/illustration.js` | ~22 KB | **Finds a real illustration for any lesson on Wikimedia Commons**: search, language-copy collapsing, licence/size/shape/noise filters, then a model that SEES the 5 best and refuses the wrong ones. `?file=` returns a cleaned SVG. CDN-cached 30 days |
 | `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** The marketing pages that sit in the nav's own links (Help, Our story, Plans) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `lesson`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. `index.html` keeps its own copy - see "The site nav" |
@@ -2352,6 +2352,33 @@ LadyofHats' row of six mitosis cells (45px each on a phone - the cycle
 diagram is used instead). Not changed: "Draw it for me" still draws with the
 model.
 
+**Promoting a found picture into the library (Nov 2026: the ear and the
+skeleton).** `api/illustration.js` finds a picture for any lesson, but a
+hand-checked file is instant, free, never depends on a judge's mood, and is
+looked at on a phone. When the search keeps picking the same good file for a
+common topic, add it to `illustrations.json` and the `ITEMS` list in
+`sf-library.js` and run `prep_illustration.py <id>` as for any other. Two
+catalogue options came from the skeleton (27 labels, 862 KB, 171 KB gzipped):
+**`integer_paths`** rounds every path coordinate to a whole number - safe ONLY
+when every path is absolute (the script refuses a relative one) and applied to
+the `d` attributes alone, never to a stroke width - and took it to 92 KB with
+no visible change; **`drop_fills`** removes the paths whose whole style is one
+shading colour, and took it to 48 KB (under the 80 KB rule, which
+`test_library.js` enforces) at the cost of a flatter skull and joints, nothing
+missing. The skeleton also drops its two blue group headers (`drop` + `hide`
+the pale bars) and the Roman numerals on the three vertebra labels
+(`translate`); every leader line stays, so none dangles.
+
+**A bug found on the way, in `sf-illustrate.js`:** a label whose second line
+holds a small inner tspan (`Vertebrae <tspan>(I-VII)</tspan>`) counted that inner
+tspan as another line, so the suffix printed twice and the labels collided. Only
+a text's DIRECT tspans are lines now. The other 15 files rebuild byte-identical
+with and without the change.
+
+**Matching words** are the risk with common nouns: the ear refuses "a court
+hearing", "an ear of corn" and "early"; the skeleton refuses "skeleton key" and
+"an essay skeleton"; both are tested (`test_library.js`).
+
 ### A real illustration for any lesson — `api/illustration.js`, `sf-illustrate.js` (Oct 2026)
 
 The 14 checked pictures cover 14 topics; the owner wanted every lesson to get
@@ -4277,13 +4304,15 @@ genuinely nothing.
   (see its section for the 15-topic run). Cost per NEW topic: one Haiku call with up to 5 small images,
   shared across learners by the CDN. The endpoint is open like
   `api/generate.js`; a flood of made-up topics would each cost a call.
-- **Real illustrations: fourteen.** Leaf, heart, plant cell, animal cell,
+- **Real illustrations: sixteen.** Leaf, heart, plant cell, animal cell,
   volcano, water cycle, lungs, digestive system, eye, neuron, mitosis,
   flower, rock cycle, plate boundaries (subduction and a ridge; no transform
-  boundary). Each was looked at on a lesson card at 375px, light and dark.
+  boundary), **the ear and the skeleton** (Nov 2026, promoted from pictures the
+  live search found - see below). Each was looked at on a lesson card at 375px,
+  light and dark.
   Still missing: **the solar system** (no Commons file reads on a phone -
-  a code-drawn one in `sf-render.js` may be the answer), the skeleton, the
-  brain (the kit's curated template is the fallback), the ear, the kidney,
+  a code-drawn one in `sf-render.js` may be the answer), the
+  brain (the kit's curated template is the fallback), the kidney,
   atoms. Servier Medical Art (plain CC BY) was not used: its body drawings
   are unlabelled, which the `add` key now makes workable. The flower and
   mitosis are small on a phone (labels 9px, the mitosis cells ~45px) - they
