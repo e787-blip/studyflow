@@ -15030,7 +15030,20 @@
       s = String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
       maxLines = maxLines || 3;
       if (!s) return [''];
-      var words = s.split(' '), lines = [], cur = '', i, trial, spill = false;
+      /* A single word wider than the box is broken with a hyphen, never cut
+         with an ellipsis: "Photophosphoryl-" / "ation" is the whole word. */
+      var words = [], w0 = s.split(' '), k, wd, cut;
+      for (k = 0; k < w0.length; k++) {
+        wd = w0[k];
+        while (wd.length > 4 && measure(wd, size, weight) > maxW) {
+          cut = wd.length - 1;
+          while (cut > 3 && measure(wd.slice(0, cut) + '-', size, weight) > maxW) cut--;
+          words.push(wd.slice(0, cut) + '-');
+          wd = wd.slice(cut);
+        }
+        words.push(wd);
+      }
+      var lines = [], cur = '', i, trial, spill = false;
       for (i = 0; i < words.length; i++) {
         trial = cur ? cur + ' ' + words[i] : words[i];
         if (cur && measure(trial, size, weight) > maxW) {
@@ -15468,7 +15481,7 @@
        Instrument Serif's real width and errs wide. */
     function titleBlock(title, w) {
       if (!title) return { svg: '', h: 6 };
-      var lines = wrap(title, w - 24, TITLE_SIZE * 0.8, 600, 2);
+      var lines = wrap(title, w - 24, TITLE_SIZE * 0.8, 600, 4);
       /* A title that wraps gets real leading. At 1.12em the two lines' glyph
          boxes overlapped - "Writing a persuasive / essay" failed the audit's
          label-overlap check on every narrow flow. One line is unchanged. */
@@ -15513,12 +15526,12 @@
       var ic = iconsFor(items), oIcon = iconOne(outcome);
       var rows = [], stackH = 0, VG = 10;
       for (i = 0; i < n; i++) {
-        var lines = wrap(items[i], TW, LS, 600, 3);
+        var lines = wrap(items[i], TW, LS, 600, 12);
         var h = Math.max(2 * R + 12, lines.length * lh + 16);
         rows.push({ lines: lines, h: h });
         stackH += h + (i < n - 1 ? VG : 0);
       }
-      var OS = LS + 0.5, oLines = wrap(outcome, OW - 20, OS, 700, 3);
+      var OS = LS + 0.5, oLines = wrap(outcome, OW - 20, OS, 700, 12);
       var oH = Math.max(58, oLines.length * OS * 1.3 + (oIcon ? 50 : 24));
       var tb = titleBlock(title, W), top = tb.h + 8, bodyH = Math.max(stackH, oH);
       var svg = open(W, top + bodyH + MARGIN) + tb.svg;
@@ -15619,7 +15632,7 @@
       var DX = (loop ? lane + 14 : MARGIN) + R + 2, TX = DX + R + 14, TW = W - TX - MARGIN;
       var tb = titleBlock(title, W), y = tb.h + 6, rows = [];
       for (i = 0; i < n; i++) {
-        var ln = wrap(items[i], TW - 18, LS, 600, 3);
+        var ln = wrap(items[i], TW - 18, LS, 600, 12);
         var hR = Math.max(2 * R + 12, ln.length * lh + 20);
         rows.push({ lines: ln, y: y, h: hR, cy: y + hR / 2 });
         y += hR + 12;
@@ -15766,7 +15779,7 @@
         /* Wrap to the level's NARROWEST edge - its top - so no line of text
            pokes through a slanted side. */
         var tTop = guessTot ? (i * (guessH + gap)) / guessTot : 0;
-        var ln = wrap(items[i], Math.max(64, widthAt(tTop) - 34), NODE_SIZE, 700, 2);
+        var ln = wrap(items[i], Math.max(64, widthAt(tTop) - 34), NODE_SIZE, 700, 6);
         rows.push({ lines: ln, h: Math.max(36, 16 + ln.length * NODE_SIZE * 1.3) });
       }
       var stackH = 0;
@@ -15796,13 +15809,13 @@
       var HSZ = NODE_SIZE + 1, ISZ = SUB_SIZE + 0.5, lh = ISZ * 1.3;
       var headLines = [], headMax = 1, bodies = [], bodyMax = 0;
       for (i = 0; i < 2; i++) {
-        headLines.push(wrap(cols[i].title, colW - 24, HSZ, 700, 2));
+        headLines.push(wrap(cols[i].title, colW - 24, HSZ, 700, 4));
         headMax = Math.max(headMax, headLines[i].length);
         /* Items may take two lines. They were forced onto one at 10pt, so a
            long trait was cut with an ellipsis mid-word. */
         var body = [], hI = 12;
         for (j = 0; j < cols[i].items.length; j++) {
-          var il = wrap(cols[i].items[j], colW - 34, ISZ, 500, 2);
+          var il = wrap(cols[i].items[j], colW - 34, ISZ, 500, 6);
           body.push(il);
           hI += il.length * lh + 9;
         }
@@ -15883,7 +15896,7 @@
           var tbA = titleBlock(title, wA);
           var mk = [], hMax = 0;
           for (i = 0; i < n; i++) {
-            var lnA = wrap(rows[i].text, slot - 16, SZ, 600, 3);
+            var lnA = wrap(rows[i].text, slot - 16, SZ, 600, 8);
             mk.push(lnA);
             hMax = Math.max(hMax, lnA.length);
           }
@@ -15919,7 +15932,7 @@
       var textW = Math.max(150, MAX_W - 40 - textX - MARGIN);
       var lh = SZ * 1.3, widest = 0, laid = [];
       for (i = 0; i < n; i++) {
-        var ln = wrap(rows[i].text, textW, SZ, 500, 3);
+        var ln = wrap(rows[i].text, textW, SZ, 500, 12);
         laid.push(ln);
         widest = Math.max(widest, widestLine(ln, SZ, 500));
       }
@@ -15992,16 +16005,31 @@
          and "Petal, Stamen, Pistil, Sepal" came out P, S, S, P. */
       var W = MAX_W - 20, r = ic ? 23 : 10, LS = NODE_SIZE + 0.5, lh = LS * 1.28;
       var LW = n >= 5 ? 104 : 116, labs = [];
-      for (i = 0; i < n; i++) labs.push(wrap(items[i], LW, LS, 650, 3));
-      var HS = NODE_SIZE + 1, cl = wrap(center, 150, HS, 700, 2);
-      var pw = Math.max(92, Math.min(W - MARGIN * 2, widestLine(cl, HS, 700) + 34 + (hubIcon ? 30 : 0)));
+      for (i = 0; i < n; i++) labs.push(wrap(items[i], LW, LS, 650, 8));
+      /* The topic is never cut (it was, at 28 letters), so a long one wraps
+         to more lines - but no wider than the gap between the two side
+         discs, or the pill runs into them: the ring's width is capped. */
+      var pwMax = Math.max(92, 2 * (W / 2 - MARGIN - LW / 2 - r - 10));
+      var HS = NODE_SIZE + 1, cl = wrap(center, Math.min(150, pwMax - 34 - (hubIcon ? 30 : 0)), HS, 700, 10);
+      var pw = Math.max(92, Math.min(pwMax, widestLine(cl, HS, 700) + 34 + (hubIcon ? 30 : 0)));
       var ph = Math.max(42, cl.length * HS * 1.3 + 20);
       var RX = Math.min(W / 2 - MARGIN - LW / 2, Math.max(pw / 2 + r + 26, 116));
       var RY = n <= 4 ? 90 : 100, pos, tries;
+      /* A tall hub (a long topic on several lines) leaves no room for an
+         idea straight beside it: its name, hung under the disc, ran into the
+         hub's corner. Take whichever of the two turns (none, or half a step)
+         keeps every idea furthest above or below the hub's middle, where
+         pushing the ring taller clears it. */
+      function lowest(t) {
+        var m = 1, j;
+        for (j = 0; j < n; j++) m = Math.min(m, Math.abs(Math.sin(-Math.PI / 2 + j * 2 * Math.PI / n + t)));
+        return m;
+      }
+      var turn = (n > 2 && ph > 2 * r + 20 && lowest(Math.PI / n) > lowest(0) + 0.01) ? Math.PI / n : 0;
       function place(ry) {
         var P = [], j;
         for (j = 0; j < n; j++) {
-          var a = n === 2 ? (j === 0 ? Math.PI : 0) : -Math.PI / 2 + j * 2 * Math.PI / n;
+          var a = n === 2 ? (j === 0 ? Math.PI : 0) : -Math.PI / 2 + j * 2 * Math.PI / n + turn;
           var x = RX * Math.cos(a), y = ry * Math.sin(a), th = labs[j].length * lh;
           /* Names of the ideas above the hub go above their disc: the spoke
              runs up from the hub into the disc's underside, and a name hung
@@ -16018,12 +16046,15 @@
       }
       /* Push the ring taller until no name lands on another disc, another
          name or the hub. */
-      for (tries = 0; tries < 8; tries++) {
+      for (tries = 0; tries < 16; tries++) {
         pos = place(RY);
         var clash = false;
         for (i = 0; i < n && !clash; i++) {
           var A = pos[i];
           if (Math.abs(A.x) < LW / 2 + pw / 2 && A.bot > -ph / 2 - 4 && A.top < ph / 2 + 4) clash = true;
+          /* The disc itself clear of the hub too: a tall hub reached the
+             discs above and below it. */
+          if (Math.abs(A.x) < pw / 2 + r + 4 && Math.abs(A.y) < ph / 2 + r + 6) clash = true;
           for (k = 0; k < n && !clash; k++) {
             if (i === k) continue;
             var B = pos[k];
@@ -16249,7 +16280,7 @@
       var at = [0.07, 0.5, 0.93];
       for (k = 0; k < at.length && k < items.length; k++) {
         var mp = bez(at[k]);
-        var lines = wrap(items[k], 112, LS, 700, 2);
+        var lines = wrap(items[k], 112, LS, 700, 6);
         var tw = widestLine(lines, LS, 700), th = lines.length * LS * 1.25;
         var cand = [
           ['middle', 0, -14 - th], ['middle', 0, 14],
@@ -16318,7 +16349,7 @@
         var out = '', j, k, lh = SUB_SIZE * 1.25, gapI = 6;
         var n = Math.min(list.length, 3), blocks = [], tot = 0;
         for (j = 0; j < n; j++) {
-          var ln = wrap(list[j], maxW, SUB_SIZE, 600, 2);
+          var ln = wrap(list[j], maxW, SUB_SIZE, 600, 6);
           blocks.push(ln);
           tot += ln.length * lh + (j < n - 1 ? gapI : 0);
         }
@@ -16370,7 +16401,7 @@
           var x = left + c2 * (cell + gap), y = top + r * (cell + gap);
           var col = pal();
           svg += roundRect(x, y, cell, cell, 12, col, 1.3);
-          var ln = wrap(items[idx], cell - 22, LS, 700, 4);
+          var ln = wrap(items[idx], cell - 22, LS, 700, 8);
           svg += multiT(x + cell / 2, y + cell / 2, ln, { size: LS, weight: 700, fill: col.t });
           idx++;
         }
@@ -16413,7 +16444,6 @@
         if (STOP[p.toLowerCase()]) continue;
         if (seen[p.toLowerCase()]) continue;
         seen[p.toLowerCase()] = 1;
-        if (p.length > 46) p = p.slice(0, 44).replace(/\s\S*$/, '') + '\u2026';
         out.push(titleCase(p));
         if (out.length === 7) break;
       }
@@ -16464,11 +16494,10 @@
       var raw = spec.items || spec.steps || spec.parts || [];
       for (i = 0; i < raw.length; i++) {
         var v = clean(typeof raw[i] === 'string' ? raw[i] : (raw[i] && (raw[i].label || raw[i].name)) || '');
-        /* 80, the same ceiling dgLabels uses. At 46 this cut every step
-           written as a sentence before any layout saw it, so a flow that can
-           widen to fit its steps was handed fragments and never did. Layouts
-           with less room still wrap, and cut visibly, on their own. */
-        if (v) items.push(v.length > 80 ? v.slice(0, 78).replace(/\s\S*$/, '') + '\u2026' : v);
+        /* Never cut here (Nov 2026, the owner: no word cut off halfway,
+           ever). It was 46, then 80, with an ellipsis; every layout now
+           grows its box to fit the whole label instead. */
+        if (v) items.push(v);
         if (items.length === 7) break;
       }
 
@@ -16478,7 +16507,7 @@
           for (j = 0; j < arr.length && j < 5; j++) {
             var t = clean(arr[j]);
             /* Items may wrap to two lines now, so the cut is at 44, not 28. */
-            if (t) it.push(t.length > 46 ? t.slice(0, 44).replace(/\s\S*$/, '') + '\u2026' : t);
+            if (t) it.push(t);
           }
           return { title: clean(side.title || side.label || '\u2014'), items: it };
         };
@@ -18316,14 +18345,13 @@
          So a long label is first made shorter the way a textbook labels a
          diagram, in two steps that cannot change what it says: the leading
          article goes, then a trailing ROUTE phrase ("through the veins",
-         "via the ...") - where it went, never what did it or when. Only if it
-         is still too long is it cut, at a word, with the ellipsis showing. */
+         "via the ...") - where it went, never what did it or when. It is
+         never cut after that: the layouts grow to fit (Nov 2026). */
       if (v.length > 34) v = v.replace(/^(?:the|a|an)\s+(\S)/i, function (m, c) { return c.toUpperCase(); });
       if (v.length > 34) {
         var route = v.replace(/\s+(?:through|via|along|across)\s+(?:the\s+|a\s+|an\s+)?[^\s,]+(?:\s+[^\s,]+){0,2}$/i, '');
         if (route !== v && route.length >= 16) v = route;
       }
-      if (v.length > 80) v = v.slice(0, 78).replace(/\s\S*$/, '') + '…';
       if (v.length < 2) continue;
       out.push(v);
     }
@@ -18492,7 +18520,6 @@
       var outcome = title.replace(
         /^(?:the\s+)?(?:main\s+|key\s+|major\s+)?(?:causes?|reasons?|factors?)\s+(?:of|for|behind)\s+(?:the\s+|an?\s+)?/i, '');
       outcome = dgClean(outcome) || title;
-      if (outcome.length > 28) outcome = outcome.slice(0, 26).replace(/\s\S*$/, '') + '\u2026';
       /* Same words on both ends teaches nothing - fall back to the chain. */
       if (outcome.toLowerCase() === title.toLowerCase() && items.length >= 3) {
         return { type: 'custom', layout: 'flow', title: title, items: items };
@@ -18505,7 +18532,6 @@
       var hub = title.replace(
         /^(?:the\s+)?(?:main\s+)?(?:parts|structure|anatomy|components|regions|layers|sections|elements)\s+of\s+(?:the\s+|an?\s+)?/i, '');
       hub = dgClean(hub) || title || 'Today';
-      if (hub.length > 28) hub = hub.slice(0, 26).replace(/\s\S*$/, '') + '\u2026';
       return { type: 'custom', layout: layout, title: '', center: hub, items: items };
     }
 
@@ -19906,7 +19932,19 @@ var SFBoard = (function () {
     s = String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
     if (!s) return [];
     maxLines = maxLines || 3;
-    var words = s.split(' '), lines = [], cur = '', i, trial;
+    /* A word wider than the board is broken with a hyphen, not cut. */
+    var words = [], w0 = s.split(' '), k, wd, cut;
+    for (k = 0; k < w0.length; k++) {
+      wd = w0[k];
+      while (wd.length > 4 && measure(wd, size, weight) > maxW) {
+        cut = wd.length - 1;
+        while (cut > 3 && measure(wd.slice(0, cut) + '-', size, weight) > maxW) cut--;
+        words.push(wd.slice(0, cut) + '-');
+        wd = wd.slice(cut);
+      }
+      words.push(wd);
+    }
+    var lines = [], cur = '', i, trial;
     var dropped = false;
     for (i = 0; i < words.length; i++) {
       trial = cur ? cur + ' ' + words[i] : words[i];
@@ -20348,8 +20386,8 @@ var SFBoard = (function () {
     var textW = boxW - LEFT - 18;
     var rows = [], i, y = PAD;
     for (i = 0; i < items.length; i++) {
-      var aL = wrap(items[i].a, textW, LABEL, 700, 2);
-      var bL = items[i].b ? wrap(items[i].b, textW, BODY, 400, 4) : [];
+      var aL = wrap(items[i].a, textW, LABEL, 700, 4);
+      var bL = items[i].b ? wrap(items[i].b, textW, BODY, 400, 12) : [];
       var grp = [{ lines: aL, size: LABEL, weight: 700, fill: INK },
                  { lines: bL, size: BODY, weight: 400, fill: MUTED }];
       var h = Math.max(54, stackHeight(grp) + 22);
@@ -20438,8 +20476,8 @@ var SFBoard = (function () {
       if (vis && fitScale(vis) < MIN_SCALE) vis = null;
 
       var textW = boxW - 74 - 16;
-      var aL = wrap(items[i].a, textW, LABEL, 700, 2);
-      var bL = items[i].b ? wrap(items[i].b, textW, BODY, 400, 3) : [];
+      var aL = wrap(items[i].a, textW, LABEL, 700, 4);
+      var bL = items[i].b ? wrap(items[i].b, textW, BODY, 400, 10) : [];
       var grp = [{ lines: aL, size: LABEL, weight: 700, fill: INK },
                  { lines: bL, size: BODY, weight: 400, fill: MUTED }];
       var textH = stackHeight(grp);
@@ -21330,11 +21368,11 @@ var SFBoard = (function () {
          is broken into oxygen, protons and electrons" - and capping at two
          cut it to "...protons and…" directly above a diagram naming all
          three. */
-      var hl0 = wrap(s0.line, PW - 46, HS, 700, 3);
+      var hl0 = wrap(s0.line, PW - 46, HS, 700, 6);
       /* One very long token cannot be wrapped, only shrunk. */
       var hs0 = HS;
       while (hs0 > 12 && widest(hl0, hs0, 700) > PW - 46) hs0 -= 0.5;
-      var rl0 = s0.why ? wrap(s0.why, PW - 40, RS, 400, RS > BODY + 1.5 ? 4 : 3) : [];
+      var rl0 = s0.why ? wrap(s0.why, PW - 40, RS, 400, 10) : [];
       var hasT0 = !!(s0.title && s0.title !== s0.line);
 
       /* Chosen once, here, and reused when the panel is drawn. */
@@ -22251,7 +22289,7 @@ var SFBoard = (function () {
     var out = [], i, p;
     for (i = 0; i < parts.length && out.length < 5; i++) {
       p = clean(parts[i]).replace(/[.;,]+$/, '');
-      if (p.length >= 3) out.push({ label: p.length > 46 ? p.slice(0, 44) + '\u2026' : p, detail: '' });
+      if (p.length >= 3) out.push({ label: p, detail: '' });
     }
     return out.length >= 2 ? out : [];
   }

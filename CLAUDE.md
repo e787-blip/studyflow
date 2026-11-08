@@ -1360,9 +1360,19 @@ every flow chart was a rainbow. What replaced it:
 - **`uniqIds(svg)`.** Every marker id was fixed (`sfdkArrow`, `wvA`...), and
   `url(#id)` resolves to the first in the DOCUMENT - so a hidden first diagram
   took every later arrowhead with it. Ids are renamed per SVG at the exit.
-- **`wrap()` no longer drops words silently** past `maxLines`; the rest is cut
-  with a visible ellipsis. Hubs get three lines ("Causes of the French
-  Revolution" was reaching the hub as "Causes of the / French").
+- **No word on a picture is ever cut (Nov 2026, the owner: "make sure the
+  words aren't cut off halfway ANYMORE").** The lesson card printed
+  "American Revolution begins at Le…". Every layout now passes a line limit
+  it can grow to (the box is as tall as its words), a word wider than the
+  box is broken with a hyphen, and nothing chops a label by letter count
+  first (the old 28 / 46 / 80-letter cuts are gone). `wrap()` still cuts
+  with an ellipsis past `maxLines` - that is how `whole()` tells a layout
+  (the ring, the flow across) to choose a roomier shape - so a new caller
+  must give room for every word or test `whole()`. A long hub topic wraps
+  narrower and taller, and the ring turns so no idea sits beside it. Same
+  in block 2's walkthrough boards. `test_no_cut.js` renders every layout
+  with long labels and fails on any "…", lost word or label touching the
+  hub.
 - **A step is made shorter at the source, not cut at the edge.** Steps arrive
   as sentences, and three layers each cut them - `dgLabels` at 38 chars,
   `fromSpec` at 44, then the node's own `wrap` - so a heart lesson's cycle

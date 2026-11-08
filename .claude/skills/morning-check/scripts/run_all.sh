@@ -49,6 +49,7 @@ if grep -q FAIL "$OUT/parse.log"; then FAILS=$((FAILS+1)); note "FAIL  parse"; g
 check edges        "ALL EDGE CASES PASS"   node "$HERE/test_edges.js"
 check walk         "WALK CLEAN"            node "$HERE/test_walk.js"
 check captions     "CAPTIONS OK"           node "$HERE/test_caption.js"
+check no_cut       "NO CUT OK"             node "$HERE/test_no_cut.js"
 check recall       "no page errors"        node "$HERE/test_recall.js"
 check moment       "no page errors"        node "$HERE/test_moment.js"
 check on_the_spot  "ON-THE-SPOT OK"        node "$HERE/test_ontheSpot.js"

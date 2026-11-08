@@ -10,6 +10,7 @@
     ['edges', 'ALL EDGE CASES PASS', S + 'test_edges.js'],
     ['walk', 'WALK CLEAN', S + 'test_walk.js'],
     ['captions', 'CAPTIONS OK', S + 'test_caption.js'],
+    ['no_cut', 'NO CUT OK', S + 'test_no_cut.js'],
     ['recall', 'no page errors', S + 'test_recall.js'],
     ['moment', 'no page errors', S + 'test_moment.js'],
     ['on_the_spot', 'ON-THE-SPOT OK', S + 'test_ontheSpot.js'],
