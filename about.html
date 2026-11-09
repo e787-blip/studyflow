@@ -491,6 +491,24 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   .stat { padding: 1.1rem 1rem; }
   .stat + .stat { border-left: 0; box-shadow: none; border-top: 1px solid rgba(26, 40, 90, .1); }
 }
+
+/* ── De-slop pass (Nov 2026): no glow blobs, no glass blur, no running light,
+   no italic-accent word in every heading, flat closing band, blocky buttons. ── */
+.h1 em, .h2 em, .cta h2 em { font-style: normal; color: inherit; }
+.aura, .sheen, .comet, .cta::before { display: none; }
+.glass { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.btn { border-radius: 12px; }
+.cta { background: var(--blue-deep); }
+.tech-ico { display: none; }
+.founder-card { grid-template-columns: minmax(0, 1fr); }
+.foot-mark { background: none; -webkit-text-fill-color: currentColor; color: rgba(160, 188, 255, .16); }
+.btn-glass, .dcard-in { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.dcard-in { animation: none; background: var(--card); }
+.founder-card h2 em { font-style: normal; color: inherit; }
+.glass, .glass.blue, .glass.night { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; box-shadow: none !important; }
+.env-glow { display: none !important; }
+.dcard-in { animation: none !important; }
+.btn-light, .btn-blue { box-shadow: none; }
 </style>
 </head>
 <body>
@@ -507,7 +525,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 
 <header class="hero">
   <div class="aura" aria-hidden="true"></div>
-  <p class="eyebrow" data-reveal="up">Our story</p>
   <h1 class="h1" data-reveal="up" style="--rd:.06s">Built by a student, <em>for students.</em></h1>
   <p class="lede" data-reveal="up" style="--rd:.14s">StudyFlow is made by one student at Punahou School, who uses it to study for real tests.</p>
 </header>
@@ -516,9 +533,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 <section class="sec founder" aria-label="The founder">
   <div class="aura" aria-hidden="true"></div>
   <article class="founder-card glass live" data-reveal="glass">
-    <div class="avatar" aria-hidden="true">E</div>
     <div class="founder-info">
-      <p class="eyebrow">Meet the founder</p>
       <h2>Ethan <em>Hwang</em></h2>
       <p class="role">Founder, StudyFlow</p>
       <p class="bio">Ethan is a 7th grader at Punahou School in Honolulu. StudyFlow started as a way to study for Ethan&rsquo;s own tests. The plan builder, the lessons, the questions and the teacher dashboard on this site were all built by Ethan, one feature at a time.</p>
@@ -567,14 +582,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 </section>
 
 <!-- NUMBERS -->
-<section class="sec proof" aria-label="StudyFlow in numbers">
-  <div class="aura" aria-hidden="true"></div>
-  <div class="stats glass live" data-reveal="glass">
-    <div class="stat"><p class="stat-n">24</p><p class="stat-l">kinds of practice question</p></div>
-    <div class="stat"><p class="stat-n">SM-2</p><p class="stat-l">spaces each review for when you are about to forget</p></div>
-    <div class="stat"><p class="stat-n">Free</p><p class="stat-l">to start, no credit card needed</p></div>
-  </div>
-</section>
+
 
 <!-- CLOSING BAND -->
 <section class="cta" data-reveal="section">

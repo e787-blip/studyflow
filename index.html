@@ -286,10 +286,7 @@ nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .1
 .hero-h1 .l1, .hero-h1 .hero-em { display: block; font-size: clamp(3rem, 6.4vw, 5.6rem); padding-bottom: .06em; }
 .hero-em {
   font-style: italic;
-  background: linear-gradient(90deg, #93b4ff 0%, #d5e3ff 35%, #7eb0ff 55%, #c3d6ff 75%, #93b4ff 100%);
-  background-size: 250% auto;
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent;
+  color: #9db8ff;
   text-shadow: none;
   filter: drop-shadow(0 4px 22px rgba(5, 8, 20, .6));
 }
@@ -897,11 +894,35 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   .marquee-track span:nth-child(n+7) { display: none; }
   .marquee-view { -webkit-mask-image: none; mask-image: none; }
 }
+
+/* ── De-slop pass (Nov 2026). Each rule undoes a default nobody chose:
+   italic-accent word in every heading, glow blobs, glass blur on buttons,
+   the same word-by-word reveal on every h2, a pulsing dot, a running light
+   round a card, dot-grid texture on the closing band, hairline + wide shadow
+   on pricing cards, tracked-caps plan names. The hero keeps its one italic. ── */
+.h2 em, .fx-text h3 em, .cta h2 em, .band-h em, .cw-head .h2 em, .band-3 .band-h em { font-style: normal; color: inherit; }
+.env-glow, .cw-stage::before, .cta::before, .pcard.pro::before { display: none; }
+.btn-glass { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.js [data-reveal="words"] .word, .js [data-reveal="words"]:not(.in) .word { opacity: 1; transform: none; transition: none; }
+.example.in-view .hold-btn:not(.is-done) .dot::after { display: none; animation: none; }
+.pcard, .pcard.pro { box-shadow: none; }
+.cta { background: var(--blue-deep); }
+.pname { font-family: var(--sans); font-size: .95rem; font-weight: 600; letter-spacing: 0; text-transform: none; }
+@media (max-width: 860px) {
+  .fan-card { transform: translate3d(calc((var(--i) - 1.5) * 66px), calc((var(--i) - 1.5) * -14px), calc((3 - var(--i)) * -40px)) rotateZ(calc((var(--i) - 1.5) * 6deg)); }
+  .fan-card:not(:last-child) .dc-foot > span:first-child { visibility: hidden; }
+}
+.btn { border-radius: 12px; }
+.btn-light, .btn-blue, .cta .btn-light { box-shadow: none; }
+.dc { box-shadow: 0 2px 6px rgba(10, 20, 60, .18); }
+.card-header::before { display: none; }
+.board { background: var(--night); }
+.foot-mark { background: none; -webkit-text-fill-color: currentColor; color: rgba(160, 188, 255, .16); }
 </style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
-<div class="env" aria-hidden="true"><div class="env-glow"></div><div class="grain"></div></div>
+<div class="env" aria-hidden="true"><div class="grain"></div></div>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
@@ -955,7 +976,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     <div class="grain" aria-hidden="true"></div>
 
     <div class="band band-1" data-a="0" data-b="0.28" data-entrance="scatter">
-      <p class="hero-eyebrow">Study plans from your own notes</p>
       <h1 class="hero-h1">
         <span class="sr-only">Upload your notes. Know them by test day.</span>
         <span class="l1 split" aria-hidden="true">Upload your notes.</span>
@@ -983,11 +1003,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 
 <!-- PROOF -->
 <section class="proof" aria-label="StudyFlow at a glance">
-  <div class="proof-stats">
-    <div class="stat"><span class="stat-n" data-count="24">24</span><span class="stat-l">kinds of practice question</span></div>
-    <div class="stat"><span class="stat-n" data-count="6">6</span><span class="stat-l">kinds of file it can read</span></div>
-    <div class="stat"><span class="stat-n" data-count="1">1</span><span class="stat-l">free plan every month</span></div>
-  </div>
   <div class="marquee" id="marquee">
     <p class="marquee-label made-at">Built at Punahou School in Honolulu by a 7th grader who studies with it.</p>
   </div>
@@ -1091,7 +1106,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   <div id="wo" class="cw-outer">
     <div id="cw-stage" class="cw-stage">
       <div id="cw-head" class="cw-head">
-        <p class="eyebrow">Why it works</p>
         <h2 class="h2" id="why-h">What the research <em>says</em></h2>
       </div>
       <div id="cw-wall" class="cw-wall">
@@ -1107,13 +1121,9 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
           <p class="cw-quote">Trying to answer before you have learned it, <em>even getting it wrong,</em> helps you learn it afterwards.</p>
           <p class="cw-src"><span class="cw-chip">Pre-test effect</span><span>Kornell, Hays and Bjork, 2009</span></p>
         </article>
-        <article class="cw-card cw-lead cw-night" style="--o:3">
-          <div class="cw-lead-copy">
-            <p class="cw-src"><span class="cw-chip">Spaced repetition</span></p>
-            <p class="cw-quote">Study spread over several days <em>beats the same study crammed</em> into one. A review of hundreds of experiments found it again and again.</p>
-            <p class="cw-src"><span>Cepeda et al., 2006</span></p>
-          </div>
-          <div class="cw-stat" aria-hidden="true"><span class="cw-num">317</span><span class="cw-stat-l">experiments reviewed</span></div>
+        <article class="cw-card cw-night" style="--o:3">
+          <p class="cw-quote">Study spread over several days <em>beats the same study crammed</em> into one. A review of 317 experiments found it again and again.</p>
+          <p class="cw-src"><span class="cw-chip">Spaced repetition</span><span>Cepeda et al., 2006</span></p>
         </article>
         <article class="cw-card cw-paper" style="--o:4">
           <p class="cw-quote">Explain it in plain words, as if to a friend. <em>The parts you can&rsquo;t explain</em> are the parts you don&rsquo;t know yet.</p>
@@ -1315,7 +1325,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 <!-- SCHOOLS -->
 <section class="sec schools" aria-labelledby="schools-h">
   <div class="wrap">
-    <p class="eyebrow">For schools</p>
     <h2 class="h2" id="schools-h" data-reveal="words">StudyFlow for <em>classrooms</em></h2>
     <p class="lede" data-reveal="up">Give your class the same lesson and questions, and see which questions each student missed.</p>
     <div class="board" data-reveal="tilt">
@@ -1400,7 +1409,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 <section id="cta" class="sec cta">
   <div class="wrap cta-grid">
     <div>
-      <span class="chip">Free to start, no credit card</span>
       <h2>Got a test coming up? <em>Start tonight.</em></h2>
       <p>Upload your notes and get a session for every day until the test. Your first plan each month is free.</p>
       <div class="row">
@@ -2767,28 +2775,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     ['marquee', 'how', 'example', 'pricing', 'cta'].forEach(function (id) { var el = document.getElementById(id); if (el) vio.observe(el); });
   }
 
-  /* Stats count up once, the first time they are seen. */
-  (function () {
-    var nums = [].slice.call(document.querySelectorAll('.stat-n[data-count]'));
-    function fmt(el, v) {
-      var dec = parseInt(el.getAttribute('data-dec') || '0', 10);
-      var s = dec ? v.toFixed(dec) : Math.round(v).toLocaleString('en-US');
-      el.textContent = s + (el.getAttribute('data-suffix') || '');
-    }
-    if (reduced || !('IntersectionObserver' in window)) return;
-    nums.forEach(function (el) { fmt(el, 0); });
-    var cio = new IntersectionObserver(function (es) {
-      if (!es[0].isIntersecting) return;
-      cio.disconnect();
-      var st = performance.now();
-      (function step(now) {
-        var k = easeOut3((now - st) / 1400);
-        nums.forEach(function (el) { fmt(el, parseFloat(el.getAttribute('data-count')) * k); });
-        if (k < 1) requestAnimationFrame(step);
-      })(st);
-    }, { threshold: .4 });
-    cio.observe(nums[0].parentNode.parentNode);
-  })();
 
   /* FAQ: one open at a time. */
   [].slice.call(document.querySelectorAll('.faq-q')).forEach(function (q) {
