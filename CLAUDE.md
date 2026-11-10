@@ -3660,8 +3660,17 @@ are scoring higher") are gone.
 - **`Scrub` items can opt in to `snap: true`**: their first measure sets `shown`
   directly, so a scene first seen part-way through (a reload, a link, a jump)
   starts there instead of sweeping in from 0.
-- **Below 1000px (the columns get too narrow), and with reduced motion** (one shared `@media`, and
-  `staticMode()` in the script): no pin, no parallax. The findings are cards in a
+- **Below 1000px both scenes stay pinned (Nov 2026, the owner)**, sized for a
+  phone (CSS "Phones and narrow tablets"): cards ~85vw with the lead card's
+  figure under its words, `CARD_GAP` 1.05 instead of .8 so stacked cards stay
+  clear (0 overlaps at 375x812, sampled 31 positions), and the features one
+  column with the step buttons as a sideways row that follows the current one.
+  **A step button jumps, it does not glide**: the stage dips out for 140ms, the
+  page moves with `scroll-behavior` forced to `auto` (the page's CSS `smooth`
+  otherwise animated it and played every feature in between), and the fx
+  Scrub item is snapped (`fxItem.seen = false` + `Scrub.sync`).
+- **With reduced motion** (`staticMode()` in the script, which is now reduced
+  motion ONLY): no pin, no parallax. The findings are cards in a
   column on night (`--o` orders the lead cards first), the features are stacked
   (picture above words), and the light sheet just overlaps them with 32px corners. Switching modes live calls `resetShows()`,
   which removes every inline value the scroll wrote.
