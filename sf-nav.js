@@ -183,9 +183,7 @@
     '      <rect x="17" y="21" width="8" height="2" rx="1" fill="#4a7cf6" opacity="0.6"/>',
     '      <rect x="17" y="26" width="10" height="2" rx="1" fill="#4a7cf6" opacity="0.4"/>',
     '      <path d="M33 8 L34 11.5 L37.5 12.5 L34 13.5 L33 17 L32 13.5 L28.5 12.5 L32 11.5 Z" fill="white"/>',
-    '      <text x="48" y="28" font-family="Inter, system-ui, sans-serif" font-size="18" font-weight="700" letter-spacing="-0.3">',
-    '        <tspan class="logo-study">Study</tspan><tspan fill="#4a7cf6">Flow</tspan>',
-    '      </text>',
+    '      <text class="logo-study" x="48" y="29" font-family="\'Instrument Serif\', Georgia, serif" font-size="25" font-weight="400" letter-spacing="-0.2">StudyFlow</text>',
     '    </svg>',
     '  </a>',
     '  <div class="nav-links" id="nav-links">',
@@ -202,10 +200,11 @@
     '</nav>'
   ].join('\n');
 
-  /* Fonts: DM Sans 500-700 for the links and button, Inter 700 for the logo. */
+  /* Fonts: DM Sans 500-700 for the links and button, Instrument Serif for the
+     logo word (one colour, Nov 2026; it was Inter 700 with a blue "Flow"). */
   var fonts = document.createElement('link');
   fonts.rel = 'stylesheet';
-  fonts.href = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Inter:wght@700&display=swap';
+  fonts.href = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Instrument+Serif&display=swap';
   document.head.appendChild(fonts);
 
   var style = document.createElement('style');
