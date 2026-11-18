@@ -105,7 +105,9 @@ function fillQ(tpl, i) {
 }
 
 function schemaFrom(prompt) {
-  let at = prompt.lastIndexOf('"completed":false,"questions":['); if (at >= 0) at += '"completed":false,'.length; else at = prompt.lastIndexOf('"questions":[');
+  /* The questions half of a day ends in {"questions":[{"type"...; a readingset inside it carries a "questions" of its own, so the LAST "questions":[ is the wrong one. */
+  let at = prompt.lastIndexOf('{"questions":[{"type"'); if (at >= 0) at += 1;
+  else { at = prompt.lastIndexOf('"completed":false,"questions":['); if (at >= 0) at += '"completed":false,'.length; else at = prompt.lastIndexOf('"questions":['); }
   if (at < 0) return null;
   let i = at + '"questions":'.length, depth = 0, s = i, inStr = false;
   for (; i < prompt.length; i++) {
@@ -166,8 +168,10 @@ async function run(subj, mapmode, days) {
     if (/^Map the study notes/.test(p)) { mapCalls++; if (MAPMODE === 'fail') return r.fulfill({ status: 502, contentType: 'application/json', body: '{"error":"x"}' }); return reply(MAPS[SUBJ][MAPMODE]); }
     if (/^Draw ONE/.test(p) || /illustration/i.test(p.slice(0, 200))) return reply('{"type":"none"}');
     const schema = schemaFrom(p);
-    if (!schema) return reply('{"questions":[]}');
     const dm = p.match(/Day (\d+) of (\d+)/); const n = dm ? +dm[1] - 1 : 0;
+    /* A day is two calls (lesson, then questions): the lesson half has no schema. */
+    if (/THIS CALL WRITES THE LESSON ONLY/.test(p)) return reply(Object.assign({ day: n + 1 }, L.day(n)));
+    if (!schema) return reply('{"questions":[]}');
     asked.push({ day: n + 1, types: schema.map(t => t.type + (t.mode ? ':' + t.mode : '') + (t.questionType && t.questionType !== 'main-idea' && t.type === 'passage' ? ':' + t.questionType : '') + (t.categoryA === 'Changed' ? ':change' : '')) });
     const d = Object.assign({ day: n + 1 }, L.day(n), { questions: schema.map(fillQ) });
     return reply(d);

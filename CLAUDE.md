@@ -28,7 +28,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `index.html` | ~172 KB | Marketing / landing page. 3D hero, one `<script>` block |
 | `login.html` | ~57 KB | Sign in, sign up, password reset. Firebase Auth (module script), one form for all three |
 | `app.html` | ~292 KB | Plan builder: the lesson upload, one question per screen, then generation. Subject detection, AI prompt, question schemas, validators |
-| `lesson.html` | ~1.2 MB | The session runtime. Card queue, all question renderers, the whiteboard. Restyled Oct 2026 - see "The session's look and motion" |
+| `lesson.html` | ~1.3 MB | The session runtime. Card queue, all question renderers, the whiteboard. Redesigned Nov 2026 as "Focus" - see "The Focus session (Nov 2026)" |
 | `dashboard.html` | ~150 KB | Plan list and progress. Redesigned Oct 2026 - see "The dashboard" |
 | `about.html` / `pricing.html` | ~52 / ~60 KB | "Our story" and the plans page, redesigned Oct 2026 in Liquid Glass to match `index.html` - see "Our story and Plans". Each carries its own copy of the shared glass CSS and footer; the nav is `sf-nav.js` |
 | `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
@@ -37,7 +37,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `sf-library.js` + `illustrations/` | ~11 KB + 14 SVGs | **Real illustrations** (leaf, heart, plant cell, animal cell, volcano, water cycle, lungs, digestive system, eye, neuron, mitosis, flower, rock cycle, plate boundaries) from Wikimedia Commons, each with its credit inside the picture. Shown when the lesson's TITLE names one; the model no longer draws lesson pictures - see "Real illustrations"
 | `sf-illustrate.js` | ~22 KB | **Makes a real illustration ready for a phone** - the label re-setting, crop and credit, in an off-screen shadow root after a sanitise pass. ONE implementation for the offline pipeline (the 14 library files rebuild byte-identical through it) and for a picture found live - see "A real illustration for any lesson" |
 | `api/illustration.js` | ~22 KB | **Finds a real illustration for any lesson on Wikimedia Commons**: search, language-copy collapsing, licence/size/shape/noise filters, then a model that SEES the 5 best and refuses the wrong ones. `?file=` returns a cleaned SVG. CDN-cached 30 days |
-| `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** The marketing pages that sit in the nav's own links (Help, Our story, Plans) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `lesson`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. `index.html` keeps its own copy - see "The site nav" |
+| `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** The marketing pages that sit in the nav's own links (Help, Our story, Plans) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. **`lesson.html` no longer loads it** (Nov 2026, the Focus bar). `index.html` keeps its own copy - see "The site nav" |
 | `sf-smooth.js` | ~11 KB | **Smooth wheel scrolling** for `index.html`, `about.html`, `pricing.html` (window.`SFSmooth`). Off for touch and reduced motion - see "Smooth scroll and the two showcases" (now: the findings wall and the features sheet) |
 | `sf-guide.js` | ~40 KB | **The guided walkthrough.** The Walkthrough button opens a sheet over the question just answered and asks its steps one at a time, written for THAT question by one model call; on a cell lesson a drawn cell shows the protein travelling. Loaded by `lesson.html` after `sf-questions.js` - see "The guided walkthrough" |
 | `sf-auth.js` | ~8 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase; `apiFetch` sends it with every AI call, and `refreshTier` writes the server's plan into `studyflow_user.tier` on every load. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html`, `teacher-build.html`, `pricing.html` — see "The classroom" and "Paid plans are the server's" |
@@ -198,7 +198,7 @@ meant paying for a plan nothing could find.
   `usage/{email}` per UTC day, written with an `updateTime` precondition so
   two calls cannot both pass): `ai` - generate, extract and illustration -
   free 150, pro 300, VIP/classroom/school 600; `chat` - VIP 200. A 14-day
-  plan with every retry is about 50 calls, so a learner never meets it; a
+  plan with every retry is about 100 calls (a day is two), so a learner never meets it; a
   loop or a script does. Over it: 429 `daily_limit`, said in words by the
   plan builder (its own card, no retries), the tutor, a photo source and the
   teacher builder. Owners have no cap. **A broken counter lets the call
@@ -3445,7 +3445,58 @@ and a side column of At a glance / Scores / Calendar / reminder / invite.
   teacher's empty "Topics students struggle with" panel can be filled from
   the same log once the classroom is switched on.
 
+## The Focus session (`lesson.html`) — Nov 2026
+
+**The owner chose design B, "Focus"**, from three live prototypes
+(`prototypes/lesson-redesign/index.html`: A Paper, B Focus, C Desk - kept, so
+the comparison and the shared card contract in its `engine.js` can be looked
+at again). One thing at a time: no card box, the question as the biggest thing
+on screen, every answer a tile with an edge you press down, and one bar fixed
+to the bottom that holds the next step and, after an answer, becomes the
+verdict.
+
+It is a LAYER, not a rewrite: the CSS block "FOCUS" at the end of the
+stylesheet plus three hooks next to `renderCard` (`sfFxProgress`, `sfFxMark`,
+`sfFxPad`). Every id and class the ~30 renderers and the tests use is
+unchanged (`#feedback-box`, `#btn-next`, `.card-header h2`, `.q-option`...).
+
+- **The nav is the page's own `<nav class="fx-nav" id="sbar">`**, not
+  `sf-nav.js`: close (to the dashboard), ONE progress track (the session,
+  `cardIndex / sessionCards.length`), the time as a chip, the monochrome
+  streak, and a menu holding the score (`#score-pill`), dark mode
+  (`#dark-toggle`) and "End session early". No logo, no lesson title. It keeps
+  `.time-bar-wrap`, `#time-label` and `#time-bar` (the track is hidden; the
+  chip turns amber/red off its `warning`/`critical` classes) - the timer code
+  and two tests use them. `.end-btn` is hidden; the menu ends the session.
+- **A question names its type once**, in the `.q-type-label` chip.
+  `sfFxMark` sets `data-fx="q"` on question cards and the CSS hides their
+  blue header (badge + day title / "Complete the answer"), except as a small
+  tag on a review, retry or retest (`data-fx-tag`), and except the equation
+  card, whose h2 IS the instruction ("Solve for x") and is shown as the stem.
+  Lesson, deck, welcome and review cards keep their h2 as a serif title.
+- **The footer is the bottom bar** (`position:fixed`), and a shown
+  `.feedback-box` rises above it as the verdict tray (green / red / blue
+  tint, `max-height` 46vh, scrolls inside). The bar and `#btn-next` take the
+  verdict's colour through `:has(.feedback-box.show.correct-fb)`. `sfFxPad`
+  measures both (a MutationObserver on `#session-card`) into `--fx-pad` /
+  `--fx-bar-h`, so content can always scroll clear of them. The chat button
+  sits above the bar.
+- **Nothing above the footer may keep a transform.** A transformed ancestor
+  makes `position:fixed` relative to IT, so the bar rode the card's entrance:
+  `#session-card`'s inline `fadeUp` (fill `both` ends on `translateY(0)`, a
+  transform for good) and `.session-card`'s `sfCardIn` are switched off; the
+  header and body animate instead. The leaving-card ghost drops its footer
+  and feedback box (`sfGhostStyles`), or a copy of the bar sat over the new one.
+- The bar's white text sits on `#3a6ee8`, not the brand `#4a7cf6` (3.8:1).
+  An edge means "you can press this"; read-only panels stay flat.
+- In-card Check buttons (`.fill-submit`, `.write-submit`, the classify and
+  sequence checks) stay where the renderers put them, restyled with the same
+  edge. Moving every Check into the bar is the next step if wanted - it means
+  changing when `#btn-next` is enabled, which several tests assert.
+
 ## The session's look and motion (`lesson.html`) — Oct 2026
+
+**Superseded in part by "The Focus session" above** (the bar, the card shell, the feedback). What follows still holds for motion and press feedback.
 
 The apple-design pass, after the dashboard. Styles, the top bar's markup and
 a few small functions changed; no renderer, no queue logic, no class or id a
@@ -3552,9 +3603,12 @@ are scoring higher") are gone.
   the middle is on top. Two big "lead" cards carry one huge figure on a panel
   cut on a slant (`.cw-stat`, `clip-path`), the others are serif quote cards
   (paper, pale blue, night). One radius (32) for every card, 8 for chips. The
-  numbers and sources are the site's own existing claims (Cepeda 2006, Kornell
-  2009, Roediger and Karpicke, Taylor and Rohrer 2010, Walker 2017, Feynman);
-  change a card's words, never invent a figure. The cards are in `.cw-wall` in
+  cards say only what each study found (Nov 2026, the slop pass): Roediger and
+  Karpicke 2006 (61% vs 40% a week later), Kornell, Hays and Bjork 2009,
+  Cepeda et al. 2006 (317 experiments), Taylor and Rohrer 2010 (mixed
+  practice), Walker 2017, Feynman. The old "4x", "50%", "200%", "85%", "40%"
+  and "30%" were in none of those papers; never put a figure on a card that
+  its source does not state. The cards are in `.cw-wall` in
   reading order (no columns; `--o` orders them on a phone).
 - **The curtain** (`#rows-sheet`, `margin-top: -100vh`, so it overlaps the last
   screen of the wall): a light sheet rises over the pinned stage; its top
@@ -3582,8 +3636,17 @@ are scoring higher") are gone.
 - **`Scrub` items can opt in to `snap: true`**: their first measure sets `shown`
   directly, so a scene first seen part-way through (a reload, a link, a jump)
   starts there instead of sweeping in from 0.
-- **Below 1000px (the columns get too narrow), and with reduced motion** (one shared `@media`, and
-  `staticMode()` in the script): no pin, no parallax. The findings are cards in a
+- **Below 1000px both scenes stay pinned (Nov 2026, the owner)**, sized for a
+  phone (CSS "Phones and narrow tablets"): cards ~85vw with the lead card's
+  figure under its words, `CARD_GAP` 1.05 instead of .8 so stacked cards stay
+  clear (0 overlaps at 375x812, sampled 31 positions), and the features one
+  column with the step buttons as a sideways row that follows the current one.
+  **A step button jumps, it does not glide**: the stage dips out for 140ms, the
+  page moves with `scroll-behavior` forced to `auto` (the page's CSS `smooth`
+  otherwise animated it and played every feature in between), and the fx
+  Scrub item is snapped (`fxItem.seen = false` + `Scrub.sync`).
+- **With reduced motion** (`staticMode()` in the script, which is now reduced
+  motion ONLY): no pin, no parallax. The findings are cards in a
   column on night (`--o` orders the lead cards first), the features are stacked
   (picture above words), and the light sheet just overlaps them with 32px corners. Switching modes live calls `resetShows()`,
   which removes every inline value the scroll wrote.
@@ -3684,11 +3747,17 @@ files. **The nav is not in that block**: it is `sf-nav.js`, see "The site nav".
   **"Downgrade" opens Manage plan** (Stripe's Customer Portal, Oct 2026 -
   see "Paid plans are the server's"); it used to point to Contact. Classroom is a wide panel under the three
   plans: it sat alone on a second row of a three-column grid.
-- **Our story keeps every word** of the old page, in order. The long paragraph
-  is split in two and its last sentence is the pull quote, so it is said once.
-  The row naming the three techniques is new; its lines come from the
-  landing's feature cards. The unsourced "200% better retention" claim was removed from
-  the landing and this page (Nov 2026); no number is claimed now.
+- **No made-up proof on the marketing pages (Nov 2026, the slop pass).** The
+  landing's "2,400+ students / 4.9 rating" and its "Trusted by students at
+  Harvard Extension, UCLA..." marquee were invented; the strip now states
+  true counts (24 question types, 6 file types, 1 free plan a month) and
+  "Built at Punahou School". Also removed: "60 seconds" (a plan takes ~40s a
+  day), the "Predicted exam score" (nothing computes one), pricing lines for
+  things every free session has (teach-it-back, spaced review, fill-ins),
+  "Priority/VIP support", "Most popular" badges, and the School tier's
+  "admin dashboard" (it is 200 students, nothing more). Our story was
+  rewritten without template lines; it has no em dashes. A claim goes on
+  these pages only when the code or a cited paper backs it.
 - **The browser pane throttles frames while hidden** (about 1 fps), so reveals
   finish late in screenshots. Add `.in` to every `[data-reveal]` and wait, or
   check values in JS.
@@ -4092,6 +4161,41 @@ different things.
   explanation)` is the shared path; call it from any grader that does not
   go through `handleResult`.
 
+### A typed answer that means the same thing is right (Nov 2026)
+
+The owner: a typo, or a few extra words that say the same thing, should be
+correct; spelling practice should not; extra words that go off topic should
+not. `answerFill` in `lesson.html` (module "A TYPED ANSWER THAT MEANS THE SAME
+THING", just above `answerFill`):
+
+- **Safe, local, no call (`fzGrade`)**: capitals, a plural / -ed / -ing, a
+  dropped, doubled or swapped letter in a word of 5+ letters (2 at 9+), and
+  filler ("I think it is the ..."). Leftover words must be filler or words the
+  question or the answer already used. **A typed word that is itself a word
+  the lesson uses (`fzKnown`) is another word, never a typo** (meiosis for
+  mitosis, affect for effect); and a SUBSTITUTED letter is never forgiven
+  locally (proton / photon), only the model may.
+- **One model check (`fzJudge`, `api/generate`, 8s cap)** for the rest: a
+  synonym, extra words that may or may not be on topic, a substitution. It
+  answers same / different and is told to say different when unsure. The
+  card shows "Checking your answer..." while it waits and holds the input
+  (`data-judging`). "Same" is shown with "You wrote ... that counts" and the
+  real spelling. **If the call cannot be made, the card grades the old broad
+  way** (`lenientOK`: all the answer's words present, up to 4 extra, no
+  negation) - a failure never changes a grade. The old rule alone is what let
+  "nucleus and also pizza" pass; with the check on, it no longer does.
+- **Never on**: a language day, a question or day that mentions "spell",
+  `dictation`, `q.exact`, or `mustBeCorrect` (equation cards) - `fzStrict`;
+  a number or an equation answer (arithmetic, not opinion); a negation the
+  answer does not have ("not mitosis", "I don't know" - wrong at once).
+- The recall card (`rcMatch`) has the same two guards: filler is fine, and a
+  typo may not turn into a lesson word.
+- `window.SF_JUDGE_OFF = true` turns the model check off; **`harness.js`
+  sets it unless `opts.judge`**. `test_forgiving_fill.js` (fails on the code
+  before). Each check counts toward the daily `ai` cap. **Not seen against
+  the real model**: try "nucleus and also pizza", a synonym and a typo on
+  the live site and read what it decides.
+
 ### Plan generation must survive a lost day
 
 A day takes ~40 seconds. Every day used to fire at once, and the first to
@@ -4112,6 +4216,27 @@ on a **three**-day plan during testing.
   `vercel.json`. It stops short of the platform limit on purpose: the
   function returns a JSON error rather than being killed, and the client
   cannot tell a platform kill apart from a network failure.
+- **A day is TWO calls (Nov 2026, `app.html` `generateDay`).** The lesson
+  (title, flashcards, concepts) is one call and the questions another, each
+  about half the output, ~20s, so neither meets the 55s line. `promptHead` is
+  the whole guidance; the lesson call adds "THIS CALL WRITES THE LESSON
+  ONLY" and the lesson shape, the questions call adds the lesson it is
+  shown (title, ideas, key terms - so two calls cannot pick different parts of
+  the notes) and `{"questions":[...]}`. **A half that worked is kept across
+  attempts**: a failed questions call is asked again alone, and a half that
+  timed out is asked SHORT (`SHORT_RETRY`) the next time. A "lesson" with no
+  content (repairJSON's made-up "Study Session") is refused; fewer than 3
+  questions re-asks the questions only. Calls run one after the other (the
+  lesson first), not together: **whether they may run together depends on
+  Anthropic's per-minute token limits, which nobody has read yet** -
+  `api/generate.js` now logs one JSON line per call (ms, tokens in and out,
+  the `anthropic-ratelimit-*` numbers) and returns `ms` and `out`; read
+  those in the Vercel logs and the Limits page before raising the
+  concurrency. Prompts go out twice per day (input tokens double; the cap
+  counts two calls). `test_split_day.js` (fails on the one-call code);
+  `test_e2e_cards.js` answers the lesson half separately, and tests that read
+  the day prompt now read the questions call (`THIS CALL WRITES THE
+  QUESTIONS ONLY`), which carries the whole head and the schema.
 - **A day must FIT in 55s, and it did not (Oct 2026).** The owner saw
   "Retrying day 1 (attempt 3 of 3)" on most builds. Two real cell-division
   day prompts both came back 504 at 55.3s: the prompt asked for ~20k

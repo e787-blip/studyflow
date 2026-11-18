@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson Page Redesign</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%234a7cf6%27/%3E%3Crect x=%2710%27 y=%278%27 width=%2713%27 height=%2717%27 rx=%272.5%27 fill=%27white%27/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f6fb; --card: #fff; --line: #e3e8f1; --ink: #1a1d2e; --ink-2: #3b4157; --muted: #646b80;
+    --blue: #4a7cf6; --blue-ink: #2f5fe0; --blue-tint: #eef3ff;
+    --sans: 'DM Sans', system-ui, -apple-system, sans-serif; --serif: 'Instrument Serif', Georgia, serif;
+    --ease-out: cubic-bezier(.23, 1, .32, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #0c0f17; --card: #141926; --line: #242b3d; --ink: #e8ecf7; --ink-2: #c3c9da; --muted: #8d95ab; --blue-ink: #8db0ff; --blue-tint: rgba(91,138,248,.15); }
+  }
+  :root[data-theme="dark"] { --bg: #0c0f17; --card: #141926; --line: #242b3d; --ink: #e8ecf7; --ink-2: #c3c9da; --muted: #8d95ab; --blue-ink: #8db0ff; --blue-tint: rgba(91,138,248,.15); }
+  html { -webkit-text-size-adjust: 100%; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--ink); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 400; font-synthesis-weight: none; letter-spacing: -.012em; }
+
+  /* Header */
+  .g-head { padding: 56px 0 28px; }
+  .g-kicker { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--blue-ink); margin-bottom: 10px; }
+  .g-head h1 { font-size: clamp(36px, 5vw, 56px); line-height: 1.04; max-width: 15ch; text-wrap: balance; }
+  .g-lede { font-size: 18px; color: var(--ink-2); max-width: 62ch; margin-top: 14px; }
+  .g-note { display: inline-flex; gap: 8px; align-items: center; margin-top: 16px; font-size: 14px; color: var(--muted); }
+  .g-note::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #f2b33d; }
+
+  /* Controls: a solid bar, like the site's nav */
+  .g-bar { position: sticky; top: 0; z-index: 10; background: var(--card); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .g-bar .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding-top: 10px; padding-bottom: 10px; }
+  .ctl { display: flex; align-items: center; gap: 8px; }
+  .ctl-l { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .seg { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
+  .seg button { height: 32px; padding: 0 12px; border-radius: 7px; font-size: 13.5px; font-weight: 600; color: var(--muted); white-space: nowrap;
+    transition: background-color .15s, color .15s, transform .16s var(--ease-out); }
+  .seg button:active { transform: scale(.96); }
+  .seg button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 2px rgba(26,29,46,.12), 0 0 0 1px var(--line); }
+  .g-select { height: 38px; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 10px; padding: 0 34px 0 12px; font: 600 14px var(--sans);
+    appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23646b80' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; background-size: 16px; cursor: pointer; }
+  .btn { height: 38px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line); font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px;
+    transition: border-color .15s, transform .16s var(--ease-out); background: var(--card); }
+  .btn:active { transform: scale(.96); }
+  .btn i { width: 8px; height: 8px; border-radius: 50%; display: block; }
+  .btn.right i { background: #1f9e7e; } .btn.wrong i { background: #d64545; }
+  @media (hover: hover) and (pointer: fine) { .btn:hover { border-color: var(--blue); } }
+  .only-one[hidden], .only-side[hidden] { display: none !important; }
+  .g-sync { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); cursor: pointer; user-select: none; }
+  .g-sync input { width: 16px; height: 16px; accent-color: var(--blue); }
+
+  /* Stage */
+  .g-stage { padding: 28px 0 8px; }
+  .side { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+  .col-h { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .col-letter { font-family: var(--serif); font-size: 30px; line-height: 1; color: var(--blue-ink); }
+  .col-name { font-family: var(--serif); font-size: 30px; line-height: 1; }
+  .col-p { font-size: 14.5px; color: var(--ink-2); min-height: 3.1em; margin-bottom: 12px; }
+  .col-open { font-size: 13px; font-weight: 600; color: var(--blue-ink); text-decoration: none; display: inline-block; margin-top: 10px; }
+  .col-open:hover { text-decoration: underline; }
+
+  .frame { position: relative; width: 100%; overflow: hidden; background: var(--card); border: 1px solid var(--line);
+    box-shadow: 0 1px 2px rgba(26,29,46,.05), 0 30px 60px -36px rgba(26,29,46,.35); }
+  .frame.phone { border-radius: 34px; aspect-ratio: 390 / 800; }
+  .frame.desk { border-radius: 14px; aspect-ratio: 1280 / 800; }
+  .frame iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; background: transparent; }
+  .frame.phone iframe { width: 390px; height: 800px; }
+  .frame.desk iframe { width: 1280px; height: 800px; }
+  .one { max-width: 1240px; }
+  .one .frame.phone { max-width: 390px; margin: 0 auto; }
+
+  /* Sections */
+  .g-sec { padding: 56px 0 8px; }
+  .g-sec h2 { font-size: clamp(30px, 3.6vw, 40px); line-height: 1.08; margin-bottom: 8px; }
+  .g-sec .sub { font-size: 16.5px; color: var(--ink-2); max-width: 66ch; margin-bottom: 22px; }
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 760px; }
+  th, td { text-align: left; vertical-align: top; padding: 13px 16px; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  thead th { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+  thead th b { font-family: var(--serif); font-size: 20px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink); margin-left: 4px; }
+  tbody th { width: 150px; font-size: 13px; font-weight: 700; color: var(--ink-2); }
+  td { color: var(--ink-2); }
+
+  .anat { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 28px; align-items: start; }
+  .anat-fig { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+  .slot { border: 1.5px dashed var(--line); border-radius: 12px; padding: 10px 12px; }
+  .slot b { display: block; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--blue-ink); }
+  .slot span { font-size: 13.5px; color: var(--muted); }
+  .slot.stem { border-style: solid; border-color: var(--blue); background: var(--blue-tint); }
+  .slot.stem span { font-family: var(--serif); font-size: 20px; color: var(--ink); }
+  .slot.act { display: flex; justify-content: space-between; align-items: center; }
+  .slot.act em { font-style: normal; font-size: 13px; font-weight: 600; color: #fff; background: var(--blue); padding: 6px 14px; border-radius: 99px; }
+  .kinds { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+  .kind { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+  .kind h3 { font-family: var(--sans); font-size: 14.5px; font-weight: 700; letter-spacing: 0; margin-bottom: 3px; }
+  .kind p { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+
+  .fix { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+  .fix li { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 13px 15px; font-size: 14.5px; color: var(--ink-2); }
+  .fix li b { display: block; color: var(--ink); font-size: 15px; margin-bottom: 2px; }
+
+  .keep { columns: 2 300px; column-gap: 28px; font-size: 15px; color: var(--ink-2); }
+  .keep p { break-inside: avoid; padding: 8px 0; border-top: 1px solid var(--line); }
+  .keep b { color: var(--ink); }
+
+  .pick { margin: 56px 0 80px; background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 32px; display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: center; }
+  .pick h2 { font-size: clamp(28px, 3.4vw, 38px); margin-bottom: 6px; }
+  .pick p { color: var(--ink-2); max-width: 60ch; }
+  .pick-l { display: flex; gap: 10px; }
+  .pick-l span { width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; font-family: var(--serif); font-size: 34px; border: 1px solid var(--line); color: var(--blue-ink); }
+
+  @media (max-width: 980px) {
+    .side { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; gap: 40px; }
+    .anat { grid-template-columns: 1fr; }
+    .pick { grid-template-columns: 1fr; }
+  }
+  /* On a phone the controls wrap to four rows; stuck to the top they would
+     cover a third of the screen, so they scroll away there. */
+  @media (max-width: 760px) { .g-bar { position: static; } }
+  @media (max-width: 600px) {
+    .wrap { padding: 0 16px; }
+    .g-head { padding-top: 36px; }
+    .pick { padding: 22px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; } }
+</style>
+</head>
+<body>
+
+<header class="g-head">
+  <div class="wrap">
+    <p class="g-kicker">StudyFlow &middot; the lesson page</p>
+    <h1>Three ways the session could look</h1>
+    <p class="g-lede">The same session, the same questions, three designs. Every card is live: pick an answer, press Check, flip a flashcard, page through the lesson. Switch to phone or dark mode and compare, then tell me which one to build.</p>
+    <p class="g-note">A prototype. Nothing in lesson.html has changed yet.</p>
+  </div>
+</header>
+
+<div class="g-bar" role="toolbar" aria-label="Compare the designs">
+  <div class="wrap">
+    <div class="ctl">
+      <span class="ctl-l" id="l-view">View</span>
+      <div class="seg" role="group" aria-labelledby="l-view">
+        <button type="button" data-view="side" aria-pressed="true">Side by side</button>
+        <button type="button" data-view="one" aria-pressed="false">One at a time</button>
+      </div>
+    </div>
+    <div class="ctl">
+      <label class="ctl-l" for="card">Card</label>
+      <select class="g-select" id="card"></select>
+    </div>
+    <div class="ctl">
+      <span class="ctl-l">Answer it</span>
+      <button type="button" class="btn wrong" data-auto="wrong"><i></i>Wrong</button>
+      <button type="button" class="btn right" data-auto="right"><i></i>Right</button>
+    </div>
+    <div class="ctl">
+      <span class="ctl-l" id="l-theme">Theme</span>
+      <div class="seg" role="group" aria-labelledby="l-theme">
+        <button type="button" data-theme="light" aria-pressed="true">Light</button>
+        <button type="button" data-theme="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+    <label class="g-sync only-side"><input type="checkbox" id="sync" checked> Keep in step</label>
+    <div class="ctl only-one" hidden>
+      <span class="ctl-l" id="l-dir">Design</span>
+      <div class="seg" role="group" aria-labelledby="l-dir">
+        <button type="button" data-dir="a" aria-pressed="true">A &middot; Paper</button>
+        <button type="button" data-dir="b" aria-pressed="false">B &middot; Focus</button>
+        <button type="button" data-dir="c" aria-pressed="false">C &middot; Desk</button>
+      </div>
+    </div>
+    <div class="ctl only-one" hidden>
+      <span class="ctl-l" id="l-dev">Screen</span>
+      <div class="seg" role="group" aria-labelledby="l-dev">
+        <button type="button" data-dev="desk" aria-pressed="true">Laptop</button>
+        <button type="button" data-dev="phone" aria-pressed="false">Phone</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main>
+  <section class="g-stage">
+    <div class="wrap">
+      <div class="side" id="side"></div>
+      <div class="one" id="one" hidden></div>
+    </div>
+  </section>
+
+  <section class="g-sec">
+    <div class="wrap">
+      <h2>How they differ</h2>
+      <p class="sub">All three keep the brand. They differ in how much is on screen at once, and in how loud an answer feels.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th></th><th>A<b>Paper</b></th><th>B<b>Focus</b></th><th>C<b>Desk</b></th></tr></thead>
+          <tbody>
+            <tr><th>The nav</th><td>The solid bar: leave, the lesson's name, the four parts of today (Lesson, Words, Practice, Teach back) each with its own progress, time, score, a menu</td><td>Almost nothing: close, one bar filling up, time, a menu. No logo, no title</td><td>The site's solid bar (logo, breadcrumb, a time ring, score, theme, Dashboard), plus a map of the whole session in a side rail</td></tr>
+            <tr><th>Where am I?</th><td>"Practice 3/10" in the nav</td><td>How full the bar is</td><td>A numbered square for every question, green or red once answered. Click one to go back to it</td></tr>
+            <tr><th>The question</th><td>Instrument Serif, large, like print</td><td>DM Sans, bold, like a game</td><td>DM Sans, medium, like a form</td></tr>
+            <tr><th>Answers</th><td>Quiet rows with A&ndash;D keys</td><td>Big tiles with an edge you press down</td><td>Form rows with radio circles and 1&ndash;4 key hints</td></tr>
+            <tr><th>Feedback</th><td>A note written under your answer, on the card</td><td>A green or red tray rises from the bottom; Continue turns that colour</td><td>A band across the card, like a comment on your work</td></tr>
+            <tr><th>Check button</th><td>Bottom of the card, stuck in reach while you scroll</td><td>A bar fixed to the bottom of the screen</td><td>The card's footer, with an Enter hint</td></tr>
+            <tr><th>Feels like</th><td>A good textbook</td><td>A learning game</td><td>A study tool</td></tr>
+            <tr><th>Best on</th><td>Laptops and tablets; fine on phones</td><td>Phones first</td><td>Laptops and Chromebooks first; the map hides behind a button on phones</td></tr>
+            <tr><th>Watch out for</th><td>The calmest, so the least exciting</td><td>The most colour and motion; the least room for a chart or passage beside the question</td><td>The most to build (the map, key hints); the busiest screen</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="g-sec">
+    <div class="wrap">
+      <h2>One card, every question type</h2>
+      <p class="sub">The reason the three can be compared fairly: every card is the same five parts in the same order, whatever the type. A design only decides how the parts look. Today each of about 30 card types builds its own.</p>
+      <div class="anat">
+        <div class="anat-fig" aria-label="The parts of a card">
+          <div class="slot"><b>1 &middot; Eyebrow</b><span>Question 3 of 10 &middot; the type, named once &middot; level &middot; Flag</span></div>
+          <div class="slot stem"><b>2 &middot; The question</b><span>The biggest thing on the card</span></div>
+          <div class="slot"><b>3 &middot; The material</b><span>A passage, two sources, a chart, an equation, a picture. Only when there is one</span></div>
+          <div class="slot"><b>4 &middot; The answer area</b><span>One of the kinds on the right</span></div>
+          <div class="slot"><b>5 &middot; Feedback</b><span>Right or not, the answer, why, a walkthrough</span></div>
+          <div class="slot act"><span>Hint</span><em>Check &rarr; Continue</em></div>
+        </div>
+        <div class="kinds">
+          <div class="kind"><h3>Choose one</h3><p>Multiple choice, Scenario, Passage, Compare two sources, Find the evidence, Find the mistake, Read the table, Spot the bad graph</p></div>
+          <div class="kind"><h3>Two buttons</h3><p>True or false</p></div>
+          <div class="kind"><h3>Type it</h3><p>Fill in the blank, Equation, Listen and type, Estimate, Word problem steps</p></div>
+          <div class="kind"><h3>Fill the boxes</h3><p>Name them all, Complete the table, Trace the steps</p></div>
+          <div class="kind"><h3>Sort into groups</h3><p>Sort, Then and now</p></div>
+          <div class="kind"><h3>Put in order</h3><p>Put in order, Code lines (Parsons), Sentence builder</p></div>
+          <div class="kind"><h3>Pick a voice</h3><p>Who&rsquo;s right?</p></div>
+          <div class="kind"><h3>Part A, then Part B</h3><p>Two-part, Read the chart</p></div>
+          <div class="kind"><h3>Match with menus</h3><p>Match, Match the pairs, Label the diagram</p></div>
+          <div class="kind"><h3>Write it</h3><p>Teach it back, Make your case, Explain it then check</p></div>
+          <div class="kind"><h3>Draw on it</h3><p>Concept map, Build the graph: their own canvas, inside the same answer area</p></div>
+          <div class="kind"><h3>Not questions</h3><p>Lesson, Flashcards, Review done, Walkthrough, Results: the same frame, with a title instead of a question</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="g-sec">
+    <div class="wrap">
+      <h2>What this fixes, in all three</h2>
+      <p class="sub">Found by going through every card type in lesson.html today.</p>
+      <ul class="fix">
+        <li><b>The type is named once.</b>Most cards say it three or four times: the badge, the blue heading, the chip, then an instruction line ("Fill in the blank" / "Complete the answer" / "Fill in the blank" / "Type the missing word").</li>
+        <li><b>The question is the biggest thing.</b>The blue header above it was bigger and louder than the question it was for.</li>
+        <li><b>One Check button, always in the same place.</b>There are five Check-button styles today, in four different places: inside the box, under it, after the feedback, or none.</li>
+        <li><b>Hint and Flag on every question.</b>Seven types have no hint; only five have a flag.</li>
+        <li><b>You can see how far through you are.</b>The nav showed the time left, but not how many questions were left.</li>
+        <li><b>The score is shown once.</b>It was in the nav and again in every card's footer.</li>
+        <li><b>Dark mode everywhere.</b>Many cards use light colours written straight into the card, with no dark version.</li>
+        <li><b>Every card has the same frame.</b>The whiteboard cards had no card at all.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="g-sec">
+    <div class="wrap">
+      <h2>What stays the same</h2>
+      <div class="keep">
+        <p><b>One blue</b> (#4a7cf6) and the ink colour. No new accent colours.</p>
+        <p><b>Instrument Serif and DM Sans.</b> The serif only ever at its one weight.</p>
+        <p><b>Green means right, red means wrong.</b> Each answer gets a drawn tick or cross, so colour is never the only sign.</p>
+        <p><b>Amber only means "look here":</b> hints, flags, "Not sure", the watch-out flashcard.</p>
+        <p><b>Pictures stay on paper</b> in dark mode, so the drawings keep their lines.</p>
+        <p><b>The streak stays a small grey flame</b> next to the score.</p>
+        <p><b>Keys:</b> 1&ndash;4 pick an answer, Enter checks and continues, arrows turn the lesson and the flashcards.</p>
+        <p><b>Reduced motion</b> turns every slide into a fade.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="pick">
+      <div>
+        <h2>Pick one</h2>
+        <p>Tell me A, B or C. Mixing is fine too, for example "B, but with A's nav" or "C's map with A's cards". Then I'll build it into the real lesson page.</p>
+      </div>
+      <div class="pick-l" aria-hidden="true"><span>A</span><span>B</span><span>C</span></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var CARDS = [
+    ['Lesson', 0], ['Flashcards', 1], ['Multiple choice', 2], ['True or false', 3], ['Fill in the blank', 4], ['Put in order', 5],
+    ['Sort into groups', 6], ['Who’s right?', 7], ['Two-part', 8], ['Read the chart', 9], ['Name them all', 10], ['Equation', 11],
+    ['Teach it back', 12], ['Results', 13]
+  ];
+  var DIRS = [
+    ['a', 'Paper', 'Calm and printed. The question is set like a page in a good textbook, and the feedback is a note under your answer.'],
+    ['b', 'Focus', 'One thing at a time. No card and no clutter: big tiles you press, and the verdict rises from the bottom of the screen.'],
+    ['c', 'Desk', 'A study desk. A map of the whole session sits beside the question, and everything is a click or a key away.']
+  ];
+  var st = { view: 'side', card: 2, theme: 'light', dir: 'a', dev: 'desk' };
+  try { var saved = JSON.parse(localStorage.getItem('sf-redesign-gallery') || '{}'); for (var k in saved) if (k in st) st[k] = saved[k]; } catch (e) {}
+  function save() { try { localStorage.setItem('sf-redesign-gallery', JSON.stringify(st)); } catch (e) {} }
+
+  var sel = document.getElementById('card');
+  sel.innerHTML = CARDS.map(function (c) { return '<option value="' + c[1] + '">' + c[0] + '</option>'; }).join('');
+
+  function src(dir) { return 'app.html?dir=' + dir + '&card=' + st.card + '&theme=' + st.theme; }
+  function frames() { return Array.prototype.slice.call(document.querySelectorAll('.frame iframe')); }
+  function send(msg, except) { frames().forEach(function (f) { if (f.contentWindow !== except) try { f.contentWindow.postMessage(Object.assign({ type: 'sfp' }, msg), '*'); } catch (e) {} }); }
+
+  function build() {
+    var side = document.getElementById('side'), one = document.getElementById('one');
+    side.hidden = st.view !== 'side'; one.hidden = st.view !== 'one';
+    document.querySelectorAll('.only-one').forEach(function (e) { e.hidden = st.view !== 'one'; });
+    document.querySelectorAll('.only-side').forEach(function (e) { e.hidden = st.view !== 'side'; });
+    if (st.view === 'side') {
+      one.innerHTML = '';
+      side.innerHTML = DIRS.map(function (d) {
+        return '<div class="col"><div class="col-h"><span class="col-letter">' + d[0].toUpperCase() + '</span><span class="col-name">' + d[1] + '</span></div>' +
+          '<p class="col-p">' + d[2] + '</p>' +
+          '<div class="frame phone"><iframe title="Design ' + d[0].toUpperCase() + ', ' + d[1] + ', on a phone" src="' + src(d[0]) + '" loading="eager"></iframe></div>' +
+          '<a class="col-open" href="app.html?dir=' + d[0] + '" target="_blank" rel="noopener">Open ' + d[1] + ' full screen &rarr;</a></div>';
+      }).join('');
+    } else {
+      side.innerHTML = '';
+      var d = DIRS.filter(function (x) { return x[0] === st.dir; })[0];
+      one.innerHTML = '<div class="col-h"><span class="col-letter">' + d[0].toUpperCase() + '</span><span class="col-name">' + d[1] + '</span></div><p class="col-p">' + d[2] + '</p>' +
+        '<div class="frame ' + st.dev + '"><iframe title="Design ' + d[0].toUpperCase() + ', ' + d[1] + '" src="' + src(d[0]) + '"></iframe></div>';
+    }
+    fit();
+    paint();
+  }
+  function fit() {
+    document.querySelectorAll('.frame').forEach(function (fr) {
+      var f = fr.querySelector('iframe'); if (!f) return;
+      var w = fr.classList.contains('phone') ? 390 : 1280;
+      f.style.transform = 'scale(' + (fr.clientWidth / w) + ')';
+    });
+  }
+  function paint() {
+    document.documentElement.dataset.theme = st.theme;
+    sel.value = String(st.card);
+    document.querySelectorAll('[data-view]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.view === st.view); });
+    document.querySelectorAll('[data-theme]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.theme === st.theme); });
+    document.querySelectorAll('[data-dir]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.dir === st.dir); });
+    document.querySelectorAll('[data-dev]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.dev === st.dev); });
+    var q = st.card >= 2 && st.card <= 12;
+    document.querySelectorAll('[data-auto]').forEach(function (b) { b.disabled = !q; b.style.opacity = q ? '' : '.45'; });
+  }
+
+  document.querySelector('.g-bar').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.view) { st.view = b.dataset.view; save(); build(); }
+    else if (b.dataset.dir) { st.dir = b.dataset.dir; save(); build(); }
+    else if (b.dataset.dev) { st.dev = b.dataset.dev; save(); build(); }
+    else if (b.dataset.theme) { st.theme = b.dataset.theme; save(); paint(); send({ theme: st.theme }); }
+    else if (b.dataset.auto) { send({ card: st.card, instant: true, auto: b.dataset.auto }); }
+  });
+  sel.addEventListener('change', function () { st.card = +sel.value; save(); paint(); send({ card: st.card }); });
+
+  /* Keep in step: a frame that moves to a new card takes the others with it. */
+  window.addEventListener('message', function (e) {
+    var d = e.data || {}; if (d.type !== 'sfp-card') return;
+    if (d.i === st.card) return;
+    st.card = d.i; save(); paint();
+    if (st.view === 'side' && document.getElementById('sync').checked) send({ card: d.i }, e.source);
+  });
+  window.addEventListener('resize', fit);
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(document.querySelector('.g-stage'));
+  build();
+})();
+</script>
+</body>
+</html>

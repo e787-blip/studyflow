@@ -370,7 +370,7 @@ async function toCard(page, type) {
     for (let i = 0; i < 100 && !qs; i++) { await pg.waitForTimeout(150); qs = await pg.evaluate(() => { try { return JSON.parse(localStorage.getItem('sfu:nt@t.com|studyflow_plan')).days[0].questions; } catch (e) { return null; } }).catch(() => null); }
     qs = qs || [];
     const of = t => qs.filter(q => q.type === t);
-    const schema = pr.slice(pr.indexOf('"completed":false,"questions":['));
+    const schema = (function (i) { return pr.slice(i < 0 ? pr.indexOf('"completed":false,"questions":[') : i); })(pr.lastIndexOf('{"questions":[{"type"'));
     assert(/"type":"recall"/.test(schema) && /"type":"whosright"/.test(schema) && !/"type":"truefalse"/.test(schema), 'a life-science day asks for a recall and a who\'s right (in place of the true/false)');
     assert(/recall \("Name them all"\)/.test(pr) && /whosright \("Who.s right\?"\)/.test(pr) && !/conceptmap \("Complete the map"\)/.test(pr) && !/readchart \("Read the chart"\)/.test(pr),
       'the prompt explains only the new formats this day asks for');

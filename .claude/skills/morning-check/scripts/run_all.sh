@@ -55,6 +55,8 @@ check on_the_spot  "ON-THE-SPOT OK"        node "$HERE/test_ontheSpot.js"
 check predraw      "PREDRAW OK"            node "$HERE/test_predraw.js"
 check auto_cap     "no page errors"        node "$HERE/test_cap.js"
 check app_predraw  "APP PREDRAW OK"        node "$HERE/test_appdraw.js"
+check split_day     "SPLIT DAY OK"          node "$HERE/test_split_day.js"
+check forgiving_fill "FORGIVING FILL OK"    node "$HERE/test_forgiving_fill.js"
 check walk_label   "no page errors"        node "$HERE/walk_pic.js" label wl
 check walk_picture "no page errors"        node "$HERE/walk_pic.js" veins wv
 check walk_model   "no page errors"        node "$HERE/walk_model.js"

@@ -82,7 +82,7 @@ const CASES = [
     if (!saved) { FAIL(subj + ': plan never saved'); continue; }
     info.palette = saved;
     if (info.err || !prompt) { FAIL(subj + ': no prompt captured ' + (info.err || '')); continue; }
-    const schema = prompt.slice(prompt.indexOf('"completed":false,"questions":['));
+    const schema = (function (i) { return prompt.slice(i < 0 ? prompt.indexOf('"completed":false,"questions":[') : i); })(prompt.lastIndexOf('{"questions":[{"type"'));
     const types = [...schema.matchAll(/\{"type":"(\w+)"(?:,"questionType":"([\w-]+)")?/g)].map(m => m[1]);
     const counts = {}; types.forEach(t => counts[t] = (counts[t] || 0) + 1);
     const off = Object.keys(counts).filter(t => !info.palette.includes(t));

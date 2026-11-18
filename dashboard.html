@@ -57,7 +57,7 @@
      One blue. Everything that is not the brand is ink, a grey, or a tint of
      that blue. Amber means a warning and is not used for decoration. */
   :root {
-    --ink: #1a1d2e; --ink-2: #464c63; --muted: #6b7280; --faint: #a0a6b6;
+    --ink: #1a1d2e; --ink-2: #464c63; --muted: #5f6677; --faint: #a0a6b6;
     --bg: #f4f6fb; --surface: #ffffff; --surface-2: #f7f9fd;
     --line: #e7ebf3; --line-2: #d8deea;
     --blue: #4a7cf6; --blue-ink: #2f5fe0; --blue-deep: #2a52d4;
@@ -450,6 +450,12 @@
   /* ── CALENDAR ────────────────────────────────────────────────────────── */
   .cal-nav { display: flex; gap: 2px; }
   .cal-nav .icon-btn { width: 32px; height: 32px; }
+  /* Touch targets: these look 32-34px and answer a 44px press. The hit area is an
+     invisible ::before, so nothing about how they look or sit changes. */
+  .btn-text, .weak-go, .pi-del, .cal-nav .icon-btn, .seg button { position: relative; }
+  .btn-text::before, .weak-go::before, .pi-del::before, .cal-nav .icon-btn::before, .seg button::before {
+    content: ""; position: absolute; left: -4px; right: -4px; top: 50%; height: 44px; transform: translateY(-50%); }
+  .pi-del::before, .cal-nav .icon-btn::before { left: 50%; right: auto; width: 44px; transform: translate(-50%, -50%); }
   .cal-week, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
   .cal-week span { text-align: center; font-size: .66rem; font-weight: 600; color: var(--muted); letter-spacing: .04em; padding-bottom: 6px; }
   .cal-grid { row-gap: 2px; }
@@ -564,7 +570,7 @@
   .pi-meta { font-size: .76rem; color: var(--muted); }
   .pi-end { display: flex; align-items: center; gap: 2px; }
   .pi-check { color: var(--blue-ink); }
-  .pi-del { width: 34px; height: 34px; border-radius: 999px; border: 0; background: none; color: var(--faint); display: grid; place-items: center;
+  .pi-del { width: 34px; height: 34px; border-radius: 999px; border: 0; background: none; color: var(--muted); display: grid; place-items: center;
             transition: color .2s, background-color .2s, transform var(--spring-fast-ms) var(--spring-fast); }
   .pi-del:hover { color: var(--danger); background: rgba(217,54,54,.08); }
   .pi-del:active { transform: scale(.9); }

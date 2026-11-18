@@ -58,6 +58,7 @@ module.exports = async function handler(req, res) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Server misconfiguration' });
 
+  const t0 = Date.now();
   try {
     const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -84,7 +85,8 @@ module.exports = async function handler(req, res) {
 
     if (!response.ok) {
       const errText = await response.text().catch(() => '');
-      console.error('[generate.js] Anthropic error', response.status, errText.slice(0, 200));
+      console.error('[generate.js] Anthropic error', response.status, errText.slice(0, 200),
+                    'ms=' + (Date.now() - t0), 'retry-after=' + (response.headers.get('retry-after') || ''));
       return res.status(502).json({ error: 'AI service error: ' + response.status });
     }
 
@@ -101,9 +103,26 @@ module.exports = async function handler(req, res) {
       console.warn('[generate.js] Response truncated at max_tokens — client will repair');
     }
 
+    /* One line per call, for the Vercel logs: how long it took, how much it
+       wrote, and what Anthropic says is left of the per-minute limits. A day
+       is two calls now; these numbers say whether they may run together. */
+    const usage = data.usage || {};
+    const h = (n) => response.headers.get('anthropic-ratelimit-' + n) || '';
+    console.log('[generate.js] ' + JSON.stringify({
+      ms: Date.now() - t0, in: usage.input_tokens, out: usage.output_tokens, stop: stopReason,
+      chars: trimmedPrompt.length,
+      limits: {
+        requests: h('requests-remaining') + '/' + h('requests-limit'),
+        inputTokens: h('input-tokens-remaining') + '/' + h('input-tokens-limit'),
+        outputTokens: h('output-tokens-remaining') + '/' + h('output-tokens-limit')
+      }
+    }));
+
     return res.status(200).json({
       result: text,
-      truncated: stopReason === 'max_tokens'
+      truncated: stopReason === 'max_tokens',
+      ms: Date.now() - t0,
+      out: usage.output_tokens
     });
 
   } catch (err) {
