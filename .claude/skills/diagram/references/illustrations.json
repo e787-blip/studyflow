@@ -1,5 +1,5 @@
 {
-  "_about": "Source list for illustrations/*.svg, built by scripts/prep_illustration.py. 'src' is a Wikimedia Commons file title; licence and author are read from Commons, never typed here ('author' overrides only the NAME when Commons' artist line is long or wrong). 'key' labels become bold (the labelling card's pins, in this order); 'translate' rewrites label text; 'drop' removes labels whose text matches; 'keep' keeps only these labels; 'leave' marks text that is part of the drawing (not re-set); 'join' names labels written as one text per line ('Small' over 'intestine'); 'nudge' {label: [dx, dy]} moves a label; 'hide' [CSS selectors] removes parts of the file (a dropped label's leader line); 'page': true keeps only what lies on the file's own canvas, clipped to it; 'add' [{text, x, y, anchor, to:[x, y]}] places a label OURSELVES in the file's viewBox units, with a leader line to 'to' - a claim about the drawing, so name parts only from the author's own labelled version or legend, and look. 'title' is what the learner sees. '_note' is for people.",
+  "_about": "Source list for illustrations/*.svg, built by scripts/prep_illustration.py. 'src' is a Wikimedia Commons file title; licence and author are read from Commons, never typed here ('author' overrides only the NAME when Commons' artist line is long or wrong). 'key' labels become bold (the labelling card's pins, in this order); 'translate' rewrites label text; 'drop' removes labels whose text matches; 'keep' keeps only these labels; 'leave' marks text that is part of the drawing (not re-set); 'join' names labels written as one text per line ('Small' over 'intestine'); 'nudge' {label: [dx, dy]} moves a label; 'hide' [CSS selectors] removes parts of the file (a dropped label's leader line); 'page': true keeps only what lies on the file's own canvas, clipped to it; 'add' [{text, x, y, anchor, to:[x, y]}] places a label OURSELVES in the file's viewBox units, with a leader line to 'to' - a claim about the drawing, so name parts only from the author's own labelled version or legend, and look. 'integer_paths': true rounds every path coordinate to a whole number, ONLY safe when every path is absolute (the script refuses a relative one); 'drop_fills' ['#rrggbb'] removes the paths whose whole style is that one fill, a shading layer, when a file is over the 80 KB budget (the skeleton: 92 KB to 48 KB, bones and labels untouched). 'title' is what the learner sees. '_note' is for people.",
   "items": [
     {
       "id": "leaf-cross-section",
@@ -513,6 +513,51 @@
           "anchor": "start"
         }
       ]
+    },
+    {
+      "id": "ear",
+      "src": "Anatomy of the Human Ear.svg",
+      "title": "The human ear",
+      "key": [
+        "Cochlea",
+        "Auricle",
+        "Tympanic membrane",
+        "Semicircular canals",
+        "Malleus",
+        "Eustachian tube"
+      ],
+      "_note": "Found live by api/illustration.js for 'The human ear' (the judge's pick, Oct 2026), then promoted here."
+    },
+    {
+      "id": "skeleton",
+      "src": "Human skeleton front en.svg",
+      "title": "The human skeleton",
+      "key": [
+        "Cranium",
+        "Ribs",
+        "Humerus",
+        "Femur",
+        "Tibia",
+        "Sternum"
+      ],
+      "integer_paths": true,
+      "drop_fills": [
+        "#dcc06d"
+      ],
+      "drop": [
+        "Skull",
+        "Spinal Column"
+      ],
+      "hide": [
+        "#SkullBlueBar",
+        "#SpinalColumnBlueBar"
+      ],
+      "translate": {
+        "Cervical Vertebrae (I-VII)": "Cervical vertebrae",
+        "Thoracic Vertebrae (T I - T XII)": "Thoracic vertebrae",
+        "Lumbar Vertebrae (L I - L V)": "Lumbar vertebrae"
+      },
+      "_note": "Found live (Nov 2026). The darker tone layer (#dcc06d, 458 paths) is dropped so it fits the 80 KB budget: a little flatter, nothing missing. The two blue group headers and their pale bars are dropped, and the three vertebra labels lose their Roman numerals. All the leader lines stay, so none dangles."
     }
   ]
 }

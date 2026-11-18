@@ -2747,7 +2747,16 @@
     english: [
       { key:'reading', label:'Reading comprehension',
         terms:['reading','comprehension','main idea','inference','infer','summar','nonfiction','informational','passage','central idea','text evidence','author.s purpose'],
-        types:['readingset','highlight','readingset','twopart:passage','mcq','fill','write'],
+        /* Oct 2026, the owner: teach the method first, then run several
+           passages. Explicit comprehension-strategy instruction with modelled
+           examples is the best-supported way to teach reading (NRP 2000;
+           Shanahan et al. 2010, IES practice guide), and a strategy is learned
+           by applying ONE method to many different texts in a row before the
+           kinds of question are mixed. So: three passages (lesson.html runs
+           them back to back with one other card between), the mcq gone (each
+           passage already carries three), the rest after. */
+        types:['readingset','highlight','readingset','twopart:passage','readingset','fill','write'],
+        method:'THE LESSON TEACHES THE METHOD FIRST. Make "steps" the 3-4 moves a reader makes, in order, each {step, action, why}: "action" is the question the reader asks the text or the thing they do (find what each paragraph is mostly about; underline the clue, then say what it points to), "why" says why that move works. "content" names the skill, shows the method on ONE sentence from the notes thought aloud, and states the trap. The passages come straight after, so do not quiz here.',
         guide:'ASK: what the passage itself supports - the idea it builds, what it implies without stating, and what a word means in this sentence. Every question must be answerable from the passage alone. AVOID: outside knowledge, and opinion questions with no right answer.',
         visual:'a concept hub around the central idea, or compare for two viewpoints.' },
       { key:'grammar', label:'Grammar and mechanics',
@@ -2757,7 +2766,8 @@
         visual:'compare a correct and an incorrect form side by side.' },
       { key:'literature', label:'Literary analysis',
         terms:['literature','literary','novel','poem','poetry','shakespeare','theme','symbol','metaphor','character','narrat','imagery','tone','motif','protagonist','setting','plot','figurative'],
-        types:['readingset','corroborate','twopart:passage','highlight','mcq','selfcheck','write','truefalse'],
+        types:['readingset','corroborate','twopart:passage','readingset','highlight','selfcheck','write','truefalse'],
+        method:'THE LESSON TEACHES THE METHOD FIRST. Make "steps" the 3-4 moves of a close reading, in order, each {step, action, why}: point at the exact words, say what they do, say what that makes the reader think or feel, say why the author chose them. "content" names the skill, shows the method on ONE quoted line from the notes thought aloud, and states the trap. The passages come straight after, so do not quiz here.',
         guide:'ASK: what a specific choice achieves in a specific passage, with the text quoted in the question. AVOID: naming a device with no text attached to it. The selfcheck card asks what a device or choice does in the text, in the learner\'s own words.',
         visual:'a concept hub for theme, compare for two characters, timeline for plot.' }
     ],
@@ -2884,7 +2894,8 @@
         visual:'compare two forms, or a 2x2 matrix for a conjugation pattern.' },
       { key:'reading', label:'Reading and conversation',
         terms:['reading','conversation','dialogue','listening','comprehension','phrase','greeting','culture','speaking','travel','ordering','directions'],
-        types:['readingset','dictation','dictation','highlight','sentence','matchpairs','fill','write','mcq'],
+        types:['readingset','dictation','dictation','highlight','sentence','matchpairs','fill','write','readingset'],
+        method:'THE LESSON TEACHES THE METHOD FIRST. Make "steps" the 3 moves for reading a text in this language, in order, each {step, action, why}: read for the gist before any single word, pick out the words you know and the ones that look like English, then guess the rest from the sentence around them. "content" shows the method on ONE sentence from the notes thought aloud. The passages come straight after, so do not quiz here.',
         guide:'ASK: what a short passage or exchange actually says, and how to respond in the language. AVOID: translating isolated words with no context.',
         visual:'compare two ways of saying the same thing.' },
       { key:'vocab', label:'Vocabulary',
@@ -3483,6 +3494,7 @@
         '2. microTopic: domain > subdomain > micro-concept in one sentence.\n' +
         '3. content: 3-4 sentences explaining WHY, not just WHAT.\n' +
         '4. steps: Procedural topics: 3-5 steps each {step,action,why}. Conceptual: [].\n' +
+        ((sub && sub.method) ? '   ' + sub.method + '\n' : '') +
         '4b. OPENING WHITEBOARD - required on every day. Three fields:\n' +
         '   pillars: [{"label":"short claim","detail":"one sentence"}] - exactly 3, the ideas the\n' +
         '     whole topic rests on. Labels under 34 chars, details under 110.\n' +

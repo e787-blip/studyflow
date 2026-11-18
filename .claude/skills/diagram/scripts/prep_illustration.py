@@ -141,6 +141,38 @@ def shrink(s, vbw):
     return s
 
 
+def int_paths(svg):
+    """Round every path's coordinates to whole units. ONLY for a file whose paths use
+    absolute commands (no drift is possible), and only the `d` attributes: stroke
+    widths and font sizes stay as they are. The skeleton's 92 000 coordinates were
+    171 KB gzipped at one decimal and 92 KB as whole numbers, with no visible change."""
+    TOK = re.compile(r'[A-Za-z]|-?(?:\d+\.\d*|\.\d+|\d+)(?:[eE][-+]?\d+)?')
+
+    def fix(m):
+        d = m.group(1)
+        if re.search(r'[a-yA-Y]', d.replace('e', '').replace('E', '')) and re.search(r'[mlhvcsqta]', d):
+            raise SystemExit('integer_paths needs absolute path commands only (found a relative one)')
+        out, prev = '', False
+        for t in TOK.findall(d):
+            if t.isalpha():
+                out += t; prev = False
+            else:
+                v = str(int(round(float(t)))); v = '0' if v == '-0' else v
+                out += (' ' if prev and not v.startswith('-') else '') + v; prev = True
+        return ' d="' + out + '"'
+    return re.sub(r' d="([^"]*)"', fix, svg)
+
+
+def drop_fills(svg, fills):
+    """Remove the plain-fill paths of the listed colours (shading layers). A file whose
+    tone layers are 58% of its path data is over the 80 KB budget with them and under it
+    without: the skeleton, 92 KB with, 48 KB without, every bone and label still there.
+    Only a path whose whole style is that one fill is removed."""
+    for f in fills:
+        svg = re.sub(r'<path\b(?=[^>]*\sstyle="fill:' + re.escape(f) + r'")[^>]*?(?:/>|></path>)', '', svg, flags=re.I)
+    return svg
+
+
 def short_author(a):
     a = re.sub(r'^(This SVG image was created by|Created by|Own work by)\s*', '', a, flags=re.I)
     a = re.split(r'[.;]\s|\s\(|,\straduction|,\stranslation', a)[0]
@@ -194,6 +226,10 @@ def main():
         svg, rep = browser(job, '/illustrations/.stage/' + it['id'] + '.svg')
         vbw = float(re.search(r'viewBox="[-\d.]+ [-\d.]+ ([\d.]+)', svg).group(1))
         svg = shrink(sanitise(svg), vbw)
+        if it.get('drop_fills'):
+            svg = drop_fills(svg, it['drop_fills'])
+        if it.get('integer_paths'):
+            svg = int_paths(svg)
         svg = svg.replace(' xmlns:xlink="http://www.w3.org/1999/xlink"', '', 1) if 'xlink:' not in svg[200:] else svg
         open(os.path.join(OUTDIR, it['id'] + '.svg'), 'w', encoding='utf8').write(svg)
         import gzip

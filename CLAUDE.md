@@ -34,7 +34,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
 | `sf-icons.js` | ~90 KB | **Pictures for the diagrams.** 123 small two-tone icons (Phosphor, MIT) and the matcher that says which one a label names. Loaded before `sf-draw.js` on both pages - see "Pictures in the diagrams" |
 | `sf-render.js` | ~30 KB | **Pictures drawn by code.** Charts, number lines and to-scale timelines from figures and dates the model wrote; the model never places a mark. Loaded after `sf-icons.js` on `app.html` and `lesson.html` - see "Pictures drawn by code"
-| `sf-library.js` + `illustrations/` | ~11 KB + 14 SVGs | **Real illustrations** (leaf, heart, plant cell, animal cell, volcano, water cycle, lungs, digestive system, eye, neuron, mitosis, flower, rock cycle, plate boundaries) from Wikimedia Commons, each with its credit inside the picture. Shown when the lesson's TITLE names one; the model no longer draws lesson pictures - see "Real illustrations"
+| `sf-library.js` + `illustrations/` | ~11 KB + 16 SVGs | **Real illustrations** (leaf, heart, plant cell, animal cell, volcano, water cycle, lungs, digestive system, eye, neuron, mitosis, flower, rock cycle, plate boundaries, ear, skeleton) from Wikimedia Commons, each with its credit inside the picture. Shown when the lesson's TITLE names one; the model no longer draws lesson pictures - see "Real illustrations"
 | `sf-illustrate.js` | ~22 KB | **Makes a real illustration ready for a phone** - the label re-setting, crop and credit, in an off-screen shadow root after a sanitise pass. ONE implementation for the offline pipeline (the 14 library files rebuild byte-identical through it) and for a picture found live - see "A real illustration for any lesson" |
 | `api/illustration.js` | ~22 KB | **Finds a real illustration for any lesson on Wikimedia Commons**: search, language-copy collapsing, licence/size/shape/noise filters, then a model that SEES the 5 best and refuses the wrong ones. `?file=` returns a cleaned SVG. CDN-cached 30 days |
 | `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** The marketing pages that sit in the nav's own links (Help, Our story, Plans) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. **`lesson.html` no longer loads it** (Nov 2026, the Focus bar). `index.html` keeps its own copy - see "The site nav" |
@@ -153,10 +153,13 @@ the owner's decision): a paid Classroom holds 30**, a free class 5, as the
 landing page's Schools section always said. The cap is read on `join` from
 the teacher's `users/{email}.tier`, which `api/webhook.js` writes. The
 price is **$79.99** on both pages (the owner's decision, Oct 2026; the
-landing page said $79). Still not agreed: the landing page sells a $299 School tier that has a Stripe price (in
-`api/checkout.js`'s allowlist) but no button on the pricing page.
-`CAP_BY_TIER.school` is 200, not unlimited: the roster is one Firestore
-document.
+landing page said $79). The $299 School tier is sold on the landing page
+only, with no button on the pricing page: **schools contact the owner** (the
+owner's decision, Nov 2026). Its Stripe price stays in `api/checkout.js`'s
+allowlist. The landing page says **up to 200 students**, which is
+`CAP_BY_TIER.school` (it said "unlimited"; the roster is one Firestore
+document). The Help page (`contact.html`) shows no email address, only the
+form (the owner's decision, Nov 2026).
 
 ### Paid plans are the server's (Oct 2026)
 
@@ -710,6 +713,44 @@ guidance in the prompt, and a renderer branch.
   the narrower subtopic, so "the American Revolution and the Constitution"
   is era + civics. Matters when the notes-map call fails; when it works the
   model picks the shape.
+
+### Reading days (Oct 2026) — the method first, then the passages
+
+The owner: for reading comprehension, teach the method in the first part of the
+lesson, then go to the reading passages, several of them, "with a little bit of
+mix up in between". `test_reading_run.js` (fails on the code before).
+
+- **Which subtopics (the research decides, not the subject name).** A strategy
+  is learned from explicit instruction with a modelled example, then applying
+  ONE method to many different texts (NRP 2000; Shanahan et al. 2010, IES
+  practice guide), and blocked practice of one skill is better when the cases
+  share a method; interleaving earns its place where the cases are confusable
+  (question-design.md §3). So: `english/reading` (three reading sets),
+  `english/literature` and `language/reading` (two each). **Not**
+  `english/grammar` (comma splice vs fragment vs run-on ARE confusable, so it
+  stays mixed) and not the history mixes (sourcing, corroboration and context
+  are different skills, and are meant to alternate).
+- **The method is the lesson card.** A subtopic's `method` string (SUBTOPICS in
+  `app.html`) is printed under rule 4 of the day prompt: `steps` become the 3-4
+  moves of the strategy, `content` shows it on one sentence thought aloud, no
+  quizzing. The lesson card's "How it works" part prints them. A subtopic with
+  no `method` is prompted exactly as before. Mixes dropped their plain `mcq`
+  (english/reading, language/reading) because each passage already carries
+  three questions.
+- **The run** (`buildQueue`, where the reading sets are placed): two or more
+  `readingset` questions make a READING DAY. The sets go one after another,
+  passage then its own questions, with ONE other card between neighbours - never
+  a plain multiple-choice - and the remaining formats after the last passage.
+  Due-review cards follow the first passage; the labelling card (built on
+  arrival) stays last. Content-driven, so a made subtopic with two sets gets
+  it too; **one set keeps the old spread**. Pre-test and review blocks sit
+  before `practiceStart` and are untouched. Card type for a multiple-choice is
+  `'question'`, not `'mcq'` (a first draft sorted on `'mcq'` and put one in
+  the gap).
+- **Output cost:** a third set adds ~2k characters to the questions call
+  (the day is two calls, ~20s each, so it has room). Not seen from a real model.
+- Made subtopics (`sf-topics.js`) still compose ONE reading set for text
+  material, so a made reading part has no run yet.
 
 ### The five formats of Oct 2026 — recall, selfcheck, conceptmap, whosright, readchart
 
@@ -1319,9 +1360,19 @@ every flow chart was a rainbow. What replaced it:
 - **`uniqIds(svg)`.** Every marker id was fixed (`sfdkArrow`, `wvA`...), and
   `url(#id)` resolves to the first in the DOCUMENT - so a hidden first diagram
   took every later arrowhead with it. Ids are renamed per SVG at the exit.
-- **`wrap()` no longer drops words silently** past `maxLines`; the rest is cut
-  with a visible ellipsis. Hubs get three lines ("Causes of the French
-  Revolution" was reaching the hub as "Causes of the / French").
+- **No word on a picture is ever cut (Nov 2026, the owner: "make sure the
+  words aren't cut off halfway ANYMORE").** The lesson card printed
+  "American Revolution begins at Le…". Every layout now passes a line limit
+  it can grow to (the box is as tall as its words), a word wider than the
+  box is broken with a hyphen, and nothing chops a label by letter count
+  first (the old 28 / 46 / 80-letter cuts are gone). `wrap()` still cuts
+  with an ellipsis past `maxLines` - that is how `whole()` tells a layout
+  (the ring, the flow across) to choose a roomier shape - so a new caller
+  must give room for every word or test `whole()`. A long hub topic wraps
+  narrower and taller, and the ring turns so no idea sits beside it. Same
+  in block 2's walkthrough boards. `test_no_cut.js` renders every layout
+  with long labels and fails on any "…", lost word or label touching the
+  hub.
 - **A step is made shorter at the source, not cut at the edge.** Steps arrive
   as sentences, and three layers each cut them - `dgLabels` at 38 chars,
   `fromSpec` at 44, then the node's own `wrap` - so a heart lesson's cycle
@@ -2300,6 +2351,33 @@ data in 6px type, and is 130px tall on a phone, or is photographs; and
 LadyofHats' row of six mitosis cells (45px each on a phone - the cycle
 diagram is used instead). Not changed: "Draw it for me" still draws with the
 model.
+
+**Promoting a found picture into the library (Nov 2026: the ear and the
+skeleton).** `api/illustration.js` finds a picture for any lesson, but a
+hand-checked file is instant, free, never depends on a judge's mood, and is
+looked at on a phone. When the search keeps picking the same good file for a
+common topic, add it to `illustrations.json` and the `ITEMS` list in
+`sf-library.js` and run `prep_illustration.py <id>` as for any other. Two
+catalogue options came from the skeleton (27 labels, 862 KB, 171 KB gzipped):
+**`integer_paths`** rounds every path coordinate to a whole number - safe ONLY
+when every path is absolute (the script refuses a relative one) and applied to
+the `d` attributes alone, never to a stroke width - and took it to 92 KB with
+no visible change; **`drop_fills`** removes the paths whose whole style is one
+shading colour, and took it to 48 KB (under the 80 KB rule, which
+`test_library.js` enforces) at the cost of a flatter skull and joints, nothing
+missing. The skeleton also drops its two blue group headers (`drop` + `hide`
+the pale bars) and the Roman numerals on the three vertebra labels
+(`translate`); every leader line stays, so none dangles.
+
+**A bug found on the way, in `sf-illustrate.js`:** a label whose second line
+holds a small inner tspan (`Vertebrae <tspan>(I-VII)</tspan>`) counted that inner
+tspan as another line, so the suffix printed twice and the labels collided. Only
+a text's DIRECT tspans are lines now. The other 15 files rebuild byte-identical
+with and without the change.
+
+**Matching words** are the risk with common nouns: the ear refuses "a court
+hearing", "an ear of corn" and "early"; the skeleton refuses "skeleton key" and
+"an essay skeleton"; both are tested (`test_library.js`).
 
 ### A real illustration for any lesson — `api/illustration.js`, `sf-illustrate.js` (Oct 2026)
 
@@ -4295,13 +4373,15 @@ genuinely nothing.
   (see its section for the 15-topic run). Cost per NEW topic: one Haiku call with up to 5 small images,
   shared across learners by the CDN. The endpoint is open like
   `api/generate.js`; a flood of made-up topics would each cost a call.
-- **Real illustrations: fourteen.** Leaf, heart, plant cell, animal cell,
+- **Real illustrations: sixteen.** Leaf, heart, plant cell, animal cell,
   volcano, water cycle, lungs, digestive system, eye, neuron, mitosis,
   flower, rock cycle, plate boundaries (subduction and a ridge; no transform
-  boundary). Each was looked at on a lesson card at 375px, light and dark.
+  boundary), **the ear and the skeleton** (Nov 2026, promoted from pictures the
+  live search found - see below). Each was looked at on a lesson card at 375px,
+  light and dark.
   Still missing: **the solar system** (no Commons file reads on a phone -
-  a code-drawn one in `sf-render.js` may be the answer), the skeleton, the
-  brain (the kit's curated template is the fallback), the ear, the kidney,
+  a code-drawn one in `sf-render.js` may be the answer), the
+  brain (the kit's curated template is the fallback), the kidney,
   atoms. Servier Medical Art (plain CC BY) was not used: its body drawings
   are unlabelled, which the `add` key now makes workable. The flower and
   mitosis are small on a phone (labels 9px, the mitosis cells ~45px) - they

@@ -533,6 +533,24 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   .toast { background: var(--ink); }
   .sheet { background: var(--card); }
 }
+
+/* ── De-slop pass (Nov 2026): no glow blobs, no glass blur, no running light,
+   no italic-accent word in every heading, flat closing band, blocky buttons. ── */
+.h1 em, .h2 em, .cta h2 em { font-style: normal; color: inherit; }
+.aura, .sheen, .comet, .cta::before { display: none; }
+.glass { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.btn { border-radius: 12px; }
+.cta { background: var(--blue-deep); }
+.pname { font-family: var(--sans); font-size: .95rem; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.glass.blue, .glass.night { box-shadow: none; }
+.foot-mark { background: none; -webkit-text-fill-color: currentColor; color: rgba(160, 188, 255, .16); }
+.btn-glass, .dcard-in { -webkit-backdrop-filter: none; backdrop-filter: none; }
+.dcard-in { animation: none; background: var(--card); }
+.founder-card h2 em { font-style: normal; color: inherit; }
+.glass, .glass.blue, .glass.night { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; box-shadow: none !important; }
+.env-glow { display: none !important; }
+.dcard-in { animation: none !important; }
+.btn-light, .btn-blue { box-shadow: none; }
 </style>
 </head>
 <body>
@@ -549,7 +567,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 
 <header class="hero">
   <div class="aura" aria-hidden="true"></div>
-  <p class="eyebrow" data-reveal="up">Plans</p>
   <h1 class="h1" data-reveal="up" style="--rd:.06s">Pick a <em>plan</em></h1>
   <p class="lede" data-reveal="up" style="--rd:.14s">Start free. Upgrade when you want more. Cancel anytime.</p>
 </header>
@@ -577,7 +594,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 
     <!-- PRO -->
     <article class="plan glass blue live" data-plan="pro" data-reveal="glass" style="--rd:.09s" aria-labelledby="n-pro">
-      <span class="comet" aria-hidden="true"></span>
       <div class="plan-head"><h2 class="pname" id="n-pro">Pro</h2></div>
       <p class="price">$7.99</p>
       <p class="per">per month</p>
@@ -626,7 +642,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 <section class="cta" id="start" data-reveal="section">
   <div class="wrap cta-grid">
     <div>
-      <span class="chip-glass">Free to start, no credit card</span>
       <h2>Got a test coming up? <em>Start tonight.</em></h2>
       <p>Upload your notes and get a session for every day until the test. Your first plan each month is free.</p>
       <div class="row">
