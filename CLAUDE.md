@@ -28,7 +28,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `index.html` | ~172 KB | Marketing / landing page. 3D hero, one `<script>` block |
 | `login.html` | ~57 KB | Sign in, sign up, password reset. Firebase Auth (module script), one form for all three |
 | `app.html` | ~292 KB | Plan builder: the lesson upload, one question per screen, then generation. Subject detection, AI prompt, question schemas, validators |
-| `lesson.html` | ~1.3 MB | The session runtime. Card queue, all question renderers, the whiteboard. Redesigned Nov 2026 as "Focus" - see "The Focus session (Nov 2026)" |
+| `lesson.html` | ~1.3 MB | The session runtime. Card queue, all question renderers, the whiteboard. Redesigned Nov 2026: a Paper card with the Focus nav - see "The Paper session with the Focus nav (Nov 2026)" |
 | `dashboard.html` | ~150 KB | Plan list and progress. Redesigned Oct 2026 - see "The dashboard" |
 | `about.html` / `pricing.html` | ~52 / ~60 KB | "Our story" and the plans page, redesigned Oct 2026 in Liquid Glass to match `index.html` - see "Our story and Plans". Each carries its own copy of the shared glass CSS and footer; the nav is `sf-nav.js` |
 | `sf-draw.js` | ~22 KB | **The drawing skill.** The picture prompts and the call that asks for a picture, loaded by `app.html` and `lesson.html` |
@@ -3523,15 +3523,29 @@ and a side column of At a glance / Scores / Calendar / reminder / invite.
   teacher's empty "Topics students struggle with" panel can be filled from
   the same log once the classroom is switched on.
 
-## The Focus session (`lesson.html`) — Nov 2026
+## The Paper session with the Focus nav (`lesson.html`) — Nov 2026
 
-**The owner chose design B, "Focus"**, from three live prototypes
-(`prototypes/lesson-redesign/index.html`: A Paper, B Focus, C Desk - kept, so
-the comparison and the shared card contract in its `engine.js` can be looked
-at again). One thing at a time: no card box, the question as the biggest thing
-on screen, every answer a tile with an edge you press down, and one bar fixed
-to the bottom that holds the next step and, after an answer, becomes the
-verdict.
+**Two decisions, a day apart.** The owner first chose design B, "Focus", from
+three live prototypes (`prototypes/lesson-redesign/index.html`: A Paper, B
+Focus, C Desk - kept, so the comparison and the shared card contract in its
+`engine.js` can be looked at again). Then: *"change it to paper but with
+focus' nav, make the button animations the same, and the right and wrong
+dropdown has the red border all around it."* So today a session is:
+
+- **The Focus nav** (below);
+- **A PAPER page**: a white card (24px radius, hairline, soft shadow) on a
+  soft paper ground (`#f3f5fa`, dark `#0c0f17`), 720px wide; the question in
+  Instrument Serif (`.q-text`, one weight - emphasis is the italic, never
+  bold); the type chip a blue-tint pill; answers hairline tiles;
+- **A footer that sticks to the card's bottom** (`position:sticky`, a hairline
+  above it), not a bar fixed to the screen;
+- **The verdict as a box under the answer with its border ALL ROUND** (2px:
+  red for wrong, green for right, blue for a note; the label is serif) - it
+  was a tray with only a top edge;
+- **ONE PRESS**: every button has an edge under it (3px; the small keys 2px)
+  and a press sinks it onto that edge (3px down, edge gone, 80ms). Buttons
+  used to answer three ways (the Focus tiles sank, most others shrank to
+  `.96`, the nav icons to `.92`).
 
 It is a LAYER, not a rewrite: the CSS block "FOCUS" at the end of the
 stylesheet plus three hooks next to `renderCard` (`sfFxProgress`, `sfFxMark`,
@@ -3552,29 +3566,37 @@ unchanged (`#feedback-box`, `#btn-next`, `.card-header h2`, `.q-option`...).
   tag on a review, retry or retest (`data-fx-tag`), and except the equation
   card, whose h2 IS the instruction ("Solve for x") and is shown as the stem.
   Lesson, deck, welcome and review cards keep their h2 as a serif title.
-- **The footer is the bottom bar** (`position:fixed`), and a shown
-  `.feedback-box` rises above it as the verdict tray (green / red / blue
-  tint, `max-height` 46vh, scrolls inside). The bar and `#btn-next` take the
-  verdict's colour through `:has(.feedback-box.show.correct-fb)`. `sfFxPad`
-  measures both (a MutationObserver on `#session-card`) into `--fx-pad` /
-  `--fx-bar-h`, so content can always scroll clear of them. The chat button
-  sits above the bar.
-- **Nothing above the footer may keep a transform.** A transformed ancestor
-  makes `position:fixed` relative to IT, so the bar rode the card's entrance:
-  `#session-card`'s inline `fadeUp` (fill `both` ends on `translateY(0)`, a
-  transform for good) and `.session-card`'s `sfCardIn` are switched off; the
-  header and body animate instead. The leaving-card ghost drops its footer
-  and feedback box (`sfGhostStyles`), or a copy of the bar sat over the new one.
-- The bar's white text sits on `#3a6ee8`, not the brand `#4a7cf6` (3.8:1).
-  An edge means "you can press this"; read-only panels stay flat.
+- **The card must keep `overflow:visible`.** `overflow:hidden` makes it its
+  own scroller and the sticky footer stops sticking. `#session-card` (the
+  wrapper) keeps no animation of its own (its inline `fadeUp` ends on a
+  transform); the `.session-card` inside arrives with `sfCardIn`, which ends
+  on `none`. The verdict was a `position:fixed` tray in the Focus version, and
+  a transformed ancestor turns fixed into "fixed to that ancestor" - nothing
+  inside the card is fixed any more, so that trap is gone, but do not make a
+  fixed element a child of the card without remembering it.
+- **A verdict is brought into view** (`sfFxPad`, once per showing,
+  `scrollIntoView({block:'nearest'})` with `scroll-margin-bottom` on the box)
+  because on a tall card the sticky footer would sit over it. `sfFxPad` also
+  measures the footer into `--fx-pad`, which only the tutor button reads.
+- **The fill-in sets `line-height:2.2` inline**; at the serif size that put a
+  blank line between the two lines of the question, so `.q-text[style*=
+  "line-height"]` is forced to 1.3.
+- The button fill's white text sits on `#3a6ee8`, not the brand `#4a7cf6`
+  (3.8:1). An edge means "you can press this"; read-only panels stay flat.
+  The `.sfwb-explain` text link is not a pressed button and keeps its own
+  hover.
 - In-card Check buttons (`.fill-submit`, `.write-submit`, the classify and
   sequence checks) stay where the renderers put them, restyled with the same
-  edge. Moving every Check into the bar is the next step if wanted - it means
-  changing when `#btn-next` is enabled, which several tests assert.
+  edge.
+- **Looked at, not measured**: this pass was checked on real page loads at
+  desktop and 375px in light and dark (true/false, multiple choice, fill-in,
+  classify, write, the lesson card, the flashcards; a wrong verdict and a
+  right one), and the suite subset named in the commit. A pane that is hidden
+  throttles transitions, so a screenshot can catch a tile mid-colour.
 
 ## The session's look and motion (`lesson.html`) — Oct 2026
 
-**Superseded in part by "The Focus session" above** (the bar, the card shell, the feedback). What follows still holds for motion and press feedback.
+**Superseded in part by "The Paper session with the Focus nav" above** (the bar, the card shell, the feedback, the button press). What follows still holds for motion and press feedback.
 
 The apple-design pass, after the dashboard. Styles, the top bar's markup and
 a few small functions changed; no renderer, no queue logic, no class or id a
