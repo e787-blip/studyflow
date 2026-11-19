@@ -7,7 +7,8 @@
 <title>Build your study plan · StudyFlow</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Inter:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Inter:wght@600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Inter:wght@600;700&display=swap" rel="stylesheet"></noscript>
 <style>
   /* ── The plan builder ───────────────────────────────────────────────────
      One question per screen, a progress bar, and the landing page's paper
@@ -3236,15 +3237,20 @@
           '</div></div>';
         return;
       }
+      var netDown = window.__sfNetFail === true;
       box.innerHTML =
         '<div style="text-align:center;padding:1rem .4rem;">' +
         '<div style="width:56px;height:56px;border-radius:18px;background:var(--bad-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">' +
         '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c4312f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
         '</div>' +
-        '<h2 style="margin-bottom:.5rem;">The plan didn\u2019t <em>finish</em></h2>' +
-        '<p class="card-sub" style="margin:0 auto .5rem;">' +
-        'Day ' + dayNum + ' of ' + numDays + ' hit a snag after 3 attempts. That is almost always the connection or a busy server.</p>' +
-        '<p class="card-sub" style="margin:0 auto 1.4rem;font-size:.86rem;">Your notes and answers are saved. Retry usually works on the second go.</p>' +
+        (netDown
+          ? '<h2 style="margin-bottom:.5rem;">StudyFlow can\u2019t be <em>reached</em></h2>' +
+            '<p class="card-sub" style="margin:0 auto .5rem;">This computer couldn\u2019t connect to StudyFlow\u2019s server. On a school or work network that usually means a filter is blocking it.</p>' +
+            '<p class="card-sub" style="margin:0 auto 1.4rem;font-size:.86rem;">Try another network, like home Wi-Fi or a phone hotspot, or ask your school\u2019s IT to allow <strong>studyflow-ten-vert.vercel.app</strong>. Your notes and answers are saved.</p>'
+          : '<h2 style="margin-bottom:.5rem;">The plan didn\u2019t <em>finish</em></h2>' +
+            '<p class="card-sub" style="margin:0 auto .5rem;">' +
+            'Day ' + dayNum + ' of ' + numDays + ' hit a snag after 3 attempts. That is almost always the connection or a busy server.</p>' +
+            '<p class="card-sub" style="margin:0 auto 1.4rem;font-size:.86rem;">Your notes and answers are saved. Retry usually works on the second go.</p>') +
         '<div style="display:grid;gap:.5rem;max-width:340px;margin:0 auto;">' +
         '<button id="gen-retry-btn" class="btn-next">Retry</button>' +
         '<button id="gen-edit-btn" class="btn-quiet">Change my answers</button>' +
@@ -3843,6 +3849,7 @@
          next try asks for it SHORT (SHORT_RETRY). */
       var partLesson = null, partQs = null, short = { lesson: false, qs: false };
       var timeoutLike = /HTTP 50[24]|Failed to fetch|timeout|NetworkError|Load failed/i;
+      var netRefused = /Failed to fetch|NetworkError|Load failed|network connection/i;
 
       function askPart(which, text) {
         var t0 = Date.now();
@@ -3859,6 +3866,7 @@
           return res.json();
         })
         .then(function(data) {
+          window.__sfNetFail = false;
           var raw = data.result || data.plan || '';
           if (!raw || raw.trim().length < 10) throw new Error('Empty API response');
           var obj = repairJSON(raw);
@@ -3868,6 +3876,10 @@
           return obj;
         }, function(err) {
           if (timeoutLike.test(String(err && err.message || ''))) short[which] = true;
+          /* fetch() itself refused: no HTTP answer at all. On a school or work
+             network that is a filter blocking the server, and the card must say
+             so instead of "a busy server" (Nov 2026). */
+          if (netRefused.test(String(err && err.message || ''))) window.__sfNetFail = true;
           throw err;
         });
       }

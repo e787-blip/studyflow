@@ -26,6 +26,7 @@
     ['slide', 'no errors', S + 'slide_check.js'],
     ['review_change', 'REVIEW CHANGE OK', S + 'test_review_change.js'],
     ['mix', 'MIX OK', S + 'test_mix.js'],
+    ['school_net', 'SCHOOL NET OK', S + 'test_school_net.js'],
     ['visuals', 'VISUALS OK', S + 'test_visuals.js'],
     ['eqcard', 'EQCARD OK', S + 'test_eqcard.js'],
     ['deck', 'DECK OK', S + 'test_deck.js'],

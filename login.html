@@ -429,6 +429,19 @@
 </main>
 
 <script src="sf-owner.js"></script>
+<script>
+  /* The sign-in code is a module that imports Firebase from www.gstatic.com. A
+     school filter that blocks that host kills the module before it runs, and the
+     form then does nothing at all, silently (Nov 2026). If the module has not
+     started after a few seconds, say what is probably wrong. */
+  setTimeout(function () {
+    if (window.__sfAuthReady) return;
+    var el = document.getElementById('alert');
+    if (!el) return;
+    el.className = 'alert show bad';
+    el.textContent = 'Sign-in could not load. This network may be blocking Google (gstatic.com), which sign-in needs. Try another network, like home Wi-Fi or a phone hotspot, or ask your school\u2019s IT to allow it.';
+  }, 7000);
+</script>
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, updateProfile, sendPasswordResetEmail, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
@@ -444,6 +457,7 @@
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
+  window.__sfAuthReady = true;
 
   var $ = function (id) { return document.getElementById(id); };
   var MIN_PW = 8;
