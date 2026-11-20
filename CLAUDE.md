@@ -3525,27 +3525,41 @@ and a side column of At a glance / Scores / Calendar / reminder / invite.
 
 ## The Paper session with the Focus nav (`lesson.html`) — Nov 2026
 
-**Two decisions, a day apart.** The owner first chose design B, "Focus", from
-three live prototypes (`prototypes/lesson-redesign/index.html`: A Paper, B
-Focus, C Desk - kept, so the comparison and the shared card contract in its
-`engine.js` can be looked at again). Then: *"change it to paper but with
-focus' nav, make the button animations the same, and the right and wrong
-dropdown has the red border all around it."* So today a session is:
+**Three decisions, three days.** The owner first chose design B, "Focus",
+from three live prototypes (`prototypes/lesson-redesign/index.html`: A Paper,
+B Focus, C Desk - kept, so the comparison and the shared card contract in its
+`engine.js` can be looked at again). Then Paper with Focus' nav. Then, the
+settled version (Nov 19): *"paper buttons and icons, but animations from
+focus and nav from focus. The nav bar should also be from the paper, clean,
+no Duolingo vibe."* So a session is:
 
-- **The Focus nav** (below);
+- **Focus' nav CONTENTS on Paper's bar** (below): a solid strip in the card's
+  colour with a hairline under it, 40px icon buttons with a hairline border,
+  a 4px progress track (max 520px, centred), the time in tabular numbers,
+  the streak in a hairline chip. No 12px pill track, no shine on the fill.
 - **A PAPER page**: a white card (24px radius, hairline, soft shadow) on a
   soft paper ground (`#f3f5fa`, dark `#0c0f17`), 720px wide; the question in
   Instrument Serif (`.q-text`, one weight - emphasis is the italic, never
-  bold); the type chip a blue-tint pill; answers hairline tiles;
+  bold); the type chip a blue-tint pill.
+- **Paper's buttons, flat**: hairline answer tiles (1.5px, 14px radius, a
+  30px letter key; picked = blue tint + ring); Next and the in-card Checks a
+  blue PILL with a soft glow (green or red after a verdict); Hint and Flag
+  quiet text buttons; "Sure / Not sure" hairline pills; round flashcard
+  arrows. **No edge under any button** - the 3-4px edges were the Duolingo
+  look the owner rejected.
+- **FOCUS PRESS** (the only Focus motion kept): every button sinks 2px on
+  pointer-down (80ms) and springs back up with a small overshoot on release
+  (`--fx-pop`, .36s). Nothing shrinks any more (most buttons scaled to .96,
+  the nav icons to .92). One selector list carries it; add a new button
+  class there. The sort chips set `transition:all .2s` inline, so theirs is
+  `!important`. Reduced motion: no movement.
 - **A footer that sticks to the card's bottom** (`position:sticky`, a hairline
-  above it), not a bar fixed to the screen;
+  above it), not a bar fixed to the screen.
 - **The verdict as a box under the answer with its border ALL ROUND** (2px:
-  red for wrong, green for right, blue for a note; the label is serif) - it
-  was a tray with only a top edge;
-- **ONE PRESS**: every button has an edge under it (3px; the small keys 2px)
-  and a press sinks it onto that edge (3px down, edge gone, 80ms). Buttons
-  used to answer three ways (the Focus tiles sank, most others shrank to
-  `.96`, the nav icons to `.92`).
+  red for wrong, green for right, blue for a note; the label is serif).
+- **Dark mode's own `.card-header` rule** (a blue slab, `body.dark
+  .card-header:not(...)`) is more specific than the layer's - it is
+  overridden by name, or the lesson and deck titles sit on a blue bar.
 
 It is a LAYER, not a rewrite: the CSS block "FOCUS" at the end of the
 stylesheet plus three hooks next to `renderCard` (`sfFxProgress`, `sfFxMark`,
@@ -3582,12 +3596,10 @@ unchanged (`#feedback-box`, `#btn-next`, `.card-header h2`, `.q-option`...).
   blank line between the two lines of the question, so `.q-text[style*=
   "line-height"]` is forced to 1.3.
 - The button fill's white text sits on `#3a6ee8`, not the brand `#4a7cf6`
-  (3.8:1). An edge means "you can press this"; read-only panels stay flat.
-  The `.sfwb-explain` text link is not a pressed button and keeps its own
-  hover.
+  (3.8:1). The `.sfwb-explain` text link is not a pressed button and keeps
+  its own hover.
 - In-card Check buttons (`.fill-submit`, `.write-submit`, the classify and
-  sequence checks) stay where the renderers put them, restyled with the same
-  edge.
+  sequence checks) stay where the renderers put them, as Paper pills.
 - **Looked at, not measured**: this pass was checked on real page loads at
   desktop and 375px in light and dark (true/false, multiple choice, fill-in,
   classify, write, the lesson card, the flashcards; a wrong verdict and a

@@ -1735,12 +1735,15 @@
      Nov 2026, in two steps. The owner first chose design B "Focus" from three
      prototypes (prototypes/lesson-redesign/), then changed their mind: PAPER
      (design A) with Focus' nav and Focus' buttons. So today it is:
-     - the Focus nav (close, one progress track, the time, the streak, a menu);
+     - Focus' nav CONTENTS (close, one progress track, the time, the streak,
+       a menu) on Paper's clean bar;
      - a PAPER page: a white card on soft paper, the question in Instrument
-       Serif, the next step in a footer that sticks to the card's bottom, and
-       the verdict as a box under the answer with its border ALL ROUND;
-     - every button pressed the Focus way: it has an edge under it, and a press
-       sinks it onto that edge (see "ONE PRESS" below).
+       Serif, Paper's hairline answers and pill buttons, the next step in a
+       footer that sticks to the card's bottom, and the verdict as a box under
+       the answer with its border ALL ROUND;
+     - Focus' press: a button sinks when pressed and springs back up when let
+       go (see "FOCUS PRESS" below). No edges under buttons - the owner did
+       not want the Duolingo look.
      It is a layer over the renderers' own markup - every id and class they and
      the tests use is unchanged - with three hooks in block 1 (sfFxProgress,
      sfFxMark, sfFxPad, next to renderCard).
@@ -1749,7 +1752,7 @@
        overflow:visible (overflow:hidden would make the card its own scroller
        and the footer would stop sticking).
      - The bar's white text is on #3a6ee8, not the brand #4a7cf6 (3.8:1).
-     - An edge means "you can press this". Read-only panels are flat. */
+     - No edges under buttons, and no button shrinks: a press is the 2px sink. */
   body {
     --fx-page:#f3f5fa; --fx-card:#fff; --fx-card-line:#e4e8f1; --fx-shadow:0 1px 2px rgba(26,29,46,.04), 0 28px 56px -32px rgba(26,29,46,.22);
     --fx-tile:#fff; --fx-line:#dde3ee; --fx-edge:#dde3ee; --fx-track:#e6eaf3; --fx-panel:#f0f3f9;
@@ -1770,49 +1773,49 @@
     background:var(--fx-page);
   }
 
-  /* ── The bar at the top: the way out, one track, the time ── */
-  .fx-nav { position:sticky; top:0; z-index:200; background:var(--fx-page); }
-  .fx-nav-in { max-width:760px; margin:0 auto; height:64px; padding:0 16px; display:flex; align-items:center; gap:14px; }
-  .fx-icon { width:44px; height:44px; flex:none; border-radius:12px; display:grid; place-items:center; color:var(--muted);
-    background:none; border:0; cursor:pointer; text-decoration:none; -webkit-tap-highlight-color:transparent;
-    transition:background-color .15s, color .15s, transform .16s var(--fx-ease); }
-  .fx-icon svg { width:22px; height:22px; display:block; }
-  .fx-icon:active { transform:translateY(2px); }
+  /* ── THE NAV: Focus' contents (the way out, one track, the time, the
+     streak, a menu) on Paper's bar: a solid strip in the card's colour with a
+     hairline under it, hairline icon buttons, a thin track. No chunky pill,
+     no shine on the fill (the owner: "clean, no Duolingo vibe"). ── */
+  .fx-nav { position:sticky; top:0; z-index:200; background:var(--fx-card); border-bottom:1px solid var(--fx-card-line); }
+  .fx-nav-in { max-width:1240px; margin:0 auto; height:64px; padding:0 20px; display:flex; align-items:center; gap:14px; }
+  .fx-icon { width:40px; height:40px; flex:none; border-radius:10px; display:grid; place-items:center; color:var(--ink-2, var(--ink));
+    background:none; border:1px solid var(--fx-card-line); cursor:pointer; text-decoration:none; -webkit-tap-highlight-color:transparent; }
+  .fx-icon svg { width:20px; height:20px; display:block; }
   .fx-icon:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
-  @media (hover:hover) and (pointer:fine) { .fx-icon:hover { background:var(--fx-panel); color:var(--ink); } }
-  .fx-progress { flex:1; min-width:60px; height:12px; border-radius:99px; background:var(--fx-track); overflow:hidden; position:relative; }
+  @media (hover:hover) and (pointer:fine) { .fx-icon:hover { border-color:var(--blue); color:var(--blue-ink); } }
+  .fx-progress { flex:1; min-width:60px; max-width:520px; margin:0 auto; height:4px; border-radius:99px; background:var(--fx-track); overflow:hidden; position:relative; }
   .fx-progress-fill { position:absolute; inset:0; background:var(--blue); border-radius:99px; transform:translateX(-100%);
     transition:transform .7s var(--fx-ease); }
-  .fx-progress-fill::after { content:''; position:absolute; left:8px; right:9px; top:3px; height:3px; border-radius:99px; background:rgba(255,255,255,.32); }
-  .fx-nav .time-bar-wrap { flex:none; display:inline-flex; align-items:center; gap:6px; min-width:0; max-width:none; }
+  .fx-nav .time-bar-wrap { flex:none; display:inline-flex; align-items:center; gap:6px; min-width:70px; max-width:none; padding:0 4px; }
   .fx-nav .time-bar-track { display:none; }
   .fx-clock { width:17px; height:17px; color:var(--muted); flex:none; }
-  .fx-nav .time-label { font-size:14px; font-weight:600; color:var(--muted); min-width:0; }
+  .fx-nav .time-label { font-size:14px; font-weight:600; color:var(--ink-2, var(--ink)); min-width:0; font-variant-numeric:tabular-nums; }
   .fx-nav .time-bar-wrap:has(.time-bar-fill.warning) .time-label,
   .fx-nav .time-bar-wrap:has(.time-bar-fill.warning) .fx-clock { color:#b26b00; }
   .fx-nav .time-bar-wrap:has(.time-bar-fill.critical) .time-label,
   .fx-nav .time-bar-wrap:has(.time-bar-fill.critical) .fx-clock { color:var(--fx-no); }
-  .fx-nav .streak-pill { background:none; border:0; padding:0 2px; font-size:14px; gap:4px; color:var(--ink); }
-  .fx-nav .streak-mark { width:17px; height:17px; }
+  .fx-nav .streak-pill { background:none; border:1px solid var(--fx-card-line); border-radius:8px; padding:5px 9px 5px 7px; font-size:13px; font-weight:700; gap:4px; color:var(--ink); }
+  .fx-nav .streak-mark { width:15px; height:15px; opacity:.75; }
   .fx-menu { position:relative; flex:none; }
-  .fx-menu-pop { position:absolute; right:0; top:calc(100% + 8px); min-width:220px; background:var(--fx-tile); border:2px solid var(--fx-line);
-    border-radius:16px; padding:6px; box-shadow:0 3px 0 var(--fx-edge), 0 18px 40px -18px rgba(26,29,46,.3); z-index:210;
+  .fx-menu-pop { position:absolute; right:0; top:calc(100% + 8px); min-width:220px; background:var(--fx-card); border:1px solid var(--fx-card-line);
+    border-radius:14px; padding:6px; box-shadow:0 18px 40px -16px rgba(26,29,46,.3); z-index:210;
     opacity:0; visibility:hidden; transform:translateY(-4px) scale(.98); transform-origin:top right;
     transition:opacity .15s ease, transform .2s var(--fx-ease), visibility 0s linear .2s; }
   .fx-menu.is-open .fx-menu-pop { opacity:1; visibility:visible; transform:none; transition:opacity .15s ease, transform .2s var(--fx-ease); }
-  .fx-menu-item { display:flex; align-items:center; gap:10px; width:100%; padding:11px 12px; border-radius:10px; border:0; background:none;
-    font-family:var(--sans); font-size:15px; font-weight:600; color:var(--ink); text-align:left; text-decoration:none; cursor:pointer; }
+  .fx-menu-item { display:flex; align-items:center; gap:10px; width:100%; padding:10px 12px; border-radius:9px; border:0; background:none;
+    font-family:var(--sans); font-size:14.5px; font-weight:500; color:var(--ink); text-align:left; text-decoration:none; cursor:pointer; }
   .fx-menu-item > svg { width:18px; height:18px; color:var(--muted); flex:none; }
   .fx-menu-item .theme-ico { width:18px; height:18px; color:var(--muted); }
-  @media (hover:hover) and (pointer:fine) { .fx-menu-item:hover { background:var(--fx-panel); } }
+  @media (hover:hover) and (pointer:fine) { .fx-menu-item:hover { background:var(--fx-page); } }
   .fx-menu-score { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 12px 11px; margin-bottom:4px;
-    border-bottom:2px solid var(--fx-line); font-size:14px; font-weight:600; color:var(--muted); }
+    border-bottom:1px solid var(--fx-card-line); font-size:14px; font-weight:600; color:var(--muted); }
   .fx-when-dark { display:none; }
   body.dark .fx-when-dark { display:inline; }
   body.dark .fx-when-light { display:none; }
 
-  /* ── The page: no card, one column ── */
-  body .container { max-width:720px; padding:28px 20px 72px; }
+  /* ── The page: a white card on paper ── */
+  body .container { max-width:720px; padding:36px 20px 72px; }
   body .end-btn { display:none !important; }
   /* The wrapper keeps no animation of its own (its inline fadeUp ends on a
      transform); the card inside it arrives with sfCardIn, which ends on none. */
@@ -1825,32 +1828,34 @@
   body .card-header { background:none; padding:0 0 6px; overflow:visible; isolation:auto; }
   body .card-header::before { display:none; }
   body .card-header .card-badge { background:none; box-shadow:none; padding:0; border-radius:0; color:var(--blue-ink);
-    font-size:12.5px; font-weight:700; letter-spacing:.06em; margin-bottom:10px; }
-  body .card-header h2 { color:var(--ink); font-size:clamp(32px, 5vw, 40px); line-height:1.08; letter-spacing:-.01em; }
+    font-size:12px; font-weight:700; letter-spacing:.06em; margin-bottom:10px; }
+  body .card-header h2 { color:var(--ink); font-size:clamp(30px, 4vw, 40px); line-height:1.08; letter-spacing:-.01em; }
   body .card-header.struggling-header, body .card-header.retest-header { background:none; }
-  body .card-header.struggling-header .card-badge { color:var(--fx-amber-ink); background:var(--fx-amber-bg); padding:4px 9px; border-radius:8px; }
-  body .card-header.retest-header .card-badge { color:var(--fx-ok-ink); background:var(--fx-ok-bg); padding:4px 9px; border-radius:8px; }
+  body .card-header.struggling-header .card-badge { color:var(--fx-amber-ink); background:var(--fx-amber-bg); padding:4px 9px; border-radius:7px; }
+  body .card-header.retest-header .card-badge { color:var(--fx-ok-ink); background:var(--fx-ok-bg); padding:4px 9px; border-radius:7px; }
   body .card-body { padding:6px 0 0; }
   /* A question names its type once, in the chip. The blue header said it
      again (badge) and again (h2: the day's title or "Complete the answer").
      It stays only as a tag when the card is a review, a retry or a retest. */
   body .session-card[data-fx="q"] > .card-header h2 { display:none; }
   body .session-card[data-fx="q"]:not([data-fx-tag]) > .card-header:not(.struggling-header):not(.retest-header) { display:none; }
-  body .session-card[data-fx="q"] > .card-header .card-badge { margin-bottom:4px; background:var(--fx-panel); color:var(--muted); padding:4px 9px; border-radius:8px; letter-spacing:.04em; }
+  body .session-card[data-fx="q"] > .card-header .card-badge { margin-bottom:4px; background:none; color:var(--muted); padding:3px 8px;
+    border:1px solid var(--fx-card-line); border-radius:7px; letter-spacing:.04em; }
   /* ...except the equation card, whose h2 IS the instruction ("Solve for x"). */
   body .session-card[data-fx-type="bigequation"] > .card-header { display:block !important; }
   body .session-card[data-fx-type="bigequation"] > .card-header .card-badge { display:none; }
-  body .session-card[data-fx-type="bigequation"] > .card-header h2 { display:block; font-family:var(--sans); font-weight:650;
-    font-size:clamp(23px, 3.2vw, 28px); line-height:1.28; letter-spacing:-.015em; }
-
-  /* Eyebrow + question */
+  body .session-card[data-fx-type="bigequation"] > .card-header h2 { display:block; font-family:var(--serif); font-weight:400;
+    font-size:clamp(28px, 3.6vw, 36px); line-height:1.13; letter-spacing:-.012em; }
   body.dark .session-card { background:var(--fx-card); border-color:var(--fx-card-line); box-shadow:var(--fx-shadow); }
   body.dark .card-body, body.dark .card-header { background:transparent; border-color:transparent; box-shadow:none; }
+  /* The dark theme's own header rule (a blue slab) is more specific than the line above. */
+  body.dark .session-card .card-header:not(.struggling-header):not(.retest-header) { background:none; }
 
-  body .q-meta { margin-bottom:12px; gap:12px; }
+  /* Eyebrow + question */
+  body .q-meta { margin-bottom:14px; gap:10px; }
   body .q-type-label { background:var(--blue-tint); padding:4px 9px; border-radius:7px; color:var(--blue-ink); font-size:11.5px; letter-spacing:.06em; }
   body .q-difficulty { border:0; padding:0; font-size:12px; text-transform:capitalize; letter-spacing:0; font-weight:600; }
-  body .q-chip-plain { background:var(--fx-panel); border:0; color:var(--muted); padding:3px 9px; border-radius:8px; text-transform:none; letter-spacing:0; font-size:12px; }
+  body .q-chip-plain { background:none; border:1px solid var(--fx-card-line); color:var(--muted); padding:3px 8px; border-radius:7px; text-transform:none; letter-spacing:0; font-size:11.5px; }
   /* The question is the page's one serif line (Instrument Serif has ONE weight). */
   body .q-text { font-family:var(--serif); font-weight:400; font-size:clamp(28px, 3.6vw, 36px); line-height:1.13; letter-spacing:-.012em; margin-bottom:22px; text-wrap:balance; }
   body .q-text.fx-long { font-size:clamp(24px, 3vw, 29px); line-height:1.2; text-wrap:pretty; }
@@ -1861,96 +1866,92 @@
   /* Bold in a one-weight face is a smear; emphasis is the italic. */
   body .q-text :is(b, strong) { font-weight:400; font-style:italic; font-synthesis:none; }
 
-  /* ── Tiles: the one shape every answer is ── */
-  body .q-options { gap:14px; }
+  /* ── Answers: Paper's hairline tiles. Flat - no edge under them; a press
+     is a movement (see FOCUS PRESS), not a shadow. ── */
+  body .q-options { gap:10px; }
   body .q-option, body .tf-btn {
-    border:1.5px solid var(--fx-line); border-radius:14px; background:var(--fx-tile); color:var(--ink);
-    box-shadow:0 3px 0 var(--fx-edge); min-height:58px; padding:12px 14px 12px 12px; gap:14px;
-    font-size:16.5px; font-weight:500; line-height:1.35;
-    transition:border-color .15s ease, background-color .15s ease, box-shadow .08s ease, transform .08s ease, opacity .2s ease; }
+    border:1.5px solid var(--fx-line); border-radius:14px; background:var(--fx-tile); color:var(--ink); box-shadow:none;
+    min-height:58px; padding:12px 14px 12px 12px; gap:14px; font-size:16.5px; font-weight:500; line-height:1.35; }
   @media (hover:hover) and (pointer:fine) {
-    body .q-option:hover:not(:disabled), body .tf-btn:hover:not(:disabled) { border-color:#c7d4f0; background:var(--fx-tile); color:var(--ink); }
-    body.dark .q-option:hover:not(:disabled), body.dark .tf-btn:hover:not(:disabled) { border-color:#3b4a75; }
+    body .q-option:hover:not(:disabled), body .tf-btn:hover:not(:disabled) { border-color:var(--blue); background:var(--fx-tile); color:var(--ink); }
   }
-  body .q-option:active:not(:disabled), body .tf-btn:active:not(:disabled) { transform:translateY(3px); box-shadow:0 0 0 var(--fx-edge); }
-  body .opt-letter { width:30px; height:30px; border-radius:8px; background:var(--fx-panel); border:0; color:var(--muted); font-size:13px; font-weight:700; }
-  body .q-option.selected, body .tf-btn.selected { border-color:var(--blue); background:var(--blue-tint); color:var(--fx-pick-ink); box-shadow:0 3px 0 var(--blue); }
-  body .q-option.selected .opt-letter { background:var(--blue); border-color:var(--blue); color:#fff; }
+  body .opt-letter { width:30px; height:30px; border-radius:8px; background:var(--fx-panel); border:0; color:var(--muted); font-size:13px; font-weight:700;
+    transition:background-color .15s, color .15s; }
+  body .q-option.selected, body .tf-btn.selected { border-color:var(--blue); background:var(--blue-tint); color:var(--ink); box-shadow:inset 0 0 0 1px var(--blue); }
+  body .q-option.selected .opt-letter { background:var(--blue); color:#fff; }
   body .q-option.correct-ans, body .tf-btn.correct-ans, body .q-option.correct, body .tf-btn.correct {
-    background:var(--fx-ok-bg) !important; border-color:var(--fx-ok-line) !important; color:var(--fx-right-ink) !important; box-shadow:0 3px 0 var(--fx-ok) !important; }
+    background:var(--fx-ok-bg) !important; border-color:var(--fx-ok-line) !important; color:var(--fx-right-ink) !important; box-shadow:none !important; }
   body .q-option.wrong-ans, body .tf-btn.wrong-ans, body .q-option.wrong, body .tf-btn.wrong {
-    background:var(--fx-no-bg) !important; border-color:var(--fx-no-line) !important; color:var(--fx-wrong-ink) !important; box-shadow:0 3px 0 var(--fx-no) !important; }
-  body .q-option.correct-ans .opt-letter, body .q-option.correct .opt-letter { background:var(--fx-ok); border-color:var(--fx-ok); color:#fff; }
-  body .q-option.wrong-ans .opt-letter, body .q-option.wrong .opt-letter { background:var(--fx-no); border-color:var(--fx-no); color:#fff; }
-  body .q-option.dimmed { opacity:.5; box-shadow:none; }
+    background:var(--fx-no-bg) !important; border-color:var(--fx-no-line) !important; color:var(--fx-wrong-ink) !important; box-shadow:none !important; }
+  body .q-option.correct-ans .opt-letter, body .q-option.correct .opt-letter { background:var(--fx-ok); color:#fff; }
+  body .q-option.wrong-ans .opt-letter, body .q-option.wrong .opt-letter { background:var(--fx-no); color:#fff; }
+  body .q-option.dimmed { opacity:.5; }
+  body .q-option:disabled, body .tf-btn:disabled { color:var(--ink); }
   body.dark .q-option, body.dark .tf-btn { background:var(--fx-tile); border-color:var(--fx-line); color:var(--ink); }
-  body.dark .q-option.correct-ans, body.dark .tf-btn.correct-ans { background:var(--fx-ok-bg) !important; color:var(--fx-right-ink) !important; box-shadow:0 3px 0 var(--fx-ok) !important; }
-  body.dark .q-option.wrong-ans, body.dark .tf-btn.wrong-ans { background:var(--fx-no-bg) !important; color:var(--fx-wrong-ink) !important; box-shadow:0 3px 0 var(--fx-no) !important; }
-  body .tf-grid { gap:14px; }
-  body .tf-btn { min-height:84px; font-size:20px; font-weight:700; justify-content:center; }
+  body.dark .q-option.correct-ans, body.dark .tf-btn.correct-ans { background:var(--fx-ok-bg) !important; color:var(--fx-right-ink) !important; }
+  body.dark .q-option.wrong-ans, body.dark .tf-btn.wrong-ans { background:var(--fx-no-bg) !important; color:var(--fx-wrong-ink) !important; }
+  body .tf-grid { gap:10px; }
+  body .tf-btn { min-height:66px; font-size:18px; font-weight:600; justify-content:center; }
 
-  /* Who's right: classmates talking, each bubble a tile */
-  body .who-list { gap:16px; }
-  body .who-av { flex-basis:40px; height:40px; border:2px solid var(--fx-line); background:var(--fx-panel); }
-  body .who-bub { border:2px solid var(--fx-line); background:var(--fx-tile); border-radius:6px 18px 18px 18px; padding:12px 16px 13px;
-    box-shadow:0 3px 0 var(--fx-edge); transition:border-color .15s, background-color .15s, box-shadow .08s ease, transform .08s ease; }
-  body .who-say:active:not(:disabled) .who-bub { transform:translateY(3px); box-shadow:0 0 0 var(--fx-edge); }
-  body .who-say:hover:not(:disabled) .who-bub { border-color:#c7d4f0; background:var(--fx-tile); }
-  body .who-txt { font-size:16.5px; }
-  body .who-name { font-size:13px; }
-  body .who-say.is-right .who-bub { border-color:var(--fx-ok-line); background:var(--fx-ok-bg); box-shadow:0 3px 0 var(--fx-ok); }
-  body .who-say.is-wrong .who-bub { border-color:var(--fx-no-line); background:var(--fx-no-bg); box-shadow:0 3px 0 var(--fx-no); }
-  body.dark .who-say.is-right .who-bub { background:var(--fx-ok-bg); }
-  body.dark .who-say.is-wrong .who-bub { background:var(--fx-no-bg); }
+  /* Who's right: classmates talking */
+  body .who-list { gap:12px; }
+  body .who-av { flex-basis:38px; height:38px; border:0; background:var(--blue-tint); color:var(--blue-ink); }
+  body .who-bub { border:1.5px solid var(--fx-line); background:var(--fx-tile); border-radius:6px 18px 18px 18px; padding:11px 15px 12px; box-shadow:none; }
+  body .who-say:hover:not(:disabled) .who-bub { border-color:var(--blue); background:var(--fx-tile); }
+  body .who-txt { font-size:16px; }
+  body .who-name { font-size:12.5px; }
+  body .who-say.is-right .who-bub { border-color:var(--fx-ok-line); background:var(--fx-ok-bg); }
+  body .who-say.is-wrong .who-bub { border-color:var(--fx-no-line); background:var(--fx-no-bg); }
 
-  /* Order, matching, word banks and chips: the same tile, smaller */
+  /* Order, matching, word banks: the same hairline, smaller */
   body .seq-item, body .match-item, body .sb-word {
-    border:2px solid var(--fx-line); border-radius:14px; background:var(--fx-tile); color:var(--ink); box-shadow:0 3px 0 var(--fx-edge); font-weight:600; }
-  body .seq-item:active, body .match-item:active:not(.matched), body .sb-word:active:not(:disabled) { transform:translateY(3px); box-shadow:0 0 0 var(--fx-edge); }
+    border:1.5px solid var(--fx-line); border-radius:12px; background:var(--fx-tile); color:var(--ink); box-shadow:none; font-weight:500; }
   body.dark .seq-item, body.dark .match-item { background:var(--fx-tile); border-color:var(--fx-line); color:var(--ink); }
-  body .match-item.selected { background:var(--blue-tint); border-color:var(--blue); color:var(--fx-pick-ink); box-shadow:0 3px 0 var(--blue); }
-  body .seq-item.correct, body .match-item.matched, body .sb-word.is-right { border-color:var(--fx-ok-line); background:var(--fx-ok-bg); color:var(--fx-right-ink); box-shadow:0 3px 0 var(--fx-ok); }
-  body .seq-item.wrong, body .sb-word.is-wrong { border-color:var(--fx-no-line); background:var(--fx-no-bg); color:var(--fx-wrong-ink); box-shadow:0 3px 0 var(--fx-no); }
-  body .classify-item { border-radius:14px !important; box-shadow:0 3px 0 var(--fx-edge); font-weight:600 !important; }
+  body .match-item.selected { background:var(--blue-tint); border-color:var(--blue); color:var(--ink); }
+  body .seq-item.correct, body .match-item.matched, body .sb-word.is-right { border-color:var(--fx-ok-line); background:var(--fx-ok-bg); color:var(--fx-right-ink); }
+  body .seq-item.wrong, body .sb-word.is-wrong { border-color:var(--fx-no-line); background:var(--fx-no-bg); color:var(--fx-wrong-ink); }
+  body .classify-item { box-shadow:none; font-weight:500 !important; }
 
   /* Typed answers */
   body .fill-input, body .rc-in, body .sfd-in, body .tt-in, body .swp-input, body .mp-sel, body .ld-sel {
-    border:2px solid var(--fx-line); background:var(--fx-tile); color:var(--ink); }
-  body .fill-input { min-height:60px; border-radius:16px; font-size:19px; font-weight:600; padding-left:1.1rem; }
-  body .rc-in { min-height:50px; border-radius:14px; font-size:17px; font-weight:600; }
+    border:1.5px solid var(--fx-line); background:var(--fx-tile); color:var(--ink); }
+  body .fill-input { min-height:56px; border-radius:14px; font-size:18px; font-weight:500; padding-left:1rem; }
+  body .rc-in { min-height:52px; border-radius:14px; font-size:16px; font-weight:500; }
   body .fill-input:focus, body .rc-in:focus, body .write-area:focus, body .sfd-in:focus, body .tt-in:focus {
-    border-color:var(--blue); box-shadow:0 0 0 4px rgba(74,124,246,.14); }
+    border-color:var(--blue); box-shadow:0 0 0 4px var(--blue-tint); }
   body .fill-input.correct { border-color:var(--fx-ok-line); background:var(--fx-ok-bg); color:var(--fx-right-ink); }
   body .fill-input.wrong { border-color:var(--fx-no-line); background:var(--fx-no-bg); color:var(--fx-wrong-ink); }
-  body .write-area, body .sc-text { border:2px solid var(--fx-line); border-radius:16px; background:var(--fx-tile); font-size:16.5px; line-height:1.6; }
+  body .write-area, body .sc-text { border:1.5px solid var(--fx-line); border-radius:14px; background:var(--fx-tile); font-size:16.5px; line-height:1.6; }
   body.dark .fill-input, body.dark .write-area, body.dark .rc-in { background:var(--fx-tile); border-color:var(--fx-line); }
-
   /* The fill-in's blank is an inline span 1.1em tall; at this stem size it
      pushed the two lines of the question apart. */
-  body .q-text > span[style*="border-bottom"] { height:.82em !important; vertical-align:-.04em !important; border-bottom-width:3px !important; min-width:3em !important; }
-  body #est-in { min-height:56px; border:2px solid var(--fx-line) !important; border-radius:14px !important; background:var(--fx-tile) !important;
-    font-size:19px !important; font-weight:600; padding:.55rem .9rem !important; max-width:240px !important; }
-  body #est-in:focus { border-color:var(--blue) !important; outline:none; box-shadow:0 0 0 4px rgba(74,124,246,.14); }
-  /* Buttons inside the card: the same pressable edge as the bar's */
-  body .fill-submit, body .write-submit, body .sfd-check {
-    background:var(--fx-btn); color:#fff; border:0; border-radius:14px; font-weight:700; font-size:15.5px;
-    box-shadow:0 3px 0 var(--fx-btn-edge); transition:background-color .15s, box-shadow .08s ease, transform .08s ease; }
-  body .fill-submit:not(.fill-wrap .fill-submit):not(:disabled):active, body .write-submit:not(:disabled):active, body .sfd-check:not(:disabled):active {
-    transform:translateY(3px); box-shadow:0 0 0 var(--fx-btn-edge); }
-  body .fill-wrap .fill-submit { box-shadow:none; border-radius:11px; }
-  body .fill-submit:disabled, body .write-submit:disabled { background:#e8ecf3; color:#7c8499; box-shadow:0 3px 0 #dde2ec; }
-  body.dark .fill-submit:disabled, body.dark .write-submit:disabled { background:#1f2538; color:#7d869c; box-shadow:0 3px 0 #181d2d; }
-  body .fill-wrap .fill-submit:disabled { box-shadow:none; }
-  body .hint-btn { border:2px solid var(--fx-line); border-radius:12px; padding:.5rem .95rem; font-size:14px; font-weight:700; color:var(--muted);
-    background:var(--fx-tile); box-shadow:0 3px 0 var(--fx-edge); }
-  body .hint-btn:hover { border-color:var(--fx-amber-line); color:var(--fx-amber-ink); background:var(--fx-amber-bg); }
-  body .hint-box { background:var(--fx-amber-bg); border:2px solid var(--fx-amber-line); color:var(--fx-amber-ink); border-radius:14px; font-size:15px; padding:.8rem 1rem; }
-  body .confidence-row { margin:1rem 0 .5rem; gap:.5rem; }
-  body .confidence-label { font-size:14px; }
-  body .conf-btn { border:2px solid var(--fx-line); border-radius:12px; background:var(--fx-tile); color:var(--ink-2, var(--ink)); box-shadow:0 3px 0 var(--fx-edge); font-size:14px; font-weight:700; }
-  body .conf-btn.sure.selected, body .conf-btn.sure:hover { background:var(--blue-tint); border-color:var(--blue); color:var(--fx-pick-ink); }
+  body .q-text > span[style*="border-bottom"] { height:.8em !important; vertical-align:baseline !important; border-bottom-width:2.5px !important; min-width:3.4em !important; }
+  body #est-in { min-height:56px; border:1.5px solid var(--fx-line) !important; border-radius:14px !important; background:var(--fx-tile) !important;
+    font-size:18px !important; font-weight:500; padding:.55rem .9rem !important; max-width:240px !important; }
+  body #est-in:focus { border-color:var(--blue) !important; outline:none; box-shadow:0 0 0 4px var(--blue-tint); }
+
+  /* ── Buttons: Paper's. The one primary is a blue pill with a soft glow;
+     the quiet ones (hint, flag) are text buttons that tint on hover; choices
+     like "Sure / Not sure" are hairline pills. ── */
+  body .card-footer .btn-next, body .write-submit, body .sfd-check, body .fill-submit:not(.fill-wrap .fill-submit) {
+    background:var(--fx-btn); color:#fff; border:0; border-radius:99px; font-weight:600;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 10px 22px -12px rgba(74,124,246,.8); }
+  body .write-submit, body .sfd-check, body .fill-submit:not(.fill-wrap .fill-submit) { min-height:46px; padding:0 22px; font-size:15px; }
+  @media (hover:hover) and (pointer:fine) {
+    body .card-footer .btn-next:hover:not(:disabled), body .write-submit:hover:not(:disabled), body .sfd-check:hover:not(:disabled), body .fill-submit:hover:not(:disabled) { background:var(--blue-ink); }
+    body.dark .card-footer .btn-next:hover:not(:disabled) { background:#5b8af8; }
+  }
+  body .fill-wrap .fill-submit { background:var(--fx-btn); color:#fff; border-radius:10px; box-shadow:none; font-weight:600; }
+  body .card-footer .btn-next:disabled, body .fill-submit:disabled, body .write-submit:disabled { background:var(--fx-track); color:var(--muted); box-shadow:none; }
+  body .hint-btn { border:0; border-radius:10px; padding:0 12px; min-height:40px; font-size:14.5px; font-weight:600; color:var(--muted); background:none; box-shadow:none; }
+  @media (hover:hover) and (pointer:fine) { body .hint-btn:hover { background:var(--fx-page); color:var(--ink); } }
+  body .hint-box { background:var(--fx-amber-bg); border:1.5px solid var(--fx-amber-line); color:var(--fx-amber-ink); border-radius:14px; font-size:15px; padding:.8rem 1rem; }
+  body .confidence-row { margin:1rem 0 .5rem; gap:8px; }
+  body .confidence-label { font-size:13.5px; font-weight:600; }
+  body .conf-btn { min-height:34px; padding:0 14px; border:1.5px solid var(--fx-line); border-radius:99px; background:none; color:var(--ink-2, var(--ink)); box-shadow:none; font-size:14px; font-weight:600; }
+  body .conf-btn.sure.selected, body .conf-btn.sure:hover { background:var(--blue-tint); border-color:var(--blue); color:var(--blue-ink); }
   body .conf-btn.unsure.selected, body .conf-btn.unsure:hover { background:var(--fx-amber-bg); border-color:var(--fx-amber-line); color:var(--fx-amber-ink); }
-  body .mx-panel { border:0; border-radius:20px; background:var(--fx-panel); padding:2rem 1rem 1.8rem; }
+  body .mx-panel { border:1px solid var(--fx-card-line); border-radius:18px; background:var(--fx-panel); padding:1.8rem 1rem 1.6rem; }
   body.dark .mx-panel { background:var(--fx-panel); }
 
   /* ── The footer: one next step, always in the same place. It sticks to the
@@ -1959,22 +1960,14 @@
   body .session-card > .card-footer {
     position:sticky; bottom:0; z-index:5; margin:26px -40px 0;
     background:var(--fx-card); border-top:1px solid var(--fx-card-line); border-radius:0 0 24px 24px;
-    padding:14px 40px calc(14px + env(safe-area-inset-bottom));
-    gap:12px; }
-  body .session-card > .card-footer .footer-left { flex:1; min-width:0; font-size:14px; font-weight:600; color:var(--muted); }
+    padding:14px 40px calc(14px + env(safe-area-inset-bottom)); gap:10px; }
+  body .session-card > .card-footer .footer-left { flex:1; min-width:0; font-size:13.5px; font-weight:600; color:var(--muted); }
   body .session-card[data-fx="q"]:not([data-fx-type="write"]):not([data-fx-type="labeldiagram"]) > .card-footer .footer-left { visibility:hidden; }
-  body .card-footer .btn-next {
-    min-height:52px; min-width:168px; padding:0 26px; border-radius:16px; background:var(--fx-btn); color:#fff;
-    font-size:17px; font-weight:700; box-shadow:0 3px 0 var(--fx-btn-edge);
-    transition:background-color .2s ease, box-shadow .08s ease, transform .08s ease, color .2s ease; }
-  body .card-footer .btn-next:not(:disabled):active { transform:translateY(3px); box-shadow:0 0 0 var(--fx-btn-edge); }
-  @media (hover:hover) and (pointer:fine) { body .card-footer .btn-next:hover:not(:disabled) { background:#3264e0; } }
-  body .card-footer .btn-next:disabled { background:#e8ecf3; color:#7c8499; box-shadow:0 3px 0 #dde2ec; }
-  body.dark .card-footer .btn-next:disabled { background:#1f2538; color:#7d869c; box-shadow:0 3px 0 #181d2d; }
-  body .card-footer .btn-flag { height:52px; padding:0 14px; border:2px solid var(--fx-line); border-radius:16px; background:var(--fx-tile);
-    box-shadow:0 3px 0 var(--fx-edge); color:var(--muted); font-size:14px; font-weight:700; }
-  body .card-footer .btn-flag:active { transform:translateY(3px); box-shadow:0 0 0 var(--fx-edge); }
-  body .card-footer .btn-flag.flagged { border-color:var(--fx-amber-line); background:var(--fx-amber-bg); color:var(--fx-amber-ink); box-shadow:0 3px 0 var(--fx-amber-line); }
+  body .card-footer .btn-next { min-height:50px; min-width:150px; padding:0 26px; font-size:16px; }
+  body .card-footer .btn-flag { min-height:42px; height:auto; padding:0 12px; border:0; border-radius:10px; background:none; box-shadow:none;
+    color:var(--muted); font-size:14.5px; font-weight:600; }
+  @media (hover:hover) and (pointer:fine) { body .card-footer .btn-flag:hover { background:var(--fx-page); color:var(--ink); } }
+  body .card-footer .btn-flag.flagged { background:var(--fx-amber-bg); color:var(--fx-amber-ink); border:0; box-shadow:none; }
 
   /* ── The verdict: a box under the answer with its border ALL ROUND (the
      owner: "the right and wrong dropdown has the red border all around it").
@@ -1990,8 +1983,8 @@
   body .session-card .feedback-box.show.info-fb { background:var(--blue-tint); border-color:var(--blue); }
   body.dark .session-card .feedback-box.show.correct-fb { background:var(--fx-ok-bg); }
   body.dark .session-card .feedback-box.show.wrong-fb { background:var(--fx-no-bg); }
-  body .session-card:has(.feedback-box.show.correct-fb) .btn-next:not(:disabled) { background:var(--fx-ok); box-shadow:0 3px 0 var(--fx-ok-edge); }
-  body .session-card:has(.feedback-box.show.wrong-fb) .btn-next:not(:disabled) { background:var(--fx-no); box-shadow:0 3px 0 var(--fx-no-edge); }
+  body .session-card:has(.feedback-box.show.correct-fb) .btn-next:not(:disabled) { background:var(--fx-ok); box-shadow:inset 0 1px 0 rgba(255,255,255,.2), 0 10px 22px -12px rgba(22,127,100,.8); }
+  body .session-card:has(.feedback-box.show.wrong-fb) .btn-next:not(:disabled) { background:var(--fx-no); box-shadow:inset 0 1px 0 rgba(255,255,255,.2), 0 10px 22px -12px rgba(200,60,60,.8); }
   body .feedback-box .feedback-label { font-family:var(--serif); font-weight:400; font-size:25px; line-height:1.1; letter-spacing:0; text-transform:none; margin-bottom:6px; }
   body .feedback-box.correct-fb .feedback-label { color:var(--fx-ok-ink); }
   body .feedback-box.wrong-fb .feedback-label { color:var(--fx-no-ink); }
@@ -2002,54 +1995,61 @@
   /* The footer sticks to the screen's bottom, so the tutor button sits above it. */
   body .chat-fab { bottom:calc(var(--fx-pad, 0px) + 14px); }
 
-  /* ── Lesson, flashcards ── */
-  body .lp-seg { height:5px; }
-  body .fc-face { border:2px solid var(--fx-line); border-radius:24px; box-shadow:0 6px 0 var(--fx-edge); background:var(--fx-tile); }
+  /* ── Flashcards ── */
+  body .fc-face { border:1.5px solid var(--fx-line); border-radius:22px; box-shadow:0 16px 30px -24px rgba(26,29,46,.35); background:var(--fx-tile); }
   body.dark .fc-face { background:var(--fx-tile); border-color:var(--fx-line); }
-  body .fc-card.is-trap .fc-face { border-color:var(--fx-amber-line); background:var(--fx-amber-bg); box-shadow:0 6px 0 var(--fx-amber-line); }
-  body .fc-arrow { border:2px solid var(--fx-line); box-shadow:0 3px 0 var(--fx-edge); background:var(--fx-tile); }
+  body .fc-card.is-trap .fc-face { border-color:var(--fx-amber-line); background:var(--fx-amber-bg); }
+  body .fc-arrow { width:42px; height:42px; border-radius:50%; border:1.5px solid var(--fx-line); box-shadow:none; background:var(--fx-tile); }
 
-  /* ═══ ONE PRESS (Nov 2026, the owner: "make the button animations the same") ═
-     Buttons answered three ways: the Focus tiles and bars sank onto an edge,
-     most of the rest shrank to .96, and the nav icons to .92. Now every button
-     has an edge under it (3px; the small keys 2px) and a press sinks it onto
-     that edge - 3px down, edge gone, 80ms, and as quick on release. The edge
-     is the line colour on neutral buttons, the dark blue on blue ones, dark
-     amber on the amber one. A disabled button does not move. */
-  body :is(.dict-slow, .hear-btn, .lp-back, .cm-chip, .sf-recall-btn, .sf-moment-btn) { --pe:var(--fx-edge); box-shadow:0 3px 0 var(--pe); }
-  body :is(.accent-key, .mx-key) { --pe:var(--fx-edge); box-shadow:0 2px 0 var(--pe); }
-  body :is(.dict-play, .swp-go, .btn-recap-next, .btn-dashboard) { --pe:var(--fx-btn-edge); box-shadow:0 3px 0 var(--pe); }
-  body .btn-review-lesson { --pe:#a85b05; box-shadow:0 3px 0 var(--pe); }
-  body .chat-send { --pe:var(--fx-btn-edge); box-shadow:0 2px 0 var(--pe); }
-  body .chat-send:disabled { box-shadow:none; }
-  body :is(.dict-play, .dict-slow, .hear-btn, .lp-back, .cm-chip, .sf-recall-btn, .sf-moment-btn, .accent-key, .mx-key,
-           .swp-go, .btn-recap-next, .btn-dashboard, .btn-review-lesson, .chat-send, .fc-arrow, .classify-item, .hint-btn, .conf-btn) {
-    transition:border-color .15s ease, background-color .15s ease, color .15s ease, box-shadow .08s ease, transform .08s ease; }
-  body :is(.dict-play, .dict-slow, .hear-btn, .lp-back, .cm-chip, .sf-recall-btn, .sf-moment-btn,
-           .swp-go, .btn-recap-next, .btn-dashboard, .btn-review-lesson):active:not(:disabled) {
-    transform:translateY(3px); box-shadow:0 0 0 var(--pe, transparent); transition-duration:.08s; }
-  body :is(.accent-key, .mx-key):active:not(:disabled) { transform:translateY(2px); box-shadow:0 0 0 var(--pe); }
-  body .chat-send:active:not(:disabled) { transform:translateY(2px); box-shadow:0 0 0 var(--pe); }
+  /* ═══ FOCUS PRESS (Nov 2026, the owner: Paper buttons, "but the button
+     animations like it going down and then popping back up are from Focus") ═
+     Every button sinks 2px the instant it is pressed (80ms, on pointer-down)
+     and springs back up with a little overshoot when it is let go. Movement
+     only: no edge, no shadow change, no shrinking (most buttons here used to
+     scale to .96, the nav icons to .92). A disabled button does not move.
+     Reduced motion: no movement at all, the colour cues stay. */
+  body {
+    --fx-pop:cubic-bezier(.34,1.56,.64,1);
+    --fx-press-out:border-color .15s ease, background-color .15s ease, color .15s ease, box-shadow .2s ease, opacity .2s ease, transform .36s var(--fx-pop);
+    --fx-press-in:border-color .15s ease, background-color .15s ease, color .15s ease, box-shadow .2s ease, opacity .2s ease, transform .08s ease-out;
+  }
+  body :is(.q-option, .tf-btn, .seq-item, .match-item, .sb-word, .hint-btn, .conf-btn, .fill-submit, .write-submit, .sfd-check,
+           .ft-check-btn, .btn-next, .btn-flag, .fc-arrow, .lp-back, .dict-play, .dict-slow, .hear-btn, .cm-chip, .accent-key, .mx-key,
+           .sf-recall-btn, .sf-moment-btn, .swp-go, .btn-review-lesson, .btn-recap-next, .btn-dashboard, .chat-send, .fx-icon) {
+    transition:var(--fx-press-out); }
+  body :is(.q-option, .tf-btn, .seq-item, .match-item, .sb-word, .hint-btn, .conf-btn, .write-submit, .sfd-check,
+           .ft-check-btn, .btn-next, .btn-flag, .fc-arrow, .lp-back, .dict-play, .dict-slow, .hear-btn, .cm-chip, .accent-key, .mx-key,
+           .sf-recall-btn, .sf-moment-btn, .swp-go, .btn-review-lesson, .btn-recap-next, .btn-dashboard, .chat-send, .fx-icon):active:not(:disabled) {
+    transform:translateY(2px); transition:var(--fx-press-in); }
+  body .fill-submit:not(.fill-wrap .fill-submit):active:not(:disabled) { transform:translateY(2px); transition:var(--fx-press-in); }
+  /* Inside the answer box the Check button is centred with a transform, so its sink keeps the centring. */
+  body .fill-wrap .fill-submit:active:not(:disabled) { transform:translateY(calc(-50% + 2px)); transition:var(--fx-press-in); }
+  body .who-bub { transition:var(--fx-press-out); }
+  body .who-say:active:not(:disabled) .who-bub { transform:translateY(2px); transition:var(--fx-press-in); }
   /* The sort chips carry transition:all .2s inline, which slowed their press. */
-  body .classify-item { transition:border-color .15s ease, background-color .15s ease, color .15s ease, box-shadow .08s ease, transform .08s ease !important; }
-  body :is(.classify-item, .hint-btn, .conf-btn):active:not(:disabled) { transform:translateY(3px); box-shadow:0 0 0 var(--fx-edge); }
-  body .fc-arrow:active:not(:disabled) { transform:translateY(3px); box-shadow:0 0 0 var(--fx-edge); }
-  body .fill-wrap .fill-submit:active:not(:disabled) { transform:translateY(calc(-50% + 3px)); }
+  body .classify-item { transition:var(--fx-press-out) !important; }
+  body .classify-item:active { transform:translateY(2px) !important; transition:var(--fx-press-in) !important; }
   @media (prefers-reduced-motion:reduce) {
-    body :is(.dict-play, .dict-slow, .hear-btn, .lp-back, .cm-chip, .sf-recall-btn, .sf-moment-btn, .accent-key, .mx-key,
-             .swp-go, .btn-recap-next, .btn-dashboard, .btn-review-lesson, .chat-send, .fc-arrow):active { transform:none; }
+    body :is(.q-option, .tf-btn, .seq-item, .match-item, .sb-word, .classify-item, .hint-btn, .conf-btn, .fill-submit, .write-submit,
+             .sfd-check, .ft-check-btn, .btn-next, .btn-flag, .fc-arrow, .lp-back, .dict-play, .dict-slow, .hear-btn, .cm-chip,
+             .accent-key, .mx-key, .sf-recall-btn, .sf-moment-btn, .swp-go, .btn-review-lesson, .btn-recap-next, .btn-dashboard,
+             .chat-send, .fx-icon, .who-bub):active { transform:none !important; }
+    body .fill-wrap .fill-submit:active { transform:translateY(-50%) !important; }
   }
 
+  @media (max-width:900px) {
+    .fx-progress { max-width:none; }
+  }
   @media (max-width:600px) {
-    .fx-nav-in { height:56px; padding:0 10px; gap:10px; }
+    .fx-nav-in { height:56px; padding:0 12px; gap:10px; }
+    .fx-nav .time-bar-wrap { min-width:0; padding:0 2px; }
     body .container { padding:12px 10px 48px; }
     body .session-card { padding:20px 18px 0; border-radius:20px; }
     body .session-card > .card-footer { margin:22px -18px 0; padding:12px 18px calc(12px + env(safe-area-inset-bottom)); border-radius:0 0 20px 20px; }
     body .session-card > .card-footer .footer-left:empty, body .session-card[data-fx="q"]:not([data-fx-type="write"]):not([data-fx-type="labeldiagram"]) > .card-footer .footer-left { display:none; }
-    body .card-footer .btn-next { flex:1; min-width:0; }
+    body .card-footer .btn-next { flex:1; min-width:0; max-width:260px; margin-left:auto; }
     body .q-text { font-size:28px; margin-bottom:18px; }
     body .q-text.fx-long { font-size:24px; }
-    body .tf-btn { min-height:72px; }
   }
   @media (prefers-reduced-motion:reduce) {
     body .session-card, body .session-card .feedback-box.show { animation:none; }
