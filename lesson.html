@@ -1773,69 +1773,47 @@
     background:var(--fx-page);
   }
 
-  /* ── THE NAV: Focus' contents (the way out, one track, the time, the
-     streak, a menu) on Paper's bar: a solid strip in the card's colour with a
-     hairline under it, hairline icon buttons, a thin track. No chunky pill,
-     no shine on the fill (the owner: "clean, no Duolingo vibe"). ── */
-  .fx-nav { position:sticky; top:0; z-index:200; background:var(--fx-card); border-bottom:1px solid var(--fx-card-line); }
-  .fx-nav-in { max-width:1240px; margin:0 auto; height:64px; padding:0 20px; display:flex; align-items:center; gap:14px; }
-  .fx-icon { width:40px; height:40px; flex:none; border-radius:10px; display:grid; place-items:center; color:var(--ink-2, var(--ink));
-    background:none; border:1px solid var(--fx-card-line); cursor:pointer; text-decoration:none; -webkit-tap-highlight-color:transparent; }
-  .fx-icon svg { width:20px; height:20px; display:block; }
+  /* ── The bar at the top: the way out, one track, the time ── */
+  .fx-nav { position:sticky; top:0; z-index:200; background:var(--fx-page); }
+  .fx-nav-in { max-width:760px; margin:0 auto; height:64px; padding:0 16px; display:flex; align-items:center; gap:14px; }
+  .fx-icon { width:44px; height:44px; flex:none; border-radius:12px; display:grid; place-items:center; color:var(--muted);
+    background:none; border:0; cursor:pointer; text-decoration:none; -webkit-tap-highlight-color:transparent;
+    transition:background-color .15s, color .15s, transform .16s var(--fx-ease); }
+  .fx-icon svg { width:22px; height:22px; display:block; }
+  .fx-icon:active { transform:scale(.92); }
   .fx-icon:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
-  @media (hover:hover) and (pointer:fine) { .fx-icon:hover { border-color:var(--blue); color:var(--blue-ink); } }
-  .fx-progress { flex:1; min-width:60px; max-width:520px; margin:0 auto; height:4px; border-radius:99px; background:var(--fx-track); overflow:hidden; position:relative; }
+  @media (hover:hover) and (pointer:fine) { .fx-icon:hover { background:var(--fx-panel); color:var(--ink); } }
+  .fx-progress { flex:1; min-width:60px; height:12px; border-radius:99px; background:var(--fx-track); overflow:hidden; position:relative; }
   .fx-progress-fill { position:absolute; inset:0; background:var(--blue); border-radius:99px; transform:translateX(-100%);
     transition:transform .7s var(--fx-ease); }
-  .fx-nav .time-bar-wrap { flex:none; display:inline-flex; align-items:center; gap:6px; min-width:70px; max-width:none; padding:0 4px; }
+  .fx-progress-fill::after { content:''; position:absolute; left:8px; right:9px; top:3px; height:3px; border-radius:99px; background:rgba(255,255,255,.32); }
+  .fx-nav .time-bar-wrap { flex:none; display:inline-flex; align-items:center; gap:6px; min-width:0; max-width:none; }
   .fx-nav .time-bar-track { display:none; }
   .fx-clock { width:17px; height:17px; color:var(--muted); flex:none; }
-  .fx-nav .time-label { font-size:14px; font-weight:600; color:var(--ink-2, var(--ink)); min-width:0; font-variant-numeric:tabular-nums; }
+  .fx-nav .time-label { font-size:14px; font-weight:600; color:var(--muted); min-width:0; }
   .fx-nav .time-bar-wrap:has(.time-bar-fill.warning) .time-label,
   .fx-nav .time-bar-wrap:has(.time-bar-fill.warning) .fx-clock { color:#b26b00; }
   .fx-nav .time-bar-wrap:has(.time-bar-fill.critical) .time-label,
   .fx-nav .time-bar-wrap:has(.time-bar-fill.critical) .fx-clock { color:var(--fx-no); }
-  .fx-nav .streak-pill { background:none; border:1px solid var(--fx-card-line); border-radius:8px; padding:5px 9px 5px 7px; font-size:13px; font-weight:700; gap:4px; color:var(--ink); }
-  .fx-nav .streak-mark { width:15px; height:15px; opacity:.75; }
+  .fx-nav .streak-pill { background:none; border:0; padding:0 2px; font-size:14px; gap:4px; color:var(--ink); }
+  .fx-nav .streak-mark { width:17px; height:17px; }
   .fx-menu { position:relative; flex:none; }
-  .fx-menu-pop { position:absolute; right:0; top:calc(100% + 8px); min-width:220px; background:var(--fx-card); border:1px solid var(--fx-card-line);
-    border-radius:14px; padding:6px; box-shadow:0 18px 40px -16px rgba(26,29,46,.3); z-index:210;
+  .fx-menu-pop { position:absolute; right:0; top:calc(100% + 8px); min-width:220px; background:var(--fx-tile); border:2px solid var(--fx-line);
+    border-radius:16px; padding:6px; box-shadow:0 4px 0 var(--fx-edge), 0 18px 40px -18px rgba(26,29,46,.3); z-index:210;
     opacity:0; visibility:hidden; transform:translateY(-4px) scale(.98); transform-origin:top right;
     transition:opacity .15s ease, transform .2s var(--fx-ease), visibility 0s linear .2s; }
   .fx-menu.is-open .fx-menu-pop { opacity:1; visibility:visible; transform:none; transition:opacity .15s ease, transform .2s var(--fx-ease); }
-  .fx-menu-item { display:flex; align-items:center; gap:10px; width:100%; padding:10px 12px; border-radius:9px; border:0; background:none;
-    font-family:var(--sans); font-size:14.5px; font-weight:500; color:var(--ink); text-align:left; text-decoration:none; cursor:pointer; }
+  .fx-menu-item { display:flex; align-items:center; gap:10px; width:100%; padding:11px 12px; border-radius:10px; border:0; background:none;
+    font-family:var(--sans); font-size:15px; font-weight:600; color:var(--ink); text-align:left; text-decoration:none; cursor:pointer; }
   .fx-menu-item > svg { width:18px; height:18px; color:var(--muted); flex:none; }
   .fx-menu-item .theme-ico { width:18px; height:18px; color:var(--muted); }
-  @media (hover:hover) and (pointer:fine) { .fx-menu-item:hover { background:var(--fx-page); } }
+  @media (hover:hover) and (pointer:fine) { .fx-menu-item:hover { background:var(--fx-panel); } }
   .fx-menu-score { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 12px 11px; margin-bottom:4px;
-    border-bottom:1px solid var(--fx-card-line); font-size:14px; font-weight:600; color:var(--muted); }
+    border-bottom:2px solid var(--fx-line); font-size:14px; font-weight:600; color:var(--muted); }
   .fx-when-dark { display:none; }
   body.dark .fx-when-dark { display:inline; }
   body.dark .fx-when-light { display:none; }
 
-
-  /* The Paper nav: leave, the lesson's name, the four parts of the session
-     each with its own progress, then time, score, streak, menu. On a phone the
-     parts fold into one thin bar under the nav. */
-  .fx-title { display:flex; flex-direction:column; min-width:0; width:240px; flex:none; line-height:1.25; }
-  .fx-kicker { font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .fx-name { font-size:15px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .fx-phases { flex:1; display:flex; gap:6px; max-width:520px; margin:0 auto; align-self:center; }
-  .fx-ph { min-width:0; display:flex; flex-direction:column; gap:6px; }
-  .fx-ph-name { font-size:12px; font-weight:600; color:var(--muted); display:flex; align-items:center; gap:4px; white-space:nowrap; }
-  .fx-ph-name b { font-weight:700; color:var(--blue-ink); font-variant-numeric:tabular-nums; }
-  .fx-ph-name svg { width:13px; height:13px; color:var(--blue); }
-  .fx-ph.is-now .fx-ph-name { color:var(--ink); }
-  .fx-ph-track { height:4px; border-radius:99px; background:var(--fx-track); overflow:hidden; }
-  .fx-ph-track span { display:block; height:100%; background:var(--blue); border-radius:inherit; transform-origin:left; transition:transform .6s var(--fx-ease); }
-  .fx-ph.is-done .fx-ph-track span { background:color-mix(in srgb, var(--blue) 45%, var(--fx-card)); }
-  .fx-nav .fx-score { font-size:13px; font-weight:700; padding:6px 10px; border-radius:8px; }
-  .fx-bar { display:none; height:3px; background:var(--fx-track); }
-  .fx-bar span { display:block; height:100%; background:var(--blue); transform-origin:left; transition:transform .6s var(--fx-ease); }
-  .fx-nav .time-bar-wrap { margin-left:auto; }
-  @media (max-width:900px) { .fx-phases { display:none; } .fx-bar { display:block; } .fx-title { width:auto; flex:1; } }
-  @media (max-width:600px) { .fx-kicker { display:none; } .fx-nav .fx-score { display:none; } }
   /* ── The page: a white card on paper ── */
   body .container { max-width:720px; padding:36px 20px 72px; }
   /* The wrapper keeps no animation of its own (its inline fadeUp ends on a
@@ -2092,14 +2070,14 @@
     <a href="dashboard.html" class="fx-icon fx-exit" aria-label="Leave the session and go to the dashboard" title="Back to dashboard">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </a>
-    <div class="fx-title"><span class="fx-kicker" id="fx-kicker"></span><span class="fx-name" id="fx-name"></span></div>
-    <div class="fx-phases" id="fx-phases" role="progressbar" aria-label="How far through the session" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+    <div class="fx-progress" id="fx-progress" role="progressbar" aria-label="How far through the session" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <span class="fx-progress-fill" id="fx-progress-fill"></span>
+    </div>
     <div class="time-bar-wrap" title="Time left">
       <svg class="fx-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
       <span class="time-label" id="time-label">30 min</span>
       <div class="time-bar-track" aria-hidden="true"><div class="time-bar-fill" id="time-bar" style="width:100%"></div></div>
     </div>
-    <span class="stat-pill total fx-score" id="score-pill" title="Correct so far">0/0</span>
     <span class="streak-pill" id="streak-pill" title="Answers right in a row">
       <svg class="streak-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -2112,6 +2090,7 @@
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5.5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.5" cy="12" r="1.7"/></svg>
       </button>
       <div class="fx-menu-pop" id="fx-menu-pop" role="menu" aria-label="Session menu">
+        <div class="fx-menu-score"><span>Right so far</span><span class="stat-pill total" id="score-pill" title="Correct so far">0/0</span></div>
         <button type="button" role="menuitem" class="fx-menu-item" onclick="toggleDark()" id="dark-toggle" aria-label="Switch to dark mode">
           <svg id="dark-icon" class="theme-ico" viewBox="0 0 24 24" aria-hidden="true">
             <defs><mask id="sf-moon-mask"><rect x="-4" y="-4" width="32" height="32" fill="#fff"/><circle class="cut" cx="24" cy="4" r="7" fill="#000"/></mask></defs>
@@ -2130,7 +2109,6 @@
       </div>
     </div>
   </div>
-  <div class="fx-bar" aria-hidden="true"><span id="fx-bar-fill"></span></div>
 </nav>
 
 <div class="container">
@@ -4686,52 +4664,15 @@
      3. sfFxPad: measures the card's footer (now sticky inside the Paper card,
         no longer a fixed bar) into --fx-pad, which only the tutor button
         reads, to sit above it. */
-  /* The session's four parts, read off the queue: everything up to and
-     including the lesson card is "Lesson" (welcome, pre-test, review), the
-     flashcards are "Words", the teach-it-back writing cards "Teach back", and
-     the rest "Practice". A part with no cards is not shown. */
-  var FX_PHASES = ['Lesson', 'Words', 'Practice', 'Teach back'];
-  function sfFxPhaseOf(c, i, lessonIdx) {
-    if (lessonIdx >= 0 ? i <= lessonIdx : (c.isPretest || c.type === 'welcome')) return 0;
-    if (c.type === 'flashcards') return 1;
-    if (c.type === 'write' && !c.isReview) return 3;
-    return 2;
-  }
   function sfFxProgress() {
     try {
-      var cards = sessionCards || [], n = cards.length || 1;
-      var done = cardIndex + (currentAnswered ? 1 : 0);
-      var f = Math.max(0, Math.min(1, done / n));
-      var lessonIdx = -1, k;
-      for (k = 0; k < cards.length; k++) if (cards[k].type === 'lesson') { lessonIdx = k; break; }
-      var tot = [0, 0, 0, 0], got = [0, 0, 0, 0], cur = -1;
-      for (k = 0; k < cards.length; k++) {
-        var ph = sfFxPhaseOf(cards[k], k, lessonIdx);
-        tot[ph]++; if (k < done) got[ph]++;
-        if (k === cardIndex) cur = ph;
-      }
-      var host = document.getElementById('fx-phases');
-      if (host) {
-        var h = '';
-        for (k = 0; k < 4; k++) {
-          if (!tot[k]) continue;
-          var isDone = got[k] >= tot[k], isNow = k === cur;
-          h += '<div class="fx-ph' + (isDone ? ' is-done' : isNow ? ' is-now' : '') + '" style="flex:' + (k === 2 ? 2.8 : 1) + '"' + (isNow ? ' aria-current="step"' : '') + '>' +
-            '<span class="fx-ph-name">' + (isDone ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>' : '') +
-            FX_PHASES[k] + (k === 2 && isNow ? ' <b>' + Math.min(tot[k], got[k] + 1) + '/' + tot[k] + '</b>' : '') + '</span>' +
-            '<span class="fx-ph-track"><span style="transform:scaleX(' + (tot[k] ? got[k] / tot[k] : 0).toFixed(3) + ')"></span></span></div>';
-        }
-        if (host.getAttribute('data-h') !== h) { host.innerHTML = h; host.setAttribute('data-h', h); }
-        host.setAttribute('aria-valuenow', String(Math.round(f * 100)));
-      }
-      var bar = document.getElementById('fx-bar-fill');
-      if (bar) bar.style.transform = 'scaleX(' + f.toFixed(3) + ')';
-      var nm = document.getElementById('fx-name');
-      if (nm && !nm.textContent && typeof day !== 'undefined' && day) {
-        nm.textContent = day.title || '';
-        var kk = document.getElementById('fx-kicker');
-        if (kk) kk.textContent = ((typeof plan !== 'undefined' && plan && plan.subject) ? plan.subject + ' \u00b7 ' : '') + 'Day ' + (dayIndex + 1) + (plan && plan.days ? ' of ' + plan.days.length : '');
-      }
+      var n = sessionCards && sessionCards.length ? sessionCards.length : 1;
+      var f = Math.max(0, Math.min(1, (cardIndex + (currentAnswered ? 1 : 0)) / n));
+      var fill = document.getElementById('fx-progress-fill');
+      /* Moved, not stretched: a scaled fill squashes its own rounded end. */
+      if (fill) fill.style.transform = 'translateX(' + ((f - 1) * 100).toFixed(2) + '%)';
+      var bar = document.getElementById('fx-progress');
+      if (bar) bar.setAttribute('aria-valuenow', String(Math.round(f * 100)));
     } catch (e) { /* the bar never costs the card */ }
   }
   function sfFxMark(card) {
