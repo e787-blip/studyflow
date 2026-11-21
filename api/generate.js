@@ -22,10 +22,10 @@ const MAX_PROMPT_CHARS = 60000;
    cannot tell apart from a network failure. */
 const FETCH_TIMEOUT_MS = 55000;
 
-function fetchWithTimeout(url, opts) {
+function fetchWithTimeout(url, opts, ms) {
   opts = opts || {};
   const ctrl = new AbortController();
-  const id = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  const id = setTimeout(() => ctrl.abort(), ms || FETCH_TIMEOUT_MS);
   return fetch(url, Object.assign({}, opts, { signal: ctrl.signal })).finally(() => clearTimeout(id));
 }
 
@@ -60,7 +60,7 @@ module.exports = async function handler(req, res) {
 
   const t0 = Date.now();
   try {
-    const response = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
+    const ask = (ms) => fetchWithTimeout('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -81,13 +81,36 @@ module.exports = async function handler(req, res) {
         ].join(' '),
         messages: [{ role: 'user', content: trimmedPrompt }]
       })
-    });
+    }, ms);
+
+    let response = await ask(FETCH_TIMEOUT_MS);
+
+    /* Anthropic's per-minute limits (429) and its overload answer (529) are
+       not errors a learner can fix, and a day is two long calls back to back.
+       Wait the time Anthropic asks for, once, if the 60s the platform allows
+       still has room for a whole second call (Nov 2026). */
+    if (response.status === 429 || response.status === 529) {
+      const wait = Math.min(Math.max(parseFloat(response.headers.get('retry-after')) || 6, 2), 12) * 1000;
+      const left = 57000 - (Date.now() - t0);
+      console.warn('[generate.js] Anthropic', response.status, 'waiting', wait, 'ms; left', left);
+      if (left > wait + 15000) {
+        await new Promise((r) => setTimeout(r, wait));
+        response = await ask(57000 - (Date.now() - t0) - 1500);
+      }
+    }
 
     if (!response.ok) {
       const errText = await response.text().catch(() => '');
       console.error('[generate.js] Anthropic error', response.status, errText.slice(0, 200),
                     'ms=' + (Date.now() - t0), 'retry-after=' + (response.headers.get('retry-after') || ''));
-      return res.status(502).json({ error: 'AI service error: ' + response.status });
+      /* What Anthropic said, short, so the page can show the real reason. */
+      let detail = '';
+      try { const j = JSON.parse(errText); detail = j && j.error ? String(j.error.type || '') + ' ' + String(j.error.message || '') : ''; } catch (e) { /* not JSON */ }
+      detail = (response.status + ' ' + detail).trim().slice(0, 160);
+      if (response.status === 429 || response.status === 529) {
+        return res.status(503).json({ error: 'ai_busy', message: 'The AI service is busy right now.', detail });
+      }
+      return res.status(502).json({ error: 'AI service error: ' + response.status, detail });
     }
 
     const data = await response.json();

@@ -40,5 +40,6 @@ async function run(mode) {
   assert(a.errors.length === 0, 'no page errors ' + a.errors.join('|'));
   const c = await run('500');
   assert(/hit a snag/i.test(c.text) && !/can.t be\s*reached/i.test(c.text), 'a server that answers 500 keeps the old card');
+  assert(/What went wrong: HTTP 500: x/.test(c.text), 'and the card shows what the server said, so the real reason can be read');
   console.log(fails ? '\n' + fails + ' FAILED' : '\nSCHOOL NET OK');
 })();
