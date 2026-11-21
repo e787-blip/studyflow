@@ -2056,6 +2056,56 @@
     body .session-card, body .session-card .feedback-box.show { animation:none; }
     .fx-progress-fill { transition:none; }
   }
+
+  /* ═══ DE-SLOP (Nov 20, a slop-check of this page; the owner: fix them) ═══
+     What the audit found, and what is done about each:
+     - rounded bordered boxes on the results screen and the recap (the owner
+       had already removed them from the question): now plain sections;
+     - a navy gradient tip box, gradient banners, glow shadows under the
+       buttons and the chat button, a 30px frosted blur on the tutor panel: all
+       flat now;
+     - tracked all-caps labels on every chip: sentence case;
+     - sparkle glyphs and check/cross text glyphs: gone (the strings are in the
+       renderers; the verdict is drawn by the border and the mark);
+     - the nav's progress bar was a 12px pill with a shine: now a plain 4px
+       line. ── */
+  .fx-progress { height:4px; border-radius:2px; background:var(--fx-track); }
+  .fx-progress-fill { border-radius:2px; }
+  .fx-progress-fill::after { display:none; }
+  .fx-nav-in { gap:18px; }
+
+  body .results-top, body .results-stats .r-stat, body .wrong-reviews, body .recap-card {
+    background:none; border:0; border-radius:0; box-shadow:none; }
+  body .results-top { padding:.5rem 0 1.4rem; }
+  body .results-stats { gap:.4rem; margin-bottom:1rem; }
+  body .results-stats .r-stat { padding:.6rem .4rem; text-align:left; }
+  body .wrong-reviews { padding:0; }
+  body .recap-card { padding:.5rem 0 1rem; }
+  body .wrong-item { border-left:0; border-top:1px solid var(--fx-line); border-radius:0; background:none; padding:.9rem 0 .2rem; margin-bottom:.4rem; }
+  body .wrong-item:first-of-type { border-top:0; }
+  body .r-note { background:none; border:0; border-left:0; padding:0; border-radius:0; }
+  body .btn-dashboard { box-shadow:none; background:var(--fx-btn); min-height:52px; }
+  body.dark .results-stats .r-stat, body.dark .wrong-reviews, body.dark .wrong-item, body.dark .r-note { background:none; }
+
+  body .milestone-banner { background:var(--blue-tint); color:var(--ink); box-shadow:none; border-radius:14px; }
+  body .milestone-banner .milestone-text p { color:var(--ink-2, var(--ink)); }
+  body .milestone-icon { background:var(--blue); color:#fff; }
+  body .milestone-close { background:none; color:var(--muted); }
+  body .struggling-banner { border:0; border-left:0; background:var(--fx-amber-bg); border-radius:14px; }
+  body.dark .struggling-banner .struggling-text h4, body.dark .struggling-banner .struggling-text p { color:var(--fx-amber-ink); }
+  .chat-fab { box-shadow:none; }
+  .chat-panel { -webkit-backdrop-filter:none !important; backdrop-filter:none !important; background:var(--white); }
+
+  /* Labels in plain case: the type, the part, the stat, the kicker. */
+  body .card-badge, body .q-type-label, body .q-chip-plain, body .wr-group, body .r-kicker, body .r-stat-label,
+  body .lp-label, body .fc-kind, body .cl-label, body .cl-source-k, body .recap-kick {
+    text-transform:none; letter-spacing:0; }
+  body .q-type-label, body .card-badge { font-size:13px; font-weight:600; }
+  body .wr-group { font-size:14px; }
+
+  /* Tap targets: at least 44px tall on a phone. */
+  body .sfwb-explain { min-height:44px; display:inline-flex; align-items:center; }
+  body .end-btn { min-height:44px; }
 </style>
 </head>
 <body>
@@ -4215,7 +4265,7 @@
       // Never show blank — display error and a retry button
       var sc = document.getElementById('session-card');
       if (sc) {
-        sc.innerHTML = '<div class="session-card"><div class="card-header"><div class="card-badge">✦ Oops</div><h2>Something went wrong</h2></div>' +
+        sc.innerHTML = '<div class="session-card"><div class="card-header"><div class="card-badge">Oops</div><h2>Something went wrong</h2></div>' +
           '<div class="card-body"><p class="content-text">There was an error rendering this card. Tap Next to skip it.</p>' +
           '<p class="content-text" style="font-size:0.78rem;color:var(--muted);margin-top:.5rem;">' + (err && err.message ? err.message : 'Unknown error') + '</p></div>' +
           '<div class="card-footer"><span class="footer-left"></span>' +
@@ -7028,7 +7078,7 @@
     }
     fig += '</div>';
     mount.innerHTML = '<div class="session-card pw-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Walkthrough</div><h2>' + escHtml(w.title) + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Walkthrough</div><h2>' + escHtml(w.title) + '</h2></div>' +
       '<div class="card-body">' + fig + '<ol class="pw-rows">' + rows + '</ol></div>' +
       '<div class="card-footer"><span class="footer-left" id="pw-count"></span>' +
       '<button class="btn-next" id="btn-next" onclick="picWalkNext()">Next step →</button></div></div>';
@@ -7963,7 +8013,7 @@
   function buildCard(badge, title, struggling, bodyHtml, footerLeft, nextLabel, disabled) {
     var headerClass = struggling ? 'card-header struggling-header' : 'card-header';
     return '<div class="session-card">' +
-      '<div class="' + headerClass + '"><div class="card-badge">✦ ' + badge + '</div><h2>' + title + '</h2></div>' +
+      '<div class="' + headerClass + '"><div class="card-badge">' + badge + '</div><h2>' + title + '</h2></div>' +
       '<div class="card-body">' + bodyHtml + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + footerLeft + '</span>' +
       '<button class="btn-next" ' + (disabled ? 'disabled' : '') + ' onclick="showNextCard()">' + nextLabel + '</button></div></div>';
@@ -8046,7 +8096,7 @@
     return '<div class="session-card">' +
       '<div class="card-header' + (isReview ? ' struggling-header' : '') +
         (card && card.isRetest ? ' retest-header' : '') +
-        '"><div class="card-badge">✦ ' + badge + '</div><h2>' + title + '</h2></div>' +
+        '"><div class="card-badge">' + badge + '</div><h2>' + title + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -8119,7 +8169,7 @@
 
     var card =
       '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Fill in the Blank</div><h2>Complete the answer</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Fill in the Blank</div><h2>Complete the answer</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left"></span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button>' +
@@ -8436,7 +8486,7 @@
 
     var streak = correctCount + '/' + totalAnswered;
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Interactive Graph</div><h2>' + (day.title||'Practice') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Interactive Graph</div><h2>' + (day.title||'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -8551,13 +8601,13 @@
     if (isCorrect) {
       correctCount++; currentStreak++; recordRight();
       fb.className = 'feedback-box show correct-fb';
-      fb.innerHTML = '<div class="feedback-label">✓ Correct!</div><div class="feedback-text">' + (gs.explanation || 'The y-intercept is where the line crosses the y-axis.') + '</div>';
+      fb.innerHTML = '<div class="feedback-label">Correct</div><div class="feedback-text">' + (gs.explanation || 'The y-intercept is where the line crosses the y-axis.') + '</div>';
       spawnConfetti();
       flashCard(true);
     } else {
       currentStreak = 0;
       fb.className = 'feedback-box show wrong-fb';
-      fb.innerHTML = '<div class="feedback-label">✗ Not quite</div><div class="feedback-text">The correct y-intercept was <strong>' + gs.target + '</strong>. ' + (gs.explanation || '') + '</div>';
+      fb.innerHTML = '<div class="feedback-label">Not quite</div><div class="feedback-text">The correct y-intercept was <strong>' + gs.target + '</strong>. ' + (gs.explanation || '') + '</div>';
       recordMiss(String(gs.current), gs.explanation);
       flashCard(false);
     }
@@ -8656,7 +8706,7 @@
 
     var streak = correctCount + '/' + totalAnswered;
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ ' + badgeLabel + '</div><h2>' + (day.title || 'Practice') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">' + badgeLabel + '</div><h2>' + (day.title || 'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -8781,7 +8831,7 @@
       '<div class="feedback-box" id="feedback-box"></div>';
 
     var card = '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ ' + topic.badge + '</div><h2>' + escHtml(topic.title) + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">' + topic.badge + '</div><h2>' + escHtml(topic.title) + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -9664,7 +9714,7 @@
 
        The card is named after the subject it belongs to. */
     var card = '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Word Problem</div><h2>' +
+      '<div class="card-header"><div class="card-badge">Word Problem</div><h2>' +
         esc(wordProblemHeading()) + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
@@ -9758,7 +9808,7 @@
       '<div class="feedback-box" id="feedback-box"></div>';
 
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Error Spotting</div><h2>Find the mistake</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Error Spotting</div><h2>Find the mistake</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -9775,7 +9825,7 @@
       correctCount++; currentStreak++; recordRight();
       btn.style.background = '#d1faf0'; btn.style.borderColor = '#38bfa1'; btn.style.color = '#065f46';
       fb.className = 'feedback-box show correct-fb';
-      fb.innerHTML = '<div class="feedback-label">✓ Found it!</div><div class="feedback-text">' + (explanation || 'That step has the mistake.') + '</div>';
+      fb.innerHTML = '<div class="feedback-label">Found it!</div><div class="feedback-text">' + (explanation || 'That step has the mistake.') + '</div>';
       spawnConfetti(); flashCard(true);
     } else {
       currentStreak = 0;
@@ -9788,7 +9838,7 @@
         }
       });
       fb.className = 'feedback-box show wrong-fb';
-      fb.innerHTML = '<div class="feedback-label">✗ Not this one</div><div class="feedback-text">' + (explanation || 'The correct step is highlighted in green.') + '</div>';
+      fb.innerHTML = '<div class="feedback-label">Not this one</div><div class="feedback-text">' + (explanation || 'The correct step is highlighted in green.') + '</div>';
       recordMiss(btn ? fmStr(btn.textContent).slice(0, 60) : '', explanation);
       flashCard(false);
     }
@@ -9834,7 +9884,7 @@
     setTimeout(sbPaint, 0);
     var streak = correctCount + '/' + totalAnswered;
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Sentence Builder</div><h2>' + escHtml(day.title||'Practice') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Sentence Builder</div><h2>' + escHtml(day.title||'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -9899,14 +9949,14 @@
     if (ok) {
       correctCount++; currentStreak++; recordRight();
       fb.className = 'feedback-box show correct-fb';
-      fb.innerHTML = '<div class="feedback-label">✓ That’s the sentence</div><div class="feedback-text">' +
+      fb.innerHTML = '<div class="feedback-label">That’s the sentence</div><div class="feedback-text">' +
         escHtml(sentence) + (st.q.explanation ? ' — ' + st.q.explanation : '') + '</div>';
       spawnConfetti();
       flashCard(true);
     } else {
       currentStreak = 0;
       fb.className = 'feedback-box show wrong-fb';
-      fb.innerHTML = '<div class="feedback-label">✗ Here it is</div><div class="feedback-text"><strong>' +
+      fb.innerHTML = '<div class="feedback-label">Here it is</div><div class="feedback-text"><strong>' +
         escHtml(sentence) + '</strong>' + (st.q.explanation ? '<br>' + st.q.explanation : '') + '</div>';
       recordMiss(built.join(' ').slice(0, 80), st.q.explanation);
       flashCard(false);
@@ -10002,7 +10052,7 @@
 
     var streak = correctCount + '/' + totalAnswered;
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Put in Order</div><h2>' + (day.title||'Practice') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Put in Order</div><h2>' + (day.title||'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -10082,13 +10132,13 @@
     if (isCorrect) {
       correctCount++; currentStreak++; recordRight();
       fb.className = 'feedback-box show correct-fb';
-      fb.innerHTML = '<div class="feedback-label">✓ Perfect order!</div><div class="feedback-text">' + (window._seqState.explanation || 'Great work.') + '</div>';
+      fb.innerHTML = '<div class="feedback-label">Perfect order!</div><div class="feedback-text">' + (window._seqState.explanation || 'Great work.') + '</div>';
       spawnConfetti();
       flashCard(true);
     } else {
       currentStreak = 0;
       fb.className = 'feedback-box show wrong-fb';
-      fb.innerHTML = '<div class="feedback-label">✗ Not quite</div><div class="feedback-text">' + (window._seqState.explanation || 'Check the correct order shown above.') + '</div>';
+      fb.innerHTML = '<div class="feedback-label">Not quite</div><div class="feedback-text">' + (window._seqState.explanation || 'Check the correct order shown above.') + '</div>';
       recordMiss(currentOrder.join(' \u2192 ').slice(0, 80), window._seqState.explanation);
       flashCard(false);
     }
@@ -10116,7 +10166,7 @@
 
     var streak = correctCount + '/' + totalAnswered;
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Matching</div><h2>' + (day.title||'Practice') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Matching</div><h2>' + (day.title||'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -10160,7 +10210,7 @@
         recordRight();
         var fb = document.getElementById('feedback-box');
         fb.className = 'feedback-box show correct-fb';
-        fb.innerHTML = '<div class="feedback-label">✓ All matched!</div><div class="feedback-text">' + (ms.explanation || 'Great work connecting these concepts.') + '</div>';
+        fb.innerHTML = '<div class="feedback-label">All matched!</div><div class="feedback-text">' + (ms.explanation || 'Great work connecting these concepts.') + '</div>';
         enableNext();
         spawnConfetti();
         flashCard(true);
@@ -10502,7 +10552,7 @@
       '<div class="feedback-box" id="feedback-box"></div>';
     window._claimState = { q: q };
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Make your case</div><h2>Argue it like a historian</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Make your case</div><h2>Argue it like a historian</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">Claim · evidence · why</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -10544,7 +10594,7 @@
       '</div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Feynman Technique</div><h2>Teach it back</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Feynman Technique</div><h2>Teach it back</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">Writing is the strongest memory</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -10590,7 +10640,7 @@
     return '<div class="session-card">' +
       /* Continuity and change gets its own name; it is a different question
          from "which group does this belong to". */
-      '<div class="card-header"><div class="card-badge">✦ Classify</div><h2>' +
+      '<div class="card-header"><div class="card-badge">Classify</div><h2>' +
         (/^changed$/i.test(fmStr(q.categoryA)) ? 'Then and now' : 'Sort into categories') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
@@ -10659,13 +10709,13 @@
     if (isCorrect) {
       correctCount++; currentStreak++; recordRight();
       fb.className = 'feedback-box show correct-fb';
-      fb.innerHTML = '<div class="feedback-label">✓ Perfect!</div><div class="feedback-text">' + (state.explanation || 'All items sorted correctly.') + '</div>';
+      fb.innerHTML = '<div class="feedback-label">Perfect!</div><div class="feedback-text">' + (state.explanation || 'All items sorted correctly.') + '</div>';
       spawnConfetti(); flashCard(true);
     } else {
       currentStreak = 0;
       var correctMsg = state.correctA.join(', ') + ' → ' + state.catA + '<br>' + state.correctB.join(', ') + ' → ' + state.catB;
       fb.className = 'feedback-box show wrong-fb';
-      fb.innerHTML = '<div class="feedback-label">✗ Not quite</div><div class="feedback-text">Correct sorting:<br>' + correctMsg + '</div>';
+      fb.innerHTML = '<div class="feedback-label">Not quite</div><div class="feedback-text">Correct sorting:<br>' + correctMsg + '</div>';
       flashCard(false);
       /* The sorting card was the one self-grader left out of recordMiss: a
          miss lowered the score and never reached "What to study more", the
@@ -10745,7 +10795,7 @@
       '<div class="feedback-box" id="feedback-box"></div>';
 
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Two-part question</div><h2>' + esc(day.title || 'Answer, then justify it') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Two-part question</div><h2>' + esc(day.title || 'Answer, then justify it') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -10830,7 +10880,7 @@
       '<div class="feedback-box" id="feedback-box"></div>';
 
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Compare two sources</div><h2>' + esc(day.title || 'Do these agree?') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Compare two sources</div><h2>' + esc(day.title || 'Do these agree?') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -10859,7 +10909,7 @@
       '<div class="feedback-box" id="feedback-box"></div>';
 
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Find the evidence</div><h2>' + esc(day.title || 'Locate it in the text') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Find the evidence</div><h2>' + esc(day.title || 'Locate it in the text') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -11065,7 +11115,7 @@
       '<div class="feedback-box" id="feedback-box"></div>';
 
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Match the pairs</div><h2>' + esc(day.title || 'Match them up') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Match the pairs</div><h2>' + esc(day.title || 'Match them up') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -11135,7 +11185,7 @@
       '<div class="feedback-box" id="feedback-box"></div>';
 
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Trace the steps</div><h2>' + esc(day.title || 'Work it through') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Trace the steps</div><h2>' + esc(day.title || 'Work it through') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -11235,7 +11285,7 @@
     }, 60);
     var streak = correctCount + '/' + totalAnswered;
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Listen and type</div><h2>' + escHtml(day.title||'Practice') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Listen and type</div><h2>' + escHtml(day.title||'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -11268,7 +11318,7 @@
       '<div class="feedback-box" id="feedback-box"></div>';
 
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Estimate it</div><h2>' + esc(day.title || 'About how much?') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Estimate it</div><h2>' + esc(day.title || 'About how much?') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -11332,7 +11382,7 @@
     else if (card.isSpacedRepeat) b = 'Try again';
     else if (card.isRetest) { b = 'You saw this in the pre-test'; cls = ' retest-header'; }
     return '<div class="session-card">' +
-      '<div class="card-header' + cls + '"><div class="card-badge">✦ ' + escHtml(b) + '</div><h2>' +
+      '<div class="card-header' + cls + '"><div class="card-badge">' + escHtml(b) + '</div><h2>' +
       escHtml(day.title || 'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
@@ -11537,7 +11587,7 @@
         el.classList.add('sel-right');
         var canon = st.items[r.item][0];
         /* Accepted with a slip: show how it is spelled. */
-        if (fix && rcNorm(canon, !!lang) !== rcNorm(typed[k], !!lang)) fix.textContent = '✓ ' + canon;
+        if (fix && rcNorm(canon, !!lang) !== rcNorm(typed[k], !!lang)) fix.textContent = '' + canon;
       } else {
         el.classList.add('sel-wrong');
         if (r.kind === 'dup' && fix) { fix.textContent = 'already named'; fix.className = 'rc-fix is-dup'; }
@@ -12160,7 +12210,7 @@
       b.classList.add(c.right ? 'is-right' : (i === ci ? 'is-wrong' : 'is-other'));
       if (i === ci) b.classList.add('is-picked');
       if (w) {
-        w.innerHTML = '<span class="who-tag">' + (c.right ? '✓ Right' : '✗ Not quite') + '</span>' +
+        w.innerHTML = '<span class="who-tag">' + (c.right ? 'Right' : 'Not quite') + '</span>' +
           escHtml(c.why || (c.right ? fmStr(st.q.explanation) : ''));
         w.hidden = false;
       }
@@ -12567,7 +12617,7 @@
       '<div class="feedback-box" id="feedback-box"></div>';
 
     return '<div class="session-card">' +
-      '<div class="card-header"><div class="card-badge">✦ Real Scenario</div><h2>' + (day.title||'Apply your knowledge') + '</h2></div>' +
+      '<div class="card-header"><div class="card-badge">Real Scenario</div><h2>' + (day.title||'Apply your knowledge') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
       '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
@@ -12988,7 +13038,7 @@
         var fbR = document.getElementById('feedback-box');
         if (fbR) {
           fbR.className = 'feedback-box show wrong-fb';
-          fbR.innerHTML = '<div class="feedback-label">✗ Not quite — try again</div>' +
+          fbR.innerHTML = '<div class="feedback-label">Not quite — try again</div>' +
             '<div class="feedback-text">Attempt ' + fillAttempts + ' of ' + MAX_FILL_TRIES +
             '. Check your work and enter a new answer.</div>' +
             '<div class="feedback-growth">Tap "Show steps" if you want a nudge.</div>';
@@ -13029,13 +13079,13 @@
       var closeNote = (valN !== corN && sfCanon(val) !== sfCanon(correct))
         ? '<div class="feedback-text" style="margin-bottom:.35rem;">You wrote \u201c' + escHtml(val) + '\u201d \u2014 that counts. The textbook answer: <strong>' + correct + '</strong></div>'
         : '';
-      fb.innerHTML = '<div class="feedback-label">✓ Correct!</div>' + closeNote +
+      fb.innerHTML = '<div class="feedback-label">Correct</div>' + closeNote +
         '<div class="feedback-text">' + (closeNote ? '' : '<strong>' + correct + '</strong>') +
         (explanation ? (closeNote ? '' : ' — ') + explanation : '') + '</div>';
       spawnConfetti();
       flashCard(true);
     } else {
-      fb.innerHTML = '<div class="feedback-label">✗ Not quite</div>' +
+      fb.innerHTML = '<div class="feedback-label">Not quite</div>' +
         '<div class="feedback-text">The answer is <strong style="font-size:1.1em;color:#dc2626;">' + correct + '</strong></div>' +
         '<div class="feedback-growth">Missing it builds a stronger memory — you\'ll remember it next time.</div>';
       flashCard(false);
@@ -13264,11 +13314,11 @@
     // Growth mindset language — "Not yet" not "Wrong"
     fb.className = 'feedback-box show ' + (isCorrect ? 'correct-fb' : 'wrong-fb');
     fb.innerHTML = metaMsg +
-      '<div class="feedback-label">' + (isCorrect ? '✓ Correct!' : '✗ Not yet — keep going') + '</div>' +
+      '<div class="feedback-label">' + (isCorrect ? 'Correct!' : 'Not quite') + '</div>' +
       '<div class="feedback-text">' + (explanation || (isCorrect ? 'Great work — your brain just built a stronger connection!' : 'Review this concept and you\'ll get it next time.')) + '</div>' +
       /* Once a session. Under every miss it stopped being encouragement
          and became furniture - the same two sentences, eleven times. */
-      (isCorrect || growthShown++ ? '' : '<div class="feedback-growth">Mistakes are how your brain grows. Every wrong answer = stronger memory when you get it right.</div>');
+      '';
   }
   var growthShown = 0;
 
@@ -13347,8 +13397,8 @@
         .replace(/```[\s\S]*?```/g, '')      // strip code blocks
         .replace(/`([^`]+)`/g, '<code style="background:var(--soft);padding:.1em .3em;border-radius:4px;font-size:.85em;">$1</code>')
         .replace(/SCORE:[^\n]*/i, '')
-        .replace(/WHAT YOU NAILED:/gi, '<div style="font-weight:700;color:#38bfa1;margin-top:.75rem;">✓ What you nailed</div>')
-        .replace(/KNOWLEDGE GAPS:/gi, '<div style="font-weight:700;color:#ef4444;margin-top:.75rem;">✗ Knowledge gaps</div>')
+        .replace(/WHAT YOU NAILED:/gi, '<div style="font-weight:700;color:#38bfa1;margin-top:.75rem;">What you nailed</div>')
+        .replace(/KNOWLEDGE GAPS:/gi, '<div style="font-weight:700;color:#ef4444;margin-top:.75rem;">Knowledge gaps</div>')
         .replace(/ADVICE:/gi, '<div style="font-weight:700;color:#4a7cf6;margin-top:.75rem;"> To improve</div>')
         .replace(/\n{2,}/g, '</p><p style="margin-top:.5rem;">')  // double newline = paragraph
         .replace(/\n/g, '<br>');             // single newline = line break
@@ -14014,7 +14064,7 @@
     document.getElementById('recap-card').classList.remove('show');
 
     var pct = totalAnswered > 0 ? Math.round((correctCount / totalAnswered) * 100) : 100;
-    var msg = pct >= 80 ? 'Excellent work — you know this.' : (pct >= 60 ? 'Solid session — keep building.' : 'A hard one. The list below is exactly what to go over.');
+    var msg = pct >= 80 ? 'You know this.' : (pct >= 60 ? 'Mostly there.' : 'A hard one. The list below is what to go over.');
     var timeStudied = Math.max(1, Math.round((totalSeconds - secondsLeft) / 60));
 
     // Calculate streak for end screen
@@ -14083,10 +14133,7 @@
     }
 
     // Sleep tip
-    var sleepTip = '<div style="background:linear-gradient(135deg,#1a1d2e,#2851c8);border-radius:14px;padding:1rem 1.2rem;margin-bottom:1.2rem;color:#fff;">' +
-      '<div style="font-size:0.82rem;font-weight:700;margin-bottom:.25rem;">Science tip for tonight</div>' +
-      '<div style="font-size:0.78rem;opacity:.85;line-height:1.6;">Your brain will replay everything you just learned during deep sleep — converting it into long-term memory. Don\'t cram more tonight. Let your brain do its job.</div>' +
-      '</div>';
+    var sleepTip = '';
 
     // Streak display
     /* Monochrome, like the streak mark in the header - it was the orange
@@ -14109,7 +14156,7 @@
     // Share results button
     var shareSubject = plan ? plan.subject || 'my subject' : 'my subject';
     var shareText = 'I just scored ' + pct + '% studying ' + shareSubject + ' on StudyFlow! Building my streak one day at a time. Try it free: ' + sfShareHost();
-    var shareHtml = '<button onclick="shareSession(\'' + pct + '\',\'' + esc(shareSubject) + '\')" style="width:100%;padding:.85rem;background:var(--soft);border:1.5px solid var(--border);border-radius:14px;font-family:var(--sans);font-size:0.9rem;font-weight:600;color:var(--ink);cursor:pointer;margin-bottom:.75rem;display:flex;align-items:center;justify-content:center;gap:.6rem;transition:all .2s;" onmouseover="this.style.borderColor=\'var(--blue)\'" onmouseout="this.style.borderColor=\'var(--border)\'">' +
+    var shareHtml = '<button onclick="shareSession(\'' + pct + '\',\'' + esc(shareSubject) + '\')" style="width:100%;min-height:48px;padding:.8rem;background:none;border:0;font-family:var(--sans);font-size:0.95rem;font-weight:600;color:var(--blue-ink);cursor:pointer;margin-bottom:.5rem;display:flex;align-items:center;justify-content:center;gap:.6rem;">' +
       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>' +
       'Share my score</button>';
 
@@ -20240,7 +20287,7 @@
     } catch(err) {
       var sc = document.getElementById('session-card');
       if (sc) {
-        sc.innerHTML = '<div class="session-card"><div class="card-header"><div class="card-badge">✦ Error</div><h2>Could not load session</h2></div>' +
+        sc.innerHTML = '<div class="session-card"><div class="card-header"><div class="card-badge">Error</div><h2>Could not load session</h2></div>' +
           '<div class="card-body"><p class="content-text">Error: ' + (err && err.message ? err.message : String(err)) + '</p>' +
           '<p class="content-text" style="margin-top:1rem;"><a href="dashboard.html" style="color:var(--blue);font-weight:600;">← Back to dashboard</a></p></div></div>';
       }
