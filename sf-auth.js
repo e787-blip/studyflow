@@ -82,9 +82,22 @@
     });
   }
 
+  /* Nothing here may wait forever (Nov 2026). A managed school browser can
+     leave an IndexedDB open or a request to Google's token host pending with
+     no answer at all, and every AI call waits on this file first - so the
+     plan builder sat silent until its own ceiling and then said "a snag".
+     Past the limit we answer "no token", and the server's 401 says so in
+     words. window.SF_AUTH_MS shortens it for the tests. */
+  function limit(p, ms) {
+    return new Promise(function (resolve) {
+      var t = setTimeout(function () { resolve(null); }, window.SF_AUTH_MS || ms);
+      p.then(function (v) { clearTimeout(t); resolve(v); }, function () { clearTimeout(t); resolve(null); });
+    });
+  }
+
   function user() {
     var u = fromWebStorage();
-    return u ? Promise.resolve(u) : fromIndexedDB();
+    return u ? Promise.resolve(u) : limit(fromIndexedDB(), 3000);
   }
 
   function same(a, b) { return String(a || '').toLowerCase().trim() === String(b || '').toLowerCase().trim(); }
@@ -98,7 +111,7 @@
       var st = u.stsTokenManager || {};
       if (st.accessToken && Number(st.expirationTime) - 60000 > now) return st.accessToken;
       if (!st.refreshToken) return null;
-      return fetch('https://securetoken.googleapis.com/v1/token?key=' + API_KEY, {
+      return limit(fetch('https://securetoken.googleapis.com/v1/token?key=' + API_KEY, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(st.refreshToken)
@@ -108,7 +121,7 @@
           fresh = { uid: u.uid, token: d.id_token, exp: now + (Number(d.expires_in) || 3600) * 1000 };
           return d.id_token;
         })
-        .catch(function () { return null; });
+        .catch(function () { return null; }), 8000);
     }).catch(function () { return null; });
   }
 
