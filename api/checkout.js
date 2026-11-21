@@ -64,6 +64,10 @@ module.exports = async function handler(req, res) {
       'cancel_url': site + '/pricing.html',
       'allow_promotion_codes': 'true',
       'billing_address_collection': 'auto',
+      /* The renewal terms beside Stripe's own Subscribe button too (Nov 2026),
+         the button that actually starts the charge. pricing.html says the
+         same under each plan's button. */
+      'custom_text[submit][message]': 'Your plan renews automatically every month at this price until you cancel. You can cancel anytime from Manage plan in your StudyFlow account.',
     });
 
     if (acct.customer) params.set('customer', acct.customer);
