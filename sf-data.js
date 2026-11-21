@@ -485,11 +485,13 @@
      - ordered numeric rows: between which two did it rise the least / most?
      - otherwise: which row has the highest / lowest value?
      A question whose answer is a tie is never asked. */
+  /* "O2 made" and "pH" keep their capitals; "Pens" becomes "pens" mid-sentence. */
+  function lcName(n) { n = String(n); return /[A-Z0-9]/.test(n.slice(1)) ? n : n.toLowerCase(); }
   function readQ(m, seed) {
     /* The column the lesson is about: the one a rule works out, when there
        is one ("per pen" is the point, not "total"); otherwise the first. */
     var y = m.rule ? m.rule.col - 1 : 0, col = m.cols[y + 1], rows = m.rows, i;
-    var name = col.name.toLowerCase(), most = hash(seed) % 2 === 0;
+    var name = lcName(col.name), most = hash(seed) % 2 === 0;
     if (m.xNum && rows.length >= 3 && rows.length <= 5) {     /* four steps at most: four options */
       var sorted = rows.map(function (r, k) { return { r: r, k: k }; }).sort(function (a, b) { return a.r.x - b.r.x; });
       var inOrder = sorted.every(function (s, k) { return s.k === k; });
@@ -547,7 +549,7 @@
     if (!(y0 > 0)) return null;
     var pct = Math.round((hi - lo) / lo * 100);
     var opts = ['The vertical axis starts at ' + show(y0, st < 1 ? 1 : 0) + ', not at 0',
-                'It uses bars instead of a line', 'It shows only ' + m.rows.length + ' ' + (m.xNum ? m.cols[0].name.toLowerCase() : 'items'),
+                'It uses bars instead of a line', 'It shows only ' + m.rows.length + ' ' + (m.xNum ? lcName(m.cols[0].name) : 'items'),
                 'Every bar is the same colour'];
     var at = hash(seed + 'bad') % 4, order = [1, 2, 3];
     order.splice(at, 0, 0);

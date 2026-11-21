@@ -61,12 +61,12 @@ async function lessonPanes(page) {
     assert(!cards.some(c => c.pre && /table|graph/.test(c.type)), 'never in the pre-test');
     assert(!cards.some(c => c.type === 'filltable' || c.type === 'badgraph'), 'no rule and not a data day: no second data card');
     const panes = await lessonPanes(page);
-    const num = panes && panes.find(p => p.label === 'The numbers');
+    const num = panes && panes.find(p => p.label === 'See the numbers');
     assert(num && num.fig && num.svg && num.table, 'the lesson has "The numbers" with a chart and its table');
-    assert(panes && panes.findIndex(p => p.label === 'The numbers') === panes.findIndex(p => p.label === 'How it works') + 1, 'it comes right after "How it works"');
+    assert(panes && panes.findIndex(p => p.label === 'See the numbers') === panes.findIndex(p => p.label === 'How it works') + 1, 'it comes right after "How it works"');
     // the switch
     const sw = await page.evaluate(() => {
-      const idx = sfLesson.panes.findIndex(p => p.label === 'The numbers');
+      const idx = sfLesson.panes.findIndex(p => p.label === 'See the numbers');
       sfLessonJump(idx);
       return new Promise(r => setTimeout(() => {
         const fig = document.querySelector('#session-card .sfd-fig');
@@ -156,7 +156,7 @@ async function lessonPanes(page) {
     const cards = await session(page);
     assert(!cards.some(c => /readtable|filltable|badgraph/.test(c.type)), 'no data cards');
     const panes = await lessonPanes(page);
-    assert(!panes || !panes.some(p => p.label === 'The numbers'), 'no "The numbers" page');
+    assert(!panes || !panes.some(p => p.label === 'See the numbers'), 'no "The numbers" page');
     assert(errors.length === 0, 'no page errors' + (errors.length ? ': ' + errors.join(' | ') : ''));
     await browser.close();
   }
@@ -173,7 +173,7 @@ async function lessonPanes(page) {
     console.log('\n## hostile table');
     await lessonPanes(page);
     const x = await page.evaluate(async () => {
-      const idx = sfLesson ? sfLesson.panes.findIndex(p => p.label === 'The numbers') : -1;
+      const idx = sfLesson ? sfLesson.panes.findIndex(p => p.label === 'See the numbers') : -1;
       if (idx >= 0) sfLessonJump(idx);
       await new Promise(r => setTimeout(r, 500));
       const a = document.querySelectorAll('#session-card img, #session-card iframe, #session-card script, #session-card [onerror], #session-card [onload], #session-card [onmouseover]').length;

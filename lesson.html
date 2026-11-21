@@ -89,6 +89,21 @@
   @keyframes checkmark { 0%{stroke-dashoffset:50} 100%{stroke-dashoffset:0} }
   @keyframes xmark { 0%{stroke-dashoffset:30} 100%{stroke-dashoffset:0} }
 
+
+  /* TODAY: the big picture, then what you will be able to do (welcome card). */
+  .td-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:.8rem; margin-top:1rem; }
+  .td-grid.td-one { grid-template-columns:minmax(0,1fr); }
+  .td-card { background:var(--soft); border:1px solid var(--border); border-radius:16px; padding:.95rem 1.05rem; min-width:0; }
+  .td-card h3 { font-family:var(--sans); font-size:.92rem; font-weight:700; letter-spacing:0; color:var(--ink); margin:0 0 .75rem; }
+  .td-track, .td-goals { list-style:none; margin:0; padding:0; }
+  .td-track li { display:grid; grid-template-columns:26px minmax(0,1fr); gap:.7rem; align-items:center; position:relative; padding:.4rem 0; font-size:.9rem; font-weight:600; line-height:1.3; color:var(--ink); }
+  .td-track li + li::before { content:''; position:absolute; left:12px; top:-10px; height:16px; width:2px; background:var(--blue-light); }
+  .td-n { width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-size:.78rem; font-weight:700; background:var(--white); border:1.5px solid var(--blue-light); color:var(--blue-ink); font-variant-numeric:tabular-nums; }
+  .td-goals { display:grid; gap:.7rem; }
+  .td-goals li { display:grid; grid-template-columns:10px minmax(0,1fr); gap:.7rem; align-items:start; font-size:.92rem; line-height:1.4; color:var(--ink); }
+  .td-goals li::before { content:''; width:8px; height:8px; margin-top:.4rem; border-radius:50%; background:var(--blue); }
+  @media (max-width:640px) { .td-grid { grid-template-columns:minmax(0,1fr); } }
+
   /* CONFIDENCE TAP */
   .confidence-row { display:flex; align-items:center; gap:.6rem; margin:.75rem 0; flex-wrap:wrap; }
   .confidence-label { font-size:0.78rem; font-weight:600; color:var(--muted); flex-shrink:0; }
@@ -434,19 +449,18 @@
   }
   .fc-face.fc-back { transform:rotateY(180deg); }
   .fc-kind {
-    font-size:.64rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
-    margin-bottom:.55rem;
+    font-size:.76rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+    margin-bottom:.6rem;
   }
   .fc-term { font-family:var(--serif); font-size:1.5rem; color:var(--ink); line-height:1.2; }
-  .fc-def { font-size:.9rem; color:var(--ink); line-height:1.6; font-weight:400; }
-  .fc-hint { font-size:.7rem; color:var(--muted); margin-top:.7rem; font-weight:500; }
+  .fc-def { font-size:1.02rem; color:var(--ink); line-height:1.55; font-weight:500; }
+  .fc-hint { font-size:.82rem; color:var(--muted); margin-top:.7rem; font-weight:500; }
   /* A trap card is amber, which is what amber means everywhere else here. */
   .fc-card.is-trap .fc-face { border-color:#f0c274; background:#fffdf6; }
   .fc-card.is-trap .fc-kind { color:#b4740d; }
   .fc-card.is-term .fc-kind { color:var(--blue); }
   .fc-myth {
-    font-size:.86rem; color:#92400e; line-height:1.5;
-    text-decoration:line-through; text-decoration-color:rgba(146,64,14,.4);
+    font-size:.98rem; color:#92400e; line-height:1.5;
   }
   .fc-nav { display:flex; align-items:center; gap:.7rem; }
   .fc-arrow {
@@ -507,9 +521,9 @@
     color:var(--muted); border:1px solid var(--border); }
   /* INTERACTIVE COORDINATE GRAPH */
   .graph-wrap { background:var(--soft); border-radius:16px; padding:1.2rem; margin-bottom:1rem; }
-  .graph-svg { width:100%; height:auto; display:block; touch-action:none; user-select:none; }
+  .graph-svg { width:100%; max-width:380px; margin:0 auto; height:auto; display:block; touch-action:none; user-select:none; }
   .graph-controls { display:flex; flex-direction:column; align-items:center; gap:.5rem; margin-top:1rem; }
-  .graph-value { font-family:var(--serif); font-size:1.6rem; font-weight:400; color:var(--blue-deep, #2851c8); }
+  .graph-value { font-family:var(--sans); font-variant-numeric:tabular-nums; font-size:1.3rem; font-weight:700; color:var(--blue-deep, #2851c8); }
   .graph-slider-track { position:relative; width:100%; height:36px; display:flex; align-items:center; }
   .graph-slider-rail { position:absolute; left:0; right:0; height:4px; background:var(--border); border-radius:2px; }
   .graph-slider-dot {
@@ -7334,7 +7348,7 @@
     return '<div class="fc-card ' + (isTrap ? 'is-trap' : 'is-term') + (ico ? ' has-ico' : '') + '" id="fc-card" ' +
         'onclick="sfDeckFlip()">' +
       '<div class="fc-face fc-front">' + ico +
-        '<div class="fc-kind">' + (isTrap ? 'People often think' : 'Key term') + '</div>' +
+        '<div class="fc-kind">' + (isTrap ? 'A common mix-up' : 'Key word') + '</div>' +
         '<div class="' + (isTrap ? 'fc-myth' : 'fc-term') + '">' + esc(it.front) + '</div>' +
         '<div class="fc-hint">Tap to turn</div>' +
       '</div>' +
@@ -7614,12 +7628,26 @@
     }
     else if (card.type === 'welcome') {
       var dayLabel = dayIndex === 0 ? 'Introduction' : (day.isFinal ? 'Final Exam Day' : 'Day ' + (dayIndex + 1));
-      // Micro-topic pill if available
-      var microPill = buildTopicPath(day.microTopic, day.subject);
+      /* TODAY (Nov 2026): the big picture first, then what you will be able
+         to do. Built from the day's own steps and concepts, so it names
+         nothing the lesson does not teach. The course path stays only when
+         there is nothing else to show. */
+      var tdSteps = [], tdGoals = [];
+      (day.steps || []).forEach(function (st) { if (st && st.action && tdSteps.length < 4) tdSteps.push(String(st.action)); });
+      (day.concepts || []).forEach(function (c) { if (c && c.name && tdGoals.length < 3) tdGoals.push('Explain ' + c.name); });
+      if (!tdGoals.length) (day.keyTerms || []).forEach(function (k) { var t = k && (k.term || k.name); if (t && tdGoals.length < 3) tdGoals.push('Use the word ' + t + ' correctly'); });
+      var tdHtml = '';
+      if (tdSteps.length >= 2 || tdGoals.length) {
+        tdHtml = '<div class="td-grid' + ((tdSteps.length >= 2 && tdGoals.length) ? '' : ' td-one') + '">' +
+          (tdSteps.length >= 2 ? '<section class="td-card"><h3>The big picture</h3><ol class="td-track">' + tdSteps.map(function (t, i) {
+            return '<li><span class="td-n">' + (i + 1) + '</span><span>' + escHtml(t) + '</span></li>'; }).join('') + '</ol></section>' : '') +
+          (tdGoals.length ? '<section class="td-card"><h3>By the end you can</h3><ul class="td-goals">' + tdGoals.map(function (t) { return '<li>' + escHtml(t) + '</li>'; }).join('') + '</ul></section>' : '') + '</div>';
+      }
+      var microPill = tdHtml ? '' : buildTopicPath(day.microTopic, day.subject);
       html = buildCard(dayLabel, day.title || 'Day ' + (dayIndex+1), false,
         (card.reviewedEarlier ? '<p class="rv-earlier">' + SF_RV_TICK + 'Your review is already done, so it\'s straight into the lesson.</p>' : '') +
-        microPill + '<p class="content-text">' + (day.briefing || '') + '</p>',
-        'Session: ' + totalMinutes + ' min', 'Let\'s go →', false);
+        microPill + '<p class="content-text">' + (day.briefing || '') + '</p>' + tdHtml,
+        'Session: ' + totalMinutes + ' min', 'Let\'s go \u2192', false);
     }
     else if (card.type === 'lesson') {
       /* The lesson is PAGED, not poured down one column.
@@ -7667,7 +7695,7 @@
       }
 
       /* Part one: look at it, then read it. */
-      panes.push({ label: 'The idea',
+      panes.push({ label: 'The big idea',
                    html: dgmHtml +
                          '<div class="content-text" style="margin-top:' + (dgmHtml ? '1rem' : '0') + ';">' +
                          formatContent(day.content) + '</div>' });
@@ -7693,7 +7721,7 @@
          whose notes HAVE numbers - a day without gets no such page. */
       var dataM = sfDataDay();
       if (dataM) {
-        panes.push({ label: 'The numbers',
+        panes.push({ label: 'See the numbers',
           html: (dataM.takeaway ? '<p class="content-text" style="margin-bottom:.85rem;"><strong>' + escHtml(dataM.takeaway) + '</strong></p>' : '') +
                 SFData.figure(dataM, nfFigWidth()) +
                 (dataM.notice ? '<p class="content-text" style="margin-top:.85rem;font-size:.9rem;"><strong>Notice:</strong> ' + escHtml(dataM.notice) + '</p>' : '') });
@@ -7711,7 +7739,7 @@
             (con.misconception ? '<div style="font-size:0.72rem;color:#d97706;margin-top:.25rem;"><strong>Common mistake:</strong> ' + con.misconception + '</div>' : '') +
             '</div>');
         });
-        lpSection(panes, conItems, 'Core concepts', 'More concepts', 3);
+        lpSection(panes, conItems, 'Key ideas', 'More key ideas', 3);
       }
 
       /* The day's traps are NOT here any more - they are flashcards, on the
@@ -8465,7 +8493,7 @@
       '<div class="graph-wrap">' +
       '<svg class="graph-svg" viewBox="0 0 ' + size + ' ' + size + '" id="graph-svg">' +
       defs + grid +
-      '<line id="graph-line" x1="0" y1="0" x2="0" y2="0" stroke="#3563e9" stroke-width="2.5" stroke-linecap="round" marker-end="url(#arr)" marker-start="url(#arr2)"/>' +
+      '<line id="graph-line" x1="0" y1="0" x2="0" y2="0" stroke="#3563e9" stroke-width="2.5" stroke-linecap="round"/>' +
       '<circle id="graph-dot" cx="' + toSvgX(0) + '" cy="' + toSvgY(0) + '" r="7" fill="#3563e9" stroke="#fff" stroke-width="2.5"/>' +
       '</svg>' +
       '<div class="graph-controls">' +
