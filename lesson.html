@@ -18457,6 +18457,51 @@
         '</svg>';
     }
 
+    // ── COORDINATE PLANE (Nov 2026) ─────────────────────────────────────────
+    /* "The Coordinate Plane" used to get a hub: four sentences round a pill, and
+       an AIRPLANE icon because the word "plane" matched one. The thing a learner
+       has to see is the grid itself - two axes, the origin, and one point reached
+       by going across and then up. Drawn from computed positions so the point
+       really sits at (3, 2). */
+    if (/coordinate (plane|grid|system)|cartesian|ordered pair|\bx ?y plane\b|graphing points|plotting points|\bquadrants?\b/.test(d)) {
+      var cpId = 'cpA' + (curatedDiagramSVG.seq = (curatedDiagramSVG.seq || 0) + 1);
+      var cpX0 = 170, cpY0 = 132, cpU = 28, cpGrid = '', cpTick = '', cpK;
+      for (cpK = -4; cpK <= 4; cpK++) {
+        cpGrid += '<line x1="' + (cpX0 + cpK * cpU) + '" y1="' + (cpY0 - 3 * cpU) + '" x2="' + (cpX0 + cpK * cpU) + '" y2="' + (cpY0 + 3 * cpU) + '" stroke="#e2e8f0" stroke-width="1"/>';
+        if (cpK !== 0 && cpK >= -3 && cpK <= 3)
+          cpTick += '<text x="' + (cpX0 + cpK * cpU) + '" y="' + (cpY0 + 14) + '" style="' + LS + '" fill="#64748b" text-anchor="middle">' + cpK + '</text>';
+      }
+      for (cpK = -3; cpK <= 3; cpK++) {
+        cpGrid += '<line x1="' + (cpX0 - 4 * cpU) + '" y1="' + (cpY0 + cpK * cpU) + '" x2="' + (cpX0 + 4 * cpU) + '" y2="' + (cpY0 + cpK * cpU) + '" stroke="#e2e8f0" stroke-width="1"/>';
+        if (cpK !== 0)
+          cpTick += '<text x="' + (cpX0 - 11) + '" y="' + (cpY0 - cpK * cpU + 3) + '" style="' + LS + '" fill="#64748b" text-anchor="end">' + cpK + '</text>';
+      }
+      var cpPx = cpX0 + 3 * cpU, cpPy = cpY0 - 2 * cpU;
+      return '<svg viewBox="0 0 360 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A coordinate plane: the x-axis across, the y-axis up, the origin where they meet, and the point (3, 2)" style="width:100%;max-width:420px;display:block;margin:0 auto;font-family:\'DM Sans\',sans-serif;">' +
+        '<defs><marker id="' + cpId + '" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#334155"/></marker></defs>' +
+        '<text x="180" y="16" text-anchor="middle" fill="#1a1d2e" style="font-family:' + SERIF_T + ';font-size:15px;">The coordinate plane</text>' +
+        cpGrid +
+        // the axes, with arrowheads at the positive ends
+        '<line x1="' + (cpX0 - 4 * cpU - 6) + '" y1="' + cpY0 + '" x2="' + (cpX0 + 4 * cpU + 8) + '" y2="' + cpY0 + '" stroke="#334155" stroke-width="2" marker-end="url(#' + cpId + ')"/>' +
+        '<line x1="' + cpX0 + '" y1="' + (cpY0 + 3 * cpU + 6) + '" x2="' + cpX0 + '" y2="' + (cpY0 - 3 * cpU - 12) + '" stroke="#334155" stroke-width="2" marker-end="url(#' + cpId + ')"/>' +
+        cpTick +
+        '<text x="' + (cpX0 + 4 * cpU + 6) + '" y="' + (cpY0 - 7) + '" style="' + LP + '" fill="#3563e9" text-anchor="start">x</text>' +
+        '<text x="' + (cpX0 + 8) + '" y="' + (cpY0 - 3 * cpU - 12) + '" style="' + LP + '" fill="#3563e9" text-anchor="start">y</text>' +
+        '<text x="' + (cpX0 - 4 * cpU) + '" y="' + (cpY0 - 7) + '" style="' + LS + '" fill="#3563e9" text-anchor="start">x-axis: across</text>' +
+        '<text x="' + (cpX0 + 9) + '" y="' + (cpY0 + 3 * cpU - 2) + '" style="' + LS + '" fill="#3563e9" text-anchor="start">y-axis: up and down</text>' +
+        // the point, reached by going across then up
+        '<line x1="' + cpX0 + '" y1="' + cpPy + '" x2="' + cpPx + '" y2="' + cpPy + '" stroke="#3563e9" stroke-width="1.6" stroke-dasharray="4 3"/>' +
+        '<line x1="' + cpPx + '" y1="' + cpY0 + '" x2="' + cpPx + '" y2="' + cpPy + '" stroke="#3563e9" stroke-width="1.6" stroke-dasharray="4 3"/>' +
+        '<circle cx="' + cpPx + '" cy="' + cpPy + '" r="5.5" fill="#3563e9" stroke="#fff" stroke-width="1.5"/>' +
+        '<text x="' + (cpPx + 9) + '" y="' + (cpPy - 6) + '" style="' + LP + '" fill="#1d3a8a" text-anchor="start" stroke="#fff" stroke-width="3" paint-order="stroke">(3, 2)</text>' +
+        // the origin
+        '<circle cx="' + cpX0 + '" cy="' + cpY0 + '" r="4" fill="#1a1d2e" stroke="#fff" stroke-width="1.5"/>' +
+        '<text x="' + (cpX0 - 8) + '" y="' + (cpY0 + 30) + '" style="' + LP + '" fill="#1a1d2e" text-anchor="end" stroke="#fff" stroke-width="3" paint-order="stroke">origin (0, 0)</text>' +
+        '<line x1="' + (cpX0 - 5) + '" y1="' + (cpY0 + 5) + '" x2="' + (cpX0 - 12) + '" y2="' + (cpY0 + 24) + '" stroke="#94a3b8" stroke-width="1.2"/>' +
+        '<text x="180" y="242" style="font-size:11.5px;font-weight:600;" fill="#334155" text-anchor="middle">(3, 2) means 3 across, then 2 up</text>' +
+        '</svg>';
+    }
+
     // ── NUMBER LINE (addition / subtraction) ─────────────────────────────────
     if (/number line|counting on|count on|\badd(ing|ition)?\b|\bsubtract|taking away|negative number|integer line/.test(d)) {
       var nlTick = '', nlN;

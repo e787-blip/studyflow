@@ -190,8 +190,26 @@ const none = async () => ({ json: { result: '{"type":"none"}' } });
   assert(r.pops.length === 3 && r.pops.every(x => x === 'sfdPop'), 'each icon pops in as one piece (' + r.pops.join(',') + ')');
   assert(!r.traced, 'an icon\'s own outline is never traced');
   assert(r.same, 'the diagram is handed back byte-identical');
+  // A coordinate plane is a grid, not an aeroplane (Nov 2026): "plane" alone names no icon,
+  // and the lesson gets a drawn plane with the point where (3, 2) really is.
+  r = await env3.page.evaluate(() => {
+    const I = window.SFIcons;
+    const svg = curatedDiagramSVG('The Coordinate Plane');
+    const host = document.createElement('div'); host.innerHTML = svg || ''; document.body.appendChild(host);
+    const dot = host.querySelector('circle[r="5.5"]'); const org = host.querySelector('circle[r="4"]');
+    const out = { air: I.match('The Coordinate Plane', 'math'), still: I.match('How an airplane flies', 'science'),
+                  has: !!svg, dx: dot ? (+dot.getAttribute('cx') - +org.getAttribute('cx')) : null, dy: dot ? (+org.getAttribute('cy') - +dot.getAttribute('cy')) : null,
+                  day: (diagramForDay({ title: 'The Coordinate Plane', steps: [], concepts: [{ name: 'Origin', definition: 'where axes meet' }, { name: 'x-axis', definition: 'horizontal' }, { name: 'y-axis', definition: 'vertical' }] }) || {}).svg || '' };
+    host.remove(); return out;
+  });
+  assert(r.air !== 'airplane' && !(r.air && r.air.name === 'airplane'), 'the word "plane" alone no longer picks the airplane icon');
+  assert(r.still === 'airplane', 'an airplane lesson still gets the airplane (' + r.still + ')');
+  assert(r.has && r.dx === 84 && r.dy === 56, 'the coordinate-plane picture puts (3, 2) three across and two up (' + r.dx + ', ' + r.dy + ')');
+  assert(/\(3, 2\)/.test(r.day) && !/airplane|M152,152/.test(r.day), 'a lesson titled The Coordinate Plane draws that grid, not a hub with an airplane');
+
   assert(!env3.errors.length && !env2.errors.length && !env.errors.length, 'no page errors ' + env.errors.concat(env2.errors, env3.errors).join(' | '));
   await env3.browser.close();
+
   console.log(fails ? fails + ' FAILED' : 'ICONS OK');
   function SFIcons_count() { return '120+'; }
 })();

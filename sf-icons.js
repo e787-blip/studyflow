@@ -268,7 +268,9 @@
     ['truck', 2, 'transport* deliver* shipping goods freight'],
     ['train', 3, 'railroad railway train'],
     ['car', 2, 'car vehicle automobile speed velocity motion traffic'],
-    ['airplane', 3, 'airplane aircraft plane aviation'],
+    /* Not bare "plane": a coordinate plane, an inclined plane and plane geometry
+     are not aircraft (a coordinate-plane lesson got an airplane, Nov 2026). */
+    ['airplane', 3, 'airplane aircraft aeroplane aviation'],
     ['clock', 1, 'time clock hour minute schedule timing'],
     ['hourglass', 2, 'duration period short-term long-term wait waiting delay'],
     ['calendar', 1, 'date day week month year annual calendar'],
@@ -413,7 +415,7 @@
     sword: 'sword', shield: 'shield', castle: 'castle', church: 'church', ship: 'ship', boat: 'ship',
     map: 'map', compass: 'compass', house: 'house', city: 'city', factory: 'factory', shop: 'store',
     store: 'store', coin: 'coins', coins: 'coins', money: 'money', 'piggy bank': 'piggy', truck: 'truck',
-    train: 'train', car: 'car', airplane: 'airplane', aeroplane: 'airplane', plane: 'airplane', clock: 'clock',
+    train: 'train', car: 'car', airplane: 'airplane', aeroplane: 'airplane', clock: 'clock',
     hourglass: 'hourglass', calendar: 'calendar', scales: 'scales', ruler: 'ruler', gear: 'gear', book: 'book',
     pencil: 'pencil', microphone: 'microphone', newspaper: 'newspaper', computer: 'laptop', laptop: 'laptop',
     microchip: 'chip', cpu: 'chip', database: 'database', robot: 'robot', calculator: 'calculator',
