@@ -1814,6 +1814,28 @@
   body.dark .fx-when-dark { display:inline; }
   body.dark .fx-when-light { display:none; }
 
+
+  /* The Paper nav: leave, the lesson's name, the four parts of the session
+     each with its own progress, then time, score, streak, menu. On a phone the
+     parts fold into one thin bar under the nav. */
+  .fx-title { display:flex; flex-direction:column; min-width:0; width:240px; flex:none; line-height:1.25; }
+  .fx-kicker { font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fx-name { font-size:15px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fx-phases { flex:1; display:flex; gap:6px; max-width:520px; margin:0 auto; align-self:center; }
+  .fx-ph { min-width:0; display:flex; flex-direction:column; gap:6px; }
+  .fx-ph-name { font-size:12px; font-weight:600; color:var(--muted); display:flex; align-items:center; gap:4px; white-space:nowrap; }
+  .fx-ph-name b { font-weight:700; color:var(--blue-ink); font-variant-numeric:tabular-nums; }
+  .fx-ph-name svg { width:13px; height:13px; color:var(--blue); }
+  .fx-ph.is-now .fx-ph-name { color:var(--ink); }
+  .fx-ph-track { height:4px; border-radius:99px; background:var(--fx-track); overflow:hidden; }
+  .fx-ph-track span { display:block; height:100%; background:var(--blue); border-radius:inherit; transform-origin:left; transition:transform .6s var(--fx-ease); }
+  .fx-ph.is-done .fx-ph-track span { background:color-mix(in srgb, var(--blue) 45%, var(--fx-card)); }
+  .fx-nav .fx-score { font-size:13px; font-weight:700; padding:6px 10px; border-radius:8px; }
+  .fx-bar { display:none; height:3px; background:var(--fx-track); }
+  .fx-bar span { display:block; height:100%; background:var(--blue); transform-origin:left; transition:transform .6s var(--fx-ease); }
+  .fx-nav .time-bar-wrap { margin-left:auto; }
+  @media (max-width:900px) { .fx-phases { display:none; } .fx-bar { display:block; } .fx-title { width:auto; flex:1; } }
+  @media (max-width:600px) { .fx-kicker { display:none; } .fx-nav .fx-score { display:none; } }
   /* ── The page: a white card on paper ── */
   body .container { max-width:720px; padding:36px 20px 72px; }
   /* The wrapper keeps no animation of its own (its inline fadeUp ends on a
@@ -2065,38 +2087,51 @@
      Carries data-sf-boot for the reason given in the head. -->
 <script data-sf-boot>try { if (localStorage.getItem('studyflow_dark') === '1') document.body.classList.add('dark'); } catch (e) {}</script>
 
-<template id="sf-nav-controls">
-  <!-- TIME BAR -->
-  <div class="time-bar-wrap" data-sf-slot="mid">
-    <span class="time-label" id="time-label">30 min</span>
-    <div class="time-bar-track">
-      <div class="time-bar-fill" id="time-bar" style="width:100%"></div>
+<nav class="fx-nav" id="sbar" aria-label="Session">
+  <div class="fx-nav-in">
+    <a href="dashboard.html" class="fx-icon fx-exit" aria-label="Leave the session and go to the dashboard" title="Back to dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </a>
+    <div class="fx-title"><span class="fx-kicker" id="fx-kicker"></span><span class="fx-name" id="fx-name"></span></div>
+    <div class="fx-phases" id="fx-phases" role="progressbar" aria-label="How far through the session" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+    <div class="time-bar-wrap" title="Time left">
+      <svg class="fx-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
+      <span class="time-label" id="time-label">30 min</span>
+      <div class="time-bar-track" aria-hidden="true"><div class="time-bar-fill" id="time-bar" style="width:100%"></div></div>
     </div>
-  </div>
-  <div class="session-stats">
-    <span class="stat-pill total" id="score-pill" title="Correct so far">0/0</span>
-    <span class="streak-pill" id="streak-pill" title="Answer streak">
+    <span class="stat-pill total fx-score" id="score-pill" title="Correct so far">0/0</span>
+    <span class="streak-pill" id="streak-pill" title="Answers right in a row">
       <svg class="streak-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M12.4 2.6c.4 2.6 2 3.9 3.1 5.4a5.6 5.6 0 0 1 1.1 3.5 4.6 4.6 0 1 1-9.2 0c0-2 .9-3.3 2-4.5.2 1 .7 1.7 1.3 2.1.6-2.3 1-4.3 1.7-6.5Z"/>
       </svg>
       <span class="streak-num-inside" id="streak-num">2</span>
     </span>
+    <div class="fx-menu" id="fx-menu">
+      <button type="button" class="fx-icon" id="fx-menu-btn" onclick="sfFxMenu()" aria-haspopup="menu" aria-expanded="false" aria-controls="fx-menu-pop" aria-label="More">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5.5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.5" cy="12" r="1.7"/></svg>
+      </button>
+      <div class="fx-menu-pop" id="fx-menu-pop" role="menu" aria-label="Session menu">
+        <button type="button" role="menuitem" class="fx-menu-item" onclick="toggleDark()" id="dark-toggle" aria-label="Switch to dark mode">
+          <svg id="dark-icon" class="theme-ico" viewBox="0 0 24 24" aria-hidden="true">
+            <defs><mask id="sf-moon-mask"><rect x="-4" y="-4" width="32" height="32" fill="#fff"/><circle class="cut" cx="24" cy="4" r="7" fill="#000"/></mask></defs>
+            <circle class="core" cx="12" cy="12" r="5" fill="currentColor" mask="url(#sf-moon-mask)"/>
+            <g class="rays" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M12 1.5v2.2M12 20.3v2.2M1.5 12h2.2M20.3 12h2.2M4.6 4.6l1.5 1.5M17.9 17.9l1.5 1.5M4.6 19.4l1.5-1.5M17.9 6.1l1.5-1.5"/>
+            </g>
+          </svg><span class="fx-when-light">Dark mode</span><span class="fx-when-dark">Light mode</span>
+        </button>
+        <a role="menuitem" class="fx-menu-item" href="dashboard.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5V20h-5.5v-5h-5v5H4Z"/></svg>Dashboard
+        </a>
+        <button type="button" role="menuitem" class="fx-menu-item" onclick="sfFxMenu(false);endSession()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h4.5v16H14"/><path d="M10 8l-4 4 4 4M6 12h10"/></svg>End session early
+        </button>
+      </div>
+    </div>
   </div>
-  <button class="nav-icon" onclick="toggleDark()" id="dark-toggle" title="Toggle dark mode" aria-label="Switch to dark mode">
-    <svg id="dark-icon" class="theme-ico" viewBox="0 0 24 24" aria-hidden="true">
-      <defs><mask id="sf-moon-mask"><rect x="-4" y="-4" width="32" height="32" fill="#fff"/><circle class="cut" cx="24" cy="4" r="7" fill="#000"/></mask></defs>
-      <circle class="core" cx="12" cy="12" r="5" fill="currentColor" mask="url(#sf-moon-mask)"/>
-      <g class="rays" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <path d="M12 1.5v2.2M12 20.3v2.2M1.5 12h2.2M20.3 12h2.2M4.6 4.6l1.5 1.5M17.9 17.9l1.5 1.5M4.6 19.4l1.5-1.5M17.9 6.1l1.5-1.5"/>
-      </g>
-    </svg>
-  </button>
-  <a href="dashboard.html" class="nav-dashboard nav-wide" aria-label="Back to dashboard">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Dashboard
-  </a>
-</template>
-<script src="sf-nav.js" data-mode="app" data-home="dashboard.html" data-id="sbar"></script>
+  <div class="fx-bar" aria-hidden="true"><span id="fx-bar-fill"></span></div>
+</nav>
 
 <div class="container">
   <!-- MILESTONE BANNER -->
@@ -4651,15 +4686,52 @@
      3. sfFxPad: measures the card's footer (now sticky inside the Paper card,
         no longer a fixed bar) into --fx-pad, which only the tutor button
         reads, to sit above it. */
+  /* The session's four parts, read off the queue: everything up to and
+     including the lesson card is "Lesson" (welcome, pre-test, review), the
+     flashcards are "Words", the teach-it-back writing cards "Teach back", and
+     the rest "Practice". A part with no cards is not shown. */
+  var FX_PHASES = ['Lesson', 'Words', 'Practice', 'Teach back'];
+  function sfFxPhaseOf(c, i, lessonIdx) {
+    if (lessonIdx >= 0 ? i <= lessonIdx : (c.isPretest || c.type === 'welcome')) return 0;
+    if (c.type === 'flashcards') return 1;
+    if (c.type === 'write' && !c.isReview) return 3;
+    return 2;
+  }
   function sfFxProgress() {
     try {
-      var n = sessionCards && sessionCards.length ? sessionCards.length : 1;
-      var f = Math.max(0, Math.min(1, (cardIndex + (currentAnswered ? 1 : 0)) / n));
-      var fill = document.getElementById('fx-progress-fill');
-      /* Moved, not stretched: a scaled fill squashes its own rounded end. */
-      if (fill) fill.style.transform = 'translateX(' + ((f - 1) * 100).toFixed(2) + '%)';
-      var bar = document.getElementById('fx-progress');
-      if (bar) bar.setAttribute('aria-valuenow', String(Math.round(f * 100)));
+      var cards = sessionCards || [], n = cards.length || 1;
+      var done = cardIndex + (currentAnswered ? 1 : 0);
+      var f = Math.max(0, Math.min(1, done / n));
+      var lessonIdx = -1, k;
+      for (k = 0; k < cards.length; k++) if (cards[k].type === 'lesson') { lessonIdx = k; break; }
+      var tot = [0, 0, 0, 0], got = [0, 0, 0, 0], cur = -1;
+      for (k = 0; k < cards.length; k++) {
+        var ph = sfFxPhaseOf(cards[k], k, lessonIdx);
+        tot[ph]++; if (k < done) got[ph]++;
+        if (k === cardIndex) cur = ph;
+      }
+      var host = document.getElementById('fx-phases');
+      if (host) {
+        var h = '';
+        for (k = 0; k < 4; k++) {
+          if (!tot[k]) continue;
+          var isDone = got[k] >= tot[k], isNow = k === cur;
+          h += '<div class="fx-ph' + (isDone ? ' is-done' : isNow ? ' is-now' : '') + '" style="flex:' + (k === 2 ? 2.8 : 1) + '"' + (isNow ? ' aria-current="step"' : '') + '>' +
+            '<span class="fx-ph-name">' + (isDone ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>' : '') +
+            FX_PHASES[k] + (k === 2 && isNow ? ' <b>' + Math.min(tot[k], got[k] + 1) + '/' + tot[k] + '</b>' : '') + '</span>' +
+            '<span class="fx-ph-track"><span style="transform:scaleX(' + (tot[k] ? got[k] / tot[k] : 0).toFixed(3) + ')"></span></span></div>';
+        }
+        if (host.getAttribute('data-h') !== h) { host.innerHTML = h; host.setAttribute('data-h', h); }
+        host.setAttribute('aria-valuenow', String(Math.round(f * 100)));
+      }
+      var bar = document.getElementById('fx-bar-fill');
+      if (bar) bar.style.transform = 'scaleX(' + f.toFixed(3) + ')';
+      var nm = document.getElementById('fx-name');
+      if (nm && !nm.textContent && typeof day !== 'undefined' && day) {
+        nm.textContent = day.title || '';
+        var kk = document.getElementById('fx-kicker');
+        if (kk) kk.textContent = ((typeof plan !== 'undefined' && plan && plan.subject) ? plan.subject + ' \u00b7 ' : '') + 'Day ' + (dayIndex + 1) + (plan && plan.days ? ' of ' + plan.days.length : '');
+      }
     } catch (e) { /* the bar never costs the card */ }
   }
   function sfFxMark(card) {
