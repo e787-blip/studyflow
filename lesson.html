@@ -1816,7 +1816,6 @@
 
   /* ── The page: a white card on paper ── */
   body .container { max-width:720px; padding:36px 20px 72px; }
-  body .end-btn { display:none !important; }
   /* The wrapper keeps no animation of its own (its inline fadeUp ends on a
      transform); the card inside it arrives with sfCardIn, which ends on none. */
   #session-card { animation:none !important; }
@@ -2066,61 +2065,38 @@
      Carries data-sf-boot for the reason given in the head. -->
 <script data-sf-boot>try { if (localStorage.getItem('studyflow_dark') === '1') document.body.classList.add('dark'); } catch (e) {}</script>
 
-<!-- THE FOCUS BAR (Nov 2026, the owner chose design B "Focus" from three
-     prototypes in prototypes/lesson-redesign/). A session is one thing at a
-     time, so the bar holds only what a learner needs while answering: the
-     way out, how far through they are, the time left, the streak, and a menu
-     for the rest (score, dark mode, ending early). No logo, no lesson title:
-     both are one tap away on the dashboard. This page no longer loads
-     sf-nav.js; every other page still does.
-     Still a <nav>, and the time chip keeps .time-bar-wrap, #time-label and
-     #time-bar - slide_check and test_moment pin nav and .time-bar-wrap with
-     position:static, and the timer code writes to both ids. -->
-<nav class="fx-nav" id="sbar" aria-label="Session">
-  <div class="fx-nav-in">
-    <a href="dashboard.html" class="fx-icon fx-exit" aria-label="Leave the session and go to the dashboard" title="Back to dashboard">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </a>
-    <div class="fx-progress" id="fx-progress" role="progressbar" aria-label="How far through the session" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-      <span class="fx-progress-fill" id="fx-progress-fill"></span>
+<template id="sf-nav-controls">
+  <!-- TIME BAR -->
+  <div class="time-bar-wrap" data-sf-slot="mid">
+    <span class="time-label" id="time-label">30 min</span>
+    <div class="time-bar-track">
+      <div class="time-bar-fill" id="time-bar" style="width:100%"></div>
     </div>
-    <div class="time-bar-wrap" title="Time left">
-      <svg class="fx-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
-      <span class="time-label" id="time-label">30 min</span>
-      <div class="time-bar-track" aria-hidden="true"><div class="time-bar-fill" id="time-bar" style="width:100%"></div></div>
-    </div>
-    <span class="streak-pill" id="streak-pill" title="Answers right in a row">
+  </div>
+  <div class="session-stats">
+    <span class="stat-pill total" id="score-pill" title="Correct so far">0/0</span>
+    <span class="streak-pill" id="streak-pill" title="Answer streak">
       <svg class="streak-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor"
            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M12.4 2.6c.4 2.6 2 3.9 3.1 5.4a5.6 5.6 0 0 1 1.1 3.5 4.6 4.6 0 1 1-9.2 0c0-2 .9-3.3 2-4.5.2 1 .7 1.7 1.3 2.1.6-2.3 1-4.3 1.7-6.5Z"/>
       </svg>
       <span class="streak-num-inside" id="streak-num">2</span>
     </span>
-    <div class="fx-menu" id="fx-menu">
-      <button type="button" class="fx-icon" id="fx-menu-btn" onclick="sfFxMenu()" aria-haspopup="menu" aria-expanded="false" aria-controls="fx-menu-pop" aria-label="More">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5.5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="18.5" cy="12" r="1.7"/></svg>
-      </button>
-      <div class="fx-menu-pop" id="fx-menu-pop" role="menu" aria-label="Session menu">
-        <div class="fx-menu-score"><span>Right so far</span><span class="stat-pill total" id="score-pill" title="Correct so far">0/0</span></div>
-        <button type="button" role="menuitem" class="fx-menu-item" onclick="toggleDark()" id="dark-toggle" aria-label="Switch to dark mode">
-          <svg id="dark-icon" class="theme-ico" viewBox="0 0 24 24" aria-hidden="true">
-            <defs><mask id="sf-moon-mask"><rect x="-4" y="-4" width="32" height="32" fill="#fff"/><circle class="cut" cx="24" cy="4" r="7" fill="#000"/></mask></defs>
-            <circle class="core" cx="12" cy="12" r="5" fill="currentColor" mask="url(#sf-moon-mask)"/>
-            <g class="rays" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <path d="M12 1.5v2.2M12 20.3v2.2M1.5 12h2.2M20.3 12h2.2M4.6 4.6l1.5 1.5M17.9 17.9l1.5 1.5M4.6 19.4l1.5-1.5M17.9 6.1l1.5-1.5"/>
-            </g>
-          </svg><span class="fx-when-light">Dark mode</span><span class="fx-when-dark">Light mode</span>
-        </button>
-        <a role="menuitem" class="fx-menu-item" href="dashboard.html">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11.5 12 5l8 6.5V20h-5.5v-5h-5v5H4Z"/></svg>Dashboard
-        </a>
-        <button type="button" role="menuitem" class="fx-menu-item" onclick="sfFxMenu(false);endSession()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h4.5v16H14"/><path d="M10 8l-4 4 4 4M6 12h10"/></svg>End session early
-        </button>
-      </div>
-    </div>
   </div>
-</nav>
+  <button class="nav-icon" onclick="toggleDark()" id="dark-toggle" title="Toggle dark mode" aria-label="Switch to dark mode">
+    <svg id="dark-icon" class="theme-ico" viewBox="0 0 24 24" aria-hidden="true">
+      <defs><mask id="sf-moon-mask"><rect x="-4" y="-4" width="32" height="32" fill="#fff"/><circle class="cut" cx="24" cy="4" r="7" fill="#000"/></mask></defs>
+      <circle class="core" cx="12" cy="12" r="5" fill="currentColor" mask="url(#sf-moon-mask)"/>
+      <g class="rays" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 1.5v2.2M12 20.3v2.2M1.5 12h2.2M20.3 12h2.2M4.6 4.6l1.5 1.5M17.9 17.9l1.5 1.5M4.6 19.4l1.5-1.5M17.9 6.1l1.5-1.5"/>
+      </g>
+    </svg>
+  </button>
+  <a href="dashboard.html" class="nav-dashboard nav-wide" aria-label="Back to dashboard">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Dashboard
+  </a>
+</template>
+<script src="sf-nav.js" data-mode="app" data-home="dashboard.html" data-id="sbar"></script>
 
 <div class="container">
   <!-- MILESTONE BANNER -->

@@ -4655,3 +4655,5 @@ genuinely nothing.
 - Never leak a question's answer into a prompt or a whiteboard label.
 
 **Nov 20, the owner: no box.** The session card has no fill, border, radius or shadow any more, on a white page (dark: the dark page): the question is just the problem on the page, as in Focus. The footer still sticks to the bottom of the screen, on the page colour with no hairline. Do not put a card back around it.
+
+**Nov 20, the owner: "the exact same nav design".** The lesson page uses the shared `sf-nav.js` app-mode bar again (logo, time, score, streak, theme, Dashboard), the same as every other app page; the custom `fx-nav` is gone and "End session early" is visible again. Do not give this page its own bar.
