@@ -3250,7 +3250,8 @@
           : '<h2 style="margin-bottom:.5rem;">The plan didn\u2019t <em>finish</em></h2>' +
             '<p class="card-sub" style="margin:0 auto .5rem;">' +
             'Day ' + dayNum + ' of ' + numDays + ' hit a snag after 3 attempts. That is almost always the connection or a busy server.</p>' +
-            '<p class="card-sub" style="margin:0 auto 1.4rem;font-size:.86rem;">Your notes and answers are saved. Retry usually works on the second go.</p>') +
+            '<p class="card-sub" style="margin:0 auto 1.4rem;font-size:.86rem;">Your notes and answers are saved. Retry usually works on the second go.</p>' +
+            (window.__sfLastFail ? '<p class="card-sub" style="margin:-.6rem auto 1.2rem;font-size:.74rem;opacity:.7;word-break:break-word;">What went wrong: ' + escHtml(window.__sfLastFail) + '</p>' : '')) +
         '<div style="display:grid;gap:.5rem;max-width:340px;margin:0 auto;">' +
         '<button id="gen-retry-btn" class="btn-next">Retry</button>' +
         '<button id="gen-edit-btn" class="btn-quiet">Change my answers</button>' +
@@ -3862,7 +3863,15 @@
         .then(function(res) {
           if (res.status === 401) { signInLost = true; throw new Error('Signed out'); }
           if (res.status === 429) { limitHit = true; throw new Error('Daily limit'); }
-          if (!res.ok) { short[which] = true; throw new Error('HTTP ' + res.status); }
+          if (!res.ok) {
+            short[which] = true;
+            /* Read what the server said, so the failure card can show the real
+               reason instead of "a snag" (Nov 2026). */
+            return res.json().catch(function () { return {}; }).then(function (b) {
+              var why = b && (b.detail || b.message || b.error) ? String(b.detail || b.message || b.error).slice(0, 140) : '';
+              throw new Error('HTTP ' + res.status + (why ? ': ' + why : ''));
+            });
+          }
           return res.json();
         })
         .then(function(data) {
@@ -4200,6 +4209,7 @@
         .catch(function(err) {
           console.warn('[gen] day ' + dayNum + ' attempt ' + attempt + ':', err.message);
           lastFail = String(err && err.message || '');
+          window.__sfLastFail = lastFail;
           if (signInLost || limitHit) { callback(err); return; }
           if (attempt < MAX_RETRIES) {
             /* BACKOFF MUST OUTLAST THE CALL IT IS BACKING OFF FROM.
@@ -4217,7 +4227,9 @@
                purpose: a BACKGROUNDED TAB clamps setTimeout hard, and a 12s
                backoff there stretched into minutes of a plan that looked
                hung. Long backoffs and background throttling do not mix. */
-            setTimeout(tryFetch, attempt * 4000);
+            /* The AI service saying it is busy needs a longer breath than a
+               dropped connection does. */
+            setTimeout(tryFetch, attempt * (/HTTP 503|HTTP 502.*(429|529|overloaded|rate_limit)/i.test(lastFail) ? 12000 : 4000));
           } else {
             callback(new Error('Day ' + dayNum + ' failed after ' + MAX_RETRIES + ' attempts'));
           }
