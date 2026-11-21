@@ -4653,3 +4653,5 @@ genuinely nothing.
   comments document bugs that were fixed; don't delete them.
 - Escape user/model content before putting it in HTML or SVG (`esc()`).
 - Never leak a question's answer into a prompt or a whiteboard label.
+
+**Nov 20, the owner: no box.** The session card has no fill, border, radius or shadow any more, on a white page (dark: the dark page): the question is just the problem on the page, as in Focus. The footer still sticks to the bottom of the screen, on the page colour with no hairline. Do not put a card back around it.

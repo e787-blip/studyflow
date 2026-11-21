@@ -1754,7 +1754,7 @@
      - The bar's white text is on #3a6ee8, not the brand #4a7cf6 (3.8:1).
      - No edges under buttons, and no button shrinks: a press is the 2px sink. */
   body {
-    --fx-page:#f3f5fa; --fx-card:#fff; --fx-card-line:#e4e8f1; --fx-shadow:0 1px 2px rgba(26,29,46,.04), 0 28px 56px -32px rgba(26,29,46,.22);
+    --fx-page:#fff; --fx-card:#fff; --fx-card-line:#e4e8f1; --fx-shadow:0 1px 2px rgba(26,29,46,.04), 0 28px 56px -32px rgba(26,29,46,.22);
     --fx-tile:#fff; --fx-line:#dde3ee; --fx-edge:#dde3ee; --fx-track:#e6eaf3; --fx-panel:#f0f3f9;
     --fx-btn:#3a6ee8; --fx-btn-edge:#2851c8;
     --fx-ok:#167f64; --fx-ok-edge:#0f5e4a; --fx-ok-ink:#0f6e55; --fx-ok-bg:#e9f8f2; --fx-ok-line:#38bfa1;
@@ -1822,8 +1822,10 @@
   #session-card { animation:none !important; }
   /* THE PAPER CARD. overflow stays visible: the footer sticks to the bottom of
      the screen inside it, and an overflow:hidden card would be its own scroller. */
-  body .session-card { background:var(--fx-card); border:1px solid var(--fx-card-line); border-radius:24px; box-shadow:var(--fx-shadow);
-    overflow:visible; padding:30px 40px 0; }
+  /* No box (Nov 20, the owner: "just the problem, no circly border"): the card is
+     only a column on the page - no fill, border, radius or shadow. */
+  body .session-card { background:none; border:0; border-radius:0; box-shadow:none;
+    overflow:visible; padding:8px 0 0; }
   body .session-card::after { display:none; }
   body .card-header { background:none; padding:0 0 6px; overflow:visible; isolation:auto; }
   body .card-header::before { display:none; }
@@ -1846,7 +1848,7 @@
   body .session-card[data-fx-type="bigequation"] > .card-header .card-badge { display:none; }
   body .session-card[data-fx-type="bigequation"] > .card-header h2 { display:block; font-family:var(--serif); font-weight:400;
     font-size:clamp(28px, 3.6vw, 36px); line-height:1.13; letter-spacing:-.012em; }
-  body.dark .session-card { background:var(--fx-card); border-color:var(--fx-card-line); box-shadow:var(--fx-shadow); }
+  body.dark .session-card { background:none; border:0; box-shadow:none; }
   body.dark .card-body, body.dark .card-header { background:transparent; border-color:transparent; box-shadow:none; }
   /* The dark theme's own header rule (a blue slab) is more specific than the line above. */
   body.dark .session-card .card-header:not(.struggling-header):not(.retest-header) { background:none; }
@@ -1958,9 +1960,9 @@
      bottom of the screen while the card is longer than the screen, and sits
      at the card's foot when it is not. ── */
   body .session-card > .card-footer {
-    position:sticky; bottom:0; z-index:5; margin:26px -40px 0;
-    background:var(--fx-card); border-top:1px solid var(--fx-card-line); border-radius:0 0 24px 24px;
-    padding:14px 40px calc(14px + env(safe-area-inset-bottom)); gap:10px; }
+    position:sticky; bottom:0; z-index:5; margin:26px 0 0;
+    background:var(--fx-page); border-top:0; border-radius:0;
+    padding:14px 0 calc(14px + env(safe-area-inset-bottom)); gap:10px; }
   body .session-card > .card-footer .footer-left { flex:1; min-width:0; font-size:13.5px; font-weight:600; color:var(--muted); }
   body .session-card[data-fx="q"]:not([data-fx-type="write"]):not([data-fx-type="labeldiagram"]) > .card-footer .footer-left { visibility:hidden; }
   body .card-footer .btn-next { min-height:50px; min-width:150px; padding:0 26px; font-size:16px; }
@@ -2044,8 +2046,8 @@
     .fx-nav-in { height:56px; padding:0 12px; gap:10px; }
     .fx-nav .time-bar-wrap { min-width:0; padding:0 2px; }
     body .container { padding:12px 10px 48px; }
-    body .session-card { padding:20px 18px 0; border-radius:20px; }
-    body .session-card > .card-footer { margin:22px -18px 0; padding:12px 18px calc(12px + env(safe-area-inset-bottom)); border-radius:0 0 20px 20px; }
+    body .session-card { padding:8px 0 0; border-radius:0; }
+    body .session-card > .card-footer { margin:22px 0 0; padding:12px 0 calc(12px + env(safe-area-inset-bottom)); border-radius:0; }
     body .session-card > .card-footer .footer-left:empty, body .session-card[data-fx="q"]:not([data-fx-type="write"]):not([data-fx-type="labeldiagram"]) > .card-footer .footer-left { display:none; }
     body .card-footer .btn-next { flex:1; min-width:0; max-width:260px; margin-left:auto; }
     body .q-text { font-size:28px; margin-bottom:18px; }
