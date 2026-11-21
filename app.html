@@ -3096,6 +3096,7 @@
 
   function startGeneration(notes, numDays, deadline, userPlan) {
     userPlan = userPlan || (JSON.parse(SFStore.getItem('studyflow_user') || '{}').tier || 'free');
+    window.__sfLastFail = ''; window.__sfNetFail = false;   // each build starts with a clean reason
     generating = true;
     document.querySelectorAll('.card').forEach(function(c) { c.classList.remove('active'); });
     var loadEl = document.getElementById('loading');
@@ -3249,7 +3250,7 @@
             '<p class="card-sub" style="margin:0 auto 1.4rem;font-size:.86rem;">Try another network, like home Wi-Fi or a phone hotspot, or ask your school\u2019s IT to allow <strong>studyflow-ten-vert.vercel.app</strong>. Your notes and answers are saved.</p>'
           : '<h2 style="margin-bottom:.5rem;">The plan didn\u2019t <em>finish</em></h2>' +
             '<p class="card-sub" style="margin:0 auto .5rem;">' +
-            'Day ' + dayNum + ' of ' + numDays + ' hit a snag after 3 attempts. That is almost always the connection or a busy server.</p>' +
+            'Day ' + dayNum + ' of ' + numDays + ' hit a snag. That is almost always the connection or a busy server.</p>' +
             '<p class="card-sub" style="margin:0 auto 1.4rem;font-size:.86rem;">Your notes and answers are saved. Retry usually works on the second go.</p>' +
             (window.__sfLastFail ? '<p class="card-sub" style="margin:-.6rem auto 1.2rem;font-size:.74rem;opacity:.7;word-break:break-word;">What went wrong: ' + escHtml(window.__sfLastFail) + '</p>' : '')) +
         '<div style="display:grid;gap:.5rem;max-width:340px;margin:0 auto;">' +
@@ -3258,6 +3259,7 @@
         '</div></div>';
       var btn = document.getElementById('gen-retry-btn');
       if (btn && retryFn) btn.onclick = function() {
+        window.__sfLastFail = ''; window.__sfNetFail = false;
         box.innerHTML = '';
         box.classList.remove('active');
         generating = true;
@@ -3854,13 +3856,23 @@
 
       function askPart(which, text) {
         var t0 = Date.now();
+        /* The server answers within ~57s whatever happens. A request that is
+           still unanswered well past that was swallowed by something between
+           here and there (a school filter that drops packets, say) and would
+           otherwise sit until the whole plan's ceiling, with no reason shown.
+           window.SF_FETCH_MS shortens it for the tests. */
+        var capMs = window.SF_FETCH_MS || 80000;
+        var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        var capTimer = ctrl ? setTimeout(function () { ctrl.timedOut = true; ctrl.abort(); }, capMs) : null;
         return (window.SFAuth ? SFAuth.apiFetch : fetch)('api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: (short[which] ? SHORT_RETRY : '') + text }),
+          signal: ctrl ? ctrl.signal : undefined,
           keepalive: true  // tells browser to keep this fetch alive even if tab goes background
         })
         .then(function(res) {
+          clearTimeout(capTimer);
           if (res.status === 401) { signInLost = true; throw new Error('Signed out'); }
           if (res.status === 429) { limitHit = true; throw new Error('Daily limit'); }
           if (!res.ok) {
@@ -3884,6 +3896,8 @@
                       (data.out ? ', ' + data.out + ' tokens' : '') + (data.truncated ? ', TRUNCATED' : ''));
           return obj;
         }, function(err) {
+          clearTimeout(capTimer);
+          if (ctrl && ctrl.timedOut) err = new Error('Server timeout: no answer in ' + Math.round(capMs / 1000) + 's');
           if (timeoutLike.test(String(err && err.message || ''))) short[which] = true;
           /* fetch() itself refused: no HTTP answer at all. On a school or work
              network that is a filter blocking the server, and the card must say
@@ -4266,7 +4280,7 @@
     /* Serial now, so the ceiling is per-day rather than per-wave, plus room
        for retries. A 14-day plan is allowed ~11 minutes before this fires and
        saves whatever has arrived. */
-    var globalMs = Math.max(150000, 45000 * Math.ceil(numDays / WAVE_SIZE) + 60000);
+    var globalMs = Math.max(330000, 60000 * Math.ceil(numDays / WAVE_SIZE) + 150000);
     var timeoutId = setTimeout(function() { finish(true); }, globalMs);
 
     /* ── Generation runs in WAVES, and a lost day does not lose the plan ──
@@ -4297,6 +4311,11 @@
 
               if (allDays.length === 0) {
                 done = false;
+                /* Always have a reason to show: a plan that ran out of time with
+                   no failed call has nothing else to say (Nov 2026). */
+                if (!window.__sfLastFail) window.__sfLastFail = fromTimeout
+                  ? 'Nothing came back in ' + Math.round(globalMs / 1000) + ' seconds'
+                  : 'The AI service gave no usable reply';
                 showFatalError(1, function() { generateAllParallel(); });
                 return;
               }
