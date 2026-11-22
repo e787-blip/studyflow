@@ -2119,6 +2119,10 @@
   /* Tap targets: at least 44px tall on a phone. */
   body .sfwb-explain { min-height:44px; display:inline-flex; align-items:center; }
   body .end-btn { min-height:44px; }
+  /* TOUCH AND TEXT FLOOR (Nov 21, an interface audit of every card): buttons at least 44px tall, text at least 12px. */
+  body .fill-submit, body .conf-btn { min-height:44px; }
+  body .q-chip-plain { font-size:12px; }
+  body .sf-moment-head, body .sf-moment-foot { font-size:12px; }
 </style>
 </head>
 <body>
@@ -9819,7 +9823,7 @@
     var stepsHtml = steps.map(function(step, i) {
       return '<button class="error-step-btn" data-idx="' + i + '" onclick="selectErrorStep(this,' + i + ',' + (step.hasError ? 'true' : 'false') + ',\'' + esc(q.explanation) + '\')" ' +
         'style="width:100%;text-align:left;padding:.7rem .9rem;border-radius:10px;border:1.5px solid var(--border);background:var(--soft);font-family:var(--sans);font-size:0.88rem;font-weight:500;color:var(--ink);cursor:pointer;margin-bottom:.4rem;transition:border-color .2s,background .2s;">' +
-        '<span style="display:inline-block;min-width:20px;font-size:0.7rem;font-weight:700;color:var(--muted);margin-right:.5rem;font-variant-numeric:tabular-nums;">Step ' + (i+1) + '</span>' +
+        '<span style="display:inline-block;min-width:20px;font-size:0.78rem;font-weight:700;color:var(--muted);margin-right:.5rem;font-variant-numeric:tabular-nums;">Step ' + (i+1) + '</span>' +
         '<span style="font-family:\'Georgia\',serif;">' + step.text + '</span>' +
         '</button>';
     }).join('');
