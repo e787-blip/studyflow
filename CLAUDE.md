@@ -83,6 +83,21 @@ the fonts or the no-build-step stack.
 
 - Brand blue `#4a7cf6`, ink `#1a1d2e`
 - Fonts: Instrument Serif (headings), DM Sans (body)
+- **Fonts are self-hosted (Nov 2026), never loaded from Google.** Every page
+  links `/fonts/fonts.css` (19 woff2 files beside it, OFL): DM Sans
+  variable 300-700 with optical size plus italic 400, Instrument Serif
+  regular and italic, DM Mono 400/500, Inter 600-700. `sf-nav.js` adds the
+  same file only if a page lacks it. Loading `fonts.googleapis.com` sent
+  every visitor's IP address to Google (a GDPR fine in Munich), so **do not
+  add a Google Fonts link to any page**. A new weight or family: fetch the
+  css2 URL with a Chrome user agent, download each woff2 into `fonts/`, and
+  add its `@font-face` to `fonts.css` with a local path.
+- **The renewal terms sit under every paid button** on `pricing.html`
+  (`.renew`, named by the button's `aria-describedby`) and beside Stripe's
+  Subscribe button (`custom_text[submit]` in `api/checkout.js`): the price,
+  that it renews monthly, and that it can be cancelled in Manage plan.
+  California's auto-renewal law wants them next to the button. A price
+  change is a change to the price, the `.renew` line and the Stripe price.
 - Card hover: blue border only. **No pop/scale transform** — this was a deliberate
   decision, don't reintroduce it.
 - **The streak mark is monochrome**, sized and shaped like the score pill beside
@@ -1679,7 +1694,7 @@ rectangles say the opposite. Every role label is anchored to **its own level's**
 edge; one right-hand column printed "secondary consumer" across the pyramid,
 because the column has to clear the widest level, not the narrowest.
 
-`curatedDiagramSVG` holds 23 hand-drawn templates: brain, neuron, atom,
+`curatedDiagramSVG` holds 24 hand-drawn templates (the 24th, `coordinate-plane`, Nov 2026: a grid with both axes, the origin and the point (3, 2) reached across then up - the lesson "The Coordinate Plane" used to get a hub with an AIRPLANE icon, because the bare word "plane" matched one; it no longer names any icon, and `test_icons.js` covers both): brain, neuron, atom,
 **cell**, supply-demand, dna, ecosystem, water-cycle, mitosis, memory-model,
 plate-tectonics, photosynthesis, forces, wave, circuit, number-line, fractions,
 place-value, area-model, triangle, states-of-matter, solar-system,

@@ -201,11 +201,17 @@
   ].join('\n');
 
   /* Fonts: DM Sans 500-700 for the links and button, Instrument Serif for the
-     logo word (one colour, Nov 2026; it was Inter 700 with a blue "Flow"). */
-  var fonts = document.createElement('link');
-  fonts.rel = 'stylesheet';
-  fonts.href = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Instrument+Serif&display=swap';
-  document.head.appendChild(fonts);
+     logo word (one colour, Nov 2026; it was Inter 700 with a blue "Flow").
+     Served from this site, never Google's (Nov 2026): loading them from
+     fonts.googleapis.com sends every visitor's IP address to Google. Every
+     page already links /fonts/fonts.css; this only covers a page that does
+     not, and never adds it twice. */
+  if (!document.querySelector('link[href$="/fonts/fonts.css"]')) {
+    var fonts = document.createElement('link');
+    fonts.rel = 'stylesheet';
+    fonts.href = '/fonts/fonts.css';
+    document.head.appendChild(fonts);
+  }
 
   var style = document.createElement('style');
   style.id = 'sf-nav-css';
