@@ -2122,7 +2122,19 @@
   /* TOUCH AND TEXT FLOOR (Nov 21, an interface audit of every card): buttons at least 44px tall, text at least 12px. */
   body .fill-submit, body .conf-btn { min-height:44px; }
   body .q-chip-plain { font-size:12px; }
-  body .sf-moment-head, body .sf-moment-foot { font-size:12px; }
+  body .sf-moment-head, body .sf-moment-foot { font-size:12px; text-transform:none; letter-spacing:0; }
+  /* CARD FLOOR, the rest of the formats (Nov 22, every card type built and measured):
+     no label under 12px, no tracked all-caps label, every control 44px tall.
+     The part rail stays a 4px line but is a 28px target. */
+  #session-card .lp-label { font-size:12.5px; text-transform:none; letter-spacing:0; }
+  #session-card .lp-count, #session-card .lp-hint, #session-card .rch-src, #session-card .rc-n { font-size:12px; }
+  #session-card .lp-seg { height:28px; padding:12px 0; margin:-12px 0; box-sizing:border-box; background-clip:content-box; }
+  #session-card .cl-source-k, #session-card .cl-label, #session-card .rch-part { font-size:12.5px; letter-spacing:0; text-transform:none; }
+  #session-card .sfd-dt caption, #session-card .sfd-dt small { font-size:12px; }
+  #session-card [style*="text-transform:uppercase"]:not(svg *) { text-transform:none !important; letter-spacing:0 !important; }
+  #session-card [style*="font-size:0.6"]:not(svg *), #session-card [style*="font-size:0.7"]:not(svg *),
+  #session-card [style*="font-size:.6"]:not(svg *), #session-card [style*="font-size:.7"]:not(svg *) { font-size:12.5px !important; }
+  #session-card .tt-in, #session-card .classify-item, #session-card .cm-chip, #session-card .mp-sel { min-height:44px; }
 </style>
 </head>
 <body>
