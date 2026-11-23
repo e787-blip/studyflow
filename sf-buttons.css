@@ -51,6 +51,7 @@
   transition: scale .15s ease-out, background-color .15s, border-color .15s, color .15s, opacity .15s;
 }
 .btn svg { width: 18px; height: 18px; flex: none; }
+.btn[hidden] { display: none; }
 
 .btn-sm { min-height: 40px; padding: 0 18px; border-radius: 10px; font-size: 14px; }
 .btn-block { display: flex; width: 100%; }
@@ -76,14 +77,18 @@
 .btn:focus-visible { outline: 2px solid var(--sfb-blue); outline-offset: 2px; }
 .btn-light:focus-visible, .btn-glass:focus-visible { outline-color: #fff; }
 
-/* A really disabled button looks the same everywhere. aria-disabled alone (the
-   plans page's "Current plan") keeps its own look and only loses the press and
-   the pointer. Busy keeps its colour so a button that is working does not look
-   like one that is switched off. */
-.btn:disabled { background: #e8ecf4; border-color: transparent; color: #7d89ad; cursor: not-allowed; }
-.btn[aria-disabled="true"] { cursor: default; }
-.btn[aria-busy="true"] { cursor: progress; }
-.btn[aria-busy="true"]:disabled { background: var(--sfb-blue); color: #fff; opacity: .8; }
+/* One disabled look, for :disabled and for aria-disabled (the plan builder uses
+   aria-disabled so the click can still say why). Two exceptions: the plans
+   page's "Current plan" (.is-current) keeps its own look, and a BUSY button keeps
+   its colour so one that is working does not look switched off. A link that is
+   disabled takes no clicks; a button that is busy takes none either. */
+.btn:disabled,
+.btn[aria-disabled="true"]:not(.is-current):not([aria-busy="true"]) { background: #e8ecf4; border-color: transparent; color: #7d89ad; cursor: not-allowed; }
+.btn[aria-disabled="true"].is-current { cursor: default; }
+a.btn[aria-disabled="true"] { pointer-events: none; }
+.btn[aria-busy="true"] { cursor: progress; pointer-events: none; }
+.btn[aria-busy="true"]:disabled,
+.btn[aria-busy="true"][aria-disabled="true"] { background: var(--sfb-blue); color: #fff; opacity: .8; }
 
 @media (pointer: coarse) { .btn-sm { min-height: 44px; } }
 
@@ -96,3 +101,15 @@
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
   .btn-glass { background: #2f5fd6; border-color: #fff; }
 }
+
+/* Dark pages (the app, dashboard and teacher pages): html.dark or body.dark.
+   The primary keeps its blue (white on it still holds); the outlined and text
+   levels lift to the page's light blue; the on-dark pair is unchanged. */
+:is(html.dark, body.dark) .btn-primary:hover, :is(html.dark, body.dark) .btn-blue:hover { background: #4a78ee; }
+:is(html.dark, body.dark) .btn-secondary, :is(html.dark, body.dark) .btn-outline { background: rgba(255, 255, 255, .04); color: #8db0ff; border-color: rgba(255, 255, 255, .2); }
+:is(html.dark, body.dark) .btn-secondary:hover, :is(html.dark, body.dark) .btn-outline:hover { border-color: #8db0ff; }
+:is(html.dark, body.dark) .btn-text { color: #8db0ff; }
+:is(html.dark, body.dark) .btn-text:hover { background: rgba(141, 176, 255, .14); }
+:is(html.dark, body.dark) .btn:focus-visible { outline-color: #8db0ff; }
+:is(html.dark, body.dark) .btn:disabled,
+:is(html.dark, body.dark) .btn[aria-disabled="true"]:not(.is-current):not([aria-busy="true"]) { background: rgba(255, 255, 255, .08); color: rgba(255, 255, 255, .4); }

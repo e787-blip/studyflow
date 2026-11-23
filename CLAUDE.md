@@ -122,14 +122,34 @@ the fonts or the no-build-step stack.
   pages, measures `offsetHeight` (a card still scaling in reads small by
   `getBoundingClientRect`), and fails on any button that differs or any
   page rule that re-sizes one.
-  **Migrated: index, about, pricing, login, teacher-login, contact, parent.
-  NOT yet: app, dashboard, teacher, teacher-build, lesson** (their own
-  `.btn-next`, `.btn-primary`, `.btn-quiet`, `.fill-submit`... are still
-  pills of 40-54px). The lesson is last and the riskiest (118 buttons, the
-  renderers and tests pin their class names, so keep the names and change
-  only the CSS). **This replaces two lesson decisions**: Next and the in-card
-  Checks stop being a blue pill with a soft glow, and the press stops being
-  the 2px sink with a spring back (the "FOCUS PRESS" above).
+  **Migrated: index, about, pricing, login, teacher-login, contact, parent,
+  app, dashboard, teacher, teacher-build. NOT yet: lesson** (its own
+  `.btn-next`, `.fill-submit`, `.write-submit`... are still blue pills with
+  a soft glow and the 2px sink press). The lesson is last and the riskiest
+  (118 buttons, the renderers and tests pin their class names, so keep the
+  names and change only the CSS). **This replaces two lesson decisions**:
+  Next and the in-card Checks stop being a blue pill with a soft glow, and
+  the press stops being the 2px sink with a spring back (the "FOCUS PRESS"
+  above).
+  What the second batch changed, so it is not re-litigated: the dashboard,
+  teacher and teacher-build `.btn-quiet` (outlined) is `.btn-secondary`; the
+  plan builder's `.btn-quiet` (a muted text button) is `.btn-text`; its
+  `.pill-btn` is `.btn-secondary .btn-sm`; its `.btn-next` keeps its name as
+  a hook but is `.btn .btn-primary .btn-block`. **Dense places use `.btn-sm`**
+  (rows, cards, the "Share progress" header action); page-level actions and
+  wizard steps use the 48px default. **`aria-disabled` is the same grey as
+  `:disabled`** (the plan builder disables Continue with it so a click can
+  still say why), except `.is-current` (plans page) and a busy button
+  (`aria-busy="true"`, which keeps its blue and takes no clicks). **Not
+  buttons, left alone on purpose**: icon buttons (`.icon-btn`, round), the
+  segmented controls, tabs (`.tab-btn`), filter chips and the nav bar's own
+  `.nav-cta` / `.nav-dashboard` (10px blocks, part of the bar). Dark mode:
+  `html.dark` and `body.dark` are both handled in `sf-buttons.css`.
+  `test_buttons.js` cannot load `teacher` and `teacher-build` as a teacher
+  (they send everyone else to sign-in, so a plain load would measure the
+  sign-in page and pass for the wrong reason); it measures their own markup
+  with the scripts stripped. Buttons their scripts write later are covered
+  by the stray-rule check only.
 - Card hover: blue border only. **No pop/scale transform** — this was a deliberate
   decision, don't reintroduce it.
 - **The streak mark is monochrome**, sized and shaped like the score pill beside

@@ -6,6 +6,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNWI4ZGY4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzI4NTFjOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0idXJsKCNnKSIvPgogIDxyZWN0IHg9IjciIHk9IjgiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNyIgcng9IjIuNSIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMjUiLz4KICA8cmVjdCB4PSIxMCIgeT0iOCIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3IiByeD0iMi41IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC45Ii8+CiAgPHJlY3QgeD0iMTMiIHk9IjEzIiB3aWR0aD0iNyIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSIjMzU2N2UwIi8+CiAgPHJlY3QgeD0iMTMiIHk9IjE2LjUiIHdpZHRoPSI1IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMzNTY3ZTAiIG9wYWNpdHk9IjAuNyIvPgogIDxyZWN0IHg9IjEzIiB5PSIyMCIgd2lkdGg9IjYiIGhlaWdodD0iMS41IiByeD0iMC43NSIgZmlsbD0iIzRhN2NmNiIgb3BhY2l0eT0iMC41Ii8+Cjwvc3ZnPg=="/>
 <title>Build your study plan · StudyFlow</title>
 <link rel="stylesheet" href="/fonts/fonts.css">
+<link rel="stylesheet" href="/sf-buttons.css">
 <style>
   /* ── The plan builder ───────────────────────────────────────────────────
      One question per screen, a progress bar, and the landing page's paper
@@ -107,12 +108,7 @@
   .drop strong u { color: var(--blue-deep); text-underline-offset: 3px; }
   .drop span { font-size: .8rem; color: var(--muted); }
   .src-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0 1rem; }
-  .pill-btn {
-    display: inline-flex; align-items: center; gap: .45rem; min-height: 40px; padding: .45rem 1rem; border-radius: 999px;
-    border: 1.5px solid var(--border); background: var(--white); font-size: .86rem; font-weight: 600; color: var(--ink); cursor: pointer; transition: border-color .2s;
-  }
-  .pill-btn:hover { border-color: var(--blue); }
-  .pill-btn svg { width: 16px; height: 16px; color: var(--blue-deep); }
+  /* Buttons (secondary, small): sf-buttons.css */
   .paste-hint { font-size: .78rem; color: var(--muted); align-self: center; margin-left: auto; }
 
   /* minmax(0, 1fr), not the implicit auto track: an auto track grows to the
@@ -196,21 +192,7 @@
 
   /* ── Actions: pinned to the thumb on phones ── */
   .step-actions { margin-top: 1.5rem; display: grid; gap: .5rem; }
-  .btn-next {
-    width: 100%; min-height: 54px; padding: 1rem; border: none; border-radius: 999px; cursor: pointer;
-    background: var(--blue-btn); color: #fff; font-size: 1.02rem; font-weight: 700;
-    box-shadow: 0 10px 26px -12px rgba(53,103,224,.8); transition: background-color .2s, box-shadow .2s;
-    display: flex; align-items: center; justify-content: center; gap: .5rem;
-  }
-  .btn-next:hover { background: var(--blue-deep); }
-  body.dark .btn-next:hover { background: #2851c8; }
-  .btn-next:active { transform: translateY(1px); }
-  /* Solid, not translucent: over the sticky bar on a phone a see-through
-     button let the card behind it show through the label. */
-  .btn-next[aria-disabled="true"] { background: #a9bdf0; box-shadow: none; cursor: not-allowed; }
-  body.dark .btn-next[aria-disabled="true"] { background: #2b3a66; color: #9aa6bd; }
-  .btn-quiet { border: 0; background: none; cursor: pointer; font-size: .92rem; font-weight: 600; color: var(--muted); padding: .7rem; border-radius: 999px; }
-  .btn-quiet:hover { color: var(--ink); background: var(--blue-mist); }
+  /* Buttons: sf-buttons.css. .btn-next stays as a hook, the look is .btn .btn-primary .btn-block. */
 
   .divider { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; color: var(--muted); font-size: 0.8rem; }
   .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
@@ -345,11 +327,11 @@
     <input type="file" id="camera-input" accept="image/*" capture="environment" hidden onchange="handleFiles(this.files)" />
 
     <div class="src-actions">
-      <button type="button" class="pill-btn" id="photo-btn">
+      <button type="button" class="btn btn-secondary btn-sm" id="photo-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
         Take a photo
       </button>
-      <button type="button" class="pill-btn" id="record-btn">
+      <button type="button" class="btn btn-secondary btn-sm" id="record-btn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
         Record a class
       </button>
@@ -372,18 +354,18 @@
     </div>
 
     <div class="step-actions">
-      <button type="button" class="btn-next" id="notes-next" onclick="goToStep2()">Continue</button>
+      <button type="button" class="btn btn-primary btn-block btn-next" id="notes-next" onclick="goToStep2()">Continue</button>
     </div>
 
     <!-- JOIN A CLASS -->
     <div id="join-class-wrap">
       <div id="join-class-closed" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;">
         <div style="font-size:0.85rem;color:var(--muted);">In a class? Enter your teacher's code so they can see your progress.</div>
-        <button onclick="document.getElementById('join-class-closed').style.display='none';document.getElementById('join-class-open').style.display='flex';document.getElementById('class-code-input').focus();" class="pill-btn" style="white-space:nowrap;flex-shrink:0;color:var(--blue-deep);">Join a class</button>
+        <button onclick="document.getElementById('join-class-closed').style.display='none';document.getElementById('join-class-open').style.display='flex';document.getElementById('class-code-input').focus();" class="btn btn-secondary btn-sm" style="flex-shrink:0;">Join a class</button>
       </div>
       <div id="join-class-open" style="display:none;align-items:center;gap:.6rem;">
         <input id="class-code-input" class="text-input" placeholder="SF-XXXXXX" maxlength="9" aria-label="Class code" style="flex:1;font-weight:700;letter-spacing:.06em;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()" />
-        <button onclick="joinClass()" class="btn-next" style="width:auto;min-height:50px;padding:0 1.3rem;box-shadow:none;">Join</button>
+        <button onclick="joinClass()" class="btn btn-primary btn-next" style="flex:none;">Join</button>
       </div>
       <div id="join-class-msg" style="display:none;margin-top:.6rem;font-size:0.82rem;font-weight:600;"></div>
     </div>
@@ -392,8 +374,8 @@
     <div id="camera-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;flex-direction:column;align-items:center;justify-content:center;gap:1rem;">
       <video id="camera-video" autoplay playsinline style="max-width:100%;max-height:60vh;border-radius:16px;"></video>
       <div style="display:flex;gap:1rem;">
-        <button onclick="captureCamera()" style="background:#fff;color:#1a1d2e;border:none;border-radius:999px;padding:.8rem 1.8rem;font-family:var(--sans);font-size:0.95rem;font-weight:700;cursor:pointer;">Capture</button>
-        <button onclick="closeCamera()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:.8rem 1.4rem;font-family:var(--sans);font-size:0.95rem;font-weight:600;cursor:pointer;">Cancel</button>
+        <button onclick="captureCamera()" class="btn btn-light">Capture</button>
+        <button onclick="closeCamera()" class="btn btn-glass">Cancel</button>
       </div>
       <canvas id="camera-canvas" style="display:none;"></canvas>
     </div>
@@ -405,7 +387,7 @@
     <h2 id="h-purpose" tabindex="-1">What's it <em>for?</em></h2>
     <p class="card-sub">We'll shape the questions like the real thing.</p>
     <div class="choices" role="radiogroup" aria-labelledby="h-purpose" data-group="purpose"></div>
-    <div class="step-actions"><button type="button" class="btn-next" data-next>Continue</button></div>
+    <div class="step-actions"><button type="button" class="btn btn-primary btn-block btn-next" data-next>Continue</button></div>
   </section>
 
   <!-- ── 3 · WHEN ───────────────────────────────────────────────────── -->
@@ -422,7 +404,7 @@
     <label class="field-label" for="deadline-input">Or pick the date</label>
     <input type="date" class="text-input" id="deadline-input" required />
     <div class="date-summary" id="date-summary" aria-live="polite" hidden></div>
-    <div class="step-actions"><button type="button" class="btn-next" data-next>Continue</button></div>
+    <div class="step-actions"><button type="button" class="btn btn-primary btn-block btn-next" data-next>Continue</button></div>
   </section>
 
   <!-- ── 4 · WHAT THEY KNOW ─────────────────────────────────────────── -->
@@ -431,7 +413,7 @@
     <h2 id="h-known" tabindex="-1">How well do you know it <em>right now?</em></h2>
     <p class="card-sub">Be honest. It decides where day 1 starts.</p>
     <div class="choices" role="radiogroup" aria-labelledby="h-known" data-group="known"></div>
-    <div class="step-actions"><button type="button" class="btn-next" data-next>Continue</button></div>
+    <div class="step-actions"><button type="button" class="btn btn-primary btn-block btn-next" data-next>Continue</button></div>
   </section>
 
   <!-- ── 5 · GOAL ───────────────────────────────────────────────────── -->
@@ -440,7 +422,7 @@
     <h2 id="h-goal" tabindex="-1">What would <em>success</em> look like?</h2>
     <p class="card-sub">This sets how hard the questions get.</p>
     <div class="choices" role="radiogroup" aria-labelledby="h-goal" data-group="goal"></div>
-    <div class="step-actions"><button type="button" class="btn-next" data-next>Continue</button></div>
+    <div class="step-actions"><button type="button" class="btn btn-primary btn-block btn-next" data-next>Continue</button></div>
   </section>
 
   <!-- ── 6 · GRADE (asked once, remembered) ─────────────────────────── -->
@@ -449,7 +431,7 @@
     <h2 id="h-grade" tabindex="-1">What grade are <em>you in?</em></h2>
     <p class="card-sub">So every question is worded for you, not for a textbook. We'll remember it.</p>
     <div class="choices grid" role="radiogroup" aria-labelledby="h-grade" data-group="grade"></div>
-    <div class="step-actions"><button type="button" class="btn-next" data-next>Continue</button></div>
+    <div class="step-actions"><button type="button" class="btn btn-primary btn-block btn-next" data-next>Continue</button></div>
   </section>
 
   <!-- ── 7 · FOCUS (optional, in their own words) ───────────────────── -->
@@ -467,8 +449,8 @@
     <textarea id="focus-input" maxlength="400" placeholder="e.g. The test is mostly on the light reactions. I keep mixing up the stroma and the thylakoid." style="min-height:120px"></textarea>
     <div class="notes-meta"><span></span><span id="focus-count">0 / 400</span></div>
     <div class="step-actions">
-      <button type="button" class="btn-next" data-next>Continue</button>
-      <button type="button" class="btn-quiet" id="focus-skip">Skip this</button>
+      <button type="button" class="btn btn-primary btn-block btn-next" data-next>Continue</button>
+      <button type="button" class="btn btn-text btn-block" id="focus-skip">Skip this</button>
     </div>
   </section>
 
@@ -479,7 +461,7 @@
     <p class="card-sub">Check it over, then we'll build it.</p>
     <ul class="review" id="review-list"></ul>
     <div class="step-actions">
-      <button type="button" class="btn-next" id="build-btn" onclick="generatePlan()">Build my study plan</button>
+      <button type="button" class="btn btn-primary btn-block btn-next" id="build-btn" onclick="generatePlan()">Build my study plan</button>
     </div>
     <p class="review-note" id="review-note"></p>
   </section>
@@ -1595,8 +1577,8 @@
       '<strong>2. Listen live.</strong> Start this during class, or play the recording out loud, ' +
       'and StudyFlow writes down what it hears.</div>' +
       '<div style="display:flex;gap:.5rem;flex-wrap:wrap;">' +
-      '<button type="button" class="pill-btn" onclick="triggerUpload(\'.vtt,.srt,.sbv,.txt\')">Upload a caption file</button>' +
-      '<button type="button" class="pill-btn" id="live-listen-btn" onclick="toggleLiveListen()" ' +
+      '<button type="button" class="btn btn-secondary btn-sm" onclick="triggerUpload(\'.vtt,.srt,.sbv,.txt\')">Upload a caption file</button>' +
+      '<button type="button" class="btn btn-secondary btn-sm" id="live-listen-btn" onclick="toggleLiveListen()" ' +
       'style="background:var(--blue-btn);border-color:var(--blue-btn);color:#fff;">Start listening</button></div>' +
       '<div id="live-listen-status" style="margin-top:.6rem;font-size:.8rem;color:var(--muted);" aria-live="polite"></div>';
     host.appendChild(box);
@@ -3221,7 +3203,7 @@
           '<h2 style="margin-bottom:.5rem;">Sign in <em>again</em></h2>' +
           '<p class="card-sub" style="margin:0 auto 1.4rem;">Your sign-in has expired. Your notes and answers are saved here, so you can pick up where you left off.</p>' +
           '<div style="display:grid;gap:.5rem;max-width:340px;margin:0 auto;">' +
-          '<a id="gen-signin-btn" class="btn-next" href="login.html" style="text-align:center;text-decoration:none;">Sign in</a>' +
+          '<a id="gen-signin-btn" class="btn btn-primary btn-block btn-next" href="login.html">Sign in</a>' +
           '</div></div>';
         return;
       }
@@ -3231,7 +3213,7 @@
           '<h2 style="margin-bottom:.5rem;">That\u2019s the limit for <em>today</em></h2>' +
           '<p class="card-sub" style="margin:0 auto 1.4rem;">Your account has used today\u2019s AI limit. It resets tomorrow, and your notes and answers are saved here until then.</p>' +
           '<div style="display:grid;gap:.5rem;max-width:340px;margin:0 auto;">' +
-          '<a class="btn-next" href="dashboard.html" style="text-align:center;text-decoration:none;">Back to my dashboard</a>' +
+          '<a class="btn btn-primary btn-block btn-next" href="dashboard.html">Back to my dashboard</a>' +
           '</div></div>';
         return;
       }
@@ -3251,8 +3233,8 @@
             '<p class="card-sub" style="margin:0 auto 1.4rem;font-size:.86rem;">Your notes and answers are saved. Retry usually works on the second go.</p>' +
             (window.__sfLastFail ? '<p class="card-sub" style="margin:-.6rem auto 1.2rem;font-size:.74rem;opacity:.7;word-break:break-word;">What went wrong: ' + escHtml(window.__sfLastFail) + '</p>' : '')) +
         '<div style="display:grid;gap:.5rem;max-width:340px;margin:0 auto;">' +
-        '<button id="gen-retry-btn" class="btn-next">Retry</button>' +
-        '<button id="gen-edit-btn" class="btn-quiet">Change my answers</button>' +
+        '<button id="gen-retry-btn" class="btn btn-primary btn-block btn-next">Retry</button>' +
+        '<button id="gen-edit-btn" class="btn btn-text btn-block">Change my answers</button>' +
         '</div></div>';
       var btn = document.getElementById('gen-retry-btn');
       if (btn && retryFn) btn.onclick = function() {

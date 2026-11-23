@@ -9,7 +9,12 @@ const { chromium } = require('./pw');
 let fails = 0; const assert = (c, m) => { if (!c) { fails++; process.exitCode = 1; } console.log((c ? 'PASS ' : 'FAIL ') + m); };
 const BASE = process.env.SF_BASE || 'http://localhost:8765/';
 // page -> fewest visible .btn it must show (so a renamed class cannot hide a page)
-const PAGES = { index: 5, about: 1, pricing: 3, login: 2, 'teacher-login': 1, contact: 1, parent: 0 };
+const PAGES = { index: 5, about: 1, pricing: 3, login: 2, 'teacher-login': 1, contact: 1, parent: 0, app: 2, dashboard: 3 };
+// These two send anyone without a teacher session to sign-in, so a plain load measures the
+// SIGN-IN page and passes for the wrong reason. They are measured from their own markup
+// (scripts stripped, every hidden panel shown) - which covers the static buttons and every
+// CSS rule; buttons the page's script writes later are covered by the stray-rule check.
+const STATIC = { teacher: 3, 'teacher-build': 8 };
 
 function measure() {
   const rows = [];
@@ -21,6 +26,7 @@ function measure() {
     rows.push({ cls: el.className, h: el.offsetHeight, rad: cs.borderTopLeftRadius, fs: cs.fontSize, fw: cs.fontWeight,
       ff: cs.fontFamily.split(',')[0].replace(/"/g, ''), bg: cs.backgroundColor, sh: cs.boxShadow,
       small: el.classList.contains('btn-sm'), text: el.classList.contains('btn-text'),
+      off: el.disabled || el.getAttribute('aria-disabled') === 'true',
       primary: el.classList.contains('btn-primary') || el.classList.contains('btn-blue') });
   });
   // The press, read from the stylesheets: the .btn:active rule in sf-buttons.css, and any
@@ -47,10 +53,19 @@ function measure() {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   await ctx.addInitScript(() => { try { localStorage.setItem('studyflow_user', JSON.stringify({ name: 'Test Learner', email: 't@example.com', tier: 'free', grade: '7' })); } catch (e) {} });
   const seen = {};
-  for (const [name, min] of Object.entries(PAGES)) {
+  for (const [name, min] of Object.entries(Object.assign({}, PAGES, STATIC))) {
     const page = await ctx.newPage(); const errs = []; page.on('pageerror', e => errs.push(String(e)));
-    await page.goto(BASE + name + '.html?cb=' + Date.now(), { waitUntil: 'load' });
-    await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(800);
+    if (STATIC[name]) {
+      const html = (await (await fetch(BASE + name + '.html')).text()).replace(/<script[\s\S]*?<\/script>/gi, '').replace('<head>', '<head><base href="' + BASE + '">');
+      await page.setContent(html, { waitUntil: 'load' });
+      await page.evaluate(() => document.fonts.ready);
+      await page.evaluate(() => document.querySelectorAll('body *').forEach(el => { if (/^(TEMPLATE|NOSCRIPT)$/.test(el.tagName)) return; el.removeAttribute('hidden'); if (getComputedStyle(el).display === 'none') el.style.setProperty('display', 'block', 'important'); }));
+    } else {
+      await page.goto(BASE + name + '.html?cb=' + Date.now(), { waitUntil: 'load' });
+      await page.evaluate(() => document.fonts.ready);
+      assert(page.url().indexOf('/' + name + '.html') > -1, name + ': stayed on its own page (' + page.url().replace(BASE, '') + ')');
+    }
+    await page.waitForTimeout(800);
     const m = await page.evaluate(measure);
     assert(m.rows.length >= min, name + ': measured ' + m.rows.length + ' buttons (needs ' + min + '+)');
     const key = r => [r.small ? 40 : 48, r.small ? '10px' : '12px'].join('/');
@@ -62,7 +77,7 @@ function measure() {
     assert(bad.length === 0, name + ': every button is 48px with 12px corners (40px with 10px for .btn-sm)' + (bad.length ? ' - ' + bad.map(r => r.cls + ' ' + Math.round(r.h) + 'px ' + r.rad).join('; ') : ''));
     const off = m.rows.filter(r => !r.small && (r.fs !== '15px' || r.fw !== '600' || r.ff !== 'DM Sans'));
     assert(off.length === 0, name + ': type is DM Sans 15px 600' + (off.length ? ' - ' + off.map(r => r.cls + ' ' + r.fs + '/' + r.fw + ' ' + r.ff).join('; ') : ''));
-    const prim = m.rows.filter(r => r.primary);
+    const prim = m.rows.filter(r => r.primary && !r.off);
     assert(prim.every(r => r.bg === 'rgb(53, 103, 224)' || r.bg === 'rgb(42, 82, 212)'), name + ': every primary is #3567e0' + (prim.length ? '' : ' (none on this page)'));
     assert(m.rows.every(r => r.sh === 'none'), name + ': flat, no shadow on any button');
     assert(m.press === '0.97', name + ': the press is scale .97 (' + m.press + ')');

@@ -7,6 +7,7 @@
 <title>StudyFlow — New assignment</title>
 <script>try { if (localStorage.getItem('studyflow_dark') === '1') document.documentElement.className += ' dark'; } catch (e) {}</script>
 <link rel="stylesheet" href="/fonts/fonts.css">
+<link rel="stylesheet" href="/sf-buttons.css">
 <!--
   THE ASSIGNMENT BUILDER (Oct 2026) - app.html, for a teacher.
 
@@ -46,7 +47,7 @@
     --right:#4cc9a6; --right-tint:rgba(76,201,166,.14); --material:rgba(12,15,22,.72);
     color-scheme:dark;
   }
-  .btn-quiet:active, .chip:active, .qtools button:active { transform:scale(.96); }
+  .chip:active, .qtools button:active { transform:scale(.96); }
   .chip, .qtools button { transition:transform .12s, background .2s, border-color .2s, color .2s; }
   @media (prefers-reduced-transparency: reduce) {
     .stickybar { background:var(--soft); -webkit-backdrop-filter:none; backdrop-filter:none; }
@@ -111,13 +112,7 @@
   .linkbtn:hover { text-decoration:underline; }
 
   .foot { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:1.4rem; }
-  .btn { display:inline-flex; align-items:center; justify-content:center; gap:.45rem; height:44px; padding:0 20px; border-radius:999px; border:1px solid transparent; font-weight:700; font-size:.92rem; cursor:pointer; white-space:nowrap; transition:transform .12s, background .2s, border-color .2s, color .2s; }
-  .btn:active { transform:scale(.96); }
-  .btn-primary { background:var(--blue); color:#fff; }
-  .btn-primary:hover { background:var(--blue-ink); }
-  .btn-quiet { background:var(--surface); border-color:var(--border-2); color:var(--ink); }
-  .btn-quiet:hover { border-color:var(--blue); color:var(--blue-ink); }
-  .btn[disabled], .btn[aria-disabled="true"] { opacity:.5; pointer-events:none; }
+  /* Buttons: sf-buttons.css (one set for every page). */
 
   .rev { display:grid; gap:2px; }
   .rev-row { display:flex; gap:12px; align-items:baseline; padding:.65rem 0; border-bottom:1px solid var(--border); }
@@ -214,7 +209,7 @@
     <h1 id="h-kind">What is it for?</h1>
     <p class="lead">This sets how much teaching comes before the questions.</p>
     <div class="choices" id="kind-choices"></div>
-    <div class="foot"><button class="btn btn-quiet" data-back>Back</button><span></span></div>
+    <div class="foot"><button class="btn btn-secondary" data-back>Back</button><span></span></div>
   </section>
 
   <!-- 3. GRADE -->
@@ -223,7 +218,7 @@
     <h1 id="h-grade">What grade do you teach this class?</h1>
     <p class="lead">The same notes read differently in 6th grade and in AP. We'll remember it for next time.</p>
     <div class="chips" id="grade-chips"></div>
-    <div class="foot"><button class="btn btn-quiet" data-back>Back</button><button class="btn btn-primary" id="go-grade">Continue</button></div>
+    <div class="foot"><button class="btn btn-secondary" data-back>Back</button><button class="btn btn-primary" id="go-grade">Continue</button></div>
   </section>
 
   <!-- 4. GOALS -->
@@ -233,7 +228,7 @@
     <p class="lead">Suggested from your notes. Untick, edit, or add your own. Every question will check one of these, and your results are grouped by them.</p>
     <div id="goals-box"></div>
     <button class="linkbtn" id="add-goal" type="button">+ Add a goal</button>
-    <div class="foot"><button class="btn btn-quiet" data-back>Back</button><button class="btn btn-primary" id="go-goals">Continue</button></div>
+    <div class="foot"><button class="btn btn-secondary" data-back>Back</button><button class="btn btn-primary" id="go-goals">Continue</button></div>
   </section>
 
   <!-- 5. MISCONCEPTIONS -->
@@ -242,7 +237,7 @@
     <h1 id="h-misc">What do students get wrong every year?</h1>
     <p class="lead">These become the tempting wrong answers, so a student who believes one picks it, and you see who does.</p>
     <textarea class="inp" id="a-misc" maxlength="1200" style="min-height:120px" placeholder="e.g. They think plants get their food from the soil."></textarea>
-    <div class="foot"><button class="btn btn-quiet" data-back>Back</button><button class="btn btn-primary" id="go-misc">Continue</button></div>
+    <div class="foot"><button class="btn btn-secondary" data-back>Back</button><button class="btn btn-primary" id="go-misc">Continue</button></div>
   </section>
 
   <!-- 6. LENGTH AND DUE -->
@@ -261,7 +256,7 @@
     <label class="f">Question formats</label>
     <div class="chips" id="fmt-chips"></div>
     <p class="hint" id="fmt-note"></p>
-    <div class="foot"><button class="btn btn-quiet" data-back>Back</button><button class="btn btn-primary" id="go-length">Continue</button></div>
+    <div class="foot"><button class="btn btn-secondary" data-back>Back</button><button class="btn btn-primary" id="go-length">Continue</button></div>
   </section>
 
   <!-- 7. REVIEW -->
@@ -270,7 +265,7 @@
     <h1 id="h-review">Ready to write it?</h1>
     <p class="lead">Nothing goes to students yet. You'll read every question first.</p>
     <div class="rev" id="rev"></div>
-    <div class="foot"><button class="btn btn-quiet" data-back>Back</button><button class="btn btn-primary" id="go-build">Write the assignment</button></div>
+    <div class="foot"><button class="btn btn-secondary" data-back>Back</button><button class="btn btn-primary" id="go-build">Write the assignment</button></div>
   </section>
 
   <!-- 8. BUILDING -->
@@ -295,11 +290,11 @@
     <div id="qlist"></div>
     <div class="addbar" id="addbar">
       <select class="inp" id="add-type" aria-label="Format of the question to add"></select>
-      <button class="btn btn-quiet" id="add-q" type="button">Add a question</button>
+      <button class="btn btn-secondary" id="add-q" type="button">Add a question</button>
     </div>
     <div class="stickybar">
       <span class="saved" id="saved-note"></span>
-      <button class="btn btn-quiet" id="save-draft" type="button">Save draft</button>
+      <button class="btn btn-secondary" id="save-draft" type="button">Save draft</button>
       <button class="btn btn-primary" id="publish" type="button">Publish to class</button>
     </div>
   </section>
@@ -921,7 +916,7 @@
         if (tries < 2) { setTimeout(attempt, 2500); return; }
         $('build-box').innerHTML = '<h1 style="font-size:1.6rem">That didn’t work</h1>' +
           '<p class="lead">The writer didn’t answer in time. Your answers are all still here.</p>' +
-          '<div class="foot" style="justify-content:center"><button class="btn btn-quiet" type="button" id="b-back">Change something</button>' +
+          '<div class="foot" style="justify-content:center"><button class="btn btn-secondary" type="button" id="b-back">Change something</button>' +
           '<button class="btn btn-primary" type="button" id="b-retry">Try again</button></div>';
         $('b-retry').onclick = build;
         $('b-back').onclick = function () { show('review'); };
