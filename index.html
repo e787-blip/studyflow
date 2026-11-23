@@ -11,6 +11,7 @@
 <meta property="og:url" content="https://studyflow-ten-vert.vercel.app/" />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNWI4ZGY4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzI4NTFjOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0idXJsKCNnKSIvPgogIDxyZWN0IHg9IjciIHk9IjgiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNyIgcng9IjIuNSIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMjUiLz4KICA8cmVjdCB4PSIxMCIgeT0iOCIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3IiByeD0iMi41IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC45Ii8+CiAgPHJlY3QgeD0iMTMiIHk9IjEzIiB3aWR0aD0iNyIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSIjMzU2N2UwIi8+CiAgPHJlY3QgeD0iMTMiIHk9IjE2LjUiIHdpZHRoPSI1IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMzNTY3ZTAiIG9wYWNpdHk9IjAuNyIvPgogIDxyZWN0IHg9IjEzIiB5PSIyMCIgd2lkdGg9IjYiIGhlaWdodD0iMS41IiByeD0iMC43NSIgZmlsbD0iIzRhN2NmNiIgb3BhY2l0eT0iMC41Ii8+Cjwvc3ZnPg=="/>
 <link rel="stylesheet" href="/fonts/fonts.css">
+<link rel="stylesheet" href="/sf-buttons.css">
 <style>
 /* The landing page. Design rules this file keeps (CLAUDE.md wins over the design skills):
    one blue (#4a7cf6) on navy and paper, Instrument Serif + DM Sans, card hover
@@ -171,32 +172,15 @@ nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .1
   .nav-logo svg { width: 132px; height: 34px; }
 }
 
-/* ── BUTTONS ── */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
-  font-family: var(--sans); font-size: .95rem; font-weight: 600; line-height: 1;
-  padding: .95rem 1.55rem; border-radius: 999px; border: 1.5px solid transparent;
-  text-decoration: none; cursor: pointer; white-space: nowrap;
-  transition: background-color .2s, border-color .2s, color .2s, box-shadow .2s;
-}
-.btn:active { transform: translateY(1px); }
-.btn-light { background: #f7f9ff; color: var(--night); box-shadow: 0 6px 24px -6px rgba(0, 0, 0, .45); }
-.btn-light:hover { background: var(--blue-soft); }
-.btn-glass { background: rgba(255, 255, 255, .07); color: #fff; border-color: rgba(255, 255, 255, .3); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .2); }
-.btn-glass:hover { background: rgba(255, 255, 255, .15); border-color: rgba(255, 255, 255, .5); }
-.btn-blue { background: var(--blue-btn); color: #fff; box-shadow: 0 8px 24px -8px rgba(53, 103, 224, .7); }
-.btn-blue:hover { background: var(--blue-deep); }
-.btn-outline { background: var(--card); color: var(--blue-deep); border-color: var(--line-strong); }
-.btn-outline:hover { border-color: var(--blue); }
-@media (prefers-reduced-transparency: reduce) { .btn-glass { -webkit-backdrop-filter: none; backdrop-filter: none; } }
-@media (pointer: coarse) { .btn, .nav-cta, .nav-dashboard { min-height: 44px; } }
+/* ── BUTTONS: sf-buttons.css. Only the nav's own buttons are sized here. ── */
+@media (pointer: coarse) { .nav-cta, .nav-dashboard { min-height: 44px; } }
 /* Phones: the one action stays in the thumb zone once the hero is behind you,
    and gets out of the way at the final call to action. */
 .sticky-cta, .edge-fade { display: none; }
 @media (max-width: 760px) {
   .sticky-cta {
     display: inline-flex; position: fixed; z-index: 90; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-    transform: translate3d(-50%, 160%, 0); transition: transform .55s var(--ease-out);
+    transform: translate3d(-50%, 160%, 0); transition: transform .55s var(--ease-out), scale .15s ease-out;
     box-shadow: 0 14px 30px -10px rgba(26, 40, 90, .6), inset 0 1.5px 0 rgba(255, 255, 255, .25);
   }
   .sticky-cta.show { transform: translate3d(-50%, 0, 0); }
@@ -352,7 +336,7 @@ nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .1
   .band { top: calc(50% + 26px); }
   .hero-sub, .band-p { font-size: .95rem; margin-bottom: 1rem; }
   .hero-ctas { flex-wrap: nowrap; }
-  .hero-ctas .btn { padding: .72rem 1.05rem; font-size: .86rem; }
+  .hero-ctas .btn { padding-inline: 1.05rem; font-size: .86rem; }
 }
 
 /* ── PROOF STRIP: stats + the one marquee ── */
@@ -870,7 +854,6 @@ nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .1
 .cta h2 em { font-style: italic; color: #d6e3ff; }
 .cta p { color: rgba(255, 255, 255, .86); font-size: 1.08rem; max-width: 42ch; }
 .cta .row { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
-.cta .btn-light { color: var(--blue-deep); box-shadow: 0 10px 30px -10px rgba(10, 20, 60, .6); }
 .fan { position: relative; height: 380px; perspective: 1300px; }
 .fan-inner { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateY(calc(-24deg + var(--p, .5) * 30deg)) rotateX(calc(12deg - var(--p, .5) * 10deg)); }
 /* Dealt like a hand of cards: each day lies on top of the one before, so the
@@ -943,7 +926,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
    on pricing cards, tracked-caps plan names. The hero keeps its one italic. ── */
 .h2 em, .fx-text h3 em, .cta h2 em, .band-h em, .cw-head .h2 em, .band-3 .band-h em { font-style: normal; color: inherit; }
 .env-glow, .cw-stage::before, .cta::before, .pcard.pro::before { display: none; }
-.btn-glass { -webkit-backdrop-filter: none; backdrop-filter: none; }
 .js [data-reveal="words"] .word, .js [data-reveal="words"]:not(.in) .word { opacity: 1; transform: none; transition: none; }
 .example.in-view .hold-btn:not(.is-done) .dot::after { display: none; animation: none; }
 .pcard, .pcard.pro { box-shadow: none; }
@@ -953,8 +935,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   .fan-card { transform: translate3d(calc((var(--i) - 1.5) * 66px), calc((var(--i) - 1.5) * -14px), calc((3 - var(--i)) * -40px)) rotateZ(calc((var(--i) - 1.5) * 6deg)); }
   .fan-card:not(:last-child) .dc-foot > span:first-child { visibility: hidden; }
 }
-.btn { border-radius: 12px; }
-.btn-light, .btn-blue, .cta .btn-light { box-shadow: none; }
 .dc { box-shadow: 0 2px 6px rgba(10, 20, 60, .18); }
 .card-header::before { display: none; }
 .board { background: var(--night); }

@@ -38,6 +38,7 @@ Each HTML file is self-contained: markup, CSS and JS in one file.
 | `sf-illustrate.js` | ~22 KB | **Makes a real illustration ready for a phone** - the label re-setting, crop and credit, in an off-screen shadow root after a sanitise pass. ONE implementation for the offline pipeline (the 14 library files rebuild byte-identical through it) and for a picture found live - see "A real illustration for any lesson" |
 | `api/illustration.js` | ~22 KB | **Finds a real illustration for any lesson on Wikimedia Commons**: search, language-copy collapsing, licence/size/shape/noise filters, then a model that SEES the 5 best and refuses the wrong ones. `?file=` returns a cleaned SVG. CDN-cached 30 days |
 | `sf-nav.js` | ~19 KB | **The top bar of EVERY page.** The marketing pages that sit in the nav's own links (Help, Our story, Plans) get `index.html`'s nav in its light state; the app pages (`app`, `dashboard`, `teacher`, `teacher-build`) get the same bar in app mode, holding their own controls. **`lesson.html` no longer loads it** (Nov 2026, the Focus bar). `index.html` keeps its own copy - see "The site nav" |
+| `sf-buttons.css` | ~5 KB | **The one button** (`.btn`, `.btn-primary`, `.btn-secondary`, `.btn-text`, `.btn-sm`...). Linked by every migrated page after `fonts/fonts.css`; see "ONE button" in the design system. Nov 2026 |
 | `sf-smooth.js` | ~11 KB | **Smooth wheel scrolling** for `index.html`, `about.html`, `pricing.html` (window.`SFSmooth`). Off for touch and reduced motion - see "Smooth scroll and the two showcases" (now: the findings wall and the features sheet) |
 | `sf-guide.js` | ~40 KB | **The guided walkthrough.** The Walkthrough button opens a sheet over the question just answered and asks its steps one at a time, written for THAT question by one model call; on a cell lesson a drawn cell shows the protein travelling. Loaded by `lesson.html` after `sf-questions.js` - see "The guided walkthrough" |
 | `sf-auth.js` | ~8 KB | The signed-in Firebase user's ID token, for pages that do not load Firebase; `apiFetch` sends it with every AI call, and `refreshTier` writes the server's plan into `studyflow_user.tier` on every load. Loaded by `app.html`, `dashboard.html`, `lesson.html`, `teacher.html`, `teacher-build.html`, `pricing.html` — see "The classroom" and "Paid plans are the server's" |
@@ -98,6 +99,37 @@ the fonts or the no-build-step stack.
   that it renews monthly, and that it can be cancelled in Manage plan.
   California's auto-renewal law wants them next to the button. A price
   change is a change to the price, the `.renew` line and the Stripe price.
+- **ONE button, `sf-buttons.css` (Nov 22, the owner: "get them to all be the
+  same ... 12px corners, with .97").** Measured first: the main button was
+  40, 47, 48, 49, 50, 52 and 54px tall on ten pages, with pill, 10, 12 and
+  14px corners, three blues (`#3567e0`, `#3b6fe8`, `#4a7cf6`) and four
+  press feels, and only two pages had a disabled or a focus style. Now:
+  **`.btn` is 48px with 12px corners, DM Sans 15px 600, flat (no shadow, no
+  glow)**; `.btn-sm` is 40px with 10px (corners are a quarter of the height;
+  the top bar's buttons were already that); levels are `.btn-primary`
+  (`#3567e0`, white on it is 5.0:1; the brand blue `#4a7cf6` is 3.8:1 and
+  is NOT a button colour), `.btn-secondary`, `.btn-text`, and on a blue or
+  navy section `.btn-light` / `.btn-glass` (flat, no blur). `.btn-blue` and
+  `.btn-outline` are the old names, still accepted. **Pills are for tags
+  and chips, rectangles are for things you press.** Hover changes colour
+  only. **The press is the `scale` PROPERTY (.97, 150ms ease-out), never
+  `transform`**: the landing page's floating button positions itself with
+  transform and jumped the moment it was pressed. Only a real `:disabled`
+  goes grey; `aria-disabled` (the plans page's "Current plan") keeps its
+  look; `aria-busy="true"` keeps its colour. **Do not put height, padding,
+  radius or a press on a page's own `.btn`**: link the file, use the
+  classes, delete the local CSS. `test_buttons.js` (morning suite) loads the
+  pages, measures `offsetHeight` (a card still scaling in reads small by
+  `getBoundingClientRect`), and fails on any button that differs or any
+  page rule that re-sizes one.
+  **Migrated: index, about, pricing, login, teacher-login, contact, parent.
+  NOT yet: app, dashboard, teacher, teacher-build, lesson** (their own
+  `.btn-next`, `.btn-primary`, `.btn-quiet`, `.fill-submit`... are still
+  pills of 40-54px). The lesson is last and the riskiest (118 buttons, the
+  renderers and tests pin their class names, so keep the names and change
+  only the CSS). **This replaces two lesson decisions**: Next and the in-card
+  Checks stop being a blue pill with a soft glow, and the press stops being
+  the 2px sink with a spring back (the "FOCUS PRESS" above).
 - Card hover: blue border only. **No pop/scale transform** — this was a deliberate
   decision, don't reintroduce it.
 - **The streak mark is monochrome**, sized and shaped like the score pill beside

@@ -8,6 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNWI4ZGY4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzI4NTFjOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0idXJsKCNnKSIvPgogIDxyZWN0IHg9IjciIHk9IjgiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNyIgcng9IjIuNSIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMjUiLz4KICA8cmVjdCB4PSIxMCIgeT0iOCIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3IiByeD0iMi41IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC45Ii8+CiAgPHJlY3QgeD0iMTMiIHk9IjEzIiB3aWR0aD0iNyIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSIjMzU2N2UwIi8+CiAgPHJlY3QgeD0iMTMiIHk9IjE2LjUiIHdpZHRoPSI1IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMzNTY3ZTAiIG9wYWNpdHk9IjAuNyIvPgogIDxyZWN0IHg9IjEzIiB5PSIyMCIgd2lkdGg9IjYiIGhlaWdodD0iMS41IiByeD0iMC43NSIgZmlsbD0iIzRhN2NmNiIgb3BhY2l0eT0iMC41Ii8+Cjwvc3ZnPg=="/>
 <title>Sign in · StudyFlow</title>
 <link rel="stylesheet" href="/fonts/fonts.css">
+<link rel="stylesheet" href="/sf-buttons.css">
 <style>
   /* The sign-in page speaks the landing page's language (index.html): night
      navy and notebook paper, one blue, Instrument Serif over DM Sans, DM Mono
@@ -160,17 +161,8 @@
   .alert.info { background: var(--blue-mist); border-color: #c8d7fb; color: var(--blue-deep); }
   .alert-act { display: inline; margin-left: .25rem; padding: 0; border: 0; background: none; cursor: pointer; font-weight: 700; color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 
-  .btn-google {
-    width: 100%; min-height: 50px; border-radius: 999px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: .7rem;
-    background: var(--card); border: 1.5px solid var(--line-strong);
-    font-size: .95rem; font-weight: 600; color: var(--ink);
-    transition: border-color .2s, background-color .2s;
-  }
-  .btn-google:hover { border-color: var(--blue); }
-  .btn-google:active { transform: translateY(1px); }
-  .btn-google svg { width: 18px; height: 18px; flex: none; }
-  .btn-google:disabled { opacity: .6; cursor: default; }
+  /* Buttons: sf-buttons.css. Google's is a secondary button with ink text. */
+  .btn-google { color: var(--ink); }
   .or { display: flex; align-items: center; gap: .9rem; margin: 1.3rem 0; color: var(--muted); font-size: .8rem; }
   .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line-strong); opacity: .7; }
 
@@ -231,16 +223,6 @@
   .code-box[hidden] { display: none; }
   #code { text-transform: uppercase; letter-spacing: .08em; font-family: var(--mono); font-weight: 500; }
 
-  .btn-primary {
-    position: relative; width: 100%; min-height: 52px; border: 0; border-radius: 999px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: .55rem;
-    background: var(--blue-btn); color: #fff; font-size: 1rem; font-weight: 700;
-    box-shadow: 0 10px 24px -10px rgba(53, 103, 224, .75);
-    transition: background-color .2s, box-shadow .2s;
-  }
-  .btn-primary:hover { background: var(--blue-deep); }
-  .btn-primary:active { transform: translateY(1px); }
-  .btn-primary:disabled { cursor: progress; background: #6f93ec; box-shadow: none; }
   .spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(255, 255, 255, .35); border-top-color: #fff; animation: spin .8s linear infinite; display: none; }
   .btn-primary[aria-busy="true"] .spin { display: block; }
 
@@ -345,7 +327,7 @@
     <div class="alert" id="alert" role="alert" aria-live="assertive"></div>
 
     <div id="social">
-      <button type="button" class="btn-google" id="google-btn">
+      <button type="button" class="btn btn-secondary btn-block btn-google" id="google-btn">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -407,7 +389,7 @@
         </div>
       </div>
 
-      <button type="submit" class="btn-primary" id="submit-btn" aria-busy="false">
+      <button type="submit" class="btn btn-primary btn-block" id="submit-btn" aria-busy="false">
         <span class="spin" aria-hidden="true"></span>
         <span id="submit-label">Sign in</span>
       </button>
@@ -417,7 +399,7 @@
       <div class="sent-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
       <h2>Check your <em>inbox</em></h2>
       <p id="sent-text">If there is an account for that email, a reset link is on its way.</p>
-      <button type="button" class="btn-primary" id="sent-back"><span id="sent-back-label">Back to sign in</span></button>
+      <button type="button" class="btn btn-primary btn-block" id="sent-back"><span id="sent-back-label">Back to sign in</span></button>
     </div>
 
     <p class="switch" id="switch"><span id="switch-text">New to StudyFlow?</span> <button type="button" class="link" id="switch-btn">Create a free account</button></p>

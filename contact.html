@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Contact & Support — StudyFlow</title>
 <link rel="stylesheet" href="/fonts/fonts.css">
+<link rel="stylesheet" href="/sf-buttons.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -102,15 +103,7 @@
   .topic-btn:hover { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
   .topic-btn.selected { border-color: var(--blue); background: var(--blue); color: #fff; }
 
-  .btn-submit {
-    width: 100%; padding: 1rem; background: var(--blue); color: #fff;
-    border: none; border-radius: 14px; font-family: var(--sans);
-    font-size: 0.95rem; font-weight: 600; cursor: pointer;
-    transition: background .2s, transform .2s, box-shadow .2s;
-    box-shadow: 0 4px 16px rgba(74,124,246,.3);
-  }
-  .btn-submit:hover { background: #3567e0; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(74,124,246,.4); }
-  .btn-submit:active { transform: none; }
+  /* Button: sf-buttons.css */
 
   .success-msg {
     display: none; text-align: center; padding: 2rem;
@@ -208,7 +201,7 @@
           <textarea class="form-input" id="contact-message" placeholder="Tell us what's on your mind..."></textarea>
         </div>
 
-        <button class="btn-submit" onclick="submitForm()">Send message →</button>
+        <button class="btn btn-primary btn-block btn-submit" onclick="submitForm()">Send message →</button>
       </div>
 
       <div class="success-msg" id="success-msg">
@@ -273,6 +266,7 @@
 
     var btn = document.querySelector('.btn-submit');
     btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
     btn.textContent = 'Sending...';
 
     // Send via Formspree — free contact form service
@@ -291,6 +285,8 @@
       if (data.ok || data.next) {
         btn.textContent = '✓ Message sent!';
         btn.style.background = '#38bfa1';
+        btn.style.color = '#fff';
+        btn.removeAttribute('aria-busy');
         document.getElementById('contact-name').value = '';
         document.getElementById('contact-email').value = '';
         document.getElementById('contact-message').value = '';
@@ -301,6 +297,7 @@
     .catch(function() {
       // No email address to fall back to: say it did not send, and keep what they wrote.
       btn.disabled = false;
+      btn.removeAttribute('aria-busy');
       btn.textContent = 'Couldn\u2019t send \u2014 try again';
     });
   }

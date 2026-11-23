@@ -11,6 +11,7 @@
 <meta property="og:url" content="https://studyflow-ten-vert.vercel.app/pricing.html" />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNWI4ZGY4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzI4NTFjOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0idXJsKCNnKSIvPgogIDxyZWN0IHg9IjciIHk9IjgiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNyIgcng9IjIuNSIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMjUiLz4KICA8cmVjdCB4PSIxMCIgeT0iOCIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3IiByeD0iMi41IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC45Ii8+CiAgPHJlY3QgeD0iMTMiIHk9IjEzIiB3aWR0aD0iNyIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSIjMzU2N2UwIi8+CiAgPHJlY3QgeD0iMTMiIHk9IjE2LjUiIHdpZHRoPSI1IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMzNTY3ZTAiIG9wYWNpdHk9IjAuNyIvPgogIDxyZWN0IHg9IjEzIiB5PSIyMCIgd2lkdGg9IjYiIGhlaWdodD0iMS41IiByeD0iMC43NSIgZmlsbD0iIzRhN2NmNiIgb3BhY2l0eT0iMC41Ii8+Cjwvc3ZnPg=="/>
 <link rel="stylesheet" href="/fonts/fonts.css">
+<link rel="stylesheet" href="/sf-buttons.css">
 <script>
   /* Runs before the first paint. `js` gates the reveal states, so a page whose
      script fails still shows everything. The springs: CSS cannot run a spring,
@@ -193,26 +194,7 @@ ul { list-style: none; }
 .lede { color: var(--muted); font-size: 1.08rem; line-height: 1.7; max-width: 46ch; }
 .eyebrow { font-family: var(--mono); font-weight: 500; font-size: .74rem; line-height: 1; letter-spacing: .14em; text-transform: uppercase; color: var(--blue-deep); }
 
-/* ── BUTTONS ──
-   Feedback lives on the PRESS: :active fires on pointer-down and the release
-   springs back. Hover changes colour only (no lift, no pop: design system). */
-.btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
-  font-family: var(--sans); font-size: .95rem; font-weight: 600; letter-spacing: -.005em; line-height: 1;
-  padding: .95rem 1.55rem; border-radius: 999px; border: 1.5px solid transparent;
-  text-decoration: none; cursor: pointer; white-space: nowrap; user-select: none; -webkit-user-select: none;
-  transition: transform var(--spring-fast-ms) var(--spring-fast), background-color .2s, border-color .2s, color .2s, box-shadow .2s;
-}
-.btn:active { transform: scale(.97); transition-duration: 80ms, .2s, .2s, .2s, .2s; transition-timing-function: ease-out; }
-.btn-blue { background: var(--blue-btn); color: #fff; box-shadow: 0 8px 24px -8px rgba(53, 103, 224, .7), inset 0 1px 0 rgba(255, 255, 255, .26); }
-.btn-blue:hover { background: var(--blue-deep); }
-.btn-light { background: #f7f9ff; color: var(--blue-deep); box-shadow: 0 6px 24px -8px rgba(0, 0, 0, .4), inset 0 1px 0 #fff; }
-.btn-light:hover { background: var(--blue-soft); }
-.btn-outline { background: var(--card); color: var(--blue-deep); border-color: var(--line-strong); }
-.btn-outline:hover { border-color: var(--blue); }
-.btn-glass { background: rgba(255, 255, 255, .12); color: #fff; border-color: rgba(255, 255, 255, .42); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, .3); }
-.btn-glass:hover { background: rgba(255, 255, 255, .22); border-color: rgba(255, 255, 255, .62); }
-@media (pointer: coarse) { .btn { min-height: 44px; } }
+/* ── BUTTONS: sf-buttons.css (one set for every page). ── */
 
 /* A small capsule for a label that sits on the page's light, not on a card. */
 .chip-glass {
@@ -373,7 +355,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   .comet { display: none; }
   .js [data-reveal="up"]:not(.in), .js [data-reveal="glass"]:not(.in), .js .cta:not(.in) .dcard-in { transform: none; }
   .js [data-reveal="up"], .js [data-reveal="glass"], .js .dcard-in { transition: opacity .25s ease; }
-  .btn:active { transform: none; }
   .sheen { display: none; }
 }
 /* Translucency off: the same surfaces, frosted solid. Also what a browser
@@ -551,7 +532,6 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 .h1 em, .h2 em, .cta h2 em { font-style: normal; color: inherit; }
 .aura, .sheen, .comet, .cta::before { display: none; }
 .glass { -webkit-backdrop-filter: none; backdrop-filter: none; }
-.btn { border-radius: 12px; }
 .cta { background: var(--blue-deep); }
 .pname { font-family: var(--sans); font-size: .95rem; font-weight: 600; letter-spacing: 0; text-transform: none; }
 .glass.blue, .glass.night { box-shadow: none; }

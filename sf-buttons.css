@@ -1,0 +1,98 @@
+/* StudyFlow buttons: ONE set for every page (Nov 2026).
+
+   Why this file exists: every page had its own .btn. Measured on 10 pages,
+   the main button was 40, 47, 48, 49, 50, 52 and 54px tall, had four corner
+   styles (pill, 10, 12, 14px), three blues, four different press feels, and
+   only two pages had a disabled or a focus style. The owner chose: 12px
+   corners, 48px, flat, and a press that shrinks to .97.
+
+   The set
+     size     .btn          48px, 12px corners      (the default)
+              .btn-sm       40px, 10px corners      (bars, tables; 44px on touch)
+     level    .btn-primary  filled blue, the ONE main action of a card or screen
+              .btn-secondary outlined                (.btn-blue / .btn-outline are the
+                                                      old names, kept so markup need
+                                                      not change at once)
+              .btn-text     no border
+     on dark  .btn-light    the primary on a blue or navy section
+              .btn-glass    the secondary on a blue or navy section (flat: no blur)
+     layout   .btn-block    full width
+
+   Rules that keep it one button:
+   - Corners are a quarter of the height (48 -> 12, 40 -> 10). Pills are for
+     tags and chips, rectangles are for actions you press.
+   - Hover changes colour ONLY. No lift, no pop, no shadow (design system).
+   - Press is the `scale` PROPERTY, not `transform`: a button that positions
+     itself with transform (the landing page's floating button) would jump the
+     moment it was pressed. 150ms ease-out both ways, as the posts say.
+   - A button is never shorter than 48px (40px for .btn-sm). Do not set a page's
+     own height, padding or radius on a .btn; add a size class instead.
+   - The blue is #3567e0: white on it is 5.0:1. The brand blue #4a7cf6 is 3.8:1
+     and fails for text, so it is not a button colour.
+   - New page: link this file, use these classes, delete any local .btn CSS. */
+
+:root {
+  --sfb-blue: #3567e0;
+  --sfb-blue-deep: #2a52d4;
+  --sfb-soft: #e3ecff;
+  --sfb-line: #c9d5f2;
+  --sfb-paper: #fdfdff;
+}
+
+.btn {
+  box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 48px; padding: 0 24px;
+  border: 1.5px solid transparent; border-radius: 12px;
+  font-family: var(--sans, "DM Sans", system-ui, sans-serif);
+  font-size: 15px; font-weight: 600; line-height: 1.2; letter-spacing: -.005em;
+  text-decoration: none; white-space: nowrap; cursor: pointer;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  transition: scale .15s ease-out, background-color .15s, border-color .15s, color .15s, opacity .15s;
+}
+.btn svg { width: 18px; height: 18px; flex: none; }
+
+.btn-sm { min-height: 40px; padding: 0 18px; border-radius: 10px; font-size: 14px; }
+.btn-block { display: flex; width: 100%; }
+
+.btn-primary, .btn-blue { background: var(--sfb-blue); color: #fff; }
+.btn-primary:hover, .btn-blue:hover { background: var(--sfb-blue-deep); }
+
+.btn-secondary, .btn-outline { background: var(--sfb-paper); color: var(--sfb-blue-deep); border-color: var(--sfb-line); }
+.btn-secondary:hover, .btn-outline:hover { border-color: var(--sfb-blue); }
+
+.btn-text { background: transparent; color: var(--sfb-blue-deep); padding: 0 14px; }
+.btn-text:hover { background: var(--sfb-soft); }
+
+.btn-light { background: #f7f9ff; color: var(--sfb-blue-deep); }
+.btn-light:hover { background: var(--sfb-soft); }
+
+.btn-glass { background: rgba(255, 255, 255, .12); color: #fff; border-color: rgba(255, 255, 255, .42); }
+.btn-glass:hover { background: rgba(255, 255, 255, .22); border-color: rgba(255, 255, 255, .62); }
+
+/* Press: shrinks a little on pointer-down, back on release. */
+.btn:active:not(:disabled):not([aria-disabled="true"]) { scale: .97; }
+
+.btn:focus-visible { outline: 2px solid var(--sfb-blue); outline-offset: 2px; }
+.btn-light:focus-visible, .btn-glass:focus-visible { outline-color: #fff; }
+
+/* A really disabled button looks the same everywhere. aria-disabled alone (the
+   plans page's "Current plan") keeps its own look and only loses the press and
+   the pointer. Busy keeps its colour so a button that is working does not look
+   like one that is switched off. */
+.btn:disabled { background: #e8ecf4; border-color: transparent; color: #7d89ad; cursor: not-allowed; }
+.btn[aria-disabled="true"] { cursor: default; }
+.btn[aria-busy="true"] { cursor: progress; }
+.btn[aria-busy="true"]:disabled { background: var(--sfb-blue); color: #fff; opacity: .8; }
+
+@media (pointer: coarse) { .btn-sm { min-height: 44px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn { transition: background-color .15s, border-color .15s, color .15s; }
+  .btn:active:not(:disabled):not([aria-disabled="true"]) { scale: none; }
+}
+
+/* Glass needs something behind it; with transparency off it becomes solid. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .btn-glass { background: #2f5fd6; border-color: #fff; }
+}

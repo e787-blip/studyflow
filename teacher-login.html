@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>StudyFlow for Teachers</title>
 <link rel="stylesheet" href="/fonts/fonts.css">
+<link rel="stylesheet" href="/sf-buttons.css">
 <style>
   *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
   :root { --ink:#1a1d2e; --muted:#6b7280; --soft:#f4f6fb; --blue:#4a7cf6; --blue-light:#dce8ff; --white:#fff; --border:#e8ecf4; --sans:'DM Sans',sans-serif; --serif:'Instrument Serif',Georgia,serif; }
@@ -34,15 +35,13 @@
   .form-label { display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--ink); margin-bottom:.4rem; }
   .form-input { width:100%; padding:.85rem 1.1rem; border:1.5px solid var(--border); border-radius:12px; font-family:var(--sans); font-size:0.92rem; color:var(--ink); background:var(--soft); outline:none; transition:border-color .2s, box-shadow .2s; }
   .form-input:focus { border-color:var(--blue); box-shadow:0 0 0 4px rgba(74,124,246,.1); }
-  .btn-submit { width:100%; padding:.95rem; background:var(--blue); color:#fff; border:none; border-radius:12px; font-family:var(--sans); font-size:0.95rem; font-weight:600; cursor:pointer; transition:all .3s; box-shadow:0 4px 14px rgba(74,124,246,.3); margin-top:.5rem; }
-  .btn-submit:hover { background:#3567e0; transform:translateY(-1px); }
   .msg-box { padding:.75rem 1rem; border-radius:10px; font-size:0.85rem; margin-bottom:1rem; display:none; }
   .msg-box.error { background:#fee2e2; border:1px solid #fca5a5; color:#dc2626; display:block; }
   .msg-box.success { background:#d1faf0; border:1px solid #38bfa1; color:#1a9e80; display:block; }
   .back-link { text-align:center; margin-top:1.5rem; font-size:0.82rem; color:var(--muted); }
   .back-link a { color:var(--blue); text-decoration:none; font-weight:500; }
   .link-btn { background:none; border:none; padding:0; color:var(--blue); font:inherit; font-weight:500; cursor:pointer; }
-  .btn-submit:disabled { cursor:wait; }
+  .btn-submit { margin-top:.5rem; }
 
   @media(max-width:768px) { body{flex-direction:column;} .left{width:100%;padding:2.5rem 2rem;min-height:auto;} .right{padding:2rem 1.5rem;} }
 
@@ -106,7 +105,7 @@
       <div class="form-field" id="f-email"><label class="form-label" for="email">School email</label><input type="email" class="form-input" id="email" autocomplete="email" placeholder="teacher@school.edu"/></div>
       <div class="form-field" id="f-school" style="display:none;"><label class="form-label" for="school">School name</label><input type="text" class="form-input" id="school" autocomplete="organization" placeholder="Lincoln High School"/></div>
       <div class="form-field" id="f-password"><label class="form-label" for="password">Password</label><input type="password" class="form-input" id="password" autocomplete="current-password" placeholder="••••••••"/></div>
-      <button class="btn-submit" id="submit" type="submit">Sign in →</button>
+      <button class="btn btn-primary btn-block btn-submit" id="submit" type="submit">Sign in →</button>
       <div class="back-link" id="forgot-line"><button type="button" class="link-btn" id="forgot">Forgot your password?</button></div>
     </form>
 
@@ -180,7 +179,7 @@
   function setBusy(on, label) {
     busy = on;
     $('submit').disabled = on;
-    $('submit').style.opacity = on ? '.7' : '';
+    $('submit').setAttribute('aria-busy', on ? 'true' : 'false');
     $('submit').textContent = on ? label : (mode === 'login' ? 'Sign in →' : 'Create classroom →');
   }
   function fail(text) { setBusy(false); showMsg('error', text); }
