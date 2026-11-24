@@ -2427,6 +2427,56 @@
                     'arabic', 'latin', 'italian', 'portuguese', 'pronunciation']],
                [1, ['language', 'verb', 'noun', 'translate', 'tense', 'accent']]],
 
+    /* The five broad types added Nov 2026. Each used to land in "general",
+       which asked every music, nursing, accounting, law and driving plan the
+       same generic 3 MCQ + 2 true/false day. Terms are specific: a word that
+       also belongs to another type ("cell", "memory", "market") is left out
+       or given the lowest weight, because a tie sends the plan to general. */
+    arts: [[3, ['music theory', 'key signature', 'time signature', 'treble clef', 'chord progression',
+                'impressionism', 'cubism', 'color theory', 'cinematography', 'choreography',
+                'orchestra', 'symphony', 'sculpture', 'watercolor', 'screenplay', 'sonata']],
+           [2, ['melody', 'harmony', 'rhythm', 'tempo', 'composer', 'painting', 'sketch',
+                'photography', 'theatre', 'theater', 'ballet', 'graphic design', 'ceramics',
+                'art history', 'instrument', 'jazz', 'drawing', 'film', 'dance']],
+           [1, ['music', 'artist', 'art', 'drama', 'design']]],
+
+    health: [[3, ['nutrition', 'calorie', 'macronutrient', 'vitamin', 'first aid', 'cpr',
+                  'pharmacology', 'dosage', 'nursing', 'vital signs', 'medical terminology',
+                  'mental health', 'public health', 'epidemiology', 'physical education',
+                  'cardiovascular fitness', 'wellness']],
+             [2, ['patient', 'symptom', 'diagnosis', 'medication', 'fitness', 'diet',
+                  'infection', 'vaccine', 'hygiene', 'addiction', 'clinical',
+                  'healthcare', 'health']],
+             [1, ['medicine', 'doctor', 'sports']]],
+
+    business: [[3, ['accounting', 'balance sheet', 'income statement', 'debit', 'ledger',
+                    'marketing mix', 'target market', 'business plan', 'entrepreneur', 'startup',
+                    'supply chain', 'swot', 'profit margin', 'depreciation', 'bookkeeping',
+                    'cash flow']],
+               [2, ['business', 'marketing', 'management', 'leadership', 'brand', 'revenue',
+                    'expense', 'customer', 'stakeholder', 'shareholder', 'strategy', 'operations',
+                    'human resources', 'invoice', 'audit']],
+               [1, ['company', 'sales', 'profit', 'employee', 'manager']]],
+
+    social: [[3, ['philosophy', 'ethics', 'utilitarian', 'sociology', 'anthropology',
+                  'world religions', 'logical fallacy', 'moral dilemma', 'categorical imperative',
+                  'criminal law', 'contract law', 'plaintiff', 'defendant', 'precedent',
+                  'political science', 'human rights', 'social norm', 'cultural relativism']],
+             [2, ['law', 'legal', 'court', 'judge', 'jury', 'verdict', 'statute',
+                  'morality', 'religion', 'buddhism', 'hinduism', 'islam', 'christianity',
+                  'judaism', 'society', 'ideology', 'argument', 'premise', 'kant', 'socrates']],
+             [1, ['culture', 'belief', 'justice', 'citizen', 'community']]],
+
+    practical: [[3, ['driver\'s ed', 'drivers ed', 'driving test', 'road sign', 'right of way',
+                     'speed limit', 'recipe', 'food safety', 'knife skills', 'woodworking',
+                     'carpentry', 'auto mechanic', 'oil change', 'citizenship test',
+                     'life jacket', 'aviation', 'pilot', 'welding', 'plumbing', 'gardening',
+                     'compost', 'sewing']],
+                [2, ['driving', 'license', 'licence', 'permit', 'traffic', 'cooking', 'baking',
+                     'kitchen', 'ingredient', 'workshop', 'apprentice',
+                     'referee', 'rulebook', 'boating', 'safety rules', 'handbook']],
+                [1, ['practical', 'hands-on', 'repair']]],
+
     /* Study skills are general's one subtopic, and nothing pointed at it:
        "Study skills: flashcards and revision" scored 2 for psychology off
        the word "recall" and never reached general/study. */
@@ -2435,7 +2485,7 @@
                    'spaced repetition', 'active recall', 'flashcard']]]
   };
 
-  var LANG_NAMES = 'russian|mandarin|cantonese|hawaiian|hindi|vietnamese|tagalog|filipino|swahili|dutch|turkish|greek|hebrew|polish|urdu|bengali|persian|farsi|thai|indonesian|ʻōlelo hawaiʻi';
+  var LANG_NAMES = 'russian|mandarin|cantonese|hawaiian|hindi|vietnamese|tagalog|filipino|swahili|dutch|turkish|greek|hebrew|polish|urdu|bengali|persian|farsi|thai|indonesian|ʻōlelo hawaiʻi|ukrainian|czech|swedish|norwegian|danish|finnish|hungarian|romanian|samoan|tongan|maori|ilocano|nepali|tamil|telugu|punjabi|malay|serbian|croatian|afrikaans|yiddish|esperanto|irish|welsh|catalan|american sign language|asl';
   var LANG_TITLE = new RegExp('^(?:' + LANG_NAMES + ')(?:\\s+(?:chinese|language))?\\s*(?:[:\\-\u2013\u2014]|$|\\s+(?:language|vocab|vocabulary|words|phrases|greetings|grammar|verbs?|tenses?|conversation|tones|pronunciation|alphabet|characters|script|numbers|for beginners|[0-9]+|i{1,3}|101)\\b)');
   var LANG_LEARN = new RegExp('\\b(?:learn(?:ing)?|speak(?:ing)?|beginner|intro(?:duction)? to|basic)\\s+(?:' + LANG_NAMES + ')\\b(?!\\s+(?:history|culture|art|food|cooking|literature|politics))');
   function classifySubject(subjectName, notes) {
@@ -2491,6 +2541,25 @@
   // Runs entirely locally — no API call, no extra latency, no cost.
   // Scoring: each topic has a list of distinctive terms and a weight.
   // Specific topics outrank broad ones, so "Geometry" beats a generic "Math" match.
+  /* A term of 4 letters or fewer must stand alone as a word, and the front
+     of every term must start a word: 'tip' sat inside "multiple" and 'dom'
+     inside "kingdom" once the list grew past a hundred topics. Longer terms
+     are stems and may carry a suffix ("derivative" -> "derivatives"). */
+  function termIn(text, term) {
+    var at = text.indexOf(term);
+    if (at === -1) return false;
+    var short = term.length <= 4, lastIsLetter = /[a-z]$/.test(term);
+    while (at !== -1) {
+      var before = at === 0 ? '' : text.charAt(at - 1);
+      var after = text.charAt(at + term.length);
+      var okFront = !/[a-z]/.test(before);
+      var okBack = !(short && lastIsLetter) || !/[a-z]/.test(after);
+      if (okFront && okBack) return true;
+      at = text.indexOf(term, at + 1);
+    }
+    return false;
+  }
+
   function detectSubject(notes, typed) {
     notes = subjText(notes);
     typed = subjText(typed);
@@ -2543,7 +2612,247 @@
          terms only occur in computing. */
       ['Computer Science', 4, ['algorithm','data structure','for loop','array','recursion','boolean','function returns','big o','compiler','binary search','linked list','hash table','pseudocode','syntax error','integer overflow']],
       ['Spanish', 4, ['conjugat','ser and estar','preterite','subjunctive','el la los las','spanish verb']],
-      ['French', 4, ['french verb','passe compose','etre','avoir','le la les']]
+      ['French', 4, ['french verb','passe compose','etre','avoir','le la les']],
+
+      // ── MORE MATH ──
+      ['Linear Equations', 4, ['linear equation','two-step equation','one-step equation','solve for x','isolate the variable','inverse operation','slope-intercept','point-slope']],
+      ['Quadratics', 4, ['quadratic formula','parabola','completing the square','discriminant','vertex of the parabola','roots of','zeros of','standard form of a quadratic']],
+      ['Exponents & Radicals', 4, ['exponent rule','scientific notation','square root','cube root','radical expression','power of a power','negative exponent','rationalize']],
+      ['Functions & Graphing', 4, ['domain and range','function notation','vertical line test','x-intercept','linear function','piecewise','transformation of','inverse function']],
+      ['Systems of Equations', 4, ['system of equations','substitution method','elimination method','simultaneous equations','point of intersection']],
+      ['Ratios & Proportions', 4, ['unit rate','ratio table','proportion','scale factor','equivalent ratio','cross multiply','direct variation']],
+      ['Percentages & Decimals', 4, ['percent increase','percent decrease','percent of','decimal places','convert to a decimal','discount','sales tax','tip']],
+      ['Integers & Number Sense', 4, ['negative number','absolute value','integer','number line','prime number','composite number','prime factor','even and odd']],
+      ['Order of Operations', 4, ['pemdas','bodmas','order of operations','parentheses first','evaluate the expression']],
+      ['Polynomials & Factoring', 4, ['factor the polynomial','greatest common factor','difference of squares','trinomial','degree of the polynomial','multiply binomials','distributive property']],
+      ['Logarithms & Exponentials', 4, ['logarithm','natural log','exponential growth','exponential decay','half-life','compound growth','change of base']],
+      ['Sequences & Series', 4, ['arithmetic sequence','geometric sequence','common ratio','common difference','sigma notation','nth term','partial sum']],
+      ['Matrices & Linear Algebra', 4, ['matrix','determinant','eigenvalue','vector space','dot product','cross product','linear transformation','row reduction']],
+      ['Pre-Calculus', 4, ['precalculus','pre-calculus','conic section','polar coordinates','parametric','complex number','end behavior']],
+      ['Differential Equations', 4, ['differential equation','separable equation','initial value problem','laplace','slope field']],
+      ['Discrete Math & Logic', 4, ['truth table','combinatorics','permutation','combination','set theory','venn diagram','proof by induction','boolean algebra','graph theory']],
+      ['Measurement & Units', 4, ['unit conversion','metric system','convert units','significant figures','dimensional analysis','customary units','estimate the length']],
+      ['Area & Volume', 4, ['surface area','volume of a','area of a','cylinder','prism','pyramid','sphere','cone']],
+      ['Coordinate Plane', 4, ['coordinate plane','ordered pair','quadrant','x-axis','y-axis','plot the point','reflection across']],
+      ['Data & Graphs', 4, ['bar graph','line plot','box plot','stem and leaf','pictograph','mean median mode','scatter plot','data set']],
+      ['Probability', 4, ['probability of','independent events','dependent events','sample space','tree diagram','expected value','compound event','at random']],
+      ['Inequalities', 4, ['inequality','greater than or equal','compound inequality','graph the solution','flip the sign']],
+
+      // ── MORE SCIENCE ──
+      ['Photosynthesis & Respiration', 4, ['photosynthesis','cellular respiration','chlorophyll','glucose','atp','light reactions','calvin cycle','krebs','electron transport']],
+      ['Plant Biology', 4, ['stomata','xylem','phloem','pollination','germination','seed dispersal','plant hormone','transpiration','angiosperm']],
+      ['Microbiology', 4, ['bacteria','virus','pathogen','microbe','antibiotic','fungi','protist','petri dish','gram stain']],
+      ['Immune System', 4, ['immune system','white blood cell','antibody','antigen','vaccine','lymph','inflammation','t cell','b cell']],
+      ['Nervous System', 4, ['neuron','synapse','spinal cord','reflex arc','brain stem','cerebrum','sensory neuron','motor neuron']],
+      ['Digestive System', 4, ['digestion','small intestine','stomach acid','esophagus','pancreas','bile','absorption of nutrients','large intestine']],
+      ['Circulatory & Respiratory', 4, ['heart chamber','blood vessel','red blood cell','lungs','alveoli','oxygenated blood','pulse','blood pressure','diaphragm']],
+      ['Skeletal & Muscular System', 4, ['bone','skeleton','joint','ligament','tendon','skeletal muscle','cartilage','muscle fiber','vertebra']],
+      ['Biochemistry', 4, ['macromolecule','protein structure','amino acid','lipid','carbohydrate','nucleic acid','enzyme','substrate','active site']],
+      ['Organic Chemistry', 4, ['organic chemistry','hydrocarbon','functional group','alkane','alkene','benzene','isomer','esterification']],
+      ['Chemical Reactions', 4, ['chemical reaction','reactant','product','balancing equations','synthesis reaction','decomposition','combustion','precipitate','law of conservation of mass']],
+      ['Acids, Bases & pH', 4, ['ph scale','acid','base','neutralization','indicator','litmus','buffer','hydroxide','hydronium']],
+      ['Atoms & the Periodic Table', 4, ['periodic table','proton','neutron','electron','atomic mass','element','noble gas','alkali metal','halogen','electron configuration']],
+      ['States of Matter', 4, ['states of matter','solid liquid gas','melting point','boiling point','condensation','sublimation','phase change','plasma']],
+      ['Thermodynamics & Heat', 4, ['thermodynamic','heat transfer','conduction','convection','radiation','specific heat','entropy','temperature scale','calorimetry']],
+      ['Electricity & Circuits', 4, ['electric circuit','series circuit','parallel circuit','ohm','voltage','current','resistor','battery','static electricity']],
+      ['Magnetism', 4, ['magnetic field','magnet','electromagnet','north pole','magnetic force','compass','induction']],
+      ['Light & Optics', 4, ['reflection','refraction','lens','mirror','concave','convex','visible spectrum','prism','focal length']],
+      ['Sound & Waves', 4, ['sound wave','pitch','decibel','echo','longitudinal wave','transverse wave','doppler','resonance','compression']],
+      ['Gravity & Orbits', 4, ['gravity','orbit','escape velocity','centripetal','kepler','free fall','weight and mass','universal gravitation']],
+      ['Astronomy & Space', 4, ['solar system','galaxy','black hole','big bang','star life cycle','supernova','telescope','light-year','exoplanet','moon phases']],
+      ['Rocks & Minerals', 4, ['igneous','sedimentary','metamorphic','rock cycle','mineral','crystal','mohs','weathering','erosion']],
+      ['Plate Tectonics', 4, ['plate tectonics','continental drift','subduction','fault line','earthquake','seismic wave','volcano','mid-ocean ridge','pangaea']],
+      ['Weather & Climate', 4, ['weather','climate change','atmosphere','front','humidity','air pressure','hurricane','jet stream','greenhouse effect','precipitation']],
+      ['Oceans & Water', 4, ['ocean current','tide','salinity','coral reef','water cycle','groundwater','aquifer','estuary','marine']],
+      ['Environmental Science', 4, ['pollution','renewable energy','fossil fuel','conservation','sustainability','deforestation','carbon footprint','endangered species','biodiversity loss']],
+      ['Scientific Method', 4, ['scientific method','hypothesis','independent variable','dependent variable','control group','controlled experiment','variables in an experiment','conclusion','observation']],
+      ['Lab Safety & Skills', 4, ['lab safety','safety goggles','bunsen burner','beaker','graduated cylinder','microscope','lab report','fume hood']],
+      ['Zoology & Animals', 4, ['vertebrate','invertebrate','mammal','reptile','amphibian','metamorphosis','warm-blooded','herbivore','carnivore','habitat']],
+      ['Classification & Taxonomy', 4, ['taxonomy','kingdom','phylum','genus','binomial','dichotomous key','classification of living']],
+      ['Human Reproduction & Growth', 4, ['puberty','fertilization','embryo','gestation','reproductive system','life cycle','hormone']],
+      ['Forensic Science', 4, ['forensic','fingerprint','crime scene','dna evidence','blood spatter','toxicology']],
+
+      // ── MORE HISTORY & CIVICS ──
+      ['Cold War', 5, ['cold war','iron curtain','berlin wall','cuban missile','containment','nato','warsaw pact','arms race','space race','truman doctrine','mccarthy']],
+      ['Ancient Rome', 5, ['roman republic','roman empire','senate','julius caesar','augustus','gladiator','punic wars','legion','aqueduct','fall of rome']],
+      ['Ancient Greece', 5, ['ancient greece','athens','sparta','peloponnesian','democracy in athens','socrates','alexander the great','olympics','persian wars','acropolis']],
+      ['Ancient Egypt', 5, ['pharaoh','pyramid','hieroglyph','nile','mummification','tutankhamun','old kingdom','new kingdom','rosetta']],
+      ['Ancient China', 5, ['han dynasty','qin','shang','zhou','great wall','confucius','silk road','tang dynasty','ming dynasty','terracotta']],
+      ['Ancient India', 4, ['indus valley','maurya','ashoka','gupta','caste system','vedas','harappa','mohenjo']],
+      ['Middle Ages', 5, ['feudalism','medieval','knight','manor','serf','crusade','black death','magna carta','castle','vassal']],
+      ['Renaissance & Reformation', 5, ['renaissance','reformation','martin luther','humanism','da vinci','michelangelo','printing press','gutenberg','protestant','counter-reformation']],
+      ['Age of Exploration', 5, ['age of exploration','columbus','magellan','conquistador','cortez','colonization','columbian exchange','navigation','da gama','spice trade']],
+      ['Scientific Revolution & Enlightenment', 5, ['enlightenment','scientific revolution','galileo','copernicus','locke','rousseau','voltaire','montesquieu','newton','social contract']],
+      ['French Revolution', 5, ['french revolution','bastille','robespierre','reign of terror','louis xvi','estates-general','guillotine','napoleon','jacobin']],
+      ['Industrial Revolution', 5, ['industrial revolution','factory system','steam engine','textile mill','child labor','urbanization','cotton gin','assembly line','labor union']],
+      ['Russian Revolution', 5, ['russian revolution','bolshevik','lenin','tsar','romanov','soviet','stalin','communism','five-year plan']],
+      ['American Colonies', 5, ['jamestown','plymouth','pilgrim','thirteen colonies','mayflower','puritan','colonial america','triangular trade','salem','indentured servant']],
+      ['The US Constitution & Founding', 5, ['constitutional convention','federalist','anti-federalist','articles of confederation','founding fathers','three-fifths','great compromise','james madison','bill of rights']],
+      ['Westward Expansion', 5, ['manifest destiny','oregon trail','gold rush','louisiana purchase','lewis and clark','homestead act','transcontinental railroad','trail of tears','frontier']],
+      ['Slavery & Abolition', 5, ['slavery','abolition','underground railroad','harriet tubman','frederick douglass','plantation','middle passage','emancipation','dred scott']],
+      ['Reconstruction', 5, ['reconstruction','freedmen','black codes','jim crow','13th amendment','14th amendment','15th amendment','carpetbagger','sharecropping']],
+      ['Civil Rights Movement', 5, ['civil rights','martin luther king','rosa parks','segregation','montgomery bus','brown v. board','voting rights act','freedom riders','naacp','malcolm x']],
+      ['Great Depression & New Deal', 5, ['great depression','new deal','stock market crash','dust bowl','fdr','hoovervilles','social security act','wpa','breadlines']],
+      ["Women's Suffrage & Rights", 5, ['suffrage','seneca falls','susan b. anthony','19th amendment','feminism','equal rights amendment','elizabeth cady stanton']],
+      ['Imperialism & Colonialism', 5, ['imperialism','colonialism','scramble for africa','opium war','berlin conference','british raj','sepoy','spanish-american war']],
+      ['Vietnam & Korean Wars', 5, ['vietnam war','tet offensive','ho chi minh','domino theory','korean war','38th parallel','draft','my lai']],
+      ['Islamic Golden Age & Empires', 5, ['islam','caliphate','muhammad','abbasid','ottoman','mecca','muslim','mughal','sultan','house of wisdom']],
+      ['Early Americas', 5, ['aztec','maya','inca','tenochtitlan','machu picchu','mesoamerica','olmec','quipu']],
+      ['African Kingdoms', 5, ['mali empire','songhai','ghana empire','mansa musa','timbuktu','great zimbabwe','kingdom of kush','swahili coast','benin']],
+      ['Japanese History', 5, ['samurai','shogun','feudal japan','meiji','edo period','tokugawa','commodore perry','bushido','heian']],
+      ['Hawaiian History', 5, ['hawaiian kingdom','kamehameha','queen liliuokalani','annexation of hawaii','ahupua','pearl harbor','kapu','polynesian voyag','missionaries in hawaii']],
+      ['Native American History', 5, ['native american','indigenous','iroquois','cherokee','sioux','plains indians','reservation','tribe','treaty rights']],
+      ['Immigration', 5, ['immigration','ellis island','angel island','nativism','melting pot','immigrant','chinese exclusion','refugee']],
+      ['Napoleonic Era & Nationalism', 5, ['napoleon','congress of vienna','nationalism','unification of germany','bismarck','italian unification','garibaldi','waterloo']],
+      ['The Holocaust', 5, ['holocaust','concentration camp','nuremberg','anne frank','genocide','final solution','kristallnacht','ghetto']],
+      ['World Geography & Trade Routes', 4, ['silk road','trade route','spice route','trans-saharan','hanseatic','caravan','merchant']],
+      ['Types of Government', 4, ['monarchy','democracy','oligarchy','dictatorship','republic','totalitarian','theocracy','communism','capitalism']],
+      ['Elections & Voting', 4, ['election','electoral college','primary','ballot','political party','campaign','voter registration','gerrymander','midterm']],
+      ['Local & State Government', 4, ['state government','governor','city council','mayor','county','municipal','state legislature','local government']],
+      ['International Relations', 4, ['united nations','treaty','diplomacy','sanctions','foreign policy','world trade organization','nato','geneva convention']],
+
+      // ── MORE GEOGRAPHY ──
+      ['Map Skills', 4, ['map key','compass rose','legend','map scale','cardinal direction','grid reference','political map','physical map','topographic']],
+      ['Continents & Countries', 4, ['continent','country','capital city','hemisphere','equator','prime meridian','europe','asia','africa','south america']],
+      ['Landforms & Bodies of Water', 4, ['landform','plateau','peninsula','archipelago','delta','canyon','mountain range','island','strait','gulf']],
+      ['Population & Migration', 4, ['population density','birth rate','death rate','migration','urban','rural','demographic','census','push and pull']],
+      ['Natural Resources', 4, ['natural resource','renewable','nonrenewable','mining','agriculture','irrigation','timber','fishing industry','land use']],
+      ['World Cultures & Religions', 4, ['culture','tradition','religion','buddhism','hinduism','islam','christianity','judaism','festival','custom']],
+      ['Climate Zones & Biomes', 4, ['tropical','temperate','polar','desert','tundra','taiga','savanna','rainforest','climate zone']],
+      ['Economic Geography', 4, ['developed country','developing country','gdp per capita','trade partner','globalization','industrialization','import','export']],
+      ['US States & Regions', 4, ['50 states','state capital','midwest','new england','southwest','pacific northwest','great plains','appalachia','region of the united states']],
+
+      // ── MORE ENGLISH ──
+      ['Reading Comprehension', 4, ['main idea','supporting detail','inference','author\'s purpose','context clue','summarize','text evidence','point of view','central idea']],
+      ['Essay Writing', 4, ['thesis','body paragraph','introduction','conclusion','transition','topic sentence','outline','five-paragraph','counterargument']],
+      ['Persuasive & Argument Writing', 4, ['persuasive','argument','claim','evidence','reasoning','counterclaim','rebuttal','ethos','pathos','logos']],
+      ['Narrative Writing', 4, ['narrative','plot','setting','conflict','climax','resolution','dialogue','show don\'t tell','first person','point of view']],
+      ['Vocabulary & Word Roots', 4, ['prefix','suffix','root word','latin root','greek root','synonym','antonym','etymology','word part','affix']],
+      ['Parts of Speech', 4, ['noun','verb','adjective','adverb','preposition','pronoun','conjunction','interjection','part of speech']],
+      ['Punctuation & Mechanics', 4, ['comma','semicolon','apostrophe','quotation marks','colon','capitalization','hyphen','dash','run-on']],
+      ['Sentence Structure', 4, ['simple sentence','compound sentence','complex sentence','independent clause','dependent clause','fragment','sentence structure','phrase','subject and predicate']],
+      ['Shakespeare', 5, ['shakespeare','hamlet','macbeth','romeo and juliet','othello','a midsummer','king lear','iambic pentameter','soliloquy','the tempest']],
+      ['Novels & Short Stories', 4, ['novel','short story','mockingbird','gatsby','of mice and men','lord of the flies','the giver','chapter','narrator','character development']],
+      ['Figurative Language', 4, ['metaphor','simile','personification','hyperbole','idiom','onomatopoeia','alliteration','oxymoron','imagery','symbolism']],
+      ['Research & Citations', 4, ['citation','mla','apa','works cited','plagiarism','primary source','secondary source','bibliography','credible source','paraphrase']],
+      ['Public Speaking & Rhetoric', 4, ['public speaking','speech','delivery','eye contact','rhetorical','audience','rhetoric','debate','presentation']],
+      ['Media Literacy', 4, ['media literacy','bias','propaganda','fake news','advertisement','news source','headline','social media','fact-check']],
+      ['Drama & Plays', 4, ['stage direction','playwright','scene','monologue','dramatic irony','cast','script']],
+      ['Mythology', 4, ['mythology','zeus','odyssey','iliad','norse','hercules','greek myth','titan','achilles','thor']],
+
+      // ── MORE PSYCHOLOGY & SOCIAL SCIENCE ──
+      ['Developmental Psychology', 4, ['erikson','piaget','vygotsky','attachment','adolescence','childhood development','developmental stage','kohlberg','object permanence','zone of proximal']],
+      ['Social Psychology', 4, ['conformity','obedience','milgram','asch','bystander effect','stereotype','prejudice','group think','cognitive dissonance','attribution']],
+      ['Abnormal Psychology', 4, ['disorder','anxiety','depression','schizophrenia','therapy','dsm','ocd','ptsd','mental illness','bipolar']],
+      ['Memory & Learning', 4, ['encoding','retrieval','working memory','forgetting curve','mnemonic','conditioning','spaced repetition','long-term memory','mnemonics']],
+      ['Personality & Emotion', 4, ['personality','big five','introvert','extravert','emotion','motivation','maslow','hierarchy of needs','temperament']],
+      ['Sociology', 5, ['sociology','social structure','social class','deviance','socialization','institution','social norm','durkheim','weber','marx']],
+      ['Anthropology', 5, ['anthropology','ethnography','kinship','cultural relativism','archaeology','artifact','hominid','fieldwork','ritual']],
+      ['Political Science', 5, ['political science','ideology','liberalism','conservatism','political spectrum','public policy','interest group','lobby','legislature']],
+      ['World Religions', 5, ['buddhism','hinduism','islam','christianity','judaism','sikhism','taoism','shinto','karma','nirvana','torah','quran','bible']],
+      ['Philosophy', 5, ['philosophy','socrates','plato','aristotle','descartes','metaphysics','epistemology','existentialism','nietzsche','free will']],
+      ['Ethics & Morality', 5, ['ethics','morality','utilitarian','deontology','virtue ethics','kant','moral dilemma','categorical imperative','trolley']],
+      ['Logic & Critical Thinking', 5, ['logical fallacy','ad hominem','straw man','syllogism','premise','deductive','inductive','valid argument','critical thinking']],
+      ['Law & the Courts', 5, ['court','judge','jury','plaintiff','defendant','verdict','appeal','precedent','statute','burden of proof']],
+      ['Criminal Law', 5, ['criminal law','felony','misdemeanor','arrest','miranda','search and seizure','probable cause','mens rea','indictment']],
+      ['Contract & Business Law', 5, ['contract','offer and acceptance','consideration','breach','tort','negligence','liability','intellectual property','copyright']],
+      ['Human Rights', 5, ['human rights','universal declaration','discrimination','equality','freedom of speech','due process','civil liberties']],
+      ['Journalism & Communication', 4, ['journalism','reporter','editorial','press freedom','interview','lede','byline','communication theory']],
+
+      // ── ECONOMICS & BUSINESS ──
+      ['Personal Finance', 4, ['budget','savings account','credit score','credit card','compound interest','debt','mortgage','retirement','401k','emergency fund']],
+      ['Macroeconomics', 4, ['gdp','inflation','unemployment','recession','fiscal policy','monetary policy','federal reserve','national debt','business cycle']],
+      ['Microeconomics', 4, ['supply curve','demand curve','price elasticity','consumer surplus','monopoly','perfect competition','marginal revenue','market structure']],
+      ['International Trade', 4, ['comparative advantage','tariff','trade deficit','exchange rate','free trade','import quota','balance of trade']],
+      ['Stock Market & Investing', 4, ['stock market','bond','mutual fund','index fund','dividend','portfolio','diversification','shareholder','etf']],
+      ['Accounting', 5, ['debit','credit','ledger','balance sheet','income statement','assets','liabilities','equity','journal entry','depreciation','trial balance','accounts receivable']],
+      ['Marketing', 5, ['marketing mix','four ps','target market','brand','market research','advertising','segmentation','customer persona','promotion','positioning']],
+      ['Management & Leadership', 5, ['leadership','management style','organizational','delegation','teamwork','motivation theory','swot','strategic planning','human resources']],
+      ['Entrepreneurship', 5, ['entrepreneur','startup','business plan','pitch','venture capital','revenue model','minimum viable','profit margin','small business']],
+      ['Banking & Credit', 4, ['bank account','checking account','interest rate','loan','apr','overdraft','credit union','debit card','fdic']],
+      ['Business Operations', 4, ['supply chain','inventory','operations management','quality control','logistics','production','lean manufacturing']],
+      ['Taxes', 4, ['income tax','w-2','tax return','deduction','tax bracket','payroll tax','sales tax','irs','refund']],
+
+      // ── MORE COMPUTER SCIENCE ──
+      ['Python', 4, ['python','def ','print(','elif','list comprehension','pip install','indentation','import ','dictionary']],
+      ['JavaScript', 4, ['javascript','const ','let ','=>','dom','addeventlistener','console.log','json','node.js']],
+      ['Java & Object-Oriented Programming', 4, ['java','object-oriented','inheritance','polymorphism','encapsulation','constructor','interface','method overriding']],
+      ['HTML & CSS', 4, ['html','css','tag','selector','flexbox','div','stylesheet','margin and padding','semantic html']],
+      ['Databases & SQL', 4, ['sql','select statement','database','primary key','foreign key','join','table','query','normalization']],
+      ['Data Structures', 4, ['data structure','linked list','stack','queue','binary tree','hash table','heap','graph traversal','array']],
+      ['Algorithms & Big O', 4, ['algorithm','big o','time complexity','sorting algorithm','binary search','recursion','dynamic programming','greedy','divide and conquer']],
+      ['Networking & the Internet', 4, ['ip address','dns','router','packet','http','tcp','protocol','bandwidth','web server','osi model']],
+      ['Cybersecurity', 4, ['cybersecurity','encryption','phishing','malware','firewall','password security','two-factor','ransomware','public key']],
+      ['Operating Systems', 4, ['operating system','process','thread','scheduling','memory management','file system','kernel','deadlock','virtual memory']],
+      ['AI & Machine Learning', 4, ['machine learning','neural network','training data','artificial intelligence','supervised learning','overfitting','classification model','deep learning','bias in ai']],
+      ['Computer Hardware', 4, ['cpu','ram','motherboard','gpu','storage','hard drive','binary','transistor','logic gate','input device']],
+      ['Number Systems & Binary', 4, ['binary','hexadecimal','bit','byte','base 2','two\'s complement','ascii','convert to binary']],
+      ['Block Coding & Robotics', 4, ['scratch','block coding','robot','sensor','arduino','microcontroller','sprite','blocks']],
+      ['Web Development', 4, ['web development','front end','back end','react','api','framework','responsive design','server','deployment']],
+      ['Spreadsheets & Productivity Software', 4, ['spreadsheet','excel','formula','cell reference','vlookup','pivot table','google sheets','slideshow','word processing']],
+
+      // ── MORE LANGUAGES ──
+      ['German', 4, ['german verb','umlaut','der die das','nominativ','akkusativ','dativ','german grammar','guten tag','konjunktiv']],
+      ['Japanese', 4, ['hiragana','katakana','kanji','japanese verb','particle','desu','masu','konnichiwa','keigo']],
+      ['Chinese (Mandarin)', 4, ['pinyin','mandarin','tones','hanzi','chinese characters','measure word','ni hao','radical','simplified characters']],
+      ['Korean', 4, ['hangul','korean verb','annyeong','honorific','korean particle','korean grammar']],
+      ['Italian', 4, ['italian verb','buongiorno','passato prossimo','italian grammar','ciao','articoli']],
+      ['Portuguese', 4, ['portuguese verb','obrigado','portuguese grammar','brazilian portuguese','bom dia']],
+      ['Latin', 4, ['latin declension','latin verb','nominative','accusative','ablative','vocabulary list latin','amo amas amat','cicero']],
+      ['Arabic', 4, ['arabic alphabet','arabic script','salaam','arabic verb','modern standard arabic','right to left']],
+      ['Russian', 4, ['cyrillic','russian verb','russian case','privet','russian grammar']],
+      ['Hawaiian Language', 4, ['ʻōlelo','okina','kahakō','aloha','hawaiian words','hawaiian language','mahalo']],
+      ['American Sign Language', 4, ['american sign language','asl','fingerspelling','deaf culture','sign language']],
+      ['ESL & English Language Learning', 4, ['english as a second language','esl','english learner','present perfect','phrasal verb','conversation practice']],
+
+      // ── THE ARTS ──
+      ['Music Theory', 5, ['scale','chord','interval','key signature','treble clef','bass clef','time signature','staff','rhythm','tempo','major and minor','sharp and flat']],
+      ['Music History & Appreciation', 5, ['baroque','classical period','romantic period','composer','symphony','bach','mozart','beethoven','jazz','blues','genre']],
+      ['Instruments & Orchestra', 5, ['orchestra','string instrument','woodwind','brass','percussion','piano','guitar','violin','conductor','ensemble']],
+      ['Drawing & Painting', 5, ['drawing','painting','sketch','shading','watercolor','acrylic','oil paint','charcoal','composition','still life']],
+      ['Color Theory & Design', 5, ['color theory','primary color','complementary','analogous','hue','saturation','value','color wheel','contrast','typography']],
+      ['Art History', 5, ['impressionism','cubism','surrealism','renaissance art','baroque art','van gogh','picasso','monet','art movement','modern art']],
+      ['Photography', 5, ['photography','aperture','shutter speed','iso','exposure','rule of thirds','depth of field','lens','darkroom']],
+      ['Film & Cinema', 5, ['film','cinematography','director','screenplay','editing','shot','camera angle','genre','storyboard','mise-en-scene']],
+      ['Theater & Acting', 5, ['theater','acting','stage','blocking','monologue','improv','costume','playwright','rehearsal','upstage']],
+      ['Dance', 5, ['choreography','ballet','hip hop dance','modern dance','dance technique','contemporary dance','tempo and rhythm','folk dance']],
+      ['Graphic Design', 5, ['graphic design','layout','logo','branding','vector','kerning','grid','visual hierarchy','poster','illustrator']],
+      ['Architecture & Design', 5, ['architecture','blueprint','floor plan','facade','gothic','column','arch','urban design','sustainable design']],
+      ['Sculpture & Ceramics', 5, ['sculpture','ceramics','clay','kiln','glaze','pottery','carving','wheel throwing','relief']],
+
+      // ── HEALTH & MEDICINE ──
+      ['Nutrition', 5, ['nutrition','calorie','protein','vitamin','carbohydrate','fat','mineral','balanced diet','food group','macronutrient','fiber','myplate']],
+      ['Fitness & Exercise', 5, ['exercise','fitness','cardio','strength training','heart rate','flexibility','endurance','warm up','stretching','muscle']],
+      ['Mental Health & Wellness', 5, ['mental health','stress','coping','mindfulness','self-care','anxiety','therapy','resilience','wellbeing','burnout']],
+      ['First Aid & CPR', 5, ['first aid','cpr','aed','choking','bleeding','burn','recovery position','emergency','bandage','rescue breathing']],
+      ['Nursing Fundamentals', 5, ['nursing','patient','vital signs','nursing process','assessment','care plan','infection control','hand hygiene','charting']],
+      ['Pharmacology', 5, ['pharmacology','dosage','medication','side effect','drug class','half-life','route of administration','contraindication','generic name']],
+      ['Medical Terminology', 5, ['medical terminology','prefix','suffix','root word','-itis','-ectomy','cardio','hepat','neuro']],
+      ['Substance Use & Prevention', 5, ['substance','alcohol','tobacco','vaping','addiction','drug abuse','peer pressure','prevention','overdose']],
+      ['Sleep & Healthy Habits', 5, ['sleep','healthy habit','hygiene','screen time','routine','rest','hydration','sunscreen']],
+      ['Public Health', 5, ['public health','epidemic','pandemic','vaccination','sanitation','epidemiology','outbreak','prevention','herd immunity']],
+      ['Sports Science & PE', 5, ['physical education','sports','training','athlete','biomechanics','injury prevention','team sport','rules of the game','performance']],
+      ['Anatomy & Physiology for Health', 5, ['anatomy and physiology','organ system','homeostasis','tissue','body cavity','anatomical position','cell to organ']],
+
+      // ── PRACTICAL SKILLS & LICENCE TESTS ──
+      ["Driver's Education", 5, ['driver','driving','road sign','traffic','right of way','speed limit','yield','license','permit','blind spot','parking','intersection']],
+      ['Cooking & Culinary Skills', 5, ['recipe','cook','bake','knife skills','ingredient','sauté','simmer','dough','sauce','seasoning','kitchen','mise en place']],
+      ['Food Safety', 5, ['food safety','foodborne','cross-contamination','danger zone','temperature','servsafe','handwashing','sanitize','allergen','expiration']],
+      ['Woodworking & Carpentry', 5, ['woodworking','carpentry','saw','joint','plywood','lumber','sanding','chisel','measure twice','workshop']],
+      ['Auto Mechanics', 5, ['engine','brake','transmission','oil change','tire','battery','alternator','spark plug','suspension','mechanic']],
+      ['Electrical & Trades', 5, ['electrician','wiring','circuit breaker','conduit','plumbing','hvac','welding','trade','apprentice','blueprint reading']],
+      ['Gardening & Agriculture', 5, ['gardening','soil','compost','seed','crop','irrigation','pruning','fertilizer','harvest','greenhouse']],
+      ['Sewing & Textiles', 5, ['sewing','fabric','pattern','seam','stitch','textile','knitting','hem','thread','needle']],
+      ['Sports Rules & Officiating', 5, ['referee','rulebook','foul','penalty','offside','scoring','officiating','game rules','tournament','umpire']],
+      ['Aviation & Pilot Knowledge', 5, ['aviation','pilot','airspeed','altitude','flight','aircraft','runway','air traffic','faa','navigation chart']],
+      ['Boating & Water Safety', 5, ['boating','life jacket','navigation rules','buoy','knots','water safety','swimming','lifeguard','capsizing']],
+      ['Citizenship & Naturalization Test', 5, ['citizenship test','naturalization','civics test','pledge of allegiance','oath of allegiance','uscis','green card']],
+      ['SAT / ACT Test Prep', 5, ['sat prep','sat math','sat reading','digital sat','psat','act prep','act science','act english','college board','test strategy']],
+      ['AP Exam Review', 5, ['ap exam','ap biology','ap chemistry','ap us history','ap world history','ap calculus','ap psychology','ap english','free response','dbq']],
+      ['Study Skills', 4, ['study skills','note-taking','active recall','spaced repetition','time management','procrastination','flashcard','cornell notes','study habits']],
+      ['Career & Workplace Skills', 4, ['resume','interview','cover letter','workplace','career','teamwork','professionalism','job application','networking']],
+      ['Home & Life Skills', 4, ['laundry','budgeting for life','home repair','meal planning','cleaning','life skills','renting','safety at home']],
+      ['Ham Radio & Technical Licences', 4, ['ham radio','amateur radio','frequency','antenna','fcc','technician class','callsign']]
     ];
 
     var best = '', bestScore = 0;
@@ -2551,7 +2860,7 @@
       var label = TOPICS[i][0], weight = TOPICS[i][1], terms = TOPICS[i][2];
       var hits = 0;
       for (var j = 0; j < terms.length; j++) {
-        if (text.indexOf(terms[j]) !== -1) hits++;
+        if (termIn(text, terms[j])) hits++;
       }
       if (hits === 0) continue;
       var score = hits * weight;
@@ -2573,7 +2882,8 @@
        even though the text classified cleanly as science. */
     var broad = { math:'Math', science:'Science', psychology:'Psychology', geography:'Geography',
                   economics:'Economics', cs:'Computer Science', history:'History',
-                  english:'English', language:'Language' };
+                  english:'English', language:'Language', arts:'The Arts', health:'Health',
+                  business:'Business', social:'Humanities', practical:'Practical Skills' };
     var cls = broad[classifySubject('', notes)];
     if (cls) return cls;
 
@@ -2889,6 +3199,100 @@
         guide:'ASK: the word used inside a sentence that fixes its meaning. AVOID: bare word-to-word pairs with no context. The recall card asks for words the notes group together (four foods, the family members), typed with their accents.',
         visual:'a concept hub grouping words by theme.' }
     ],
+    arts: [
+      { key:'theory', label:'Music theory and notation',
+        terms:['note','notes','scale','chord','interval','rhythm','tempo','key signature','time signature','staff','clef','melody','harmony','beat','measure','meter','sharp','flat','solfege','octave'],
+        types:['twopart','recall','classify','matchpairs','estimate','fill','mcq','whosright','write'],
+        guide:'ASK: read or build the thing - name the interval, count the beats, say which key a signature gives. AVOID: definitions of terms with no notation or example in front of the learner. The recall card names the notes of a scale or the parts of a chord; the estimate card is a count (beats in a measure, steps up).',
+        visual:'a flow for building a scale, compare for major and minor.' },
+      { key:'history', label:'Art and music history',
+        terms:['baroque','classical','romantic','renaissance','impressionis','cubis','surreal','modernis','movement','composer','painter','artist','symphony','opera','jazz','blues','period','style','sculpt','masterpiece'],
+        types:['passage','twopart','highlight','corroborate','classify','sequence','mcq','fill','write'],
+        guide:'ASK: what marks a style or period, and what in a named piece shows it. AVOID: artist-and-date lists with nothing to look at. Place a piece in its period from what is in the notes about it.',
+        visual:'a timeline of movements, compare for two styles.' },
+      { key:'craft', label:'Technique, design and craft',
+        terms:['draw','paint','sketch','shading','color','colour','hue','contrast','composition','perspective','texture','medium','clay','sculpt','photograph','aperture','layout','typograph','design','pattern','film','camera','stage','dance','choreograph'],
+        types:['twopart','sequence:process','scenario','whosright','matchpairs','classify','fill','mcq','selfcheck'],
+        guide:'ASK: what a choice does to the result, and the order a technique is done in. AVOID: material lists with no reason behind them. The scenario is a described piece or situation and what to change; the whosright card is a common beginner misconception about the technique.',
+        visual:'a flow for the order of steps, compare for two choices.' },
+      { key:'appreciation', label:'The arts in general',
+        fallback:true,
+        types:['twopart','passage','recall','scenario','mcq','matchpairs','truefalse','fill','write'],
+        guide:'ASK: what the work does and how you can tell, from what the notes say about it. AVOID: opinion questions with no answer in the notes.',
+        visual:'a concept hub for the parts of a work.' }
+    ],
+    health: [
+      { key:'nutrition', label:'Nutrition and fitness',
+        terms:['nutrient','nutrition','calorie','protein','carbohydrate','fat','vitamin','mineral','fiber','diet','food group','hydration','exercise','fitness','cardio','muscle','heart rate','bmi','sport'],
+        types:['twopart','estimate','classify','whosright','recall','fill','mcq','truefalse','write'],
+        guide:'ASK: sort foods or activities by what they do for the body, and work the actual figures from the notes (calories, minutes, servings). AVOID: advice beyond the notes - this is a study aid, never medical advice. The whosright card is a common nutrition or fitness myth.',
+        visual:'a bar chart for real figures, compare for two choices.' },
+      { key:'clinical', label:'The body and care (nursing and medicine)',
+        terms:['patient','nurse','nursing','symptom','diagnos','treatment','medication','dosage','pharmac','infection','vital sign','pulse','blood pressure','clinical','disease','first aid','cpr','wound','anatomy','physiolog'],
+        types:['twopart','scenario','sequence:process','classify','recall','fill','mcq','selfcheck','matchpairs'],
+        guide:'ASK: the right action for a described patient or situation, and the order of steps. AVOID: dosing or treatment questions the notes do not answer. The sequence is a procedure or protocol in its real order; the selfcheck card explains why a step is done.',
+        visual:'a flow for a protocol, parts for a body system.' },
+      { key:'wellbeing', label:'Wellbeing and prevention',
+        fallback:true,
+        terms:['mental health','stress','sleep','anxiety','coping','mindful','wellness','habit','substance','alcohol','tobacco','vaping','prevention','vaccin','hygiene','safety','bully','relationship'],
+        types:['twopart','scenario','whosright','matchpairs','classify','mcq','truefalse','fill','write'],
+        guide:'ASK: what a person could do in a described situation and what is likely to happen. AVOID: telling the learner what to feel or how to live - ask what the notes say. The whosright card is a common belief about health that the notes correct.',
+        visual:'compare two choices, flow for a routine.' }
+    ],
+    business: [
+      { key:'accounting', label:'Accounting and finance',
+        terms:['accounting','debit','credit','ledger','journal','balance sheet','income statement','asset','liabilit','equity','revenue','expense','profit','depreciation','bookkeeping','cash flow','invoice','budget','audit','tax'],
+        types:['tracetable','estimate','twopart','classify','fill','mcq','matchpairs','recall','write'],
+        guide:'ASK: put the figures where they belong and say what the totals show. AVOID: asking for a definition when the notes give an entry to post. The trace table runs a ledger or statement line by line; the classify card sorts items into assets, liabilities, revenue or expense.',
+        visual:'a bar chart for real figures, compare for two statements.' },
+      { key:'marketing', label:'Marketing and management',
+        terms:['marketing','brand','customer','market research','segment','target market','advertis','promotion','pricing','four ps','positioning','manager','leadership','team','strategy','swot','organization','human resources','motivat'],
+        types:['twopart','scenario','classify','conceptmap','whosright','mcq','fill','write','matchpairs'],
+        guide:'ASK: what a decision does for a described business, and which tool fits which problem. AVOID: buzzword definitions with no business attached. The concept map links a strategy to what it affects; the whosright card is a common management misconception.',
+        visual:'a hierarchy for an organisation, compare for two strategies.' },
+      { key:'venture', label:'Starting and running a business',
+        fallback:true,
+        terms:['entrepreneur','startup','business plan','pitch','venture','small business','operations','supply chain','inventory','quality','production','logistics','profit margin','competition','customer service'],
+        types:['twopart','scenario','estimate','recall','selfcheck','mcq','fill','truefalse','write'],
+        guide:'ASK: what to do next in a described business, and what a figure from the notes shows. AVOID: success stories with nothing the learner can apply. The estimate card is a margin, a break-even or a cost from the notes.',
+        visual:'a flow for how a product reaches a customer.' }
+    ],
+    social: [
+      { key:'law', label:'Law and justice',
+        terms:['law','legal','court','judge','jury','trial','plaintiff','defendant','verdict','appeal','statute','precedent','contract','tort','crime','criminal','felony','misdemeanor','evidence','constitutional','liabil','right to'],
+        types:['twopart','scenario','classify','highlight','whosright','recall','fill','mcq','write'],
+        guide:'ASK: which rule applies to a described case and what follows. AVOID: legal advice - ask only what the notes say. The highlight card picks the sentence in a case summary that decides it; the whosright card is a common misreading of a rule.',
+        visual:'a flow for how a case moves through the courts, compare for two kinds of law.' },
+      { key:'ideas', label:'Philosophy and ethics',
+        terms:['philosoph','ethic','moral','virtue','utilitarian','deontolog','kant','socrates','plato','aristotle','argument','premise','conclusion','logic','fallac','valid','existential','free will','metaphysic','epistemolog'],
+        types:['twopart','whosright','classify','highlight','selfcheck','conceptmap','mcq','matchpairs','write'],
+        guide:'ASK: what an argument claims, what it rests on, and which view a statement belongs to. AVOID: asking which philosopher said what with no idea attached. The highlight card is the sentence that carries the argument\'s key premise.',
+        visual:'a concept hub for a theory and its parts, compare for two views.' },
+      { key:'society', label:'Society and culture (sociology, anthropology, religion)',
+        fallback:true,
+        terms:['society','social','culture','cultural','norm','institution','class','race','gender','family','religion','belief','ritual','tradition','anthropolog','sociolog','community','government','politic','ideolog'],
+        types:['twopart','scenario','corroborate','matchpairs','classify','recall','mcq','fill','write'],
+        guide:'ASK: apply a concept to a described group or situation, and compare two accounts of it. AVOID: judging a belief - ask what the notes say it teaches or does. The corroborate card sets two short sources side by side.',
+        visual:'compare two cultures or theories, a hub for one concept.' }
+    ],
+    practical: [
+      { key:'rules', label:'Rules, signs and licence tests',
+        terms:['road sign','sign','traffic','driver','driving','license','licence','permit','right of way','yield','speed limit','intersection','parking','citizenship','naturalization','handbook','regulation','safety rule','test'],
+        types:['scenario','classify','whosright','matchpairs','recall','sequence','mcq','fill','truefalse'],
+        guide:'ASK: what to do in a described situation, and which rule applies. AVOID: numbers the notes do not give. The sequence is a real order of actions (the steps of a turn, a safety check); the whosright card is a rule drivers or beginners commonly get wrong.',
+        visual:'a flow for the steps of a manoeuvre, compare for two signs or rules.' },
+      { key:'cooking', label:'Cooking and food',
+        terms:['recipe','cook','bake','boil','simmer','sauté','fry','roast','knife','dough','sauce','ingredient','temperature','kitchen','food safety','menu','season','cuisine','culinary','measure'],
+        types:['sequence:process','estimate','twopart','recall','classify','selfcheck','fill','mcq','matchpairs'],
+        guide:'ASK: the order of steps, the amount or temperature, and why a step matters. AVOID: asking for a recipe from memory beyond what the notes give. The estimate card scales a recipe or converts a temperature; the selfcheck card explains why a step is done.',
+        visual:'a flow for the steps of a recipe, compare for two methods.' },
+      { key:'trades', label:'Trades, tools and skills',
+        fallback:true,
+        terms:['tool','trade','weld','carpent','wood','electric','plumb','mechanic','engine','repair','install','blueprint','garden','soil','sew','fabric','aviation','pilot','boat','sport','referee','craft'],
+        types:['twopart','sequence:process','scenario','estimate','recall','selfcheck','fill','mcq','matchpairs'],
+        guide:'ASK: which tool or step comes next and what goes wrong if it is skipped. AVOID: brand names and trivia the job never uses. The estimate card is a measurement or a quantity worked from the notes.',
+        visual:'a flow for a job in order, parts for the parts of a tool.' }
+    ],
     general: [
       { key:'study', label:'Study skills',
         terms:['study','studying','revision','revise','note.taking','memor','exam technique','time management','productivity','habit','focus','procrastinat','flashcard','recall'],
@@ -3041,6 +3445,16 @@
              'is affected. AVOID: naming a device with no text attached to it.',
     language: 'ASK: produce or correct a real sentence - conjugate, translate, fix the error. ' +
               'AVOID: asking about grammar terminology in the abstract.',
+    arts: 'ASK: what a technique, element or choice does to the work, shown on a named piece, passage or example. ' +
+          'AVOID: artist-and-date trivia with nothing in the notes that makes it matter.',
+    health: 'ASK: what to do, what happens in the body, and why, applied to a described person or situation. ' +
+            'AVOID: advice that goes beyond the notes - this is a study aid, never medical advice.',
+    business: 'ASK: what a decision, figure or statement shows and what it changes, using the notes\' own numbers. ' +
+              'AVOID: buzzword definitions with no business case attached.',
+    social: 'ASK: apply a principle, rule or argument to a short case, and say which side a claim supports and why. ' +
+            'AVOID: asking who said something with no idea attached.',
+    practical: 'ASK: the right action in a described situation, and the order of steps that gets it done safely. ' +
+               'AVOID: trivia about the object that the task never uses.',
     general: 'ASK: the central claims of the notes and how they connect to each other. ' +
              'AVOID: questions needing knowledge the notes do not contain.'
   };
@@ -3056,6 +3470,11 @@
       history:     { label: 'History',               feynmanPrompt: 'Explain why this event happened and its consequences.' },
       english:     { label: 'English / Literature',  feynmanPrompt: 'Explain this literary concept with a text example.' },
       language:    { label: 'Language',              feynmanPrompt: 'Explain this grammar rule with two example sentences.' },
+      arts:        { label: 'The Arts',              feynmanPrompt: 'Explain this idea and point to one example in a piece.' },
+      health:      { label: 'Health',                feynmanPrompt: 'Explain what happens and why, then what a person should do.' },
+      business:    { label: 'Business',              feynmanPrompt: 'Explain this idea with one real company or small-business example.' },
+      social:      { label: 'Humanities and Law',    feynmanPrompt: 'Explain this idea, then apply it to one short case.' },
+      practical:   { label: 'Practical Skills',      feynmanPrompt: 'Explain the steps in order and what goes wrong if one is skipped.' },
       general:     { label: 'General',               feynmanPrompt: 'Explain this concept in your own words.' }
     };
     var picked = strategies[subjectType] || strategies.general;
@@ -3313,9 +3732,21 @@
            easy first and harder at the end. */
         questionInstructions = '\n\nMATH: 12 bigequation (real equations: every one with different numbers, mixing solve, simplify, evaluate and expand or factor; start easy and get harder), 1 errorspot (EXACTLY 1 hasError:true), 1 wordproblem. All answers must be real values. Keep every hint to one short line.\n';
         var mathForms = ['Solve for x','Simplify','Evaluate','Solve for x','Expand or factor','Solve for x','Simplify','Solve for x','Evaluate','Expand or factor','Solve for x','Simplify'];
+        /* A lesson ABOUT systems of equations (Nov 2026): every equation card is a
+           pair of equations with an answer for each unknown. The four forms above
+           are all one-variable, so a systems lesson got "Solve for x" cards. The
+           card (lesson.html, sysSplit / sysAnswer) reads the two equations off one
+           line and shows a box for each unknown. */
+        var sysDay = false;
+        try { sysDay = /system|simultaneous|elimination|two equations|two unknowns|two variables/i.test(String(subject || '') + ' ' + String(allNotes() || '').substring(0, 3000)); } catch (eSys) { sysDay = false; }
+        if (sysDay) {
+          questionInstructions = '\n\nMATH (a lesson on SYSTEMS of equations): 12 bigequation and 1 errorspot and 1 wordproblem. The first 2 bigequation may be one-variable warm-ups (question "Solve for x"); the other 10 are SYSTEMS: question "Solve the system", equation = BOTH equations on one line separated by a semicolon (for example "x + y = 5; x - y = 1" or "y = 2x + 1; 3x + y = 11"), answer = EVERY unknown (for example "x = 3, y = 2"; whole numbers or simple fractions). Vary the method: adding or subtracting the equations, substitution, and elimination after multiplying. Different numbers every time; start easy and get harder. The explanation shows the method in two short steps. Keep every hint to one short line.\n';
+          mathForms = mathForms.map(function (f, fi) { return fi < 2 ? 'Solve for x' : 'Solve the system'; });
+        }
         var mathEqSchema = mathForms.map(function (f, ei) {
           var ed = ei < 3 ? 'Easy' : (ei >= 9 ? (d === 'Easy' ? 'Medium' : 'Hard') : d);
-          return '{"type":"bigequation","question":"' + f + '","equation":"","answer":"","hint":"","explanation":"","difficulty":"' + ed + '"}';
+          var ansShape = f === 'Solve the system' ? '"x = , y = "' : '""';
+          return '{"type":"bigequation","question":"' + f + '","equation":"","answer":' + ansShape + ',"hint":"","explanation":"","difficulty":"' + ed + '"}';
         }).join(',');
         questionSchema = mathEqSchema + ',' + '{"type":"errorspot","question":"Find the mistake:","steps":[{"text":"","hasError":false},{"text":"","hasError":false},{"text":"","hasError":true}],"hint":"","explanation":"","difficulty":"'+d+'"},{"type":"wordproblem","scenario":"","question":"What is the answer?","steps":[{"prompt":"","answer":"","unit":"","hint":""},{"prompt":"Now use {1} to find...","answer":"","unit":""}],"answer":"","hint":"","explanation":"","difficulty":"'+d+'"}';
       } else if (subjectType === 'science') {

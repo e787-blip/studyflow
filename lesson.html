@@ -306,6 +306,15 @@
   .mx-expr.mx-mid { font-size:1.7rem; }
   .mx-expr.mx-long { font-size:1.35rem; letter-spacing:-0.01em; }
   .mx-expr sup { font-size:.58em; line-height:0; }
+  .mx-sys { display:inline-grid; gap:.4rem; text-align:left; padding:.15rem 0 .15rem 1rem; border-left:2px solid var(--ink); border-radius:6px 0 0 6px;
+    font-family:var(--sans); font-weight:500; font-size:1.7rem; line-height:1.2; letter-spacing:-0.02em; color:var(--ink); font-variant-numeric:tabular-nums lining-nums; }
+  .fill-wrap.mx-multi { display:grid; gap:.7rem; }
+  .mx-vars { display:grid; grid-template-columns:repeat(var(--n, 2), minmax(0, 1fr)); gap:.6rem; }
+  .mx-var { display:flex; align-items:center; gap:.5rem; min-width:0; }
+  .mx-var-n { font-family:var(--sans); font-weight:600; font-size:1.1rem; color:var(--ink); white-space:nowrap; flex:none; }
+  .mx-var-in { min-width:0; width:100%; padding-left:.8rem !important; padding-right:.8rem !important; }
+  .fill-wrap.mx-multi .fill-submit { position:static; transform:none; width:100%; }
+  @media (max-width: 380px) { .mx-sys { font-size:1.4rem; } }
   .mx-cond { margin-top:.45rem; font-size:.92rem; color:var(--muted); font-variant-numeric:tabular-nums; }
   .mx-stack { display:inline-grid; justify-items:end; font-family:var(--sans); font-weight:500; font-size:1.85rem; line-height:1.22; letter-spacing:-0.01em; color:var(--ink); font-variant-numeric:tabular-nums; }
   .mx-op { color:var(--muted); font-weight:500; }
@@ -8364,6 +8373,89 @@
       .replace(/\s+/g, '');
   }
 
+
+  /* ── A SYSTEM OF EQUATIONS: two equations, two unknowns, an answer for each ──
+     (Nov 2026, the owner: a "system of equations" lesson asked "Solve for x"
+     over one box.) Everything below is about the SHAPE, not the topic title, so
+     a system from the model, from a teacher or from the generator is read the
+     same way.
+       sysSplit("x + y = 5; x - y = 1")  -> ["x + y = 5", "x - y = 1"]
+       sysAnswer("x = 3, y = 2")          -> [["x","3"],["y","2"]]
+       sysAnswer("(3, 2)", "x + y = 5; ...") -> the same, variables from the equations
+       sysGrade(typed, correct, eq)       -> true / false, or null when this is not a
+                                            multi-answer question (the usual grader runs). */
+  function sysSplit(eq) {
+    var t = String(eq == null ? '' : eq).replace(/[−–—]/g, '-').trim();
+    if (t.indexOf('=') === -1) return null;
+    var bits = t.split(/\s*(?:;|\n|,|\band\b)\s*/i).filter(function (b) { return b.trim(); });
+    if (bits.length < 2 || bits.length > 3) return null;
+    for (var i = 0; i < bits.length; i++) {
+      if ((bits[i].match(/=/g) || []).length !== 1) return null;
+      if (!/[a-z]/i.test(bits[i].replace(/\b(?:sin|cos|tan|log|ln|sqrt|pi)\b/gi, ''))) return null;
+      if (/\b[a-z]\s*\(/i.test(bits[i].split('=')[0]) && /^\s*[fgh]\s*\(/i.test(bits[i])) return null;   // f(x) = ..., g(x) = ...
+    }
+    return bits.map(function (b) { return b.trim(); });
+  }
+  function sysNum(t) {
+    t = String(t);
+    if (t.indexOf('/') !== -1) { var q = t.split('/'); return parseFloat(q[0]) / parseFloat(q[1]); }
+    return parseFloat(t);
+  }
+  function sysVars(eq) {
+    var seen = {}, out = [], m, re = /\b([a-z])\b/gi, t = String(eq || '').replace(/\b(?:sin|cos|tan|log|ln|sqrt|pi|and)\b/gi, ' ');
+    while ((m = re.exec(t))) { var v = m[1].toLowerCase(); if (!seen[v]) { seen[v] = 1; out.push(v); } }
+    return out.sort();
+  }
+  function sysAnswer(answer, equation) {
+    var c = sfCanon(answer), pairs = [], seen = {}, m, re = /([a-z])=(-?\d+(?:\.\d+)?(?:\/\d+)?)/g;
+    while ((m = re.exec(c))) { if (!seen[m[1]]) { seen[m[1]] = 1; pairs.push([m[1], m[2]]); } }
+    if (pairs.length >= 2) return pairs;
+    var nums = String(answer == null ? '' : answer).replace(/[−–—]/g, '-').replace(/[()\[\]{}]/g, ' ')
+      .split(/\s*(?:,|;|\band\b)\s*|\s+/).filter(function (x) { return x !== ''; });
+    if (nums.length >= 2 && nums.every(function (x) { return /^-?\d+(?:\.\d+)?(?:\/\d+)?$/.test(x); })) {
+      var vars = sysVars(equation);
+      if (vars.length === nums.length && sysSplit(equation)) return vars.map(function (v, i) { return [v, nums[i]]; });
+    }
+    return null;
+  }
+  /* Several answers for ONE unknown ("x = 3 or x = -3", the two roots of x^2 = 9):
+     every root is needed, in any order, however they are joined. One root was
+     marked right, and "x = -3, x = 3" was marked wrong. */
+  function sysRoots(answer) {
+    var c = sfCanon(answer), vals = [], vars = {}, m, re = /([a-z])=(-?\d+(?:\.\d+)?(?:\/\d+)?)/g;
+    while ((m = re.exec(c))) { vars[m[1]] = 1; vals.push(sysNum(m[2])); }
+    var uniq = vals.filter(function (v, i) { return vals.indexOf(v) === i; });
+    return (Object.keys(vars).length === 1 && uniq.length >= 2) ? uniq : null;
+  }
+  function sysGrade(typed, correct, equation) {
+    var roots = sysRoots(correct);
+    if (roots) {
+      var ct = sfCanon(typed), tn = [];
+      /* "x = ±3" is both roots. */
+      ct = ct.replace(/\+-(\d+(?:\.\d+)?(?:\/\d+)?)/g, function (_, n) { tn.push(sysNum(n), -sysNum(n)); return ' '; });
+      tn = tn.concat((ct.match(/-?\d+(?:\.\d+)?(?:\/\d+)?/g) || []).map(sysNum));
+      var tu = tn.filter(function (v, i) { return tn.indexOf(v) === i; });
+      return tu.length === roots.length && roots.every(function (r) { return tu.some(function (t) { return Math.abs(t - r) < 1e-6; }); });
+    }
+    var cp = sysAnswer(correct, equation);
+    if (!cp) return null;
+    var c = sfCanon(typed), tp = [], seen = {}, m, re = /([a-z])=(-?\d+(?:\.\d+)?(?:\/\d+)?)/g;
+    while ((m = re.exec(c))) { if (!seen[m[1]]) { seen[m[1]] = 1; tp.push([m[1], m[2]]); } }
+    var close = function (a, b) { return Math.abs(sysNum(a) - sysNum(b)) < 1e-6; };
+    if (tp.length) {
+      if (tp.length !== cp.length) return false;
+      return cp.every(function (pr) {
+        var hit = tp.filter(function (x) { return x[0] === pr[0]; })[0];
+        return !!hit && close(hit[1], pr[1]);
+      });
+    }
+    /* No letters typed: "3, 2" or "(3, 2)" - read in the order the answer lists them. */
+    var nums = String(typed == null ? '' : typed).replace(/[−–—]/g, '-').replace(/[()\[\]{}]/g, ' ')
+      .split(/\s*(?:,|;|\band\b)\s*|\s+/).filter(function (x) { return x !== ''; });
+    if (nums.length !== cp.length || !nums.every(function (x) { return /^-?\d+(?:\.\d+)?(?:\/\d+)?$/.test(x); })) return false;
+    return cp.every(function (pr, i) { return close(nums[i], pr[1]); });
+  }
+
   /* One "look at the accents" per card - a prompt, not the answer. */
   var accentRetryUsed = false;
 
@@ -8746,7 +8838,8 @@
        ("2x + 5", with "when x = 4" under it), and the box asks for what the
        question asks for. */
     var parts = mxSplit(q.question, eq);
-    if (parts.verb) topic.title = parts.verb;
+    if (topic.id === 'system') topic.title = 'Solve the system';
+    else if (parts.verb) topic.title = parts.verb;
     else if (/^solve for [a-z]$/i.test(topic.title) && parts.expr && parts.expr.indexOf('=') === -1) {
       /* No equals sign, nothing to solve: an expression is evaluated when a
          value is given for its letter, and simplified otherwise. */
@@ -8771,17 +8864,39 @@
 
     var visual = buildMathVisual(topic, eq, q, parts);
 
+    /* A question with an answer for each unknown gets a box for each, labelled
+       "x =" and "y =". The page still has ONE #fill-input that the grader, the
+       Enter key and the retry all read: here it is a hidden field the boxes
+       write into ("x = 3, y = 2"), so nothing downstream had to learn about
+       boxes. Enter moves to the next empty box and checks from the last. */
+    var multi = topic.id === 'system' ? sysAnswer(ans, eq) : null;
+    var inputsHtml;
+    if (multi) {
+      inputsHtml = '<div class="fill-wrap mx-multi" data-vars="' + escHtml(multi.map(function (m) { return m[0]; }).join('')) + '">' +
+        '<div class="mx-vars" style="--n:' + multi.length + '">' +
+        multi.map(function (m) {
+          return '<label class="mx-var"><span class="mx-var-n">' + escHtml(m[0]) + ' =</span>' +
+            '<input class="fill-input mx-var-in" type="text" data-v="' + escHtml(m[0]) + '" data-sf-enter="next" inputmode="text" ' +
+            'aria-label="Value of ' + escHtml(m[0]) + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/></label>';
+        }).join('') + '</div>' +
+        '<input class="fill-input" id="fill-input" type="text" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"/>' +
+        '<button class="btn btn-primary btn-sm fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
+        '</div>';
+    } else {
+      inputsHtml = '<div class="fill-wrap">' +
+      '<input class="fill-input" id="fill-input" type="text" placeholder="' + escHtml(placeholder) + '" inputmode="' + inputMode + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>' +
+      '<button class="btn btn-primary btn-sm fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
+      '</div>' +
+      mathKeysHtml('fill-input', q.question, ans, { equation: eq, decimal: inputMode === 'decimal' });
+    }
+
     var body =
       '<div class="q-meta">' +
       '<span class="q-type-label">' + topic.label + '</span>' +
       '<span class="q-difficulty ' + diffClass + '">' + diff + '</span>' +
       '</div>' +
       visual +
-      '<div class="fill-wrap">' +
-      '<input class="fill-input" id="fill-input" type="text" placeholder="' + escHtml(placeholder) + '" inputmode="' + inputMode + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>' +
-      '<button class="btn btn-primary btn-sm fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
-      '</div>' +
-      mathKeysHtml('fill-input', q.question, ans, { equation: eq, decimal: inputMode === 'decimal' }) +
+      inputsHtml +
       '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show steps</button>' +
       '<div class="hint-box" id="hint-box">' + escHtml(hint) + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
@@ -8795,8 +8910,33 @@
     setTimeout(function() {
       var btn = document.getElementById('fill-btn');
       var inp = document.getElementById('fill-input');
-      if (btn) { btn.dataset.answer = ans; btn.dataset.explanation = expl; btn.dataset.mustBeCorrect = '1'; }
-      if (inp) {
+      if (btn) { btn.dataset.answer = ans; btn.dataset.explanation = expl; btn.dataset.mustBeCorrect = '1'; btn.dataset.equation = eq; }
+      var boxes = document.querySelectorAll('#session-card .mx-var-in');
+      if (inp && boxes.length) {
+        /* The boxes write into the hidden #fill-input; its grade colours and
+           its "disabled" are copied back onto them. */
+        var mirror = function () {
+          var filled = [];
+          for (var bi = 0; bi < boxes.length; bi++) {
+            var tv = boxes[bi].value.trim();
+            if (tv) filled.push(boxes[bi].getAttribute('data-v') + ' = ' + tv);
+          }
+          inp.value = filled.join(', ');
+        };
+        for (var bj = 0; bj < boxes.length; bj++) boxes[bj].addEventListener('input', mirror);
+        new MutationObserver(function () {
+          for (var bk = 0; bk < boxes.length; bk++) {
+            boxes[bk].disabled = inp.disabled;
+            boxes[bk].readOnly = inp.readOnly;
+            boxes[bk].style.borderColor = inp.style.borderColor;
+            boxes[bk].style.background = inp.style.background;
+          }
+        }).observe(inp, { attributes: true, attributeFilter: ['style', 'disabled', 'readonly'] });
+        setTimeout(function () {
+          if (!boxes[0] || !document.body.contains(boxes[0])) return;
+          try { boxes[0].focus({ preventScroll: true }); } catch (e) { boxes[0].focus(); }
+        }, 380);
+      } else if (inp) {
         inp.addEventListener('keydown', function(e){
           if (e.key !== 'Enter' || sfEnterAlreadyHandled(e)) return;
           answerFillBtn();
@@ -8816,6 +8956,8 @@
   // ── TOPIC DETECTOR ──
   function detectMathTopic(eq) {
     var e = eq.toLowerCase();
+    if (sysSplit(eq))
+      return { id:'system', label:'Algebra', badge:'Equation', title:'Solve the system', instruction:'Find the value of each unknown.', placeholder:'x = ?, y = ?' };
     // Order matters — most specific first
     if (/d\/dx|dy\/dx|f'\(|derivative|differentiat|integral|integrat|antiderivativ|∫|\blim\b|limit|chain rule|product rule|quotient rule/.test(e))
       return { id:'calculus', label:'Calculus', badge:'Calculus', title:'Solve it', instruction:'Differentiate, integrate, or evaluate the limit.', placeholder:'Answer…' };
@@ -8962,6 +9104,15 @@
         var fop = { '+': '+', '-': '−', '−': '−', '×': '×', '*': '×', '÷': '÷' }[fr[3]];
         return '<div class="mx-panel"><div class="mx-expr mx-fracs">' + frac(fr[1], fr[2]) +
           '<span class="mx-op">' + fop + '</span>' + frac(fr[4], fr[5]) + '</div></div>';
+      }
+    }
+
+    // ── A SYSTEM: the equations one under the other, as a pair ──
+    if (topic.id === 'system') {
+      var sysLines = sysSplit(parts.expr || eq);
+      if (sysLines) {
+        return '<div class="mx-panel"><div class="mx-sys" role="group" aria-label="System of equations">' +
+          sysLines.map(function (l) { return '<div>' + mxPretty(l) + '</div>'; }).join('') + '</div></div>';
       }
     }
 
@@ -12864,8 +13015,16 @@
     var cmpRe = /[<>≤≥≠]|<=|>=|!=/;
     var valCmp = cmpRe.test(val), corCmp = cmpRe.test(String(correct));
 
+    /* A system ("x = 3, y = 2"): graded by what each unknown is, in any order
+       and in any form ("(3, 2)", "x=3 and y=2"). It never falls through to the
+       fuzzy rules below, which read digits alone and would take "3, 2" for
+       32 and "y = 2, x = 3" for 23. Setting corCmp keeps all of them out. */
+    var sysBtn = document.getElementById('fill-btn');
+    var sysVerdict = sysGrade(val, correct, (sysBtn && sysBtn.dataset.equation) || '');
+    if (sysVerdict !== null) { corCmp = true; isCorrect = sysVerdict; }
+
     // 1. Exact match after normalization
-    if (valN === corN || (sfCanon(val) === sfCanon(correct) && sfCanon(val) !== '')) {
+    if (!isCorrect && sysVerdict === null && (valN === corN || (sfCanon(val) === sfCanon(correct) && sfCanon(val) !== ''))) {
       isCorrect = true;
     }
 
@@ -14808,6 +14967,38 @@
     };
   }
 
+
+  /* ── SYSTEMS: two equations, two unknowns. The answer lists each unknown. ──
+     Three shapes, each with whole-number answers: add-and-subtract (x + y, x - y),
+     substitution (y = ax + b with a second equation), and elimination (matching
+     y terms with opposite signs). */
+  /* Numbers as a learner reads them: a real minus, and no "1x". */
+  function sgn(n) { return n < 0 ? '−' + (-n) : String(n); }
+  function co(n) { return n === 1 ? '' : (n === -1 ? '−' : String(n)); }
+  function genSystemEasy() {
+    var x = randInt(1, 9), y = randInt(1, 9);
+    if (x === y) y = x + 1;
+    return { eq: 'x + y = ' + sgn(x + y) + '; x − y = ' + sgn(x - y), ans: 'x = ' + x + ', y = ' + y,
+      sys: true, hint: 'Add the two equations: the y terms cancel.',
+      why: 'Add the equations: 2x = ' + sgn(2 * x) + ', so x = ' + x + '. Then x + y = ' + sgn(x + y) + ' gives y = ' + y + '.' };
+  }
+  function genSystemSub() {
+    var x = randInt(1, 7), y, a = randInt(1, 4), b = randInt(-4, 6), c = randInt(1, 3);
+    y = a * x + b;
+    if (y === 0 || y > 30) { b = 1; y = a * x + b; }
+    var k = c * x + y, bs = b < 0 ? '− ' + (-b) : '+ ' + b;
+    return { eq: 'y = ' + co(a) + 'x ' + bs + '; ' + co(c) + 'x + y = ' + sgn(k), ans: 'x = ' + x + ', y = ' + y,
+      sys: true, hint: 'Put the first equation in place of y in the second.',
+      why: 'Substitute y = ' + co(a) + 'x ' + bs + ' into ' + co(c) + 'x + y = ' + sgn(k) + ': ' + co(a + c) + 'x ' + bs + ' = ' + sgn(k) + ', so x = ' + x + '. Then y = ' + y + '.' };
+  }
+  function genSystemElim() {
+    var x = randInt(-3, 6), y = randInt(1, 6), a = randInt(1, 4), b = randInt(2, 5), d = randInt(1, 4);
+    if (a === d) d = a + 1;
+    return { eq: co(a) + 'x + ' + b + 'y = ' + sgn(a * x + b * y) + '; ' + co(d) + 'x − ' + b + 'y = ' + sgn(d * x - b * y), ans: 'x = ' + x + ', y = ' + y,
+      sys: true, hint: 'The y terms are ' + b + 'y and −' + b + 'y: add the equations to remove y.',
+      why: 'Add the equations: ' + co(a + d) + 'x = ' + sgn((a + d) * x) + ', so x = ' + x + '. Put that into the first equation to get y = ' + y + '.' };
+  }
+
   /* Combining like terms: ax + bx */
   function genCombine() {
     var a = randInt(2, 9), b = randInt(2, 9);
@@ -14959,6 +15150,9 @@
     var t = fmStr(title).toLowerCase();
     if (/two-step|two step/.test(t)) return [genTwoStep, genOneStep, genTwoStep];
     if (/one-step|one step/.test(t)) return [genOneStep, genOneStep, genTwoStep];
+    /* Systems come first: "Systems of equations by elimination" would otherwise
+       match nothing here and get the general one-variable mix. */
+    if (/system|simultaneous|elimination|two equations|two unknowns|two variables/.test(t)) return [genSystemEasy, genSystemSub, genSystemElim];
     if (/like terms|combin|simplif/.test(t)) return [genCombine, genDistribute, genCombine];
     if (/distribut|expand/.test(t)) return [genDistribute, genCombine, genDistribute];
     if (/evaluat|substitut/.test(t)) return [genEvaluate, genOneStep, genEvaluate];
@@ -15008,10 +15202,10 @@
       madeEq++;
       out.push({
         type: 'bigequation',
-        question: g.eq.indexOf('=') !== -1 ? 'Solve for x' : 'Simplify',
+        question: g.sys ? 'Solve the system' : (g.eq.indexOf('=') !== -1 ? 'Solve for x' : 'Simplify'),
         equation: g.eq,
         answer: g.ans,
-        hint: 'Work backwards through the operations.',
+        hint: g.hint || 'Work backwards through the operations.',
         explanation: g.why,
         difficulty: 'Medium',
         _generated: true
