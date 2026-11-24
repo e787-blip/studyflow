@@ -2219,6 +2219,7 @@
 <script src="/sf-draw.js"></script>
 <script src="/sf-questions.js"></script>
 <script src="/sf-data.js"></script>
+<script src="/sf-mathgen.js"></script>
 <script src="/sf-guide.js"></script>
 <script src="/sf-auth.js"></script>
 <script src="/sf-owner.js"></script>
@@ -8406,6 +8407,7 @@
     while ((m = re.exec(t))) { var v = m[1].toLowerCase(); if (!seen[v]) { seen[v] = 1; out.push(v); } }
     return out.sort();
   }
+    if (/\b(?:when|if|given|where|for)\b/i.test(t)) return null;      // "3x + 2y when x = 2 and y = 5"
   function sysAnswer(answer, equation) {
     var c = sfCanon(answer), pairs = [], seen = {}, m, re = /([a-z])=(-?\d+(?:\.\d+)?(?:\/\d+)?)/g;
     while ((m = re.exec(c))) { if (!seen[m[1]]) { seen[m[1]] = 1; pairs.push([m[1], m[2]]); } }
@@ -8446,7 +8448,41 @@
       if (tp.length !== cp.length) return false;
       return cp.every(function (pr) {
         var hit = tp.filter(function (x) { return x[0] === pr[0]; })[0];
+  /* A FRACTION answer ("5/6"): the typed fraction must have the same value AND be
+     in lowest terms, or be the same value as a decimal ("0.5" for 1/2). It used
+     to be read as digits alone, so "56" was marked right for 5/6. */
+  function fracGrade(typed, correct) {
+    var c = sfCanon(correct), m = /^(-?\d+)\/(\d+)$/.exec(c);
+    if (!m) return null;
+    var want = +m[1] / +m[2], t = sfCanon(typed);
+    var f = /^(-?\d+)\/(\d+)$/.exec(t);
+    if (f) return +f[2] !== 0 && Math.abs(+f[1] / +f[2] - want) < 1e-9 && gcdInt(+f[1], +f[2]) === 1;
+    return /^-?\d*\.?\d+$/.test(t) && Math.abs(parseFloat(t) - want) < 1e-6;
+  }
+  function gcdInt(a, b) { a = Math.abs(a); b = Math.abs(b); while (b) { var t = b; b = a % b; a = t; } return a || 1; }
+  /* An INEQUALITY answer ("x > 7"): "7 < x" is the same answer written the other
+     way round. Anything else is compared as it was. */
+  function ineqGrade(typed, correct) {
+    var re = /^(?:([a-z])(<=|>=|<|>)(-?\d+(?:\.\d+)?)|(-?\d+(?:\.\d+)?)(<=|>=|<|>)([a-z]))$/;
+    var cm = re.exec(sfCanon(correct)), tm = re.exec(sfCanon(typed));
+    if (!cm || !cm[1]) return null;
+    if (!tm) return false;
+    var swap = { '<': '>', '>': '<', '<=': '>=', '>=': '<=' };
+    var tv = tm[1] ? tm[1] : tm[6], to = tm[1] ? tm[2] : swap[tm[5]], tn = tm[1] ? tm[3] : tm[4];
+    return tv === cm[1] && to === cm[2] && Math.abs(parseFloat(tn) - parseFloat(cm[3])) < 1e-9;
+  }
+  /* A FACTORED answer ("(x + 2)(x + 3)"): the brackets in any order. */
+  function factorGrade(typed, correct) {
+    var re = /\([^()]+\)/g, c = sfCanon(correct);
+    if (!/^(\([^()]+\)){2,}$/.test(c)) return null;
+    var t = sfCanon(typed);
+    if (!/^(\([^()]+\)){2,}$/.test(t)) return false;
+    return c.match(re).sort().join('') === t.match(re).sort().join('');
+  }
         return !!hit && close(hit[1], pr[1]);
+    var fr = fracGrade(typed, correct); if (fr !== null) return fr;
+    var iq = ineqGrade(typed, correct); if (iq !== null) return iq;
+    var fc = factorGrade(typed, correct); if (fc !== null) return fc;
       });
     }
     /* No letters typed: "3, 2" or "(3, 2)" - read in the order the answer lists them. */
@@ -8847,9 +8883,10 @@
     }
     var placeholder = 'Your answer';
     var solveM = /^solve(?:\s+for\s+([a-z]))?/i.exec(topic.title);
-    if (solveM && parts.expr.indexOf('=') !== -1) placeholder = (solveM[1] || solveVar || 'x').toLowerCase() + ' = ?';
+    if (/[<>\u2264\u2265]/.test(parts.expr)) placeholder = 'Your answer, like x > 3';
+    else if (solveM && parts.expr.indexOf('=') !== -1) placeholder = (solveM[1] || solveVar || 'x').toLowerCase() + ' = ?';
     else if (topic.id === 'geometry') placeholder = 'Answer, with units';
-    else if (topic.id === 'fraction') placeholder = 'Answer as a fraction';
+    else if (topic.id === 'fraction' && /\d\s*\/\s*\d/.test(String(ans))) placeholder = 'Answer as a fraction';
     else if (/^find\s+([fgh]\(-?[\d.]+\))$/i.test(parts.cond)) placeholder = /^find\s+(.+)$/i.exec(parts.cond)[1] + ' = ?';
     /* A simplified expression has letters in it ("2x + 12"); the decimal
        keypad a phone opens for inputmode="decimal" has none. */
@@ -9027,7 +9064,10 @@
       var c = /,?\s*\b(when|if|where|for)\s+([a-z]\s*=\s*[-−]?[\d.]+(?:\s*(?:,|and)\s*[a-z]\s*=\s*[-−]?[\d.]+)*)\s*[.?]?\s*$/i.exec(expr);
       if (c && c.index > 0) { cond = c[1].toLowerCase() + ' ' + c[2]; expr = expr.slice(0, c.index); }
     }
-    expr = expr.replace(/\s*[?.]\s*$/, '').trim();
+    /* A sentence ("What percent is 14 of 140?") keeps its question mark; an
+       expression does not need one. */
+    if ((expr.replace(/\b[a-z]\b/gi, '').match(/[a-z]{3,}/gi) || []).length >= 2) expr = expr.replace(/\s*\.\s*$/, '').trim();
+    else expr = expr.replace(/\s*[?.]\s*$/, '').trim();
     verb = verb ? verb.charAt(0).toUpperCase() + verb.slice(1).toLowerCase() : '';
     if (/^what is$/i.test(verb)) verb = '';
     else if (/^find the derivative of$/i.test(verb)) verb = 'Find the derivative';
@@ -9046,8 +9086,8 @@
   function mxPretty(text) {
     var SUP = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' };
     return escHtml(String(text || ''))
-      .replace(/\^\(?(\d)\)?/g, function (_, d) { return SUP[d]; })
-      .replace(/\^\(?([a-z0-9+\-]{1,6})\)?/gi, '<sup>$1</sup>')
+      .replace(/\^\((\d+)\)|\^(\d+)/g, function (_, a, b) { return String(a || b).replace(/\d/g, function (d) { return SUP[d]; }); })
+      .replace(/\^\(([a-z0-9+\u2212\-]{1,6})\)|\^([a-z0-9+\u2212\-]{1,6})/gi, function (_, a, b) { return '<sup>' + (a || b) + '</sup>'; })
       .replace(/ - /g, ' − ')
       .replace(/(\d|\))\s*\*\s*(?=[\d(a-z])/gi, '$1 × ');
   }
@@ -9087,7 +9127,7 @@
     }
 
     // ── DIVISION: the long-division bracket ──
-    if (topic.id === 'divide') {
+    if (topic.id === 'divide' && plain && !/[\u2212-]/.test(eq)) {
       var nums3 = eq.match(/\d+(?:\.\d+)?/g) || [];
       if (nums3.length >= 2) {
         return '<div class="mx-panel"><div class="mx-expr"><span class="mx-div">' + escHtml(nums3[1]) + '</span>' +
@@ -15137,8 +15177,23 @@
 
   var WORD_PROBLEM_GENS = [wpTaxi, wpShare, wpPercent, wpRate];
 
-  function genWordProblem(nth) {
-    var g = WORD_PROBLEM_GENS[(nth || 0) % WORD_PROBLEM_GENS.length]();
+  /* The scenarios a day may draw from: the original four plus every scenario in
+     sf-mathgen.js, or - when the lesson's title names a family (percent,
+     ratios, geometry...) - only that family's scenarios. */
+  function wordPool(title) {
+    var G = window.SFMathGen;
+    if (!G) return WORD_PROBLEM_GENS;
+    var key = G.topicFor(fmStr(title));
+    var fam = key ? G.wordFor(key) : null;
+    if (fam && fam.length && key) {
+      /* The original percent scenario still belongs to a percent day. */
+      return key === 'percent' ? fam.concat([wpPercent]) : fam;
+    }
+    return WORD_PROBLEM_GENS.concat(G.wordFor('all'));
+  }
+  function genWordProblem(nth, pool) {
+    pool = pool || WORD_PROBLEM_GENS;
+    var g = pool[(nth || 0) % pool.length]();
     g.type = 'wordproblem';
     g.difficulty = 'Medium';
     g._generated = true;
@@ -15148,16 +15203,15 @@
   /* Choose the generators that suit the day's topic. */
   function generatorsFor(title) {
     var t = fmStr(title).toLowerCase();
-    if (/two-step|two step/.test(t)) return [genTwoStep, genOneStep, genTwoStep];
-    if (/one-step|one step/.test(t)) return [genOneStep, genOneStep, genTwoStep];
     /* Systems come first: "Systems of equations by elimination" would otherwise
        match nothing here and get the general one-variable mix. */
     if (/system|simultaneous|elimination|two equations|two unknowns|two variables/.test(t)) return [genSystemEasy, genSystemSub, genSystemElim];
     if (/like terms|combin|simplif/.test(t)) return [genCombine, genDistribute, genCombine];
     if (/distribut|expand/.test(t)) return [genDistribute, genCombine, genDistribute];
     if (/evaluat|substitut/.test(t)) return [genEvaluate, genOneStep, genEvaluate];
-    /* General algebra: a spread of the core skills. */
-    return [genOneStep, genTwoStep, genCombine, genDistribute, genEvaluate];
+    /* General algebra: a spread of the core skills, and (sf-mathgen.js) a few
+       more shapes so an "Algebra" day is not five. */
+    return [genOneStep, genTwoStep, genCombine, genDistribute, genEvaluate].concat(window.SFMathGen ? window.SFMathGen.general : []);
   }
 
   /* Build the shortfall of each format separately. The old signature took a
@@ -15183,26 +15237,36 @@
        day needing a single word problem always got WORD_PROBLEM_GENS[0], so
        adding three more shapes changed nothing: every day of a plan still
        opened with the same taxi. The offset is what makes the variety real. */
-    var wpOffset = randInt(0, WORD_PROBLEM_GENS.length - 1);
+    var wpPool = wordPool(dayObj && dayObj.title);
+    var wpOffset = randInt(0, wpPool.length - 1);
     var madeWp = 0;
     while (madeWp < (needWp || 0) && guard < 60) {
       guard++;
-      var wp = genWordProblem(wpOffset + madeWp);
+      var wp = genWordProblem(wpOffset + madeWp, wpPool);
       if (seen[wp.scenario]) continue;
       seen[wp.scenario] = 1; out.push(wp); madeWp++;
     }
 
-    var madeEq = 0;
+    var madeEq = 0, genStart = randInt(0, gens.length - 1);
     guard = 0;
     while (madeEq < (needEq || 0) && guard < 120) {
+    /* A family named by the title (fractions, quadratics, inequalities, geometry,
+       percent, statistics...): sf-mathgen.js. It goes before the generic rules
+       below, or "Simplifying radicals" would get like-terms filler. */
+    if (window.SFMathGen) {
+      var fam = window.SFMathGen.equations(window.SFMathGen.topicFor(t));
+      if (fam && fam.length) return fam;
+    }
+    if (/two-step|two step/.test(t)) return [genTwoStep, genOneStep, genTwoStep];
+    if (/one-step|one step/.test(t)) return [genOneStep, genOneStep, genTwoStep];
       guard++;
-      var g = gens[madeEq % gens.length]();
+      var g = gens[(genStart + guard - 1) % gens.length]();
       if (seen[g.eq]) continue;
       seen[g.eq] = 1;
       madeEq++;
       out.push({
         type: 'bigequation',
-        question: g.sys ? 'Solve the system' : (g.eq.indexOf('=') !== -1 ? 'Solve for x' : 'Simplify'),
+        question: g.same ? g.eq : (g.q || (g.sys ? 'Solve the system' : (g.eq.indexOf('=') !== -1 ? 'Solve for x' : 'Simplify'))),
         equation: g.eq,
         answer: g.ans,
         hint: g.hint || 'Work backwards through the operations.',

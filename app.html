@@ -491,6 +491,7 @@
 <script src="/sf-auth.js"></script>
 <script src="/sf-owner.js"></script>
 <script src="/sf-questions.js"></script>
+<script src="/sf-mathgen.js"></script>
 <script src="/sf-data.js"></script>
 <script>
 
@@ -3742,6 +3743,19 @@
         if (sysDay) {
           questionInstructions = '\n\nMATH (a lesson on SYSTEMS of equations): 12 bigequation and 1 errorspot and 1 wordproblem. The first 2 bigequation may be one-variable warm-ups (question "Solve for x"); the other 10 are SYSTEMS: question "Solve the system", equation = BOTH equations on one line separated by a semicolon (for example "x + y = 5; x - y = 1" or "y = 2x + 1; 3x + y = 11"), answer = EVERY unknown (for example "x = 3, y = 2"; whole numbers or simple fractions). Vary the method: adding or subtracting the equations, substitution, and elimination after multiplying. Different numbers every time; start easy and get harder. The explanation shows the method in two short steps. Keep every hint to one short line.\n';
           mathForms = mathForms.map(function (f, fi) { return fi < 2 ? 'Solve for x' : 'Solve the system'; });
+        }
+        /* A lesson on another named family (fractions, quadratics, inequalities,
+           geometry, percent, statistics...): sf-mathgen.js says what to ask for. */
+        if (!sysDay) {
+          try {
+            var famKey = window.SFMathGen ? window.SFMathGen.topicFor(String(subject || '')) : '';
+            var famPrompt = famKey && window.SFMathGen.promptFor ? window.SFMathGen.promptFor(famKey) : null;
+            if (famPrompt) {
+              questionInstructions = '\n\nMATH (a lesson on ' + famKey + '): 12 bigequation and 1 errorspot and 1 wordproblem. ' + famPrompt.rule +
+                ' Different numbers every time; start easy and get harder. Keep every hint to one short line.\n';
+              mathForms = famPrompt.forms;
+            }
+          } catch (eFam) { /* the usual four forms stand */ }
         }
         var mathEqSchema = mathForms.map(function (f, ei) {
           var ed = ei < 3 ? 'Easy' : (ei >= 9 ? (d === 'Easy' ? 'Medium' : 'Hard') : d);
