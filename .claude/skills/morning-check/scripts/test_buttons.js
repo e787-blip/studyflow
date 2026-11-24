@@ -51,16 +51,24 @@ function measure() {
 (async () => {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-  await ctx.addInitScript(() => { try { localStorage.setItem('studyflow_user', JSON.stringify({ name: 'Test Learner', email: 't@example.com', tier: 'free', grade: '7' })); } catch (e) {} });
   const seen = {};
   for (const [name, min] of Object.entries(Object.assign({}, PAGES, STATIC))) {
     const page = await ctx.newPage(); const errs = []; page.on('pageerror', e => errs.push(String(e)));
     if (STATIC[name]) {
-      const html = (await (await fetch(BASE + name + '.html')).text()).replace(/<script[\s\S]*?<\/script>/gi, '').replace('<head>', '<head><base href="' + BASE + '">');
-      await page.setContent(html, { waitUntil: 'load' });
+      // Written into a same-origin HTML page with document.write (setContent is not in every harness;
+      // an image document does not load the stylesheets written into it).
+      await page.goto(BASE + 'privacy.html');
+      await page.evaluate(async ({ name, base }) => {
+        const t = await (await fetch(base + name + '.html')).text();
+        document.open(); document.write(t.replace(/<script[\s\S]*?<\/script>/gi, '').replace('<head>', '<head><base href="' + base + '">')); document.close();
+      }, { name, base: BASE });
+      await page.waitForTimeout(1500);
       await page.evaluate(() => document.fonts.ready);
       await page.evaluate(() => document.querySelectorAll('body *').forEach(el => { if (/^(TEMPLATE|NOSCRIPT)$/.test(el.tagName)) return; el.removeAttribute('hidden'); if (getComputedStyle(el).display === 'none') el.style.setProperty('display', 'block', 'important'); }));
     } else {
+      // A signed-in learner, seeded the way harness.js does (an init script is not in every harness).
+      await page.goto(BASE + 'favicon.png');
+      await page.evaluate(() => { try { localStorage.clear(); localStorage.setItem('studyflow_user', JSON.stringify({ name: 'Test Learner', email: 't@example.com', tier: 'free', grade: '7' })); localStorage.setItem('studyflow_onboarded', '1'); } catch (e) {} });
       await page.goto(BASE + name + '.html?cb=' + Date.now(), { waitUntil: 'load' });
       await page.evaluate(() => document.fonts.ready);
       assert(page.url().indexOf('/' + name + '.html') > -1, name + ': stayed on its own page (' + page.url().replace(BASE, '') + ')');

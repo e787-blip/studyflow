@@ -122,15 +122,26 @@ the fonts or the no-build-step stack.
   pages, measures `offsetHeight` (a card still scaling in reads small by
   `getBoundingClientRect`), and fails on any button that differs or any
   page rule that re-sizes one.
-  **Migrated: index, about, pricing, login, teacher-login, contact, parent,
-  app, dashboard, teacher, teacher-build. NOT yet: lesson** (its own
-  `.btn-next`, `.fill-submit`, `.write-submit`... are still blue pills with
-  a soft glow and the 2px sink press). The lesson is last and the riskiest
-  (118 buttons, the renderers and tests pin their class names, so keep the
-  names and change only the CSS). **This replaces two lesson decisions**:
-  Next and the in-card Checks stop being a blue pill with a soft glow, and
-  the press stops being the 2px sink with a spring back (the "FOCUS PRESS"
-  above).
+  **Migrated: every page, the lesson included (Nov 23).** In the lesson the
+  class names stayed (the renderers and tests pin them) and each got
+  `.btn` classes in its markup: `.btn-next`, `.write-submit`, `.sfd-check`,
+  the standalone `.fill-submit` Checks, `.btn-recap-next` and `.btn-dashboard`
+  are `.btn .btn-primary` (48px); the Check INSIDE the fill-in's answer box
+  (`.fill-wrap .fill-submit`) is `.btn-sm` (40px, 10px corners) and keeps
+  only its position; `.swp-go` and `.dict-play` are `.btn-primary .btn-sm`;
+  `.lp-back`, `.dict-slow`, `.hear-btn` and `.btn-review-lesson` are
+  `.btn-secondary .btn-sm` (the review button was amber; one blue now);
+  `.hint-btn`, `.btn-flag` and `.nf-quiet` are `.btn-text .btn-sm`. The
+  Next button still takes the verdict's colour (green after a right answer,
+  red after a wrong one), now flat. **This replaced two lesson decisions
+  (Nov 19)**: those buttons are no longer blue pills with a soft glow, and
+  they shrink to .97 instead of sinking 2px. **The answer TILES, chips and
+  keys keep the 2px sink and spring back** (a tile as wide as the card
+  would shrink 19px at .97): `.q-option`, `.tf-btn`, `.seq-item`,
+  `.match-item`, `.sb-word`, `.conf-btn` (Sure / Not sure), `.fc-arrow`,
+  `.cm-chip`, `.accent-key`, `.mx-key`, `.sf-recall-btn`, `.sf-moment-btn`,
+  `.chat-send`, `.fx-icon`. If the owner wants those to shrink too, it is
+  one list in the "FOCUS PRESS" block.
   What the second batch changed, so it is not re-litigated: the dashboard,
   teacher and teacher-build `.btn-quiet` (outlined) is `.btn-secondary`; the
   plan builder's `.btn-quiet` (a muted text button) is `.btn-text`; its

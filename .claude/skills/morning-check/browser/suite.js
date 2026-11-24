@@ -31,6 +31,8 @@
     ['eqcard', 'EQCARD OK', S + 'test_eqcard.js'],
     ['deck', 'DECK OK', S + 'test_deck.js'],
     ['chat', 'CHAT OK', S + 'test_chat.js'],
+    ['buttons', 'BUTTONS OK', S + 'test_buttons.js'],
+    ['buttons_lesson', 'BUTTONS LESSON OK', S + 'test_buttons_lesson.js'],
     ['account', 'ACCOUNT OK', S + 'test_account.js'],
     ['language', 'LANGUAGE OK', S + 'test_language.js'],
     ['languages', 'LANGUAGES OK', S + 'test_languages.js'],

@@ -6,6 +6,7 @@
 <title>StudyFlow — Study Session</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNWI4ZGY4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzI4NTFjOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0idXJsKCNnKSIvPgogIDxyZWN0IHg9IjciIHk9IjgiIHdpZHRoPSIxMyIgaGVpZ2h0PSIxNyIgcng9IjIuNSIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMjUiLz4KICA8cmVjdCB4PSIxMCIgeT0iOCIgd2lkdGg9IjEzIiBoZWlnaHQ9IjE3IiByeD0iMi41IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC45Ii8+CiAgPHJlY3QgeD0iMTMiIHk9IjEzIiB3aWR0aD0iNyIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSIjMzU2N2UwIi8+CiAgPHJlY3QgeD0iMTMiIHk9IjE2LjUiIHdpZHRoPSI1IiBoZWlnaHQ9IjEuNSIgcng9IjAuNzUiIGZpbGw9IiMzNTY3ZTAiIG9wYWNpdHk9IjAuNyIvPgogIDxyZWN0IHg9IjEzIiB5PSIyMCIgd2lkdGg9IjYiIGhlaWdodD0iMS41IiByeD0iMC43NSIgZmlsbD0iIzRhN2NmNiIgb3BhY2l0eT0iMC41Ii8+Cjwvc3ZnPg=="/>
 <link rel="stylesheet" href="/fonts/fonts.css">
+<link rel="stylesheet" href="/sf-buttons.css">
 <!-- Marked data-sf-boot on purpose: the tools find "block 1" as the FIRST
      script tag on this page with no attributes (preview_diagrams.py takes
      blocks[0]), so this one must carry an attribute. parseall.js still
@@ -209,8 +210,7 @@
     display:flex; align-items:center; justify-content:center; font-size:.85rem; font-weight:800; margin-top:.05rem; }
   .struggling-text h4 { font-size:0.9rem; font-weight:700; color:#92400e; margin-bottom:.2rem; }
   .struggling-text p { font-size:0.84rem; color:#92400e; line-height:1.5; }
-  .btn-review-lesson { margin-top:.65rem; background:#d97706; color:#fff; border:none; border-radius:999px; padding:.5rem 1rem; font-family:var(--sans); font-size:0.82rem; font-weight:600; cursor:pointer; transition:background .2s; }
-  .btn-review-lesson:hover { background:#b45309; }
+  .btn-review-lesson { margin-top:.65rem; }
 
   /* CARD */
   /* A session is a stack of cards, so moving on is spatial: a new card
@@ -405,11 +405,6 @@
   @keyframes lpOutRight { to { opacity:0; transform:translateX(26px); } }
 
   .lp-nav { display:flex; align-items:center; gap:.6rem; margin-top:1.15rem; }
-  .lp-back { background:none; border:1.5px solid var(--border); border-radius:999px;
-    padding:.42rem .8rem; cursor:pointer; color:var(--muted);
-    font-family:var(--sans); font-size:0.76rem; font-weight:600;
-    }
-  .lp-back:hover { border-color:var(--blue); color:var(--blue); }
   .lp-hint { font-size:0.7rem; color:var(--muted); font-weight:500; }
 
   @media (prefers-reduced-motion:reduce) {
@@ -662,11 +657,6 @@
   body.dark .cl-catB { color:#a3b1c6 !important; }
   /* Listen and type. */
   .dict-player { display:flex; gap:.5rem; margin:.5rem 0 .8rem; }
-  .dict-play { display:inline-flex; align-items:center; gap:.4rem; padding:.6rem 1.1rem; border:none; border-radius:999px;
-    background:var(--blue); color:#fff; font-family:var(--sans); font-size:0.92rem; font-weight:700; cursor:pointer; }
-  .dict-slow { padding:.55rem .95rem; border:1.5px solid var(--border); border-radius:999px; background:none; color:var(--ink);
-    font-family:var(--sans); font-size:0.85rem; font-weight:600; cursor:pointer; }
-  .dict-slow:hover { border-color:var(--blue); color:var(--blue); }
   .dict-novoice { font-size:0.8rem; color:var(--muted); background:var(--soft); border-radius:10px; padding:.55rem .8rem; margin:.5rem 0 .8rem; }
   .dict-text { font-size:1.15rem; line-height:1.9; margin:.2rem 0 .9rem; color:var(--ink); }
   .dict-gap { display:inline-block; min-width:70px; height:1.05em; border-bottom:2px solid var(--blue); margin:0 3px; vertical-align:-.12em; }
@@ -686,9 +676,6 @@
   body.dark .sb-word.in-line, body.dark .sb-word.is-right { background:rgba(74,124,246,.16); color:#c7d7ff; }
   body.dark .sb-word.is-wrong { background:rgba(239,68,68,.12); color:#fecaca; }
   .sb-actions { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; margin-top:.8rem; }
-  .hear-btn { display:inline-flex; align-items:center; gap:.4rem; padding:.55rem .85rem; border:1.5px solid var(--border);
-    border-radius:10px; background:none; color:var(--blue); font-family:var(--sans); font-size:0.85rem; font-weight:600; cursor:pointer; }
-  .hear-btn:hover { border-color:var(--blue); }
   /* Letters a school keyboard cannot type, under a language answer box. */
   .accent-bar { display:flex; flex-wrap:wrap; gap:.35rem; margin:.55rem 0 .2rem; }
   .accent-key { min-width:38px; height:38px; padding:0 .5rem; border:1.5px solid var(--border); border-radius:9px;
@@ -719,15 +706,7 @@
      graph checks) are standalone and must stay in the flow. Positioning them
      absolutely with no positioned ancestor is what sent the sequence card's
      "Check order" button floating over the list. */
-  .fill-submit {
-    display:inline-flex; align-items:center; justify-content:center;
-    padding:.7rem 1.4rem; background:var(--blue); color:#fff;
-    border:none; border-radius:10px; font-family:var(--sans); font-size:0.88rem;
-    font-weight:600; cursor:pointer; line-height:1.2;
-    transition:background .2s ease, transform .18s cubic-bezier(.22,.61,.36,1);
-  }
-  .fill-submit:hover { background:#3567e0; }
-  .fill-submit:disabled { background:var(--border); color:var(--muted); cursor:not-allowed; }
+  /* Look: sf-buttons.css (.btn .btn-primary). */
 
   /* WRITING */
   /* Starts at about five lines and grows with what is typed, up to fourteen.
@@ -752,21 +731,13 @@
     transition:border-color .2s, box-shadow .2s;
   }
   .write-area:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(74,124,246,.1); }
-  .write-submit {
-    margin-top:.65rem; padding:.72rem 1.4rem; background:var(--blue); color:#fff;
-    border:none; border-radius:10px; font-family:var(--sans); font-size:0.88rem;
-    font-weight:600; cursor:pointer; transition:all .2s;
-  }
-  .write-submit:hover:not(:disabled) { background:#3567e0; }
-  .write-submit:disabled { background:var(--border); color:var(--muted); cursor:not-allowed; }
+  .write-submit { margin-top:.65rem; }
   .write-analyzing { display:none; align-items:center; gap:.6rem; margin-top:.65rem; color:var(--muted); font-size:0.85rem; }
   .write-analyzing.show { display:flex; }
   .mini-spinner { width:16px; height:16px; border-radius:50%; border:2px solid var(--blue-light); border-top-color:var(--blue); animation:spin 1s linear infinite; flex-shrink:0; }
 
   /* HINT */
   .hint-row { margin-top:.9rem; }
-  .hint-btn { background:none; border:1.5px solid var(--border); color:var(--muted); padding:.42rem .9rem; border-radius:999px; font-family:var(--sans); font-size:0.78rem; font-weight:500; cursor:pointer; transition:all .2s; }
-  .hint-btn:hover { border-color:var(--orange); color:var(--orange); background:#fff8e0; }
   .hint-box { display:none; margin-top:.6rem; padding:.7rem .95rem; background:#fff8e0; border:1px solid #f59e0b; border-radius:10px; font-size:0.82rem; color:#92400e; line-height:1.6; }
   .hint-box.show { display:block; animation:sfRise var(--spring-ms) var(--spring) both; }
 
@@ -829,14 +800,7 @@
   .card-footer { padding:1rem 1.25rem 1rem 1.75rem; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:1rem; }
 
   /* Flag / bookmark button */
-  .btn-flag {
-    background:none; border:1.5px solid var(--border); border-radius:8px;
-    padding:.38rem .6rem; cursor:pointer; color:var(--muted);
-    transition:all .18s; display:flex; align-items:center; gap:.3rem;
-    font-family:var(--sans); font-size:0.75rem; font-weight:600;
-  }
-  .btn-flag:hover { border-color:#f59e0b; color:#d97706; }
-  .btn-flag.flagged { border-color:#f59e0b; background:#fff8e0; color:#d97706; }
+  /* .btn .btn-text .btn-sm (sf-buttons.css); the amber "flagged" state is in the Paper layer below. */
 
   /* The lesson's picture, brought back during practice (sfRecallAttach).
      Hover is a blue border only - no lift, per the design system. The panel
@@ -1032,14 +996,7 @@
   .flagged-panel-title { font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#d97706; margin-bottom:.6rem; }
   .footer-left { font-size:0.75rem; color:var(--muted); font-weight:500; }
   .footer-left span { color:var(--blue); font-weight:700; }
-  .btn-next {
-    background:var(--blue); color:#fff; min-height:48px; padding:.8rem 1.6rem; border-radius:999px;
-    font-family:var(--sans); font-size:0.94rem; font-weight:600; border:none; cursor:pointer;
-    box-shadow:0 1px 0 rgba(255,255,255,.22) inset, 0 8px 18px -8px rgba(74,124,246,.7);
-    white-space:nowrap;
-  }
-  .btn-next:hover:not(:disabled) { background:var(--blue-ink); }
-  .btn-next:disabled { background:var(--border); color:var(--muted); cursor:not-allowed; transform:none; box-shadow:none; }
+  /* Look: sf-buttons.css. .btn-next is a hook and a placement; the button is .btn .btn-primary. */
 
   /* RECAP CARD */
   /* A pause card, so it looks like one of the cards - not a green slab.
@@ -1054,8 +1011,7 @@
   .recap-list li { font-size:0.9rem; line-height:1.5; color:var(--ink); padding:.55rem 0; border-bottom:1px solid var(--border); display:flex; align-items:baseline; gap:.65rem; }
   .recap-list li:last-child { border:none; }
   .recap-list li::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--blue); flex-shrink:0; transform:translateY(-.1em); }
-  .btn-recap-next { margin-top:1.1rem; min-height:48px; padding:.8rem 1.6rem; background:var(--blue); color:#fff; border:none; border-radius:999px; font-family:var(--sans); font-size:0.94rem; font-weight:600; cursor:pointer; transition:background .2s; box-shadow:0 8px 18px -8px rgba(74,124,246,.7); }
-  .btn-recap-next:hover { background:var(--blue-ink); }
+  .btn-recap-next { margin-top:1.1rem; }
 
   /* END SESSION */
   /* Quiet, because it is the one control here that ends something. */
@@ -1301,8 +1257,6 @@
   .wi-yours { font-size:0.8rem; color:#dc2626; margin-bottom:.2rem; }
   .wi-correct { font-size:0.8rem; color:#1a9e80; margin-bottom:.4rem; }
   .wi-why { font-size:0.8rem; color:var(--muted); line-height:1.6; }
-  .btn-dashboard { width:100%; min-height:52px; padding:.95rem; background:var(--blue); color:#fff; border:none; border-radius:999px; font-family:var(--sans); font-size:0.98rem; font-weight:600; cursor:pointer; box-shadow:0 1px 0 rgba(255,255,255,.22) inset, 0 10px 22px -10px rgba(74,124,246,.75); }
-  .btn-dashboard:hover { background:var(--blue-ink); }
 
   /* DARK MODE */
   body.dark { --ink:#e9eeff; --muted:#8b95ae; --soft:#0c0f16; --white:#141925; --border:#232a3c;
@@ -1378,7 +1332,6 @@
     .tf-btn { padding:.95rem; font-size:0.95rem; min-height:54px; border-radius:16px; }
     /* Fill in blank */
     .fill-input { font-size:0.92rem; padding:.85rem 5.6rem .85rem 1rem; }
-    .fill-wrap .fill-submit { padding:.5rem .85rem; font-size:0.82rem; }
     /* Write area */
     .write-area { min-height:130px; max-height:300px; font-size:0.88rem; }
     /* Results */
@@ -1388,8 +1341,6 @@
     .r-stat { padding:.75rem .4rem; border-radius:12px; }
     .r-stat-val { font-size:1.3rem; }
     .r-stat-label { font-size:0.65rem; }
-    /* Next button bigger on mobile */
-    .btn-next { padding:.85rem 1.4rem; font-size:0.92rem; border-radius:999px; min-height:48px; }
     /* Streak pill - sizes itself from its content now, so no fixed square. */
     .streak-mark { width:12px; height:12px; }
     /* Milestone/Struggling banners */
@@ -1421,30 +1372,23 @@
      back. They all used to lift 2px on hover - motion the design system does
      not have, and on a phone the lift stuck to whatever was touched last.
      Colour still changes on hover; that is how a control says "tap me". */
-  .tf-btn, .seq-item, .match-item, .classify-item, .hint-btn,
-  .conf-btn, .fill-submit, .btn-next, .sfwb-explain, .write-submit, .swp-go,
-  .lp-back, .fc-arrow, .dict-play, .dict-slow, .hear-btn, .sb-word, .cm-chip,
-  .accent-key, .mx-key, .sf-recall-btn, .sf-moment-btn, .btn-flag, .btn-review-lesson,
-  .btn-recap-next, .btn-dashboard, .end-btn, .chat-send {
+  .tf-btn, .seq-item, .match-item, .classify-item,
+  .conf-btn, .sfwb-explain,
+  .fc-arrow, .sb-word, .cm-chip,
+  .accent-key, .mx-key, .sf-recall-btn, .sf-moment-btn,
+  .end-btn, .chat-send {
     transition:border-color .18s ease, background .18s ease, color .18s ease,
                transform var(--spring-fast-ms) var(--spring-fast), box-shadow .18s ease;
   }
-  .fill-submit:active:not(:disabled) { transform:scale(.96); transition-duration:80ms; }
-
-  /* Only inside the fill wrapper does the button sit within the field. */
-  .fill-wrap .fill-submit {
-    position:absolute; right:.4rem; top:50%; transform:translateY(-50%);
-    padding:.55rem 1.05rem; border-radius:9px; font-size:0.85rem;
-  }
-  /* Its press must keep the centring offset or it jumps out of the box. */
-  .fill-wrap .fill-submit:active:not(:disabled) { transform:translateY(-50%) scale(.96); }
+  /* Only inside the fill wrapper does the button sit within the field. It is a
+     .btn .btn-sm; only its place is here. Its press is the shared one, the
+     `scale` property, which leaves this centring transform alone. */
+  .fill-wrap .fill-submit { position:absolute; right:.4rem; top:50%; transform:translateY(-50%); }
   .tf-btn:active:not(:disabled), .seq-item:active, .match-item:active:not(:disabled),
-  .classify-item:active, .hint-btn:active, .conf-btn:active,
-  .btn-next:active:not(:disabled), .write-submit:active:not(:disabled), .swp-go:active:not(:disabled),
-  .lp-back:active, .fc-arrow:active:not(:disabled), .dict-play:active, .dict-slow:active, .hear-btn:active,
+  .classify-item:active, .conf-btn:active,
+  .fc-arrow:active:not(:disabled),
   .sb-word:active:not(:disabled), .cm-chip:active:not(:disabled), .accent-key:active, .mx-key:active,
-  .sf-recall-btn:active, .sf-moment-btn:active, .btn-flag:active, .btn-review-lesson:active,
-  .btn-recap-next:active, .btn-dashboard:active, .end-btn:active, .chat-send:active {
+  .sf-recall-btn:active, .sf-moment-btn:active, .end-btn:active, .chat-send:active {
     transform:scale(.96); transition-duration:80ms;
   }
 
@@ -1453,10 +1397,10 @@
 
   /* Reduced motion: keep every colour cue, drop the travel. */
   @media (prefers-reduced-motion:reduce) {
-    .q-option, .tf-btn, .seq-item, .match-item, .classify-item, .hint-btn,
-    .conf-btn, .fill-submit, .btn-next, .sfwb-explain { transition:none; }
+    .q-option, .tf-btn, .seq-item, .match-item, .classify-item,
+    .conf-btn, .sfwb-explain { transition:none; }
     .q-option:active, .tf-btn:active, .seq-item:active, .match-item:active, .classify-item:active,
-    .hint-btn:active, .conf-btn:active, .fill-submit:active, .btn-next:active { transform:none; }
+    .conf-btn:active { transform:none; }
   }
 
   /* ── TOPIC PATH ───────────────────────────────────────────────────────
@@ -1564,13 +1508,6 @@
   .swp-input.is-right { border-color:var(--green); background:#ECFDF5; }
   .swp-input.is-wrong { border-color:var(--red); background:#FEF2F2; }
   .swp-unit { font-size:.8rem; font-weight:600; color:var(--muted); }
-  .swp-go {
-    font:inherit; font-size:.8rem; font-weight:700; color:#fff; background:var(--blue);
-    border:1.5px solid var(--blue); border-radius:10px; padding:.5rem .85rem;
-    cursor:pointer; transition:transform .18s cubic-bezier(.22,.61,.36,1), background .18s ease;
-  }
-  .swp-go:hover:not(:disabled) { background:#3B69DE; }
-  .swp-go:disabled { opacity:.4; cursor:default; transform:none; }
   /* The worked line for a step: what was actually computed. A learner who only
      sees "Correct" learns that they were right, not why. */
   .swp-eq {
@@ -1602,9 +1539,6 @@
      .art-paper, which keeps a light ground in dark mode. */
   .nf-sub { font-size:.8rem; color:var(--muted); margin:-.6rem 0 .85rem; }
   .nf-actions { display:flex; align-items:center; flex-wrap:wrap; gap:.6rem; margin-top:.85rem; }
-  .nf-quiet { background:none; border:none; padding:.3rem 0; font-family:var(--sans); font-size:.8rem;
-    font-weight:600; color:var(--muted); cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
-  .nf-quiet:hover { color:var(--blue); }
   .nf-quiet:disabled { display:none; }
 
   /* RECALL - numbered slots, typed from memory */
@@ -1944,21 +1878,9 @@
     font-size:18px !important; font-weight:500; padding:.55rem .9rem !important; max-width:240px !important; }
   body #est-in:focus { border-color:var(--blue) !important; outline:none; box-shadow:0 0 0 4px var(--blue-tint); }
 
-  /* ── Buttons: Paper's. The one primary is a blue pill with a soft glow;
-     the quiet ones (hint, flag) are text buttons that tint on hover; choices
-     like "Sure / Not sure" are hairline pills. ── */
-  body .card-footer .btn-next, body .write-submit, body .sfd-check, body .fill-submit:not(.fill-wrap .fill-submit) {
-    background:var(--fx-btn); color:#fff; border:0; border-radius:99px; font-weight:600;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 10px 22px -12px rgba(74,124,246,.8); }
-  body .write-submit, body .sfd-check, body .fill-submit:not(.fill-wrap .fill-submit) { min-height:46px; padding:0 22px; font-size:15px; }
-  @media (hover:hover) and (pointer:fine) {
-    body .card-footer .btn-next:hover:not(:disabled), body .write-submit:hover:not(:disabled), body .sfd-check:hover:not(:disabled), body .fill-submit:hover:not(:disabled) { background:var(--blue-ink); }
-    body.dark .card-footer .btn-next:hover:not(:disabled) { background:#5b8af8; }
-  }
-  body .fill-wrap .fill-submit { background:var(--fx-btn); color:#fff; border-radius:10px; box-shadow:none; font-weight:600; }
-  body .card-footer .btn-next:disabled, body .fill-submit:disabled, body .write-submit:disabled { background:var(--fx-track); color:var(--muted); box-shadow:none; }
-  body .hint-btn { border:0; border-radius:10px; padding:0 12px; min-height:40px; font-size:14.5px; font-weight:600; color:var(--muted); background:none; box-shadow:none; }
-  @media (hover:hover) and (pointer:fine) { body .hint-btn:hover { background:var(--fx-page); color:var(--ink); } }
+  /* ── Buttons: sf-buttons.css (Nov 22: one button for every page; 12px corners, flat, press .97).
+     The primary, check, hint and flag buttons are .btn .btn-primary / .btn-text and have no
+     rule here. "Sure / Not sure" are choices, not actions: hairline pills, below. ── */
   body .hint-box { background:var(--fx-amber-bg); border:1.5px solid var(--fx-amber-line); color:var(--fx-amber-ink); border-radius:14px; font-size:15px; padding:.8rem 1rem; }
   body .confidence-row { margin:1rem 0 .5rem; gap:8px; }
   body .confidence-label { font-size:13.5px; font-weight:600; }
@@ -1977,11 +1899,8 @@
     padding:14px 0 calc(14px + env(safe-area-inset-bottom)); gap:10px; }
   body .session-card > .card-footer .footer-left { flex:1; min-width:0; font-size:13.5px; font-weight:600; color:var(--muted); }
   body .session-card[data-fx="q"]:not([data-fx-type="write"]):not([data-fx-type="labeldiagram"]) > .card-footer .footer-left { visibility:hidden; }
-  body .card-footer .btn-next { min-height:50px; min-width:150px; padding:0 26px; font-size:16px; }
-  body .card-footer .btn-flag { min-height:42px; height:auto; padding:0 12px; border:0; border-radius:10px; background:none; box-shadow:none;
-    color:var(--muted); font-size:14.5px; font-weight:600; }
-  @media (hover:hover) and (pointer:fine) { body .card-footer .btn-flag:hover { background:var(--fx-page); color:var(--ink); } }
-  body .card-footer .btn-flag.flagged { background:var(--fx-amber-bg); color:var(--fx-amber-ink); border:0; box-shadow:none; }
+  body .card-footer .btn-next { min-width:150px; }
+  body .card-footer .btn-flag.flagged { background:var(--fx-amber-bg); color:var(--fx-amber-ink); }
 
   /* ── The verdict: a box under the answer with its border ALL ROUND (the
      owner: "the right and wrong dropdown has the red border all around it").
@@ -1997,8 +1916,8 @@
   body .session-card .feedback-box.show.info-fb { background:var(--blue-tint); border-color:var(--blue); }
   body.dark .session-card .feedback-box.show.correct-fb { background:var(--fx-ok-bg); }
   body.dark .session-card .feedback-box.show.wrong-fb { background:var(--fx-no-bg); }
-  body .session-card:has(.feedback-box.show.correct-fb) .btn-next:not(:disabled) { background:var(--fx-ok); box-shadow:inset 0 1px 0 rgba(255,255,255,.2), 0 10px 22px -12px rgba(22,127,100,.8); }
-  body .session-card:has(.feedback-box.show.wrong-fb) .btn-next:not(:disabled) { background:var(--fx-no); box-shadow:inset 0 1px 0 rgba(255,255,255,.2), 0 10px 22px -12px rgba(200,60,60,.8); }
+  body .session-card:has(.feedback-box.show.correct-fb) .btn-next:not(:disabled) { background:var(--fx-ok); }
+  body .session-card:has(.feedback-box.show.wrong-fb) .btn-next:not(:disabled) { background:var(--fx-no); }
   body .feedback-box .feedback-label { font-family:var(--serif); font-weight:400; font-size:25px; line-height:1.1; letter-spacing:0; text-transform:none; margin-bottom:6px; }
   body .feedback-box.correct-fb .feedback-label { color:var(--fx-ok-ink); }
   body .feedback-box.wrong-fb .feedback-label { color:var(--fx-no-ink); }
@@ -2027,28 +1946,22 @@
     --fx-press-out:border-color .15s ease, background-color .15s ease, color .15s ease, box-shadow .2s ease, opacity .2s ease, transform .36s var(--fx-pop);
     --fx-press-in:border-color .15s ease, background-color .15s ease, color .15s ease, box-shadow .2s ease, opacity .2s ease, transform .08s ease-out;
   }
-  body :is(.q-option, .tf-btn, .seq-item, .match-item, .sb-word, .hint-btn, .conf-btn, .fill-submit, .write-submit, .sfd-check,
-           .ft-check-btn, .btn-next, .btn-flag, .fc-arrow, .lp-back, .dict-play, .dict-slow, .hear-btn, .cm-chip, .accent-key, .mx-key,
-           .sf-recall-btn, .sf-moment-btn, .swp-go, .btn-review-lesson, .btn-recap-next, .btn-dashboard, .chat-send, .fx-icon) {
+  /* The answer TILES, chips and keys keep the 2px sink and spring back (a tile as wide as the
+     card would shrink 19px at .97). The ACTION buttons (.btn) shrink to .97: sf-buttons.css. */
+  body :is(.q-option, .tf-btn, .seq-item, .match-item, .sb-word, .conf-btn, .fc-arrow, .cm-chip, .accent-key, .mx-key,
+           .sf-recall-btn, .sf-moment-btn, .chat-send, .fx-icon) {
     transition:var(--fx-press-out); }
-  body :is(.q-option, .tf-btn, .seq-item, .match-item, .sb-word, .hint-btn, .conf-btn, .write-submit, .sfd-check,
-           .ft-check-btn, .btn-next, .btn-flag, .fc-arrow, .lp-back, .dict-play, .dict-slow, .hear-btn, .cm-chip, .accent-key, .mx-key,
-           .sf-recall-btn, .sf-moment-btn, .swp-go, .btn-review-lesson, .btn-recap-next, .btn-dashboard, .chat-send, .fx-icon):active:not(:disabled) {
+  body :is(.q-option, .tf-btn, .seq-item, .match-item, .sb-word, .conf-btn, .fc-arrow, .cm-chip, .accent-key, .mx-key,
+           .sf-recall-btn, .sf-moment-btn, .chat-send, .fx-icon):active:not(:disabled) {
     transform:translateY(2px); transition:var(--fx-press-in); }
-  body .fill-submit:not(.fill-wrap .fill-submit):active:not(:disabled) { transform:translateY(2px); transition:var(--fx-press-in); }
-  /* Inside the answer box the Check button is centred with a transform, so its sink keeps the centring. */
-  body .fill-wrap .fill-submit:active:not(:disabled) { transform:translateY(calc(-50% + 2px)); transition:var(--fx-press-in); }
   body .who-bub { transition:var(--fx-press-out); }
   body .who-say:active:not(:disabled) .who-bub { transform:translateY(2px); transition:var(--fx-press-in); }
   /* The sort chips carry transition:all .2s inline, which slowed their press. */
   body .classify-item { transition:var(--fx-press-out) !important; }
   body .classify-item:active { transform:translateY(2px) !important; transition:var(--fx-press-in) !important; }
   @media (prefers-reduced-motion:reduce) {
-    body :is(.q-option, .tf-btn, .seq-item, .match-item, .sb-word, .classify-item, .hint-btn, .conf-btn, .fill-submit, .write-submit,
-             .sfd-check, .ft-check-btn, .btn-next, .btn-flag, .fc-arrow, .lp-back, .dict-play, .dict-slow, .hear-btn, .cm-chip,
-             .accent-key, .mx-key, .sf-recall-btn, .sf-moment-btn, .swp-go, .btn-review-lesson, .btn-recap-next, .btn-dashboard,
-             .chat-send, .fx-icon, .who-bub):active { transform:none !important; }
-    body .fill-wrap .fill-submit:active { transform:translateY(-50%) !important; }
+    body :is(.q-option, .tf-btn, .seq-item, .match-item, .sb-word, .classify-item, .conf-btn, .fc-arrow, .cm-chip,
+             .accent-key, .mx-key, .sf-recall-btn, .sf-moment-btn, .chat-send, .fx-icon, .who-bub):active { transform:none !important; }
   }
 
   @media (max-width:900px) {
@@ -2097,7 +2010,6 @@
   body .wrong-item { border-left:0; border-top:1px solid var(--fx-line); border-radius:0; background:none; padding:.9rem 0 .2rem; margin-bottom:.4rem; }
   body .wrong-item:first-of-type { border-top:0; }
   body .r-note { background:none; border:0; border-left:0; padding:0; border-radius:0; }
-  body .btn-dashboard { box-shadow:none; background:var(--fx-btn); min-height:52px; }
   body.dark .results-stats .r-stat, body.dark .wrong-reviews, body.dark .wrong-item, body.dark .r-note { background:none; }
 
   body .milestone-banner { background:var(--blue-tint); color:var(--ink); box-shadow:none; border-radius:14px; }
@@ -2120,7 +2032,7 @@
   body .sfwb-explain { min-height:44px; display:inline-flex; align-items:center; }
   body .end-btn { min-height:44px; }
   /* TOUCH AND TEXT FLOOR (Nov 21, an interface audit of every card): buttons at least 44px tall, text at least 12px. */
-  body .fill-submit, body .conf-btn { min-height:44px; }
+  body .conf-btn { min-height:44px; }
   body .q-chip-plain { font-size:12px; }
   body .sf-moment-head, body .sf-moment-foot { font-size:12px; text-transform:none; letter-spacing:0; }
   /* CARD FLOOR, the rest of the formats (Nov 22, every card type built and measured):
@@ -2136,7 +2048,6 @@
   #session-card [style*="font-size:.6"]:not(svg *), #session-card [style*="font-size:.7"]:not(svg *) { font-size:12.5px !important; }
   #session-card .tt-in, #session-card .classify-item, #session-card .cm-chip, #session-card .mp-sel { min-height:44px; }
   #session-card .accent-key, #session-card .mx-key { min-height:44px; min-width:44px; }
-  #session-card .dict-play, #session-card .dict-slow { min-height:44px; }
 </style>
 </head>
 <body>
@@ -2209,7 +2120,7 @@
     <div class="struggling-text">
       <h4>Let's slow down a bit</h4>
       <p>You've missed a few in a row — no worries. Review the lesson content and try again.</p>
-      <button class="btn-review-lesson" onclick="showReviewCard()">Review lesson →</button>
+      <button class="btn btn-secondary btn-sm btn-review-lesson" onclick="showReviewCard()">Review lesson →</button>
     </div>
     <button onclick="closeStruggling()" style="position:absolute;top:.6rem;right:.75rem;background:none;border:none;cursor:pointer;color:#92400e;font-size:1.1rem;line-height:1;padding:.2rem .4rem;border-radius:6px;font-weight:700;" title="Dismiss">✕</button>
   </div>
@@ -2220,7 +2131,7 @@
     <h3>Quick recap</h3>
     <p class="recap-sub">The ideas so far, in one breath. Read them, then keep going.</p>
     <ul class="recap-list" id="recap-list"></ul>
-    <button class="btn-recap-next" onclick="closeRecap()">Keep going →</button>
+    <button class="btn btn-primary btn-recap-next" onclick="closeRecap()">Keep going →</button>
   </div>
 
   <!-- MAIN SESSION CARD -->
@@ -2828,7 +2739,7 @@
       ? 'You have completed every day in this plan. Nothing left to grind \u2014 come back when you add a new one.'
       : 'You already worked through this one. Re-answering questions you have been graded on would not teach you much; come back tomorrow for the next day.';
 
-    var btns = '<div style="margin-top:1.5rem"><button class="btn-next" ' +
+    var btns = '<div style="margin-top:1.5rem"><button class="btn btn-primary btn-next" ' +
       'onclick="window.location.href=\'dashboard.html\'">Back to dashboard</button></div>';
 
     /* Wrapped in .card-body: without it the content sat flush against the card
@@ -4300,7 +4211,7 @@
           '<div class="card-body"><p class="content-text">There was an error rendering this card. Tap Next to skip it.</p>' +
           '<p class="content-text" style="font-size:0.78rem;color:var(--muted);margin-top:.5rem;">' + (err && err.message ? err.message : 'Unknown error') + '</p></div>' +
           '<div class="card-footer"><span class="footer-left"></span>' +
-          '<button class="btn-next" onclick="showNextCard()">Next →</button></div></div>';
+          '<button class="btn btn-primary btn-next" onclick="showNextCard()">Next →</button></div></div>';
       }
     }
     sfCardLeave(leaving);
@@ -4854,7 +4765,7 @@
           'Something was wrong with how this one was built. Your progress is safe \u2014 ' +
           'skip ahead and keep going.</p>' +
           '<div style="margin-top:1.4rem">' +
-          '<button class="btn-next" onclick="showNextCard()">Skip this one \u2192</button>' +
+          '<button class="btn btn-primary btn-next" onclick="showNextCard()">Skip this one \u2192</button>' +
           '</div></div></div>';
       }
       currentAnswered = true;   // never strand the learner on a broken card
@@ -7112,7 +7023,7 @@
       '<div class="card-header"><div class="card-badge">Walkthrough</div><h2>' + escHtml(w.title) + '</h2></div>' +
       '<div class="card-body">' + fig + '<ol class="pw-rows">' + rows + '</ol></div>' +
       '<div class="card-footer"><span class="footer-left" id="pw-count"></span>' +
-      '<button class="btn-next" id="btn-next" onclick="picWalkNext()">Next step →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" onclick="picWalkNext()">Next step →</button></div></div>';
 
     var figEl = document.getElementById('pw-fig');
     if (w.kind === 'moment' || w.kind === 'offer') {
@@ -7474,7 +7385,7 @@
       '<div class="lp-rail" id="lp-rail">' + rail + '</div>' +
       '<div class="lp-viewport" id="lp-viewport"><div class="lp-pane">' + panes[0].html + '</div></div>' +
       '<div class="lp-nav">' +
-        '<button type="button" class="lp-back" id="lp-back" style="display:none" ' +
+        '<button type="button" class="btn btn-secondary btn-sm lp-back" id="lp-back" style="display:none" ' +
           'onclick="sfLessonJump(sfLesson ? sfLesson.at - 1 : 0)">← Back</button>' +
         '<span class="lp-hint">Use ← → to move through the lesson</span>' +
       '</div>';
@@ -8034,7 +7945,7 @@
         var qText = card.q.question;
         var isFlagged = flaggedQuestions.indexOf(qText) > -1;
         var flagBtn = document.createElement('button');
-        flagBtn.className = 'btn-flag' + (isFlagged ? ' flagged' : '');
+        flagBtn.className = 'btn btn-text btn-sm btn-flag' + (isFlagged ? ' flagged' : '');
         flagBtn.title = isFlagged ? 'Flagged (press F)' : 'Flag for review (press F)';
         flagBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="' +
           (isFlagged ? '#d97706' : 'none') +
@@ -8061,7 +7972,7 @@
       '<div class="' + headerClass + '"><div class="card-badge">' + badge + '</div><h2>' + title + '</h2></div>' +
       '<div class="card-body">' + bodyHtml + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + footerLeft + '</span>' +
-      '<button class="btn-next" ' + (disabled ? 'disabled' : '') + ' onclick="showNextCard()">' + nextLabel + '</button></div></div>';
+      '<button class="btn btn-primary btn-next" ' + (disabled ? 'disabled' : '') + ' onclick="showNextCard()">' + nextLabel + '</button></div></div>';
   }
 
   /* card is optional - it carries the flags that decide which badge this
@@ -8133,7 +8044,7 @@
       '<span class="q-difficulty ' + diffClass + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       '<div class="q-text">' + qText(q) + '</div>' +
       optHtml + confidenceTap +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Think about the key concepts from today\'s lesson.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
@@ -8144,7 +8055,7 @@
         '"><div class="card-badge">' + badge + '</div><h2>' + title + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   var currentConfidence = null;
@@ -8204,11 +8115,11 @@
       '<div style="font-size:0.75rem;color:var(--muted);margin:.6rem 0 .75rem;">' + (targetLang() ? 'Type the missing word' : 'Type the missing word, number, or formula') + '</div>' +
       '<div class="fill-wrap">' +
       '<input class="fill-input" id="fill-input" type="text" placeholder="Your answer..." autocomplete="off" autocorrect="off" autocapitalize="off" autocomplete="off"' + langDir() + ' />' +
-      '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
+      '<button class="btn btn-primary btn-sm fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
       '</div>' +
       accentBarHtml('fill-input') +
       mathKeysHtml('fill-input', q.question, answer, { decimal: false }) +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Think carefully about the key concepts.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
@@ -8217,7 +8128,7 @@
       '<div class="card-header"><div class="card-badge">Fill in the Blank</div><h2>Complete the answer</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left"></span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button>' +
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button>' +
       '</div></div>';
 
     // Use 60ms timeout — longer than graph's 50ms to avoid race condition
@@ -8519,10 +8430,10 @@
       '<div class="graph-slider-rail"></div>' +
       '<div class="graph-slider-handle" id="graph-handle" style="left:50%;"><svg width="12" height="12" viewBox="0 0 24 24" fill="white"><circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/></svg></div>' +
       '</div></div></div>' +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'The y-intercept is where the line crosses the y-axis (x = 0). Drag the handle left or right.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>' +
-      '<button class="fill-submit" id="graph-check-btn" onclick="checkGraph()" style="margin-top:.8rem;">Check →</button>';
+      '<button class="btn btn-primary fill-submit" id="graph-check-btn" onclick="checkGraph()" style="margin-top:.8rem;">Check →</button>';
 
     // Store toSvgX/Y and slope in _graphState for initGraphDrag
     window._graphState.toSvgX = toSvgX;
@@ -8534,7 +8445,7 @@
       '<div class="card-header"><div class="card-badge">Interactive Graph</div><h2>' + (day.title||'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   function initGraphDrag(min, max, toSvgX, toSvgY, slope) {
@@ -8743,7 +8654,7 @@
       (q.collapsePassage ? '</details>' : '') +
       '<div class="q-text" style="font-style:normal;margin-bottom:.75rem;">' + qText(q) + '</div>' +
       optHtml +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Re-read the passage carefully.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
@@ -8754,7 +8665,7 @@
       '<div class="card-header"><div class="card-badge">' + badgeLabel + '</div><h2>' + (day.title || 'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
   // ── BIG EQUATION — smart visual renderer, auto-detects topic from equation ──
   /* Does `equation` actually describe the same problem as `question`?
@@ -8868,10 +8779,10 @@
       visual +
       '<div class="fill-wrap">' +
       '<input class="fill-input" id="fill-input" type="text" placeholder="' + escHtml(placeholder) + '" inputmode="' + inputMode + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>' +
-      '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
+      '<button class="btn btn-primary btn-sm fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
       '</div>' +
       mathKeysHtml('fill-input', q.question, ans, { equation: eq, decimal: inputMode === 'decimal' }) +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show steps</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show steps</button>' +
       '<div class="hint-box" id="hint-box">' + escHtml(hint) + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
@@ -8879,7 +8790,7 @@
       '<div class="card-header"><div class="card-badge">' + topic.badge + '</div><h2>' + escHtml(topic.title) + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
 
     setTimeout(function() {
       var btn = document.getElementById('fill-btn');
@@ -9546,7 +9457,7 @@
           'inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off" ' +
           'placeholder="' + escHtml(st.unit ? 'Number of ' + st.unit : 'Your answer') + '"/>' +
           (st.unit ? '<span class="swp-unit">' + escHtml(st.unit) + '</span>' : '') +
-          '<button class="swp-go" id="swp-go-' + i + '" onclick="swpCheck(' + i + ')">Check</button>' +
+          '<button class="btn btn-primary btn-sm swp-go" id="swp-go-' + i + '" onclick="swpCheck(' + i + ')">Check</button>' +
           '</div>';
       }
       html += '<div id="swp-eq-' + i + '"></div>' +
@@ -9736,7 +9647,7 @@
         '<div style="font-size:0.82rem;font-weight:700;color:var(--muted);margin-bottom:.5rem;">Your answer:</div>' +
         '<div class="fill-wrap">' +
         '<input class="fill-input" id="fill-input" type="text" placeholder="Type your answer..." inputmode="decimal" autocomplete="off" autocorrect="off" autocapitalize="off"/>' +
-        '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
+        '<button class="btn btn-primary btn-sm fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
         '</div>';
     }
 
@@ -9746,7 +9657,7 @@
       scenario + '</div>' +
       visual +
       solveArea +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Read carefully and identify what the question is asking for.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
@@ -9763,7 +9674,7 @@
         esc(wordProblemHeading()) + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
 
     setTimeout(function() {
       if (scaffolded) {
@@ -9848,7 +9759,7 @@
       topicVisual +
       '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:.6rem;">Tap the step that contains the mistake</div>' +
       stepsHtml +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Check each step carefully against the previous one.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
@@ -9856,7 +9767,7 @@
       '<div class="card-header"><div class="card-badge">Error Spotting</div><h2>Find the mistake</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   function selectErrorStep(btn, idx, isError, explanation) {
@@ -9920,10 +9831,10 @@
       (q.translation ? '<div class="sb-meaning">“' + escHtml(q.translation) + '”</div>' : '') +
       '<div class="sb-line" id="sb-line" aria-label="Your sentence"></div>' +
       '<div class="sb-bank" id="sb-bank" aria-label="Words to use"></div>' +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Find the verb first, then build around it.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>' +
-      '<div class="sb-actions"><button class="fill-submit" id="sb-check-btn" onclick="checkSentence()" disabled>Check sentence →</button>' +
+      '<div class="sb-actions"><button class="btn btn-primary fill-submit" id="sb-check-btn" onclick="checkSentence()" disabled>Check sentence →</button>' +
       '<span id="sb-hear"></span></div>';
 
     setTimeout(sbPaint, 0);
@@ -9932,7 +9843,7 @@
       '<div class="card-header"><div class="card-badge">Sentence Builder</div><h2>' + escHtml(day.title||'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   function sbPaint(marks) {
@@ -10044,7 +9955,7 @@
   }
   function hearButtonHtml(text) {
     if (!canSpeak()) return '';
-    return '<button type="button" class="hear-btn" onclick="speakText(' + escHtml(JSON.stringify(String(text))) + ')">' +
+    return '<button type="button" class="btn btn-secondary btn-sm hear-btn" onclick="speakText(' + escHtml(JSON.stringify(String(text))) + ')">' +
       '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>' +
       'Hear it</button>';
   }
@@ -10088,10 +9999,10 @@
       timelineHtml +
       '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:.7rem;">Drag to reorder, then check your answer</div>' +
       '<div class="seq-wrap" id="seq-wrap">' + itemsHtml + '</div>' +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Think about what logically happens first.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>' +
-      '<button class="fill-submit" id="seq-check-btn" onclick="checkSequence()" style="margin-top:.8rem;">Check order →</button>';
+      '<button class="btn btn-primary fill-submit" id="seq-check-btn" onclick="checkSequence()" style="margin-top:.8rem;">Check order →</button>';
 
     setTimeout(initSeqDrag, 50);
 
@@ -10100,7 +10011,7 @@
       '<div class="card-header"><div class="card-badge">Put in Order</div><h2>' + (day.title||'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   function initSeqDrag() {
@@ -10214,7 +10125,7 @@
       '<div class="card-header"><div class="card-badge">Matching</div><h2>' + (day.title||'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   function selectMatch(el) {
@@ -10591,7 +10502,7 @@
       box('cl-evidence', 'Your evidence', 'Two facts from your notes or the source - names, dates, events.', 3) +
       box('cl-because', 'Why it proves your claim', 'This shows ... because ...', 2) +
       '<div style="display:flex;align-items:center;gap:.75rem;margin-top:.65rem;">' +
-      '<button class="write-submit" onclick="submitClaim()">Get feedback →</button>' +
+      '<button class="btn btn-primary write-submit" onclick="submitClaim()">Get feedback →</button>' +
       '<div class="write-analyzing" id="write-analyzing"><div class="mini-spinner"></div><span>Reading your argument...</span></div>' +
       '</div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
@@ -10600,7 +10511,7 @@
       '<div class="card-header"><div class="card-badge">Make your case</div><h2>Argue it like a historian</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">Claim · evidence · why</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   function submitClaim() {
@@ -10634,7 +10545,7 @@
       '<textarea class="write-area" id="write-input" oninput="autoGrowWrite(this)" ' +
       'placeholder="Write your explanation here. The more specific the better — include examples, causes, effects, dates, names..."></textarea>' +
       '<div style="display:flex;align-items:center;gap:.75rem;margin-top:.65rem;">' +
-      '<button class="write-submit" onclick="submitWrite(\'' + esc(q.modelAnswer || q.explanation || '') + '\',\'' + esc(q.question) + '\')">Get AI feedback →</button>' +
+      '<button class="btn btn-primary write-submit" onclick="submitWrite(\'' + esc(q.modelAnswer || q.explanation || '') + '\',\'' + esc(q.question) + '\')">Get AI feedback →</button>' +
       '<div class="write-analyzing" id="write-analyzing"><div class="mini-spinner"></div><span>Claude is analyzing your explanation...</span></div>' +
       '</div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
@@ -10642,7 +10553,7 @@
       '<div class="card-header"><div class="card-badge">Feynman Technique</div><h2>Teach it back</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">Writing is the strongest memory</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   // ── CLASSIFY — drag items into two categories ──
@@ -10689,7 +10600,7 @@
         (/^changed$/i.test(fmStr(q.categoryA)) ? 'Then and now' : 'Sort into categories') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   function classifySelect(btn) {
@@ -10835,7 +10746,7 @@
         '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.reasonPrompt || 'Which statement best supports your answer?') + '</div>' +
         '<div class="q-options" id="tp-b-opts">' + reasonHtml + '</div>' +
       '</div>' +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Answer Part A first, then find the reason that backs it up.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
@@ -10843,7 +10754,7 @@
       '<div class="card-header"><div class="card-badge">Two-part question</div><h2>' + esc(day.title || 'Answer, then justify it') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   function answerTwoPartA(btn, i) {
@@ -10920,7 +10831,7 @@
       srcBlock(B, { bg: '#fdf4ff', br: '#f0abfc', fg: '#a21caf' }) + '</div>' +
       '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.question) + '</div>' +
       '<div class="q-options">' + optHtml + '</div>' +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Ask what each source claims, and where they actually differ.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
@@ -10928,7 +10839,7 @@
       '<div class="card-header"><div class="card-badge">Compare two sources</div><h2>' + esc(day.title || 'Do these agree?') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   /* HIGHLIGHT — pick the sentence that does the work. Text-dependent close
@@ -10949,7 +10860,7 @@
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       '<div class="q-text" style="margin-bottom:.8rem;">' + esc(q.question) + '</div>' +
       '<div>' + sentHtml + '</div>' +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Read each sentence and ask which one actually states it.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
@@ -10957,7 +10868,7 @@
       '<div class="card-header"><div class="card-badge">Find the evidence</div><h2>' + esc(day.title || 'Locate it in the text') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   function answerHighlight(btn, i) {
@@ -11085,8 +10996,8 @@
       '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.question || 'Label each numbered part.') + '</div>' +
       '<div class="ld-fig">' + labelPinsSvg(svg, pins) + '</div>' +
       '<div class="ld-rows">' + rows + '</div>' +
-      '<button class="fill-submit" id="ld-check-btn" onclick="checkLabelDiagram()" style="margin-top:.7rem;">Check answers</button>' +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<button class="btn btn-primary fill-submit" id="ld-check-btn" onclick="checkLabelDiagram()" style="margin-top:.7rem;">Check answers</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Work from the part you are surest of.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
@@ -11095,7 +11006,7 @@
       esc(day.title || 'Label the diagram') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">Tap each menu</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next \u2192</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next \u2192</button></div></div>';
   }
 
   function checkLabelDiagram() {
@@ -11154,8 +11065,8 @@
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       '<div class="q-text" style="margin-bottom:.8rem;">' + esc(q.question || 'Match each item to its pair.') + '</div>' +
       rowsHtml +
-      '<button class="fill-submit" id="mp-check-btn" onclick="checkMatchPairs()" style="margin-top:.6rem;">Check answers</button>' +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<button class="btn btn-primary fill-submit" id="mp-check-btn" onclick="checkMatchPairs()" style="margin-top:.6rem;">Check answers</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Work from the ones you are sure of first.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
@@ -11163,7 +11074,7 @@
       '<div class="card-header"><div class="card-badge">Match the pairs</div><h2>' + esc(day.title || 'Match them up') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   function checkMatchPairs() {
@@ -11224,8 +11135,8 @@
       '<span class="q-difficulty ' + (q.difficulty || 'medium').toLowerCase() + '">' + (q.difficulty || 'Medium') + '</span></div>' +
       '<div class="q-text" style="margin-bottom:.7rem;">' + esc(q.question) + '</div>' + setup +
       '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr>' + head + '</tr></thead><tbody>' + bodyRows + '</tbody></table></div>' +
-      '<button class="fill-submit" id="tt-check-btn" onclick="checkTraceTable()" style="margin-top:.7rem;">Check answers</button>' +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<button class="btn btn-primary fill-submit" id="tt-check-btn" onclick="checkTraceTable()" style="margin-top:.7rem;">Check answers</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Take one row at a time and carry the value forward.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
@@ -11233,7 +11144,7 @@
       '<div class="card-header"><div class="card-badge">Trace the steps</div><h2>' + esc(day.title || 'Work it through') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   function checkTraceTable() {
@@ -11302,9 +11213,9 @@
     var voice = canSpeak();
     window._dictState = { q: q, plays: 0 };
     var player = voice
-      ? '<div class="dict-player"><button type="button" class="dict-play" onclick="dictPlay(false)">' +
+      ? '<div class="dict-player"><button type="button" class="btn btn-primary btn-sm dict-play" onclick="dictPlay(false)">' +
           '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Play</button>' +
-        '<button type="button" class="dict-slow" onclick="dictPlay(true)">Slower</button></div>'
+        '<button type="button" class="btn btn-secondary btn-sm dict-slow" onclick="dictPlay(true)">Slower</button></div>'
       : '<div class="dict-novoice">This device has no voice for this language, so read it instead - the missing word is still the one to type.</div>';
     var body = '<div class="q-meta"><span class="q-type-label">Listen and type</span>' +
       '<span class="q-difficulty ' + (q.difficulty||'medium').toLowerCase() + '">' + (q.difficulty||'Medium') + '</span></div>' +
@@ -11313,10 +11224,10 @@
       '<div class="dict-text" lang="' + escHtml((targetLang() || {}).code || '') + '"' + langDir() + '>' + gapped + '</div>' +
       '<div class="fill-wrap">' +
       '<input class="fill-input" id="fill-input" type="text" placeholder="The missing word" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"' + langDir() + ' />' +
-      '<button class="fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
+      '<button class="btn btn-primary btn-sm fill-submit" id="fill-btn" onclick="answerFillBtn()">Check →</button>' +
       '</div>' +
       accentBarHtml('fill-input') +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + escHtml(q.hint || (voice ? 'Play it on Slower and listen for the gap.' : 'Which word makes the sentence complete?')) + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
     /* After the answer, the whole sentence and what it means - and the voice
@@ -11333,7 +11244,7 @@
       '<div class="card-header"><div class="card-badge">Listen and type</div><h2>' + escHtml(day.title||'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + streak + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   function dictPlay(slow) {
@@ -11357,8 +11268,8 @@
       'style="flex:1 1 130px;min-width:110px;max-width:220px;padding:.55rem .7rem;border:1.5px solid #cbd5e1;' +
       'border-radius:10px;font-family:inherit;font-size:.95rem;font-variant-numeric:tabular-nums;' +
       'background:#fff;color:inherit;">' + unit + '</div>' +
-      '<button class="fill-submit" id="est-check-btn" onclick="checkEstimate()">Check answer</button>' +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<button class="btn btn-primary fill-submit" id="est-check-btn" onclick="checkEstimate()">Check answer</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + esc(q.hint || 'Round the numbers to something easy, then adjust.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
@@ -11366,7 +11277,7 @@
       '<div class="card-header"><div class="card-badge">Estimate it</div><h2>' + esc(day.title || 'About how much?') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   function checkEstimate() {
@@ -11431,10 +11342,10 @@
       escHtml(day.title || 'Practice') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
   function nfHint(html) {
-    return '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+    return '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + html + '</div></div>';
   }
   function nfHash(s) {
@@ -11575,7 +11486,7 @@
       '<div class="nf-sub">' + sub + '</div>' +
       '<ol class="rc-list">' + slots + '</ol>' +
       accentBarHtml('*') +
-      '<div class="nf-actions"><button class="fill-submit" id="rc-check-btn" onclick="checkRecall()" disabled>Check my list →</button></div>' +
+      '<div class="nf-actions"><button class="btn btn-primary fill-submit" id="rc-check-btn" onclick="checkRecall()" disabled>Check my list →</button></div>' +
       '<div class="rc-missed" id="rc-missed" aria-live="polite"></div>' +
       nfHint((q.hint ? escHtml(q.hint) : 'Picture the lesson card and walk through it in order.') +
         '<div class="rc-letters">Starts with: ' + escHtml(letters) + '</div>') +
@@ -11689,8 +11600,8 @@
                                           : 'In your own words, from memory. Then check it against a full answer.') + '</div>' +
       '<textarea class="sc-text" id="sc-text" rows="4" placeholder="Write your explanation…" oninput="scInput()"></textarea>' +
       accentBarHtml('sc-text') +
-      '<div class="nf-actions"><button class="fill-submit" id="sc-check-btn" onclick="scReveal(false)" disabled>Check myself →</button>' +
-      '<button type="button" class="nf-quiet" id="sc-giveup" onclick="scReveal(true)">I don’t remember — show me</button>' +
+      '<div class="nf-actions"><button class="btn btn-primary fill-submit" id="sc-check-btn" onclick="scReveal(false)" disabled>Check myself →</button>' +
+      '<button type="button" class="btn btn-text btn-sm nf-quiet" id="sc-giveup" onclick="scReveal(true)">I don’t remember — show me</button>' +
       '<span class="sc-count" id="sc-count" aria-live="polite"></span></div>' +
       '<div class="sc-judge" id="sc-judge"></div>' +
       nfHint(q.hint ? escHtml(q.hint) : 'Start with what it does, then say why.') +
@@ -11746,7 +11657,7 @@
         escHtml(fmStr(st.q.modelAnswer) || st.ideas.join('; ')) + '</div>' +
         '<span class="sc-kick">' + (gaveUp ? 'The ideas to learn' : 'Did your answer say…') + '</span>' +
         '<ul class="sc-ideas">' + rows + '</ul>' +
-        (gaveUp ? '' : '<div class="nf-actions"><button class="fill-submit" id="sc-done-btn" onclick="scDone()" disabled>Done →</button></div>');
+        (gaveUp ? '' : '<div class="nf-actions"><button class="btn btn-primary fill-submit" id="sc-done-btn" onclick="scDone()" disabled>Done →</button></div>');
     }
     if (gaveUp) {
       currentAnswered = true;
@@ -12085,7 +11996,7 @@
       '<div class="cm-help">Tap a blank, then the word that belongs there. Every arrow reads as a sentence.</div>' +
       '<div class="cm-fig art-paper" id="cm-fig"></div>' +
       '<div class="cm-bank" id="cm-bank" aria-label="Words to place"></div>' +
-      '<div class="nf-actions"><button class="fill-submit" id="cm-check-btn" onclick="cmCheck()" disabled>Check the map →</button></div>' +
+      '<div class="nf-actions"><button class="btn btn-primary fill-submit" id="cm-check-btn" onclick="cmCheck()" disabled>Check the map →</button></div>' +
       nfHint(q.hint ? escHtml(q.hint) : 'Read each arrow out loud, from the box it leaves to the box it reaches.') +
       '<div class="feedback-box" id="feedback-box"></div>';
     setTimeout(cmPaint, 0);
@@ -12566,7 +12477,7 @@
     var body = nfMeta('Complete the table', q) +
       '<div class="sfd-rule"><b>Rule</b><span>' + escHtml(m.rule.text) + '</span></div>' +
       SFData.table(m, { id: 'ft-table', caption: m.title, cell: cell, given: given }) +
-      '<button class="sfd-check" id="ft-check-btn" disabled onclick="ftCheck()">Check</button>' +
+      '<button class="btn btn-primary sfd-check" id="ft-check-btn" disabled onclick="ftCheck()">Check</button>' +
       '<div class="feedback-box" id="feedback-box"></div>';
     return nfShell('Complete the table', body, card);
   }
@@ -12657,7 +12568,7 @@
       q.question + '</div>' +
       '<div style="font-size:0.78rem;font-weight:600;color:var(--muted);margin-bottom:.6rem;">Which concept BEST explains this?</div>' +
       optHtml +
-      '<div class="hint-row"><button class="hint-btn" onclick="toggleHint()">Show hint</button>' +
+      '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show hint</button>' +
       '<div class="hint-box" id="hint-box">' + (q.hint || 'Think about what psychological/economic/geographic concept applies here.') + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
 
@@ -12665,7 +12576,7 @@
       '<div class="card-header"><div class="card-badge">Real Scenario</div><h2>' + (day.title||'Apply your knowledge') + '</h2></div>' +
       '<div class="card-body">' + body + '</div>' +
       '<div class="card-footer"><span class="footer-left">' + correctCount + '/' + totalAnswered + '</span>' +
-      '<button class="btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
+      '<button class="btn btn-primary btn-next" id="btn-next" disabled onclick="showNextCard()">Next →</button></div></div>';
   }
 
   /* ── ANSWERS ── */
@@ -14218,7 +14129,7 @@
         '<div class="r-stat"><div class="r-stat-val">' + streak + (streak >= 3 ? ' ' : '') + '</div><div class="r-stat-label">Day streak</div></div>' +
       '</div>' +
       sleepTip + adviceHtml + wrongHtml + shareHtml +
-      '<button class="btn-dashboard" onclick="goToDashboard()">' +
+      '<button class="btn btn-primary btn-block btn-dashboard" onclick="goToDashboard()">' +
       (day.isFinal || dayIndex >= plan.days.length - 1 ? 'Back to dashboard →' : 'Next session: Day ' + (dayIndex + 2) + ' →') +
       '</button>';
 
