@@ -8506,6 +8506,14 @@
   /* One "look at the accents" per card - a prompt, not the answer. */
   var accentRetryUsed = false;
 
+  /* A graded box or button wears .sel-right / .sel-wrong, which have a dark
+     version. The pale green and red used to be set inline, so in dark mode the
+     learner's own answer was near-white text on a near-white box. */
+  function sfGraded(el, right) {
+    el.classList.remove('sel-right', 'sel-wrong');
+    el.classList.add(right ? 'sel-right' : 'sel-wrong');
+  }
+
   function answerFillBtn() {
     var btn = document.getElementById('fill-btn');
     if (!btn) return;
@@ -8981,10 +8989,10 @@
           for (var bk = 0; bk < boxes.length; bk++) {
             boxes[bk].disabled = inp.disabled;
             boxes[bk].readOnly = inp.readOnly;
-            boxes[bk].style.borderColor = inp.style.borderColor;
-            boxes[bk].style.background = inp.style.background;
+            boxes[bk].classList.toggle('sel-right', inp.classList.contains('sel-right'));
+            boxes[bk].classList.toggle('sel-wrong', inp.classList.contains('sel-wrong'));
           }
-        }).observe(inp, { attributes: true, attributeFilter: ['style', 'disabled', 'readonly'] });
+        }).observe(inp, { attributes: true, attributeFilter: ['class', 'disabled', 'readonly'] });
         setTimeout(function () {
           if (!boxes[0] || !document.body.contains(boxes[0])) return;
           try { boxes[0].focus({ preventScroll: true }); } catch (e) { boxes[0].focus(); }
@@ -10014,18 +10022,18 @@
     fb.style.display = 'block';
     if (isError) {
       correctCount++; currentStreak++; recordRight();
-      btn.style.background = '#d1faf0'; btn.style.borderColor = '#38bfa1'; btn.style.color = '#065f46';
+      sfGraded(btn, true);
       fb.className = 'feedback-box show correct-fb';
       fb.innerHTML = '<div class="feedback-label">Found it!</div><div class="feedback-text">' + (explanation || 'That step has the mistake.') + '</div>';
       spawnConfetti(); flashCard(true);
     } else {
       currentStreak = 0;
-      btn.style.background = '#fee2e2'; btn.style.borderColor = '#ef4444';
+      sfGraded(btn, false);
       // Also reveal which step was actually wrong
       document.querySelectorAll('.error-step-btn').forEach(function(b, i) {
         // check data-idx — the correct error step has hasError:true encoded in its onclick
         if (b.onclick && b.onclick.toString().indexOf('true') !== -1 && b !== btn) {
-          b.style.background = '#d1faf0'; b.style.borderColor = '#38bfa1';
+          sfGraded(b, true);
         }
       });
       fb.className = 'feedback-box show wrong-fb';
@@ -13242,8 +13250,7 @@
             '. Check your work and enter a new answer.</div>' +
             '<div class="feedback-growth">Tap "Show steps" if you want a nudge.</div>';
         }
-        input.style.borderColor = 'var(--red)';
-        input.style.background  = '#fee2e2';
+        sfGraded(input, false);
         // Defer the refocus one tick so it happens AFTER the feedback box's
         // height change has been laid out, and skip the browser's automatic
         // scroll-into-view on focus. Refocusing immediately, mid-reflow, is
@@ -13266,8 +13273,7 @@
     input.disabled = true;
     var submitBtn = document.getElementById('fill-btn');
     if (submitBtn) submitBtn.disabled = true;
-    input.style.borderColor = isCorrect ? 'var(--green)' : 'var(--red)';
-    input.style.background  = isCorrect ? '#d1faf0'      : '#fee2e2';
+    sfGraded(input, isCorrect);
 
     var fb = document.getElementById('feedback-box');
     fb.className = 'feedback-box show ' + (isCorrect ? 'correct-fb' : 'wrong-fb');

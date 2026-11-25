@@ -4773,3 +4773,5 @@ genuinely nothing.
 - Also fixed with it: "A octagon", a midpoint of two identical points, and a ribbon cut into 7.5 pieces.
 - **Not seen from a real model**: build a geometry plan on the live site and see which of its questions get drawings.
 
+**Nov 25: graded answers in dark mode.** The equation card, fill-in, system boxes and find-the-mistake steps still set pale green and red inline, so in dark mode the typed answer was invisible (contrast 1:1). They go through `sfGraded(el, right)` now (`.sel-right` / `.sel-wrong`). Never set a graded colour inline; `test_dark_graded.js` measures the contrast.
+
