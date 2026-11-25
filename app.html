@@ -875,7 +875,7 @@
   function userTier() {
     try { return (JSON.parse(SFStore.getItem('studyflow_user') || '{}').tier) || 'free'; } catch (e) { return 'free'; }
   }
-  function maxDaysFor(tier) { return tier === 'vip' ? 999 : (tier === 'pro' ? 14 : 7); }
+  function maxDaysFor(tier) { return (tier === 'vip' || tier === 'classroom' || tier === 'school') ? 999 : (tier === 'pro' ? 14 : 7); }  /* the same as PLAN_LIMITS in api/_account.js */
   /* The same arithmetic generatePlan uses, so the number promised on the
      date screen is the number that gets built. */
   function planDaysFor(daysLeft, tier) {

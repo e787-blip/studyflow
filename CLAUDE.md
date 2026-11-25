@@ -3797,7 +3797,9 @@ are scoring higher") are gone.
   cards say only what each study found (Nov 2026, the slop pass): Roediger and
   Karpicke 2006 (61% vs 40% a week later), Kornell, Hays and Bjork 2009,
   Cepeda et al. 2006 (317 experiments), Taylor and Rohrer 2010 (mixed
-  practice), Walker 2017, Feynman. The old "4x", "50%", "200%", "85%", "40%"
+  practice), Gais, Lucas and Born 2006 (sleep after learning), Fiorella and
+  Mayer 2013 (learning by teaching; it was "Walker, Why We Sleep" - a popular
+  book - and "named after Richard Feynman", which cites nothing). The old "4x", "50%", "200%", "85%", "40%"
   and "30%" were in none of those papers; never put a figure on a card that
   its source does not state. The cards are in `.cw-wall` in
   reading order (no columns; `--o` orders them on a phone).
@@ -4704,8 +4706,19 @@ genuinely nothing.
   - **`overflow-x: clip`, never `hidden`**, on `html` and `body`. `hidden`
     creates a scroll container and every pinned (`position: sticky`) section
     stops pinning.
-  - Phones get a floating "Build my study plan" button only between the
-    hero and pricing, with an iOS-26-style scroll-edge fade behind it.
+  - **No floating "Build my study plan" button on phones any more** (Nov 24,
+    slop pass): the nav carries "Build my plan" the whole way down, so it was
+    the same button twice, and it sat over the closing section's own buttons.
+    `#sticky-cta` is still in the markup, hidden by CSS.
+  - **The slop pass of Nov 24** (block "SLOP PASS, Nov 24" at the end of the
+    stylesheet): the closing day cards are dealt DOWN the deck so every covered
+    card shows its day and whole title (sideways, each card sliced the title of
+    the one before); the phone features picture is shrunk to fit its frame by
+    `fitFxPictures`, never cut; "test&nbsp;day." never breaks; the hero's last
+    band no longer repeats the closing "Start tonight."; the classroom board
+    says each student count once and has no strip under it; the footer
+    wordmark is upright. `app.html` `maxDaysFor` gives Classroom and School
+    999 days, as `PLAN_LIMITS` does (it capped them at 7).
   - The waitlist is gone on purpose: a waitlist contradicts a product that
     is already live, and its counter jumped from 47 to 100.
 

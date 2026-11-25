@@ -381,7 +381,6 @@ nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .1
 .how-tile {
   width: 72px; height: 72px; border-radius: 20px; display: grid; place-items: center;
   color: #fff; background: var(--blue-deep);
-  box-shadow: 0 16px 30px -12px rgba(40, 81, 200, .6), inset 0 1px 0 rgba(255, 255, 255, .25);
   transition: transform 1s var(--ease-out) .1s, opacity .6s var(--ease-out) .1s;
 }
 .how-tile svg { width: 30px; height: 30px; }
@@ -724,8 +723,7 @@ nav.site-nav.on-dark { background: #181f3d; border-color: rgba(255, 255, 255, .1
 }
 /* Short phones (an iPhone SE is 667 tall): the picture gives up its room first. */
 @media (max-width: 1000px) and (max-height: 720px) {
-  .fx-vis { max-height: 34svh; }
-  .fx-vis .pad-sheet { zoom: .86; }
+  .fx-vis { max-height: 40svh; }
   .fx-text p { font-size: .9rem; }
 }
 
@@ -939,6 +937,33 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
 .card-header::before { display: none; }
 .board { background: var(--night); }
 .foot-mark { background: none; -webkit-text-fill-color: currentColor; color: rgba(160, 188, 255, .16); }
+
+/* ── SLOP PASS, Nov 24 ──
+   The closing cards: dealt DOWN the deck, not across it. Sideways, each card
+   covered the right half of the one before and sliced its title ("Flashca",
+   "Meiosis variatio"). Now each covered card shows its whole top row - day
+   and title on one line - and only the front card shows its body. */
+.fan { height: 520px; }
+.fan-card { width: 280px; height: 250px; margin: -125px 0 0 -140px;
+  transform: translate3d(calc((var(--i) - 1.5) * 16px), calc((var(--i) - 1.5) * 84px), calc((var(--i) - 3) * 30px)) rotateZ(calc((var(--i) - 1.5) * -1.5deg)); }
+.dc h4 { white-space: nowrap; }
+@media (max-width: 860px) {
+  .fan { height: 440px; }
+  .fan-card { width: 260px; height: 200px; margin: -100px 0 0 -130px;
+    transform: translate3d(calc((var(--i) - 1.5) * 10px), calc((var(--i) - 1.5) * 76px), calc((var(--i) - 3) * 24px)) rotateZ(calc((var(--i) - 1.5) * -1.5deg)); }
+  .fan-card:not(:last-child) .dc-foot > span:first-child { visibility: visible; }
+}
+/* The proof line sat alone in a band built for three stats above it. */
+.proof { padding-block: 2.5rem; }
+.marquee { margin-top: 0; }
+/* ...and the section after it does not open with a second full gap. */
+.proof + .sec { padding-top: clamp(2.5rem, 5vw, 4rem); }
+/* The how-it-works tiles are flat like every other mark on the page. */
+.how-tile { box-shadow: none; }
+/* Phones: the nav already holds "Build my plan" the whole way down, so the
+   floating copy of it was the same button twice, and it covered the CTA's
+   own buttons. */
+@media (max-width: 760px) { .sticky-cta, .edge-fade { display: none !important; } }
 </style>
 </head>
 <body>
@@ -998,7 +1023,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       <h1 class="hero-h1">
         <span class="sr-only">Upload your notes. Know them by test day.</span>
         <span class="l1 split" aria-hidden="true">Upload your notes.</span>
-        <span class="hero-em" aria-hidden="true">Know them by test day.</span>
+        <span class="hero-em" aria-hidden="true">Know them by test&nbsp;day.</span>
       </h1>
       <p class="hero-sub">StudyFlow reads your notes and builds a day-by-day study plan with real practice questions.</p>
       <div class="hero-ctas">
@@ -1013,7 +1038,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     </div>
 
     <div class="band band-3" data-a="0.72" data-b="1" data-ramp="0.07" data-entrance="rise">
-      <h2 class="band-h"><span class="sr-only">One short session a day. Start tonight.</span><span class="rise" aria-hidden="true">One short session a day.</span> <em class="rise" aria-hidden="true">Start tonight.</em></h2>
+      <h2 class="band-h"><span class="sr-only">One short session a day, every day until the test.</span><span class="rise" aria-hidden="true">One short session a day,</span> <em class="rise" aria-hidden="true">every day until the test.</em></h2>
       <p class="band-p">Set your exam date. The questions get harder as the test gets closer, so exam day feels familiar.</p>
       <div class="hero-ctas"><a href="login.html?mode=signup" class="btn btn-blue">Build my study plan →</a></div>
     </div>
@@ -1039,11 +1064,11 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       <ol class="how-steps">
         <li class="how-step" data-reveal-step>
           <div class="how-node"><div class="how-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path pathLength="1" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline pathLength="1" points="14 2 14 8 20 8"/><line pathLength="1" x1="16" y1="13" x2="8" y2="13"/><line pathLength="1" x1="16" y1="17" x2="8" y2="17"/></svg></div></div>
-          <div class="how-copy"><span class="how-num">01</span><h3>Paste your notes</h3><p>Drop in a PDF, slides or a Word doc, paste text, or snap a photo. StudyFlow reads any subject: biology, history, chemistry, literature.</p></div>
+          <div class="how-copy"><span class="how-num">01</span><h3>Add your notes</h3><p>Drop in a PDF, slides or a Word doc, paste text, or snap a photo. StudyFlow reads any subject: biology, history, chemistry, literature.</p></div>
         </li>
         <li class="how-step" data-reveal-step>
           <div class="how-node"><div class="how-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle pathLength="1" cx="12" cy="12" r="10"/><polyline pathLength="1" points="12 6 12 12 16 14"/></svg></div></div>
-          <div class="how-copy"><span class="how-num">02</span><h3>Set your exam date</h3><p>Tell us when your exam is and the grade you want. StudyFlow fits one session into each day between now and then.</p></div>
+          <div class="how-copy"><span class="how-num">02</span><h3>Set your exam date</h3><p>Tell us when your exam is and what grade you are in. StudyFlow fits one session into each day between now and then.</p></div>
         </li>
         <li class="how-step" data-reveal-step>
           <div class="how-node"><div class="how-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline pathLength="1" points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline pathLength="1" points="17 6 23 6 23 12"/></svg></div></div>
@@ -1145,8 +1170,8 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
           <p class="cw-src"><span class="cw-chip">Spaced repetition</span><span>Cepeda et al., 2006</span></p>
         </article>
         <article class="cw-card cw-paper" style="--o:4">
-          <p class="cw-quote">Explain it in plain words, as if to a friend. <em>The parts you can&rsquo;t explain</em> are the parts you don&rsquo;t know yet.</p>
-          <p class="cw-src"><span class="cw-chip">Feynman technique</span><span>Named after the physicist Richard Feynman</span></p>
+          <p class="cw-quote">Students who taught a lesson out loud after studying it <em>did better a week later</em> than students who only got ready to teach it.</p>
+          <p class="cw-src"><span class="cw-chip">Learning by teaching</span><span>Fiorella and Mayer, 2013</span></p>
         </article>
         <article class="cw-card cw-soft" style="--o:5">
           <p class="cw-quote">Mixing different kinds of problems in one session, instead of one kind at a time, <em>more than doubled</em> students&rsquo; scores on a test the next day.</p>
@@ -1154,7 +1179,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
         </article>
         <article class="cw-card cw-night" style="--o:6">
           <p class="cw-quote">Sleep after studying helps your brain <em>hold on to what you learned.</em> A week of short sessions gets you a week of nights.</p>
-          <p class="cw-src"><span class="cw-chip">Sleep</span><span>Walker, Why We Sleep, 2017</span></p>
+          <p class="cw-src"><span class="cw-chip">Sleep</span><span>Gais, Lucas and Born, 2006</span></p>
         </article>
       </div>
     </div>
@@ -1190,7 +1215,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
           </div>
           <div class="fx-text">
           <h3>A plan built from <em>your notes</em></h3>
-          <p>Paste your notes and set your exam date. StudyFlow reads them and writes a lesson and practice questions for each day, in a few minutes.</p>
+          <p>Every lesson and question comes from what you uploaded, not from a stock question bank, so you study what your teacher actually taught.</p>
           <ul class="ft-list"><li>Works out the subject from your notes</li><li>Pitched at your grade</li><li>Questions that fit the subject</li></ul>
         </div>
         </div>
@@ -1349,23 +1374,21 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
     <div class="board" data-reveal="tilt">
       <div class="board-cols">
         <div class="tier">
-          <p class="pname">Free trial</p>
+          <p class="pname">Free class</p>
           <p class="price">$0</p>
-          <p class="per">forever free</p>
+          <p class="per">free, up to 5 students</p>
           <ul class="feats">
-            <li><svg><use href="#i-check"/></svg>Up to 5 students</li>
             <li><svg><use href="#i-check"/></svg>A class code to join</li>
             <li><svg><use href="#i-check"/></svg>Assignments and their results</li>
             <li><svg><use href="#i-check"/></svg>Each student’s progress</li>
           </ul>
-          <a href="teacher-login.html" class="btn btn-glass">Try free →</a>
+          <a href="teacher-login.html" class="btn btn-glass">Start a free class →</a>
         </div>
         <div class="tier">
           <p class="pname">Classroom</p>
           <p class="price">$79.99</p>
           <p class="per">per month, up to 30 students</p>
           <ul class="feats">
-            <li><svg><use href="#i-check"/></svg>Up to 30 students</li>
             <li><svg><use href="#i-check"/></svg>Assignments, with results by question and goal</li>
             <li><svg><use href="#i-check"/></svg>Teacher dashboard</li>
             <li><svg><use href="#i-check"/></svg>Parent view</li>
@@ -1377,16 +1400,11 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
           <p class="price">$299</p>
           <p class="per">per month, up to 200 students</p>
           <ul class="feats">
-            <li><svg><use href="#i-check"/></svg>Up to 200 students</li>
             <li><svg><use href="#i-check"/></svg>Everything in Classroom</li>
             <li><svg><use href="#i-check"/></svg>Help getting set up</li>
           </ul>
           <a href="contact.html" class="btn btn-glass">Contact us →</a>
         </div>
-      </div>
-      <div class="board-foot">
-        <p>Teaching a class? A free class holds 5 students.</p>
-        <a href="teacher-login.html" class="btn btn-blue">Set up your classroom →</a>
       </div>
     </div>
   </div>
@@ -1466,7 +1484,7 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
       <a href="contact.html">Help</a>
     </nav>
   </div>
-  <div class="foot-mark" aria-hidden="true"><span>Study</span><em>Flow</em></div>
+  <div class="foot-mark" aria-hidden="true"><span>StudyFlow</span></div>
   <div class="wrap foot-legal">
     <span>© 2026 StudyFlow</span>
     <nav aria-label="Legal">
@@ -2651,6 +2669,26 @@ body.paused *, body.paused *::before, body.paused *::after { animation-play-stat
   var showsTimer = null;
   window.addEventListener('resize', function () { clearTimeout(showsTimer); showsTimer = setTimeout(function () { remeasureShows(); Scrub.kick(); }, 120); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { remeasureShows(); Scrub.kick(); });
+
+  /* Phones: each feature's picture is SHRUNK to fit its frame, never cut. The
+     frame is capped (max-height) so the words below it stay on screen, and the
+     faces are different heights - the plan card fits, the tutor's chat does
+     not - so one fixed zoom either cut the tall ones or shrank the short ones. */
+  function fitFxPictures() {
+    [].forEach.call(document.querySelectorAll('.fx-vis'), function (vis) {
+      var sheet = vis.querySelector('.pad-sheet'); if (!sheet) return;
+      sheet.style.zoom = '';
+      var cs = getComputedStyle(vis), cap = parseFloat(cs.maxHeight);
+      if (!(cap > 0)) return;                    /* desktop: no cap, nothing to fit */
+      var base = parseFloat(getComputedStyle(sheet).zoom) || 1;
+      sheet.style.zoom = '1';
+      var room = cap - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom), need = sheet.offsetHeight;
+      sheet.style.zoom = String(Math.min(base, need > 0 ? room / need : 1));
+    });
+  }
+  fitFxPictures();
+  var fitT; window.addEventListener('resize', function () { clearTimeout(fitT); fitT = setTimeout(fitFxPictures, 150); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitFxPictures);
 
   /* ════════════════════════════════════════
      THE ONE INTERACTIVE MOMENT: hold to build the plan.
