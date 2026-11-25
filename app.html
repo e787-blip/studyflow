@@ -4254,7 +4254,11 @@
           (lesson.microTopic ? 'Topic: ' + String(lesson.microTopic).slice(0, 160) + '\n' : '') +
           (ideas.length ? 'Main ideas: ' + ideas.join('; ') + '\n' : '') +
           (names.length ? 'Key terms: ' + names.join('; ') + '\n' : '');
-        return promptHead + ctx +
+        /* Each question slot gets a named angle ("New case", "Predict"...), picked
+           here and rotated by day: sf-questions.js VERSIONS. Questions call only. */
+        var versions = window.SFQuestions && SFQuestions.versionPlan
+          ? SFQuestions.versionPlan(sub ? sub.types : questionSchema, dayNum, subjectType) : '';
+        return promptHead + ctx + versions +
           '\nTHIS CALL WRITES THE QUESTIONS ONLY. Return exactly this shape and nothing else - no lesson fields:\n' +
           OUT_LINE + '{"questions":[' + questionSchema + ']}';
       }

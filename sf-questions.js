@@ -868,7 +868,174 @@
                microTopic:'', duration:30, isFinal:false, completed:false, questions:qs };
     }
 
+  /* ── VERSIONS: the same card, asked from a different angle (Nov 2026) ──────
+     The owner: "keep the question TYPES but inside that question expand it for
+     different scenarios". A non-maths question is written by the model from the
+     notes, so its variety is what the prompt asks for. Left alone the model
+     wrote every multiple choice the same way. Now each question slot of a day is
+     given a named version. CODE picks it (the model never does), rotating by
+     day, so a day's two multiple-choice cards differ and tomorrow's differ again.
+     A version changes the angle of the question only, never its JSON shape.
+     Slots that already name a variant in the mix ("write:claim",
+     "passage:inference") keep that and are left alone. Maths is not here: its
+     variety is code (sf-mathgen.js).
+     Each entry is [name, what to write]. Keep them short: they are in the prompt. */
+  var VERSIONS = {
+    mcq: [['Meaning', 'which choice best explains the idea, in new words'],
+          ['New case', 'a short everyday situation that an idea in the notes explains; ask which idea'],
+          ['Predict', 'change one thing and ask what happens next'],
+          ['Why', 'ask for the reason or cause behind something the notes state'],
+          ['Compare', 'ask for the key difference or likeness between two things'],
+          ['Best example', 'which choice is an example of the idea']],
+    truefalse: [['Plain claim', 'one clear statement from the notes'],
+          ['New situation', 'a claim about a situation the notes do not mention but their ideas decide'],
+          ['Common mix-up', 'state something students often wrongly believe'],
+          ['Cause and effect', 'a claim of the form "If ..., then ..."'],
+          ['Comparison', 'a claim that compares two things']],
+    fill: [['Definition', 'the sentence gives the meaning; the blank is the term'],
+          ['In action', 'the sentence describes it happening; the blank names it'],
+          ['Because', 'the blank completes a reason ("... because ___")'],
+          ['Next step', 'a process where the blank is what comes next'],
+          ['Contrast', 'a sentence starting "Unlike ..., ___ ..."']],
+    write: [['Teach a friend', 'explain it to someone who missed the lesson'],
+          ['Why it happens', 'explain the cause step by step'],
+          ['Real example', 'explain it using one example from everyday life'],
+          ['Two side by side', 'explain how two things differ']],
+    classify: [['Two kinds', 'two categories the notes name'],
+          ['Causes or effects', 'sort items into causes and effects'],
+          ['Example or not', 'sort into examples of the idea and things that only look like it'],
+          ['Which of the two', 'sort facts by which of two things they describe']],
+    sequence: [['Steps of a process', 'what happens, in order'],
+          ['Chain of causes', 'each item leads to the next'],
+          ['Over time', 'events or stages from first to last'],
+          ['How you do it', 'the steps a person follows']],
+    sentence: [['Statement', 'an everyday sentence'], ['Question', 'a question someone would ask'],
+          ['Negative', 'a sentence with "not" or "never"'], ['Past or future', 'something that happened or will happen']],
+    passage: [['Main idea', 'what the passage is mostly about'], ['Read between the lines', 'something it implies but does not say'],
+          ['Word in context', 'what a word means here'], ['Key detail', 'a detail that matters to the point']],
+    errorspot: [['Wrong step', 'one step does the wrong thing'], ['Mixed-up idea', 'one step confuses two ideas'],
+          ['Wrong value carried on', 'one value is copied or worked out wrongly'], ['Wrong rule', 'one step uses a rule that does not apply']],
+    scenario: [['Everyday life', 'a person at home or out'], ['At school', 'a student or class situation'],
+          ['A choice to make', 'someone must decide; ask which choice the ideas support'],
+          ['What went wrong', 'something failed; ask what explains it'], ['What happens next', 'ask for the outcome']],
+    wordproblem: [['Shopping', 'buying things'], ['Saving up', 'saving toward a goal'],
+          ['A small business', 'costs and money coming in'], ['A family budget', 'splitting a month\'s money']],
+    twopart: [['Predict, then why', 'what happens, then the reason'], ['Judge a claim', 'is a claim right, then what shows it'],
+          ['Compare, then why', 'which is more, faster or stronger, then why'], ['Explain a result', 'what explains an outcome, then the evidence']],
+    corroborate: [['What happened', 'the sources disagree about the facts'], ['Why it happened', 'they disagree about the cause'],
+          ['How much it mattered', 'they disagree about importance'], ['Who was responsible', 'they disagree about who or what did it']],
+    highlight: [['Proof of a claim', 'the sentence that supports a stated claim'], ['The cause', 'the sentence that says why'],
+          ['The main point', 'the sentence the others support'], ['The exception', 'the sentence that goes against the others']],
+    tracetable: [['Repeated rule', 'apply one rule again and again'], ['A choice inside', 'a rule with "if ... otherwise"'],
+          ['A formula by rows', 'work out each row from a formula'], ['Running total', 'keep adding to one value']],
+    matchpairs: [['Term and meaning', 'words to definitions'], ['Cause and effect', 'causes to what they lead to'],
+          ['Example and idea', 'examples to the idea they show'], ['Part and job', 'parts to what each does'],
+          ['Problem and fix', 'problems to what solves them']],
+    estimate: [['How much', 'an amount or size'], ['How long', 'a time or duration'], ['How far', 'a distance or height'],
+          ['What share', 'a percent or fraction of a whole']],
+    dictation: [['Everyday sentence', 'something said at home or school'], ['A question', 'a question someone asks'],
+          ['A request', 'asking for something politely'], ['Past or future', 'about yesterday or tomorrow']],
+    readingset: [['Information', 'a factual passage'], ['Short story', 'a few lines of story'],
+          ['Two views', 'a passage setting out two opinions'], ['How something works', 'a passage explaining a process']],
+    recall: [['All the parts', 'name the parts of something'], ['All the causes', 'name the causes'],
+          ['All the stages', 'name the stages or steps'], ['All the examples', 'name the examples the notes give']],
+    selfcheck: [['Why', 'explain why it happens'], ['How', 'explain how it works'],
+          ['What if', 'explain what would change if one thing changed'], ['Compare', 'explain how two things differ']],
+    conceptmap: [['Causes and effects', 'what leads to what'], ['Parts of a whole', 'a thing and its parts'],
+          ['A process', 'stages that follow each other'], ['Kinds of a thing', 'a group and its types']],
+    whosright: [['About the cause', 'classmates disagree about why'], ['About size or amount', 'about how much or how big'],
+          ['About order', 'about what comes first'], ['About a word', 'about what a term means']],
+    readchart: [['Most or least', 'tap the highest or lowest, then what it shows'], ['The trend', 'tap a point, then the overall pattern'],
+          ['Compare two', 'tap one bar, then how it compares with another'], ['Explain a jump', 'tap a point, then what could explain it']]
+  };
+  /* Subjects whose cards need different angles. */
+  var VERSIONS_BY = {
+    language: {
+      mcq: [['Word in a sentence', 'what a word means in this sentence'], ['Right form', 'pick the form that fits the sentence'],
+            ['Best reply', 'which answer fits what someone says'], ['Say it', 'pick the correct translation'], ['Correct sentence', 'which sentence has no mistake']],
+      fill: [['Verb form', 'the verb form that fits'], ['Word from context', 'the word the sentence needs'],
+             ['Article or ending', 'the article or agreement that fits'], ['Question word', 'the word that asks the question']],
+      matchpairs: [['Word and meaning', 'words to meanings'], ['Question and answer', 'questions to replies'],
+             ['Opposites', 'words to their opposites'], ['Phrase and moment', 'phrases to when you say them']]
+    },
+    cs: {
+      mcq: [['What it prints', 'give a few lines of code; ask what they output'], ['Pick the line', 'which line does the job described'],
+            ['Change one thing', 'what happens if a line or value changes'], ['Why this way', 'why code is written like this'], ['Two ways', 'how two approaches differ']],
+      errorspot: [['Off by one', 'a loop or index goes one too far or short'], ['Wrong condition', 'an "if" tests the wrong thing'],
+            ['Wrong variable', 'one line uses the wrong name'], ['Wrong start', 'a value starts at the wrong number']]
+    },
+    history: {
+      mcq: [['Cause', 'why something happened'], ['Effect', 'what it led to'], ['Their point of view', 'what a person or group then would have thought'],
+            ['Turning point', 'which moment changed things most, as the notes tell it'], ['Two groups', 'how two groups differed'], ['New evidence', 'which idea in the notes a new piece of evidence supports']],
+      fill: [['Who or what', 'the blank is a person, place or event'], ['Cause', 'the blank completes why it happened'],
+             ['Result', 'the blank is what it led to'], ['Key term', 'the blank is the term the sentence defines']]
+    },
+    english: {
+      mcq: [['Name the technique', 'a new line; ask which technique it uses'], ['Effect of wording', 'what a word choice does'],
+            ['Correct sentence', 'which sentence is written correctly'], ['Fix it', 'which change repairs a sentence'], ['Apply it', 'use the rule on a new sentence']]
+    }
+  };
+  function versionsFor(type, subjectType) {
+    var by = VERSIONS_BY[subjectType];
+    return (by && by[type]) || VERSIONS[type] || null;
+  }
+  /* The types in the order the schema lists them, from a list or from the
+     schema text itself (the older fallback mixes are hand-written strings). */
+  function versionTypes(typesOrSchema) {
+    if (typeof typesOrSchema === 'string') {
+      var out = [], m, re = /"type":"([a-z]+)"([^{}]*)/g;
+      while ((m = re.exec(typesOrSchema))) {
+        var variant = /"mode":"claim"/.test(m[2]) ? ':claim' : '';
+        out.push(m[1] + variant);
+      }
+      return out;
+    }
+    return noDrawn(typesOrSchema || []);
+  }
+  /* The block the day prompt carries. day counts from 1. '' for maths. */
+  function versionPlan(typesOrSchema, day, subjectType) {
+    if (subjectType === 'math') return '';
+    var types = versionTypes(typesOrSchema), count = {}, used = {}, lines = [], i;
+    var d = Math.max(1, Math.floor(day) || 1);
+    for (i = 0; i < types.length; i++) {
+      var t = String(types[i]).split(':')[0];
+      if (String(types[i]).indexOf(':') === -1) count[t] = (count[t] || 0) + 1;
+    }
+    for (i = 0; i < types.length; i++) {
+      if (String(types[i]).indexOf(':') !== -1) continue;
+      var type = types[i], list = versionsFor(type, subjectType);
+      if (!list) continue;
+      var n = used[type] || 0; used[type] = n + 1;
+      var v = list[((d - 1) * count[type] + n) % list.length];
+      lines.push('Question ' + (i + 1) + ' (' + type + ') - ' + v[0] + ': ' + v[1] + '.');
+    }
+    if (!lines.length) return '';
+    return '\nVERSIONS - give these questions these angles, so no two read alike. Keep each type\'s JSON shape. ' +
+      'Stay inside the notes and this subject; if the notes cannot support an angle, write that question the plain way. ' +
+      'True/false answers must not all be the same.\n' + lines.join('\n') + '\n';
+  }
+  /* For the mid-session top-up, which has no fixed slots: a few angle names
+     per type, a different set each time it is called. */
+  function versionHint(types, subjectType, seed) {
+    if (subjectType === 'math') return '';
+    var seen = {}, parts = [], i, k, s = Math.max(0, Math.floor(seed) || 0);
+    for (i = 0; i < (types || []).length && parts.length < 5; i++) {
+      var t = String(types[i]).split(':')[0], list = versionsFor(t, subjectType);
+      if (!list || seen[t]) continue;
+      seen[t] = 1;
+      var names = [];
+      for (k = 0; k < 3 && k < list.length; k++) names.push(list[(s + k) % list.length][0].toLowerCase());
+      parts.push(t + ': ' + names.join(', '));
+    }
+    return parts.length ? 'Vary the ANGLE, not just the wording, between questions of one type - ' + parts.join('; ') + '.\n' : '';
+  }
+
   window.SFQuestions = {
+    versionPlan: versionPlan,
+    versionHint: versionHint,
+    versionsFor: versionsFor,
+    VERSIONS: VERSIONS,
+    VERSIONS_BY: VERSIONS_BY,
     qtpl: qtpl,
     buildQuestionSchema: buildQuestionSchema,
     QTYPE_NAME: QTYPE_NAME,

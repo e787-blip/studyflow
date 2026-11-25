@@ -847,7 +847,8 @@
       'The teacher reads and approves every question before students see it.\n\n' +
       sharedRules(goals) +
       'LESSON: ' + kindOf().lesson + ' The lesson must not answer the questions outright: teach the ideas, not the items.\n' +
-      'QUESTIONS: exactly ' + types.length + ' - ' + tallyText(types) + '. Return them in the order of the schema below, every field filled.\n\n' +
+      'QUESTIONS: exactly ' + types.length + ' - ' + tallyText(types) + '. Return them in the order of the schema below, every field filled.\n' +
+      (SFQuestions.versionPlan ? SFQuestions.versionPlan(types, 1, S.subjectType) : '') + '\n' +
       'NOTES:\n"""\n' + notesForPrompt() + '\n"""\n\n' +
       'OUTPUT: ONLY valid compact JSON. No markdown. Replace ALL empty strings with REAL content.\n\n' +
       '{"title":"","briefing":"","content":"","steps":[],"keyTerms":[{"term":"","definition":""}],' +
@@ -856,6 +857,8 @@
   function onePrompt(type, goals, avoid) {
     return 'You are writing ONE more question for a teacher\'s assignment.\n\n' + sharedRules(goals) +
       (avoid.length ? 'It must not repeat or overlap these questions already in the assignment:\n- ' + avoid.join('\n- ') + '\n' : '') +
+      /* a different angle each time the teacher asks for another */
+      (SFQuestions.versionPlan ? SFQuestions.versionPlan([type], 1 + Math.floor(Math.random() * 60), S.subjectType) : '') +
       '\nNOTES:\n"""\n' + notesForPrompt() + '\n"""\n\n' +
       'OUTPUT: ONLY valid compact JSON. No markdown. Replace ALL empty strings with REAL content.\n\n' +
       '{"questions":[' + schemaFor([type]) + ']}';

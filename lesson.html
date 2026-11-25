@@ -4005,6 +4005,11 @@
       '5. Each question must cover a DIFFERENT concept or angle within the topic.\n' +
       '6. Do NOT repeat or closely resemble any of these already-used questions: ' + recentList + '\n' +
       formatRule +
+      /* the same angles the plan builder uses (sf-questions.js VERSIONS), a
+         different set each top-up */
+      (window.SFQuestions && SFQuestions.versionHint
+        ? SFQuestions.versionHint(['mcq', 'truefalse', 'fill', 'classify', 'sequence', 'estimate'].filter(function (t) {
+            return !(day && day.allowedTypes && day.allowedTypes.length) || day.allowedTypes.indexOf(t) !== -1; }), lockType, totalAnswered) : '') +
       sfLevelRule() +
       '8. Hints must be specific facts about this topic, not generic advice.\n' +
       '   Every mcq: exactly one right option; wrong options a real learner might pick, about as long as the right one; never "all of the above" or "none of the above".\n' +

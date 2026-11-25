@@ -51,6 +51,7 @@
     ['review_queue', 'REVIEW QUEUE OK', S + 'test_review.js'],
     ['review_return', 'REVIEW RETURN OK', S + 'test_review_return.js'],
     ['math_day', 'MATH DAY OK', S + 'test_math_day.js'],
+    ['versions', 'VERSIONS OK', S + 'test_versions.js'],
     ['reading_run', 'READING RUN OK', S + 'test_reading_run.js'],
     ['data', 'DATA OK', S + 'test_data.js'],
     ['data_page', 'DATA PAGE OK', S + 'test_data_page.js'],
