@@ -8388,6 +8388,7 @@
   function sysSplit(eq) {
     var t = String(eq == null ? '' : eq).replace(/[−–—]/g, '-').trim();
     if (t.indexOf('=') === -1) return null;
+    if (/\b(?:when|if|given|where|for)\b/i.test(t)) return null;      // "3x + 2y when x = 2 and y = 5"
     var bits = t.split(/\s*(?:;|\n|,|\band\b)\s*/i).filter(function (b) { return b.trim(); });
     if (bits.length < 2 || bits.length > 3) return null;
     for (var i = 0; i < bits.length; i++) {
@@ -8407,7 +8408,6 @@
     while ((m = re.exec(t))) { var v = m[1].toLowerCase(); if (!seen[v]) { seen[v] = 1; out.push(v); } }
     return out.sort();
   }
-    if (/\b(?:when|if|given|where|for)\b/i.test(t)) return null;      // "3x + 2y when x = 2 and y = 5"
   function sysAnswer(answer, equation) {
     var c = sfCanon(answer), pairs = [], seen = {}, m, re = /([a-z])=(-?\d+(?:\.\d+)?(?:\/\d+)?)/g;
     while ((m = re.exec(c))) { if (!seen[m[1]]) { seen[m[1]] = 1; pairs.push([m[1], m[2]]); } }
@@ -8429,25 +8429,6 @@
     var uniq = vals.filter(function (v, i) { return vals.indexOf(v) === i; });
     return (Object.keys(vars).length === 1 && uniq.length >= 2) ? uniq : null;
   }
-  function sysGrade(typed, correct, equation) {
-    var roots = sysRoots(correct);
-    if (roots) {
-      var ct = sfCanon(typed), tn = [];
-      /* "x = ±3" is both roots. */
-      ct = ct.replace(/\+-(\d+(?:\.\d+)?(?:\/\d+)?)/g, function (_, n) { tn.push(sysNum(n), -sysNum(n)); return ' '; });
-      tn = tn.concat((ct.match(/-?\d+(?:\.\d+)?(?:\/\d+)?/g) || []).map(sysNum));
-      var tu = tn.filter(function (v, i) { return tn.indexOf(v) === i; });
-      return tu.length === roots.length && roots.every(function (r) { return tu.some(function (t) { return Math.abs(t - r) < 1e-6; }); });
-    }
-    var cp = sysAnswer(correct, equation);
-    if (!cp) return null;
-    var c = sfCanon(typed), tp = [], seen = {}, m, re = /([a-z])=(-?\d+(?:\.\d+)?(?:\/\d+)?)/g;
-    while ((m = re.exec(c))) { if (!seen[m[1]]) { seen[m[1]] = 1; tp.push([m[1], m[2]]); } }
-    var close = function (a, b) { return Math.abs(sysNum(a) - sysNum(b)) < 1e-6; };
-    if (tp.length) {
-      if (tp.length !== cp.length) return false;
-      return cp.every(function (pr) {
-        var hit = tp.filter(function (x) { return x[0] === pr[0]; })[0];
   /* A FRACTION answer ("5/6"): the typed fraction must have the same value AND be
      in lowest terms, or be the same value as a decimal ("0.5" for 1/2). It used
      to be read as digits alone, so "56" was marked right for 5/6. */
@@ -8479,10 +8460,29 @@
     if (!/^(\([^()]+\)){2,}$/.test(t)) return false;
     return c.match(re).sort().join('') === t.match(re).sort().join('');
   }
-        return !!hit && close(hit[1], pr[1]);
+  function sysGrade(typed, correct, equation) {
     var fr = fracGrade(typed, correct); if (fr !== null) return fr;
     var iq = ineqGrade(typed, correct); if (iq !== null) return iq;
     var fc = factorGrade(typed, correct); if (fc !== null) return fc;
+    var roots = sysRoots(correct);
+    if (roots) {
+      var ct = sfCanon(typed), tn = [];
+      /* "x = ±3" is both roots. */
+      ct = ct.replace(/\+-(\d+(?:\.\d+)?(?:\/\d+)?)/g, function (_, n) { tn.push(sysNum(n), -sysNum(n)); return ' '; });
+      tn = tn.concat((ct.match(/-?\d+(?:\.\d+)?(?:\/\d+)?/g) || []).map(sysNum));
+      var tu = tn.filter(function (v, i) { return tn.indexOf(v) === i; });
+      return tu.length === roots.length && roots.every(function (r) { return tu.some(function (t) { return Math.abs(t - r) < 1e-6; }); });
+    }
+    var cp = sysAnswer(correct, equation);
+    if (!cp) return null;
+    var c = sfCanon(typed), tp = [], seen = {}, m, re = /([a-z])=(-?\d+(?:\.\d+)?(?:\/\d+)?)/g;
+    while ((m = re.exec(c))) { if (!seen[m[1]]) { seen[m[1]] = 1; tp.push([m[1], m[2]]); } }
+    var close = function (a, b) { return Math.abs(sysNum(a) - sysNum(b)) < 1e-6; };
+    if (tp.length) {
+      if (tp.length !== cp.length) return false;
+      return cp.every(function (pr) {
+        var hit = tp.filter(function (x) { return x[0] === pr[0]; })[0];
+        return !!hit && close(hit[1], pr[1]);
       });
     }
     /* No letters typed: "3, 2" or "(3, 2)" - read in the order the answer lists them. */
@@ -15206,6 +15206,15 @@
     /* Systems come first: "Systems of equations by elimination" would otherwise
        match nothing here and get the general one-variable mix. */
     if (/system|simultaneous|elimination|two equations|two unknowns|two variables/.test(t)) return [genSystemEasy, genSystemSub, genSystemElim];
+    /* A family named by the title (fractions, quadratics, inequalities, geometry,
+       percent, statistics...): sf-mathgen.js. It goes before the generic rules
+       below, or "Simplifying radicals" would get like-terms filler. */
+    if (window.SFMathGen) {
+      var fam = window.SFMathGen.equations(window.SFMathGen.topicFor(t));
+      if (fam && fam.length) return fam;
+    }
+    if (/two-step|two step/.test(t)) return [genTwoStep, genOneStep, genTwoStep];
+    if (/one-step|one step/.test(t)) return [genOneStep, genOneStep, genTwoStep];
     if (/like terms|combin|simplif/.test(t)) return [genCombine, genDistribute, genCombine];
     if (/distribut|expand/.test(t)) return [genDistribute, genCombine, genDistribute];
     if (/evaluat|substitut/.test(t)) return [genEvaluate, genOneStep, genEvaluate];
@@ -15250,15 +15259,6 @@
     var madeEq = 0, genStart = randInt(0, gens.length - 1);
     guard = 0;
     while (madeEq < (needEq || 0) && guard < 120) {
-    /* A family named by the title (fractions, quadratics, inequalities, geometry,
-       percent, statistics...): sf-mathgen.js. It goes before the generic rules
-       below, or "Simplifying radicals" would get like-terms filler. */
-    if (window.SFMathGen) {
-      var fam = window.SFMathGen.equations(window.SFMathGen.topicFor(t));
-      if (fam && fam.length) return fam;
-    }
-    if (/two-step|two step/.test(t)) return [genTwoStep, genOneStep, genTwoStep];
-    if (/one-step|one step/.test(t)) return [genOneStep, genOneStep, genTwoStep];
       guard++;
       var g = gens[(genStart + guard - 1) % gens.length]();
       if (seen[g.eq]) continue;
