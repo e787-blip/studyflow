@@ -15065,7 +15065,9 @@
   function genEvaluate() {
     var a = randInt(3, 12), n = randInt(2, 9);
     return {
-      eq: a + 'x, x = ' + n,
+      eq: a + 'x when x = ' + n,       // "when": the card sets the given value under the expression
+      q: 'Evaluate',                   // x is GIVEN, so nothing is solved for (it said "Solve for x")
+      hint: 'Put the number in place of x, then multiply.',
       ans: String(a * n),
       why: 'Substitute x = ' + n + ': ' + a + ' \u00d7 ' + n + ' = ' + (a * n) + '.'
     };
