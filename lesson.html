@@ -331,6 +331,10 @@
   .mx-cond-inline { color:var(--muted); }
   /* --soft is darker than the card in dark mode; the panel would read as a hole. */
   body.dark .mx-panel { background:#1c2234; border-color:#2a3150; }
+  /* Shapes and graphs keep a paper ground (.art-paper) in dark mode too. */
+  .sf-shape-box { margin:.1rem 0 1rem; padding:.6rem .5rem; }
+  .sf-shape-box[hidden] { display:none; }
+  .sf-shape-box svg { display:block; width:100%; height:auto; margin:0 auto; }
   @media (max-width:480px) {
     .mx-panel { padding:1.2rem .85rem 1.1rem; }
     .mx-expr { font-size:1.65rem; }
@@ -2220,6 +2224,7 @@
 <script src="/sf-questions.js"></script>
 <script src="/sf-data.js"></script>
 <script src="/sf-mathgen.js"></script>
+<script src="/sf-shapes.js"></script>
 <script src="/sf-guide.js"></script>
 <script src="/sf-auth.js"></script>
 <script src="/sf-owner.js"></script>
@@ -6176,6 +6181,7 @@
   function sfRecallOnMiss() {
     var sc = document.getElementById('session-card');
     if (!sc || sc.getAttribute('data-recall') !== '1') return;
+    if (sc.querySelector('.sf-shape-box')) return;      // the card has its own drawing
     /* Only when the budget picked the lesson's picture for this card - once
        a session, and not on a card whose own drawing is coming. */
     if (picChoice() !== 'lesson') return;
@@ -8905,6 +8911,9 @@
     }
 
     var visual = buildMathVisual(topic, eq, q, parts);
+    /* A drawing of the givens sits above the maths; one that is the answer
+       goes under the answer box, where the grade is read. */
+    var shape = sfShapeBox(eq, q.question, ans), shapeFirst = shape.indexOf(' hidden') === -1;
 
     /* A question with an answer for each unknown gets a box for each, labelled
        "x =" and "y =". The page still has ONE #fill-input that the grader, the
@@ -8937,8 +8946,10 @@
       '<span class="q-type-label">' + topic.label + '</span>' +
       '<span class="q-difficulty ' + diffClass + '">' + diff + '</span>' +
       '</div>' +
+      (shapeFirst ? shape : '') +
       visual +
       inputsHtml +
+      (shapeFirst ? '' : shape) +
       '<div class="hint-row"><button class="btn btn-text btn-sm hint-btn" onclick="toggleHint()">Show steps</button>' +
       '<div class="hint-box" id="hint-box">' + escHtml(hint) + '</div></div>' +
       '<div class="feedback-box" id="feedback-box"></div>';
@@ -9095,6 +9106,33 @@
       .replace(/\^\(([a-z0-9+\u2212\-]{1,6})\)|\^([a-z0-9+\u2212\-]{1,6})/gi, function (_, a, b) { return '<sup>' + (a || b) + '</sup>'; })
       .replace(/ - /g, ' − ')
       .replace(/(\d|\))\s*\*\s*(?=[\d(a-z])/gi, '$1 × ');
+  }
+
+  /* ── SHAPES AND GRAPHS (sf-shapes.js) ──
+     A maths card whose words describe a shape, points, fractions and so on gets
+     it drawn, from those words, with "?" for what is asked. The drawing that
+     would BE the answer (a number line, two lines crossing) waits for the
+     grade. sf-shapes draws nothing unless its own sum agrees with the answer
+     key, so a model's question never gets a picture of a different question.
+     The words ride on the box itself, so no state can leak to the next card. */
+  function sfShapeSvg(text, head, answer, done) {
+    try { return window.SFShapes ? window.SFShapes.figure(text, { head: head, answer: answer, done: done }) : ''; }
+    catch (e) { return ''; }
+  }
+  function sfShapeBox(text, head, answer) {
+    var before = sfShapeSvg(text, head, answer, false);
+    if (!before && !sfShapeSvg(text, head, answer, true)) return '';
+    return '<div class="sf-shape-box' + (before ? ' art-paper' : '') + '"' + (before ? '' : ' hidden') +
+      ' data-t="' + escHtml(String(text || '')) + '" data-h="' + escHtml(String(head || '')) + '" data-a="' + escHtml(String(answer == null ? '' : answer)) + '">' + before + '</div>';
+  }
+  function sfShapeAnswered() {
+    var box = document.querySelector('#session-card .sf-shape-box');
+    if (!box) return;
+    var svg = sfShapeSvg(box.getAttribute('data-t'), box.getAttribute('data-h'), box.getAttribute('data-a'), true);
+    if (!svg) return;
+    box.innerHTML = svg;
+    box.classList.add('art-paper');
+    box.removeAttribute('hidden');
   }
 
   // ── VISUAL BUILDER — the one panel the maths sits in ──
@@ -9810,7 +9848,8 @@
 
   function renderWordProblem(q) {
     var scenario = q.scenario || q.question || '';
-    var visual = buildWordProblemAid(scenario);
+    /* One picture a card: the drawing, else the older rate/percent table. */
+    var visual = sfShapeBox(scenario, q.question, q.answer) || buildWordProblemAid(scenario);
 
     /* Scaffolded route: the problem is worked one sub-step at a time, each
        answer carried into the next. Falls back to a single answer box when the
@@ -13479,6 +13518,7 @@
       /* Once a session. Under every miss it stopped being encouragement
          and became furniture - the same two sentences, eleven times. */
       '';
+    try { sfShapeAnswered(); } catch (eShape) { /* never cost the feedback */ }
   }
   var growthShown = 0;
 

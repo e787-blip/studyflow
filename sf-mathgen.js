@@ -447,6 +447,7 @@
   }
   function lnMidpoint() {
     var x1 = ri(-6, 6), y1 = ri(-6, 6), mx = ri(-4, 6), my = ri(-4, 6);
+    if (mx === x1 && my === y1) mx = x1 < 6 ? x1 + 1 : x1 - 1;      // two different points
     var x2 = 2 * mx - x1, y2 = 2 * my - y1;
     return { q: 'Find the midpoint', eq: '(' + sg(x1) + ', ' + sg(y1) + ') and (' + sg(x2) + ', ' + sg(y2) + ')', ans: '(' + sg(mx) + ', ' + sg(my) + ')',
       hint: 'Average the x-values, then average the y-values.',
@@ -563,7 +564,7 @@
   }
   function geoPolygon() {
     var n = ri(5, 10), name = { 5: 'pentagon', 6: 'hexagon', 7: 'heptagon', 8: 'octagon', 9: 'nonagon', 10: 'decagon' }[n];
-    return { q: 'Sum of the angles', eq: 'A ' + name + ' has ' + n + ' sides. What do its angles add up to?', ans: String((n - 2) * 180),
+    return { q: 'Sum of the angles', eq: (n === 8 ? 'An ' : 'A ') + name + ' has ' + n + ' sides. What do its angles add up to?', ans: String((n - 2) * 180),
       hint: 'Sum of angles = (sides − 2) × 180°.', why: '(' + n + ' ' + M + ' 2) × 180 = ' + (n - 2) + ' × 180 = ' + ((n - 2) * 180) + '°.' };
   }
 
@@ -829,6 +830,7 @@
   }
   function wpUnits() {
     var m = ri(3, 9), cm = pick([20, 25, 40, 50]);
+    while ((m * 100) % cm) m = ri(3, 9);          // a whole number of pieces: 3 m has no 7.5 of 40 cm
     var pieces = m * 100 / cm;
     return { scenario: 'A ribbon is ' + m + ' m long. It is cut into pieces that are each ' + cm + ' cm long.',
       question: 'How many pieces are there?',
