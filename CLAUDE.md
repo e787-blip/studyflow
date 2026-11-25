@@ -4775,3 +4775,5 @@ genuinely nothing.
 
 **Nov 25: graded answers in dark mode.** The equation card, fill-in, system boxes and find-the-mistake steps still set pale green and red inline, so in dark mode the typed answer was invisible (contrast 1:1). They go through `sfGraded(el, right)` now (`.sel-right` / `.sel-wrong`). Never set a graded colour inline; `test_dark_graded.js` measures the contrast.
 
+**Nov 25: find the mistake.** The step holding the mistake carries `data-error="1"`. It was found by searching each button's onclick source for "true", and the explanation is in that source, so "It is not true that..." turned every wrong step green. `test_errorspot.js`.
+

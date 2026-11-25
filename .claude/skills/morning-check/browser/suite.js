@@ -54,6 +54,7 @@
     ['versions', 'VERSIONS OK', S + 'test_versions.js'],
     ['shapes', 'SHAPES OK', S + 'test_shapes.js'],
     ['dark_graded', 'DARK GRADED OK', S + 'test_dark_graded.js'],
+    ['errorspot', 'ERRORSPOT OK', S + 'test_errorspot.js'],
     ['reading_run', 'READING RUN OK', S + 'test_reading_run.js'],
     ['data', 'DATA OK', S + 'test_data.js'],
     ['data_page', 'DATA PAGE OK', S + 'test_data_page.js'],

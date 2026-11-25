@@ -9989,7 +9989,7 @@
     }
 
     var stepsHtml = steps.map(function(step, i) {
-      return '<button class="error-step-btn" data-idx="' + i + '" onclick="selectErrorStep(this,' + i + ',' + (step.hasError ? 'true' : 'false') + ',\'' + esc(q.explanation) + '\')" ' +
+      return '<button class="error-step-btn" data-idx="' + i + '"' + (step.hasError ? ' data-error="1"' : '') + ' onclick="selectErrorStep(this,' + i + ',' + (step.hasError ? 'true' : 'false') + ',\'' + esc(q.explanation) + '\')" ' +
         'style="width:100%;text-align:left;padding:.7rem .9rem;border-radius:10px;border:1.5px solid var(--border);background:var(--soft);font-family:var(--sans);font-size:0.88rem;font-weight:500;color:var(--ink);cursor:pointer;margin-bottom:.4rem;transition:border-color .2s,background .2s;">' +
         '<span style="display:inline-block;min-width:20px;font-size:0.78rem;font-weight:700;color:var(--muted);margin-right:.5rem;font-variant-numeric:tabular-nums;">Step ' + (i+1) + '</span>' +
         '<span style="font-family:\'Georgia\',serif;">' + step.text + '</span>' +
@@ -10031,8 +10031,9 @@
       sfGraded(btn, false);
       // Also reveal which step was actually wrong
       document.querySelectorAll('.error-step-btn').forEach(function(b, i) {
-        // check data-idx — the correct error step has hasError:true encoded in its onclick
-        if (b.onclick && b.onclick.toString().indexOf('true') !== -1 && b !== btn) {
+        /* The mistake is marked on the button. It used to be found by searching
+           the onclick source for "true", which also holds the explanation. */
+        if (b.getAttribute('data-error') === '1' && b !== btn) {
           sfGraded(b, true);
         }
       });
